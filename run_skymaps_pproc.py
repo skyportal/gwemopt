@@ -1,3 +1,21 @@
+# -*- coding: utf-8 -*-
+# Copyright (C) Michael Coughlin and Christopher Stubbs(2015)
+#
+# skybrightness is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# gwemopt is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with skybrightness.  If not, see <http://www.gnu.org/licenses/>.
+
+"""This module provides example methods to calculate the optimal likelihood and distance scalings for optimizing telescope time allocations.
+"""
 
 import os, sys, glob, optparse
 import numpy as np
@@ -27,6 +45,13 @@ def parse_commandline():
     """
     parser = optparse.OptionParser(usage=__doc__,version=__version__)
 
+    parser.add_option("-o","--outputDir",help="Output location",default = '/home/mcoughlin/Skymaps/optimization/plots')
+
+    parser.add_option("--minabsm", help="Min absolute magnitude.",default=-16,type=float)
+    parser.add_option("--maxabsm", help="Max absolute magnitude.",default=-10,type=float)
+    parser.add_option("--minfade", help="Min time above detection threshold [hours].",default=0.1,type=float)
+    parser.add_option("--maxfade", help="Max time above detection threshold [hours].",default=10,type=float)
+
     parser.add_option("-v", "--verbose", action="store_true", default=False,help="Run verbosely. (Default: False)")
 
     opts, args = parser.parse_args()
@@ -48,7 +73,8 @@ def parse_commandline():
 def combine_params(runpath):
     folders = glob.glob(os.path.join(runpath,"*"))
     for ii,folder in enumerate(folders):
-        baseDir = os.path.join(folder,"-16--10")
+        #baseDir = os.path.join(folder,"-16--10")
+        baseDir = "%s/%d-%d/%.2f-%.2f"%(folder,minabsm,maxabsm,minfade,maxfade)
         #resultsfile = os.path.join(baseDir,"best.dat")
         resultsfile = os.path.join(baseDir,"samples.dat")
         if not os.path.isfile(resultsfile): continue
@@ -63,7 +89,9 @@ def combine_results(runpath):
 
     folders = glob.glob(os.path.join(runpath,"*"))
     for ii,folder in enumerate(folders):
-        baseDir = os.path.join(folder,"-16--10")
+        #baseDir = os.path.join(folder,"-16--10")
+        baseDir = "%s/%d-%d/%.2f-%.2f"%(folder,minabsm,maxabsm,minfade,maxfade)
+
         resultsfile = os.path.join(baseDir,"images.dat")
         if not os.path.isfile(resultsfile): continue
         nums_cumsum, image_array = load_results(baseDir)
@@ -122,18 +150,24 @@ def hist_results(samples):
 # Parse command line
 opts = parse_commandline()
 
-basepath = '/home/mcoughlin/Skymaps/optimization/plots_skymaps_magfade'
-resultsDir = os.path.join(basepath,'results')
+minabsm = opts.minabsm
+maxabsm = opts.maxabsm
+
+minfade = opts.minfade
+maxfade = opts.maxfade
+
+outputDir = opts.outputDir 
+resultsDir = os.path.join(outputDir,'results')
 if not os.path.isdir(resultsDir):
     os.mkdir(resultsDir)
 
-runpath = os.path.join(basepath,'PS1')
+runpath = os.path.join(outputDir,'PS1')
 nums_cumsum,ps1_10,ps1_50,ps1_90,times_interp,ps1_10_interp,ps1_50_interp,ps1_90_interp = combine_results(runpath)
 ps1_params = combine_params(runpath)
-runpath = os.path.join(basepath,'ATLAS')
+runpath = os.path.join(outputDir,'ATLAS')
 nums_cumsum,atlas_10,atlas_50,atlas_90,times_interp,atlas_10_interp,atlas_50_interp,atlas_90_interp = combine_results(runpath)
 atlas_params = combine_params(runpath)
-runpath = os.path.join(basepath,'combined')
+runpath = os.path.join(outputDir,'combined')
 nums_cumsum,combined_10,combined_50,combined_90,times_interp,combined_10_interp,combined_50_interp,combined_90_interp = combine_results(runpath)
 combined_params = combine_params(runpath)
 
@@ -199,7 +233,7 @@ plt.plot(bins4, hist4,'r--',label='ATLAS with PS1')
 plt.legend(loc='best')
 #plt.xlim([10,1e6])
 #plt.ylim([0,1.0])
-plt.xlabel('Confidence Level')
+plt.xlabel('Likelihood Confidence Level')
 plt.ylabel('Probability Density Function')
 plt.show()
 plotName = os.path.join(resultsDir,'cl.pdf')

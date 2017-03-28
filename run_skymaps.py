@@ -1,12 +1,20 @@
-#!/usr/bin/python
+# -*- coding: utf-8 -*-
+# Copyright (C) Michael Coughlin and Christopher Stubbs(2015)
+#
+# skybrightness is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# gwemopt is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with skybrightness.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-% startnight.py
-
-Written by Chris Stubbs and Michael Coughlin (michael.coughlin@ligo.org)
-
-This program runs the nightly Cerro Pachon All-Sky Camera Project camera.
-
+"""This module provides example methods to calculate the optimal likelihood and distance scalings for optimizing telescope time allocations.
 """
 
 from __future__ import division
@@ -52,13 +60,16 @@ def parse_commandline():
     """
     parser = optparse.OptionParser(usage=__doc__,version=__version__)
 
+    parser.add_option("-o","--outputDir",help="Output location",default = '/home/mcoughlin/Skymaps/optimization/plots')
+    parser.add_option("-d","--dataDir",help="Data location",default  = '/home/mcoughlin/Skymaps/going-the-distance_data/2015/compare/')
+
     parser.add_option("-t", "--telescope", help="Telescope.",
                       default ="PS1")
 
     parser.add_option("--minabsm", help="Min absolute magnitude.",default=-16,type=float)
-    parser.add_option("--minabsm", help="Max absolute magnitude.",default=-10,type=float)    
+    parser.add_option("--maxabsm", help="Max absolute magnitude.",default=-10,type=float)    
     parser.add_option("--minfade", help="Min time above detection threshold [hours].",default=0.1,type=float)
-    parser.add_option("--maxfade", help="Max absolute magnitude.",default=10,type=float)
+    parser.add_option("--maxfade", help="Max time above detection threshold [hours].",default=10,type=float)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -84,12 +95,20 @@ def myprior(cube, ndim, nparams):
         cube[1] = cube[1]*0.5 + 0.5
         cube[2] = cube[2]*8.0 - 4.0
 
+def myprior_multi(cube, ndim, nparams):
+        cube[0] = cube[0]*2.0
+        cube[1] = cube[1]*0.5 + 0.5
+        cube[2] = cube[2]*8.0 - 4.0
+        cube[3] = cube[3]*2.0
+        cube[4] = cube[4]*0.5 + 0.5
+        cube[5] = cube[5]*8.0 - 4.0
+
 def myloglike(cube, ndim, nparams):
         n = cube[0]
         cl = cube[1]
         r = cube[2]
 
-        image_array = numimages(prob_data,distmu_data,data_out,n,cl,r)
+        image_array = numimages(prob_data,distmu_data,data_out,Telescope_T,Telescope_m,n,cl,r)
 
         image_array_sorted = np.sort(image_array)
 
@@ -104,6 +123,30 @@ def myloglike(cube, ndim, nparams):
 
         #if np.isfinite(prob):
         #    print n, cl, r, prob
+        return prob
+
+def myloglike_multi(cube, ndim, nparams):
+        n_PS1 = cube[0]
+        cl_PS1 = cube[1]
+        r_PS1 = cube[2]
+        n_ATLAS = cube[3]
+        cl_ATLAS = cube[4]
+        r_ATLAS = cube[5]
+
+        image_array = numimages_combine(prob_data,distmu_data,data_out,n_PS1,cl_PS1,r_PS1,n_ATLAS,cl_ATLAS,r_ATLAS)
+
+        image_array_sorted = np.sort(image_array)
+
+        tmax = data_out["fade"]*3600
+        image_detected = float(len(np.where(image_array < tmax)[0]))/float(len(image_array))
+
+        index = np.floor(len(image_array)*0.5)
+        image_T = image_array_sorted[index]/3600.0
+
+        prob = image_detected
+
+        #if np.isfinite(prob):
+        #    print n_PS1, cl_PS1, r_PS1, n_ATLAS, cl_ATLAS, r_ATLAS, prob
         return prob
 
 def probpower(prob_data,distmu_data,n,cl,r):
@@ -123,7 +166,7 @@ def probpower(prob_data,distmu_data,n,cl,r):
 
     return prob_data_scaled 
 
-def numimages(prob_data,distmu_data,data_out,n,cl,r):
+def numimages(prob_data,distmu_data,data_out,Telescope_T,Telescope_m,n,cl,r):
 
     phi_true = data_out["ra"]
     theta_true = 0.5*np.pi - data_out["dec"]
@@ -140,7 +183,14 @@ def numimages(prob_data,distmu_data,data_out,n,cl,r):
 
     return image_array
 
-def numknown(prob_data,data_out):
+def numimages_combine(prob_data,distmu_data,data_out,n_PS1,cl_PS1,r_PS1,n_ATLAS,cl_ATLAS,r_ATLAS):
+    image_array_PS1 = numimages(prob_data,distmu_data,data_out,PS1_Telescope_T,PS1_Telescope_m,n_PS1,cl_PS1,r_PS1)
+    image_array_ATLAS = numimages(prob_data,distmu_data,data_out,ATLAS_Telescope_T,ATLAS_Telescope_m,n_ATLAS,cl_ATLAS,r_ATLAS)
+    image_array = np.min(np.vstack((image_array_PS1,image_array_ATLAS)),axis=0)
+
+    return image_array
+
+def numknown(prob_data,data_out,Telescope_T,Telescope_m):
 
     phi_true = data_out["ra"]
     theta_true = 0.5*np.pi - data_out["dec"]
@@ -161,7 +211,7 @@ def hist_results(samples):
 
     return bins, hist1
 
-def healpix(filename,plotDir,data_out,minabsm,maxabsm):
+def healpix(filename,plotDir,data_out):
 
     bayestar = True
     if bayestar:
@@ -260,13 +310,20 @@ def healpix(filename,plotDir,data_out,minabsm,maxabsm):
     print "Distance: %.5f %.5f"%(np.min(data_out["dist"]),np.max(data_out["dist"]))
     print "Absolute Magnitude: %.5f %.5f"%(np.min(data_out["absm"]),np.max(data_out["absm"]))  
 
-    # number of dimensions our problem has
-    parameters = ["n","cl","r"]
+    if telescope == "combined":
+        # number of dimensions our problem has
+        parameters = ["n_PS1","cl_PS1","r_PS1","n_ATLAS","cl_ATLAS","r_ATLAS"]
+    else:
+        # number of dimensions our problem has
+        parameters = ["n","cl","r"]
     n_params = len(parameters)
 
     global prob_data, distmu_data
 
-    pymultinest.run(myloglike, myprior, n_params, importance_nested_sampling = False, resume = True, verbose = True, sampling_efficiency = 'parameter', n_live_points = 1000, outputfiles_basename='%s/2-'%plotDir, evidence_tolerance = 0.001, multimodal = False)
+    if telescope == "combined":
+        pymultinest.run(myloglike_multi, myprior_multi, n_params, importance_nested_sampling = False, resume = True, verbose = True, sampling_efficiency = 'parameter', n_live_points = 1000, outputfiles_basename='%s/2-'%plotDir, evidence_tolerance = 0.001, multimodal = False)
+    else:
+        pymultinest.run(myloglike, myprior, n_params, importance_nested_sampling = False, resume = True, verbose = True, sampling_efficiency = 'parameter', n_live_points = 1000, outputfiles_basename='%s/2-'%plotDir, evidence_tolerance = 0.001, multimodal = False)
 
     # lets analyse the results
     a = pymultinest.Analyzer(n_params = n_params, outputfiles_basename='%s/2-'%plotDir)
@@ -289,71 +346,211 @@ def healpix(filename,plotDir,data_out,minabsm,maxabsm):
     loglikelihood = -(1/2.0)*data[:,1]
     idx = np.argmax(loglikelihood)
 
-    n = data[:,2]
-    cl = data[:,3]
-    r = data[:,4]
+    if telescope == "combined":
 
-    n_best = data[idx,2]
-    cl_best = data[idx,3]
-    r_best = data[idx,4]
+        n_PS1 = data[:,2]
+        cl_PS1 = data[:,3]
+        r_PS1 = data[:,4]
+        n_ATLAS = data[:,5]
+        cl_ATLAS = data[:,6]
+        r_ATLAS = data[:,7]
+    
+        n_PS1_best = data[idx,2]
+        cl_PS1_best = data[idx,3]
+        r_PS1_best = data[idx,4]
+        n_ATLAS_best = data[idx,5]
+        cl_ATLAS_best = data[idx,6]
+        r_ATLAS_best = data[idx,7]
+    
+        image_optimal_array = numimages_combine(prob_data,distmu_data,data_out,n_PS1_best,cl_PS1_best,r_PS1_best,n_ATLAS_best,cl_ATLAS_best,r_ATLAS_best)
+        image_optimal_array_sorted = np.sort(image_optimal_array)
+    
+        image_nominal_array = numimages_combine(prob_data,distmu_data,data_out,0.0,0.99,0.0,0.0,0.99,0.0)
+        image_nominal_array_sorted = np.sort(image_nominal_array)
+    
+        image_known_array = numknown(prob_data,data_out,PS1_Telescope_T,PS1_Telescope_m)
+        image_known_array_sorted = np.sort(image_known_array)
+    
+        filename = os.path.join(plotDir,'samples.dat')
+        fid = open(filename,'w+')
+        for i, j, k, l, m, o in zip(n_PS1,cl_PS1,r_PS1,n_ATLAS,cl_ATLAS,r_ATLAS):
+            fid.write('%.5f %.5f %.5f %.5f %.5f %.5f\n'%(i,j,k,l,m,o))
+        fid.close()
+    
+        filename = os.path.join(plotDir,'best.dat')
+        fid = open(filename,'w')
+        fid.write('%.5f %.5f %.5f %.5f %.5f %.5f\n'%(n_PS1_best,cl_PS1_best,r_PS1_best,n_ATLAS_best,cl_ATLAS_best,r_ATLAS_best))
+        fid.close()
+    
+        plt.figure(figsize=(12,10))
+        bins1, hist1 = hist_results(n_PS1)
+        bins2, hist2 = hist_results(n_ATLAS)
+        #plt.plot(bins1, np.cumsum(hist1),'k',label='PS1')
+        #plt.plot(bins2, np.cumsum(hist2),'k--',label='ATLAS')
+        plt.plot(bins1, hist1,'k',label='PS1')
+        plt.plot(bins2, hist2,'k--',label='ATLAS')
+        plt.legend(loc='best')
+        #plt.xlim([10,1e6])
+        #plt.ylim([0,1.0])
+        plt.xlabel('Likelihood Powerlaw Index')
+        plt.ylabel('Probability Density Function')
+        plt.show()
+        plotName = os.path.join(plotDir,'n.pdf')
+        plt.savefig(plotName,dpi=200)
+        plt.close('all')
+    
+        plt.figure(figsize=(12,10))
+        bins1, hist1 = hist_results(cl_PS1)
+        bins2, hist2 = hist_results(cl_ATLAS)
+        #plt.plot(bins1, np.cumsum(hist1),'k',label='PS1')
+        #plt.plot(bins2, np.cumsum(hist2),'k--',label='ATLAS')
+        plt.plot(bins1, hist1,'k',label='PS1')
+        plt.plot(bins2, hist2,'k--',label='ATLAS')
+        plt.legend(loc='best')
+        #plt.xlim([10,1e6])
+        #plt.ylim([0,1.0])
+        plt.xlabel('Likelihood Confidence Level')
+        plt.ylabel('Probability Density Function')
+        plt.show()
+        plotName = os.path.join(plotDir,'cl.pdf')
+        plt.savefig(plotName,dpi=200)
+        plt.close('all')
+    
+        plt.figure(figsize=(12,10))
+        bins1, hist1 = hist_results(r_PS1)
+        bins2, hist2 = hist_results(r_ATLAS)
+        #plt.plot(bins1, np.cumsum(hist1),'k',label='PS1')
+        #plt.plot(bins2, np.cumsum(hist2),'k--',label='ATLAS')
+        plt.plot(bins1, hist1,'k',label='PS1')
+        plt.plot(bins2, hist2,'k--',label='ATLAS')
+        plt.legend(loc='best')
+        #plt.xlim([10,1e6])
+        #plt.ylim([0,1.0])
+        plt.xlabel('Distance Powerlaw Index')
+        plt.ylabel('Probability Density Function')
+        plt.show()
+        plotName = os.path.join(plotDir,'r.pdf')
+        plt.savefig(plotName,dpi=200)
+        plt.close('all')
 
-    image_optimal_array = numimages(prob_data,distmu_data,data_out,n_best,cl_best,r_best)
-    image_optimal_array_sorted = np.sort(image_optimal_array)
+    else:
+        n = data[:,2]
+        cl = data[:,3]
+        r = data[:,4]
 
-    image_nominal_array = numimages(prob_data,distmu_data,data_out,n_best,cl_best,r_best)
-    image_nominal_array_sorted = np.sort(image_nominal_array)
+        n_best = data[idx,2]
+        cl_best = data[idx,3]
+        r_best = data[idx,4]
 
-    image_known_array = numknown(prob_data,data_out)
-    image_known_array_sorted = np.sort(image_known_array)
+        image_optimal_array = numimages(prob_data,distmu_data,data_out,Telescope_T,Telescope_m,n_best,cl_best,r_best)
+        image_optimal_array_sorted = np.sort(image_optimal_array)
 
-    filename = os.path.join(plotDir,'samples.dat')
-    fid = open(filename,'w+')
-    for i, j, k in zip(n,cl,r):
-        fid.write('%.5f %.5f %.5f\n'%(i,j,k))
-    fid.close()
+        image_nominal_array = numimages(prob_data,distmu_data,data_out,Telescope_T,Telescope_m,n_best,cl_best,r_best)
+        image_nominal_array_sorted = np.sort(image_nominal_array)
 
-    filename = os.path.join(plotDir,'best.dat')
-    fid = open(filename,'w')
-    fid.write('%.5f %.5f %.5f\n'%(n_best,cl_best,r_best))
-    fid.close()
+        image_known_array = numknown(prob_data,data_out,Telescope_T,Telescope_m)
+        image_known_array_sorted = np.sort(image_known_array)
 
-    plt.figure(figsize=(12,10))
-    bins1, hist1 = hist_results(n)
-    #plt.plot(bins1, np.cumsum(hist1))
-    plt.plot(bins1, hist1)
-    #plt.ylim([0,1.0])
-    plt.xlabel('Powerlaw Index')
-    plt.ylabel('Probability Density Function')
-    plt.show()
-    plotName = os.path.join(plotDir,'n.pdf')
-    plt.savefig(plotName,dpi=200)
-    plt.close('all')
+        filename = os.path.join(plotDir,'samples.dat')
+        fid = open(filename,'w+')
+        for i, j, k in zip(n,cl,r):
+            fid.write('%.5f %.5f %.5f\n'%(i,j,k))
+        fid.close()
 
-    plt.figure(figsize=(12,10))
-    bins1, hist1 = hist_results(cl)
-    #plt.plot(bins1, np.cumsum(hist1))
-    plt.plot(bins1, hist1)
-    #plt.ylim([0,1.0])
-    plt.xlabel('Powerlaw Index')
-    #plt.ylabel('CDF')
-    plt.ylabel('Probability Density Function')
-    plt.show()
-    plotName = os.path.join(plotDir,'cl.pdf')
-    plt.savefig(plotName,dpi=200)
-    plt.close('all')
+        filename = os.path.join(plotDir,'best.dat')
+        fid = open(filename,'w')
+        fid.write('%.5f %.5f %.5f\n'%(n_best,cl_best,r_best))
+        fid.close()
 
-    plt.figure(figsize=(12,10))
-    bins1, hist1 = hist_results(r)
-    #plt.plot(bins1, np.cumsum(hist1))
-    plt.plot(bins1, hist1)
-    #plt.ylim([0,1.0])
-    plt.xlabel('Powerlaw Index')
-    #plt.ylabel('CDF')
-    plt.ylabel('Probability Density Function')
-    plt.show()
-    plotName = os.path.join(plotDir,'r.pdf')
-    plt.savefig(plotName,dpi=200)
-    plt.close('all')
+        plt.figure(figsize=(12,10))
+        bins1, hist1 = hist_results(n)
+        plt.plot(bins1, hist1)
+        plt.xlabel('Powerlaw Index')
+        plt.ylabel('Probability Density Function')
+        plt.show()
+        plotName = os.path.join(plotDir,'n.pdf')
+        plt.savefig(plotName,dpi=200)
+        plt.close('all')
+    
+        plt.figure(figsize=(12,10))
+        bins1, hist1 = hist_results(cl)
+        plt.plot(bins1, hist1)
+        plt.xlabel('Powerlaw Index')
+        plt.ylabel('Probability Density Function')
+        plt.show()
+        plotName = os.path.join(plotDir,'cl.pdf')
+        plt.savefig(plotName,dpi=200)
+        plt.close('all')
+    
+        plt.figure(figsize=(12,10))
+        bins1, hist1 = hist_results(r)
+        plt.plot(bins1, hist1)
+        plt.xlabel('Powerlaw Index')
+        plt.ylabel('Probability Density Function')
+        plt.show()
+        plotName = os.path.join(plotDir,'r.pdf')
+        plt.savefig(plotName,dpi=200)
+        plt.close('all')
+
+        ns = np.linspace(0.01,2.0,50)
+        cls = np.linspace(0.5,1.0,50)
+
+        images_detected = np.zeros((len(ns),len(cls)))
+        images_T = np.zeros((len(ns),len(cls)))
+
+        for ii,n in enumerate(ns):
+            for jj,cl in enumerate(cls):
+                image_array = numimages(prob_data,distmu_data,data_out,Telescope_T,Telescope_m,n,cl,0.0)
+                image_array_sorted = np.sort(image_array)
+
+                tmax = tmax = data_out["fade"]*3600
+                image_detected = float(len(np.where(image_array < tmax)[0]))/float(len(image_array))
+
+                index = np.floor(len(image_array)*0.5)
+                image_T = image_array_sorted[index]
+
+                images_detected[ii,jj] = image_detected
+                images_T[ii,jj] = image_T/3600.0
+
+        NS,CLS = np.meshgrid(ns,cls)
+
+        vmin = np.min(images_detected)
+        vmax = np.max(images_detected)
+        plotName = os.path.join(plotDir,'images_detected.png')
+        plt.figure()
+        plt.pcolor(NS,CLS,images_detected.T, vmin = vmin, vmax = vmax, cmap = plt.get_cmap('rainbow'))
+        cbar = plt.colorbar()
+        cbar.ax.set_ylabel('Percentage of detections')
+        plt.xlabel('Power Law Index')
+        plt.ylabel('Confidence Level')
+        plt.xlim([0.01,2.0])
+        plt.ylim([0.5,1.0])
+        plt.show()
+        plt.savefig(plotName,dpi=200)
+        plotName = os.path.join(plotDir,'images_detected.eps')
+        plt.savefig(plotName,dpi=200)
+        plotName = os.path.join(plotDir,'images_detected.pdf')
+        plt.savefig(plotName,dpi=200)
+        plt.close('all')
+
+        vmin = 0.0
+        vmax = 10.0
+        plotName = os.path.join(plotDir,'images_T.png')
+        plt.figure()
+        plt.pcolor(NS,CLS,images_T.T, vmin = vmin, vmax = vmax, cmap = plt.get_cmap('rainbow'))
+        cbar = plt.colorbar()
+        cbar.ax.set_ylabel('Median detection time [hours]')
+        plt.xlabel('Power Law Index')
+        plt.ylabel('Confidence Level')
+        plt.xlim([0.01,2.0])
+        plt.ylim([0.5,1.0])
+        plt.show()
+        plt.savefig(plotName,dpi=200)
+        plotName = os.path.join(plotDir,'images_T.eps')
+        plt.savefig(plotName,dpi=200)
+        plotName = os.path.join(plotDir,'images_T.pdf')
+        plt.savefig(plotName,dpi=200)
+        plt.close('all')
 
     nums = np.arange(0,len(image_nominal_array_sorted))
     nums[:] = 1.0
@@ -404,22 +601,22 @@ def mkdir(path):
 opts = parse_commandline()
 telescope = opts.telescope
 
-baseplotDir = '/home/mcoughlin/Skymaps/optimization/plots_skymaps_magfade'
+outputDir = opts.outputDir
+if not os.path.isdir(outputDir):
+    os.mkdir(outputDir)
+baseplotDir = os.path.join(outputDir,telescope)
 if not os.path.isdir(baseplotDir):
     os.mkdir(baseplotDir)
-baseplotDir = os.path.join(baseplotDir,telescope)
-if not os.path.isdir(baseplotDir):
-    os.mkdir(baseplotDir)
 
-baseDir = '/home/mcoughlin/Skymaps/going-the-distance_data/2015/compare/'
+dataDir = opts.dataDir
 
-directories = glob.glob(os.path.join(baseDir,'*'))
+directories = glob.glob(os.path.join(dataDir,'*'))
 
-minabsm = -16
-maxabsm = -10
+minabsm = opts.minabsm
+maxabsm = opts.maxabsm
 
-minfade = 0.1
-maxfade = 10.0
+minfade = opts.minfade
+maxfade = opts.maxfade
 
 if telescope == "PS1":
     nside = 16
@@ -446,6 +643,16 @@ elif telescope == "ATLAS":
     Telescope_T = 30.0
     Telescope_m = 18.7
     Telescope_T = Telescope_T* hp.nside2pixarea(nside, degrees=True) / 29.2
+elif telescope == "combined":
+    nside = 16
+
+    PS1_Telescope_T = 45.0
+    PS1_Telescope_m = 21.5
+    PS1_Telescope_T = PS1_Telescope_T*hp.nside2pixarea(nside, degrees=True) / 7.0
+
+    ATLAS_Telescope_T = 30.0
+    ATLAS_Telescope_m = 18.7
+    ATLAS_Telescope_T = ATLAS_Telescope_T* hp.nside2pixarea(nside, degrees=True) / 29.2
 
 print "Pixel area: %.4f square degrees" % hp.nside2pixarea(nside, degrees=True)
 
@@ -479,7 +686,7 @@ for directory in directories:
 
         print "%s: %.5f"%(param,np.median(data_out[param]))
 
-    plotDir = "%s/%s/%d-%d"%(baseplotDir,directorySplit,minabsm,maxabsm)
+    plotDir = "%s/%s/%d-%d/%.2f-%.2f"%(baseplotDir,directorySplit,minabsm,maxabsm,minfade,maxfade)
     mkdir(plotDir)
-    healpix(filename,plotDir,data_out,minabsm,maxabsm)
+    healpix(filename,plotDir,data_out)
 
