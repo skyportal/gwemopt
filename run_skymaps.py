@@ -68,8 +68,11 @@ def parse_commandline():
 
     parser.add_option("--minabsm", help="Min absolute magnitude.",default=-16,type=float)
     parser.add_option("--maxabsm", help="Max absolute magnitude.",default=-10,type=float)    
-    parser.add_option("--minfade", help="Min time above detection threshold [hours].",default=0.1,type=float)
+    parser.add_option("--minfade", help="Min time above detection threshold [hours].",default=1,type=float)
     parser.add_option("--maxfade", help="Max time above detection threshold [hours].",default=10,type=float)
+
+    parser.add_option("-e", "--event", help="Event.",default = None)
+    parser.add_option("-n", "--nsignals", help="Number of simulated signals.", type=int, default = 10000)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -90,17 +93,26 @@ def parse_commandline():
 
     return opts
 
+
+def get_post_file(basedir):
+    filenames = glob.glob(os.path.join(basedir,'2-post*'))
+    if len(filenames)>0:
+        filename = filenames[0]
+    else:
+        filename = []
+    return filename
+
 def myprior(cube, ndim, nparams):
-        cube[0] = cube[0]*2.0
-        cube[1] = cube[1]*0.5 + 0.5
+        cube[0] = cube[0]*8.0 - 4.0
+        cube[1] = cube[1]*1.0
         cube[2] = cube[2]*8.0 - 4.0
 
 def myprior_multi(cube, ndim, nparams):
-        cube[0] = cube[0]*2.0
-        cube[1] = cube[1]*0.5 + 0.5
+        cube[0] = cube[0]*8.0 - 4.0
+        cube[1] = cube[1]*1.0
         cube[2] = cube[2]*8.0 - 4.0
-        cube[3] = cube[3]*2.0
-        cube[4] = cube[4]*0.5 + 0.5
+        cube[3] = cube[3]*8.0 - 4.0
+        cube[4] = cube[4]*1.0
         cube[5] = cube[5]*8.0 - 4.0
 
 def myloglike(cube, ndim, nparams):
@@ -120,6 +132,8 @@ def myloglike(cube, ndim, nparams):
 
         #prob = 1/image_detected
         prob = image_detected
+        #prob = -np.log10(1-image_detected)
+        #prob = -np.log10(image_T)
 
         #if np.isfinite(prob):
         #    print n, cl, r, prob
@@ -204,7 +218,7 @@ def numknown(prob_data,data_out,Telescope_T,Telescope_m):
 
 def hist_results(samples):
 
-    bins = np.linspace(np.min(samples),np.max(samples),50)
+    bins = np.linspace(np.min(samples),np.max(samples),11)
     hist1, bin_edges = np.histogram(samples, bins=bins)
     hist1 = hist1 / float(np.sum(hist1))
     bins = (bins[1:] + bins[:-1])/2.0
@@ -340,27 +354,30 @@ def healpix(filename,plotDir,data_out):
     print("-" * 30, 'ANALYSIS', "-" * 30)
     print("Global Evidence:\n\t%.15e +- %.15e" % ( s['nested sampling global log-evidence'], s['nested sampling global log-evidence error'] ))
 
-    multifile= os.path.join(plotDir,'2-.txt')
+    #multifile= os.path.join(plotDir,'2-.txt')
+    multifile = get_post_file(plotDir)
     data = np.loadtxt(multifile)
 
-    loglikelihood = -(1/2.0)*data[:,1]
-    idx = np.argmax(loglikelihood)
+    #loglikelihood = -(1/2.0)*data[:,1]
+    #idx = np.argmax(loglikelihood)
 
     if telescope == "combined":
 
-        n_PS1 = data[:,2]
-        cl_PS1 = data[:,3]
-        r_PS1 = data[:,4]
-        n_ATLAS = data[:,5]
-        cl_ATLAS = data[:,6]
-        r_ATLAS = data[:,7]
+        n_PS1 = data[:,0]
+        cl_PS1 = data[:,1]
+        r_PS1 = data[:,2]
+        n_ATLAS = data[:,3]
+        cl_ATLAS = data[:,4]
+        r_ATLAS = data[:,5]
+        loglikelihood = data[:,6]
+        idx = np.argmax(loglikelihood)
     
-        n_PS1_best = data[idx,2]
-        cl_PS1_best = data[idx,3]
-        r_PS1_best = data[idx,4]
-        n_ATLAS_best = data[idx,5]
-        cl_ATLAS_best = data[idx,6]
-        r_ATLAS_best = data[idx,7]
+        n_PS1_best = data[idx,0]
+        cl_PS1_best = data[idx,1]
+        r_PS1_best = data[idx,2]
+        n_ATLAS_best = data[idx,3]
+        cl_ATLAS_best = data[idx,4]
+        r_ATLAS_best = data[idx,5]
     
         image_optimal_array = numimages_combine(prob_data,distmu_data,data_out,n_PS1_best,cl_PS1_best,r_PS1_best,n_ATLAS_best,cl_ATLAS_best,r_ATLAS_best)
         image_optimal_array_sorted = np.sort(image_optimal_array)
@@ -434,18 +451,20 @@ def healpix(filename,plotDir,data_out):
         plt.close('all')
 
     else:
-        n = data[:,2]
-        cl = data[:,3]
-        r = data[:,4]
+        n = data[:,0]
+        cl = data[:,1]
+        r = data[:,2]
+        loglikelihood = data[:,3]
+        idx = np.argmax(loglikelihood)
 
-        n_best = data[idx,2]
-        cl_best = data[idx,3]
-        r_best = data[idx,4]
+        n_best = data[idx,0]
+        cl_best = data[idx,1]
+        r_best = data[idx,2]
 
         image_optimal_array = numimages(prob_data,distmu_data,data_out,Telescope_T,Telescope_m,n_best,cl_best,r_best)
         image_optimal_array_sorted = np.sort(image_optimal_array)
 
-        image_nominal_array = numimages(prob_data,distmu_data,data_out,Telescope_T,Telescope_m,n_best,cl_best,r_best)
+        image_nominal_array = numimages(prob_data,distmu_data,data_out,Telescope_T,Telescope_m,0.0,0.99,0.0)
         image_nominal_array_sorted = np.sort(image_nominal_array)
 
         image_known_array = numknown(prob_data,data_out,Telescope_T,Telescope_m)
@@ -663,7 +682,11 @@ print "Pixel area: %.4f square degrees" % hp.nside2pixarea(nside, degrees=True)
 for directory in directories:
     directorySplit = directory.split("/")[-1]
     plotDir = os.path.join(baseplotDir,directorySplit)
+
+    if not opts.event == None:
+        if not opts.event == directorySplit: continue
     print plotDir
+    print directorySplit
 
     filename = os.path.join(directory,'bayestar.fits.gz')
  
@@ -678,13 +701,26 @@ for directory in directories:
     line = lines[0]
     params = line.split("\t")
     params = filter(None, params)
-    data_out = {}
+    samples = {}
 
     for ii in xrange(len(params)):
         param = params[ii]
-        data_out[param] = data[:,ii]
+        samples[param] = data[:,ii]
 
-        print "%s: %.5f"%(param,np.median(data_out[param]))
+        print "%s: %.5f"%(param,np.median(samples[param]))
+
+    data_out = {}
+    data_out["ra"] = []
+    data_out["dec"] = []
+    data_out["dist"] = []
+    for ii in xrange(opts.nsignals):
+        idx = np.floor(np.random.rand()*len(samples["ra"]))
+        data_out["ra"].append(samples["ra"][idx])
+        data_out["dec"].append(samples["dec"][idx])
+        data_out["dist"].append(samples["dist"][idx])    
+    data_out["ra"] = np.array(data_out["ra"])
+    data_out["dec"] = np.array(data_out["dec"])
+    data_out["dist"] = np.array(data_out["dist"])
 
     plotDir = "%s/%s/%d-%d/%.2f-%.2f"%(baseplotDir,directorySplit,minabsm,maxabsm,minfade,maxfade)
     mkdir(plotDir)
