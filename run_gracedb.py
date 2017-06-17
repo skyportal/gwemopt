@@ -78,7 +78,7 @@ def download_events(events):
     fileorder = ['LALInference_skymap.fits.gz','bayestar.fits.gz','BW_skymap.fits','LIB_skymap.fits.gz','skyprobcc_cWB.fits']
     #fileorder = ['LALInference3d.fits.gz','bayestar3d.fits.gz','bayestar.fits.gz']
 
-    fileorder = ['LALInference_skymap.fits.gz','bayestar.fits.gz','BW_skymap','LIB_skymap.fits.gz','skyprobcc_cWB.fits']
+    fileorder = ['LALInference_skymap.fits.gz','bayestar.fits.gz','BW_skymap.fits','LIB_skymap.fits.gz','skyprobcc_cWB.fits']
 
     for event in events:
         eventinfo = {}
@@ -89,17 +89,14 @@ def download_events(events):
         if eventinfo['far'] == None:
             eventinfo['far'] = np.nan
 
-        for key in event:
-            print key
-        print stop
-        print dir(event) 
-        print event.json()
-        print stop
+        #for key in event:
+        #    print key
  
         #if not eventinfo['graceid'] == "G211117": continue
  
         triggerfile = "%s/%s.txt"%(triggerDir,eventinfo['graceid'])
-        skymapfile = '%s/%s.fits.gz'%(skymapDir,eventinfo['graceid'])
+        #skymapfile = '%s/%s.fits.gz'%(skymapDir,eventinfo['graceid'])
+        skymapfile = '%s/%s'%(skymapDir,eventinfo['graceid'])
         if os.path.isfile(triggerfile) and os.path.isfile(skymapfile):
             print "Already have info for %s... continuing."%event["graceid"]
             continue
@@ -127,23 +124,24 @@ def download_events(events):
             single_ifo_times = eventinfo['burst']['single_ifo_times'].split(",")           
             ifos = eventinfo['burst']['ifos'].split(",")
 
-            ifo1 = ifos[0]
-            gps1 = float(single_ifo_times[0])
+            if len(ifos) > 1 and len(single_ifo_times) > 1:
+                ifo1 = ifos[0]
+                gps1 = float(single_ifo_times[0])
         
-            ifo2 = ifos[1]
-            gps2 = float(single_ifo_times[1])
+                ifo2 = ifos[1]
+                gps2 = float(single_ifo_times[1])
         
-            eventinfo['burst'][ifo1] = {}
-            eventinfo['burst'][ifo1]['gpstime'] = gps1
+                eventinfo['burst'][ifo1] = {}
+                eventinfo['burst'][ifo1]['gpstime'] = gps1
     
-            eventinfo['burst'][ifo2] = {}
-            eventinfo['burst'][ifo2]['gpstime'] = gps2
+                eventinfo['burst'][ifo2] = {}
+                eventinfo['burst'][ifo2]['gpstime'] = gps2
         
-            if ("H1" in eventinfo['burst']) and ("L1" in eventinfo['burst']):
-                eventinfo["H1_L1_difference"] = eventinfo['burst']['H1']["gpstime"] - eventinfo['burst']['L1']["gpstime"]
-                t = Time([eventinfo['burst']['H1']["gpstime"],eventinfo['burst']['L1']["gpstime"]], format='gps', scale='utc')
-                mjds = t.mjd
-                timediff = eventinfo["H1_L1_difference"]
+                if ("H1" in eventinfo['burst']) and ("L1" in eventinfo['burst']):
+                    eventinfo["H1_L1_difference"] = eventinfo['burst']['H1']["gpstime"] - eventinfo['burst']['L1']["gpstime"]
+                    t = Time([eventinfo['burst']['H1']["gpstime"],eventinfo['burst']['L1']["gpstime"]], format='gps', scale='utc')
+                    mjds = t.mjd
+                    timediff = eventinfo["H1_L1_difference"]
         
         try:       
             print "Looking for EM bright file..."
@@ -238,42 +236,49 @@ def download_events(events):
             skymap = open(skymapfile,'w')
             skymap.write(r.read())
             skymap.close()
-        
-            mask = hp.read_map(skymapfile)
-            prob, distmu, distsigma, distnorm = hp.read_map(skymapfile,field=(0,1,2,3)) 
+       
+            print skymapfile 
+            prob = hp.read_map(skymapfile)
+            try:
+                prob, distmu, distsigma, distnorm = hp.read_map(skymapfile,field=(0,1,2,3)) 
+                distanceInfo = True
+            except:
+                distanceInfo = False
+                print "No distance information"
             ra, dec, dist = opts.ra, opts.dec, opts.dist
             theta = 0.5 * np.pi - np.deg2rad(dec)
             phi = np.deg2rad(ra)
 
-            npix = len(mask)
+            npix = len(prob)
             nside = hp.npix2nside(npix)
 
-            ipix = hp.ang2pix(nside, theta, phi)
-            pixarea = hp.nside2pixarea(nside)
-            pixarea_deg2 = hp.nside2pixarea(nside, degrees=True)
+            if distanceInfo:
+                ipix = hp.ang2pix(nside, theta, phi)
+                pixarea = hp.nside2pixarea(nside)
+                pixarea_deg2 = hp.nside2pixarea(nside, degrees=True)
 
-            dp_dA = prob[ipix] / pixarea
-            dp_dA_deg2 = prob[ipix] / pixarea_deg2
+                dp_dA = prob[ipix] / pixarea
+                dp_dA_deg2 = prob[ipix] / pixarea_deg2
      
-            r = np.linspace(0, 1500)
-            dp_dr = r**2 * distnorm[ipix] * norm(distmu[ipix], distsigma[ipix]).pdf(r)
-            dp_dV = prob[ipix] * distnorm[ipix] * norm(distmu[ipix], distsigma[ipix]).pdf(dist) / pixarea
-            dp_dr_sky = [np.sum(prob*rr**2 * distnorm * norm(distmu, distsigma).pdf(rr)) for rr in r]
-            dp_dr_norm = np.cumsum(dp_dr / np.sum(dp_dr))
-            dp_dr_sky_norm = np.cumsum(dp_dr_sky / np.sum(dp_dr_sky))
+                r = np.linspace(0, 1500)
+                dp_dr = r**2 * distnorm[ipix] * norm(distmu[ipix], distsigma[ipix]).pdf(r)
+                dp_dV = prob[ipix] * distnorm[ipix] * norm(distmu[ipix], distsigma[ipix]).pdf(dist) / pixarea
+                dp_dr_sky = [np.sum(prob*rr**2 * distnorm * norm(distmu, distsigma).pdf(rr)) for rr in r]
+                dp_dr_norm = np.cumsum(dp_dr / np.sum(dp_dr))
+                dp_dr_sky_norm = np.cumsum(dp_dr_sky / np.sum(dp_dr_sky))
  
-            dp_dr_norm_10 = np.argmin(np.abs(dp_dr_norm - 0.1))
-            dp_dr_norm_90 = np.argmin(np.abs(dp_dr_norm - 0.9))
-            dp_dr_sky_norm_10 = np.argmin(np.abs(dp_dr_sky_norm - 0.1))
-            dp_dr_sky_norm_90 = np.argmin(np.abs(dp_dr_sky_norm - 0.9))
+                dp_dr_norm_10 = np.argmin(np.abs(dp_dr_norm - 0.1))
+                dp_dr_norm_90 = np.argmin(np.abs(dp_dr_norm - 0.9))
+                dp_dr_sky_norm_10 = np.argmin(np.abs(dp_dr_sky_norm - 0.1))
+                dp_dr_sky_norm_90 = np.argmin(np.abs(dp_dr_sky_norm - 0.9))
 
-            print "Probability per steradian: %.5e"%dp_dA 
-            print "Probability per deg^2: %.5e"%dp_dA_deg2
-            print "Probability per unit volume: %.5e / Mpc^3"%dp_dV
-            print "Line-of-sight 10-90 (mpc): %.0f - %.0f"%(r[dp_dr_norm_10],r[dp_dr_norm_90])
-            print "All-sky 10-90 (mpc): %.0f - %.0f"%(r[dp_dr_sky_norm_10],r[dp_dr_sky_norm_90])
+                print "Probability per steradian: %.5e"%dp_dA 
+                print "Probability per deg^2: %.5e"%dp_dA_deg2
+                print "Probability per unit volume: %.5e / Mpc^3"%dp_dV
+                print "Line-of-sight 10-90 (mpc): %.0f - %.0f"%(r[dp_dr_norm_10],r[dp_dr_norm_90])
+                print "All-sky 10-90 (mpc): %.0f - %.0f"%(r[dp_dr_sky_norm_10],r[dp_dr_sky_norm_90])
 
-            index = np.argmax(mask)
+            index = np.argmax(prob)
             theta, phi = hp.pix2ang(nside, index)
             ra = phi
             dec = 0.5*np.pi - theta
@@ -286,29 +291,30 @@ def download_events(events):
                 os.mkdir(thisplotDir)
         
             plotName = os.path.join(thisplotDir,'mollview.png')
-            hp.mollview(mask)
+            hp.mollview(prob)
             plt.show()
             plt.savefig(plotName,dpi=200)
             plt.close('all')
    
-            plotName = os.path.join(thisplotDir,'prob_dist.png')
-            plt.figure(figsize=(8, 6))
-            plt.plot(r, dp_dr)
-            plt.xlabel('distance (Mpc)')
-            plt.ylabel('prob Mpc$^{-1}$')
-            plt.show()
-            plt.savefig(plotName,dpi=200)
-            plt.close('all')
+            if distanceInfo:
+                plotName = os.path.join(thisplotDir,'prob_dist.png')
+                plt.figure(figsize=(8, 6))
+                plt.plot(r, dp_dr)
+                plt.xlabel('distance (Mpc)')
+                plt.ylabel('prob Mpc$^{-1}$')
+                plt.show()
+                plt.savefig(plotName,dpi=200)
+                plt.close('all')
  
-            plotName = os.path.join(thisplotDir,'prob_dist_sky.png')
-            plt.figure(figsize=(8, 6))
-            plt.plot(r, dp_dr_sky)
-            plt.plot([dist,dist],[0,np.max(dp_dr_sky)],'r--')
-            plt.xlabel('distance (Mpc)')
-            plt.ylabel('prob Mpc$^{-1}$')
-            plt.show()
-            plt.savefig(plotName,dpi=200)
-            plt.close('all')
+                plotName = os.path.join(thisplotDir,'prob_dist_sky.png')
+                plt.figure(figsize=(8, 6))
+                plt.plot(r, dp_dr_sky)
+                plt.plot([dist,dist],[0,np.max(dp_dr_sky)],'r--')
+                plt.xlabel('distance (Mpc)')
+                plt.ylabel('prob Mpc$^{-1}$')
+                plt.show()
+                plt.savefig(plotName,dpi=200)
+                plt.close('all')
  
         f = open(triggerfile,"w")
         print "%s %.0f %.10f %.10f %.10f %.10f %.10f %.10f"%(eventinfo['graceid'], eventinfo['gpstime'], eventinfo['far'], ra, dec, mjds[0], mjds[1],timediff)
