@@ -27,7 +27,7 @@ from setuptools import (find_packages, setup)
 
 from utils import version
 
-PACKAGENAME = 'seismon'
+PACKAGENAME = 'gwemopt'
 
 VERSION_PY = os.path.join(PACKAGENAME, 'version.py')
 

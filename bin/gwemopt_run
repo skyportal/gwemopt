@@ -29,6 +29,8 @@ Comments should be e-mailed to michael.coughlin@ligo.org.
 
 import os, sys, glob, optparse, shutil, warnings
 
+import gwemopt.utils
+
 if not os.getenv("DISPLAY", None):
     import matplotlib
     matplotlib.use("agg", warn=False)
@@ -52,6 +54,7 @@ def parse_commandline():
                       default ="../input/gwem_params_PS1.txt")
     parser.add_option("-s", "--skymap", help="GW skymap.", default='../output/skymaps/G268556.fits')
 
+    parser.add_option("--do3D",  action="store_true", default=False)
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
 
@@ -72,12 +75,12 @@ def parse_commandline():
     return opts
 
 def params_struct(opts):
-    """@Creates seismon params structure
+    """@Creates gwemopt params structure
     @param opts
-        seismon command line options
+        gwemopt command line options
     """
 
-    params = seismon.utils.readParamsFromFile(opts.paramsFile)
+    params = gwemopt.utils.readParamsFromFile(opts.paramsFile)
     params["skymap"] = opts.skymap
 
     return params
@@ -95,5 +98,9 @@ opts = parse_commandline()
 params = params_struct(opts)
 
 # Function to read maps
-map_struct = gwemopt.utils.read_skymap(params)
+if opts.do3D:
+    map_struct = gwemopt.utils.read_skymap(params["skymap"],is3D=True)
+else:
+    map_struct = gwemopt.utils.read_skymap(params["skymap"],is3D=False)
 
+print map_struct
