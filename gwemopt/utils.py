@@ -1,4 +1,6 @@
 
+import os, sys
+import numpy as np
 import healpy as hp
 
 def readParamsFromFile(file):
@@ -19,7 +21,7 @@ def readParamsFromFile(file):
                     params[line_split[0]] = line_split[1]
     return params
 
-def read_skymap(filename,is3D=False)
+def read_skymap(filename,is3D=False):
 
     map_struct = {}
 
