@@ -1,0 +1,99 @@
+#!/usr/bin/python
+
+# Copyright (C) 2017 Michael Coughlin
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 3 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+# Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+""".
+Gravitational-wave Electromagnetic Optimization
+
+This script generates an optimized list of pointings and content for
+reviewing gravitational-wave skymap likelihoods.
+
+Comments should be e-mailed to michael.coughlin@ligo.org.
+
+"""
+
+
+import os, sys, glob, optparse, shutil, warnings
+
+if not os.getenv("DISPLAY", None):
+    import matplotlib
+    matplotlib.use("agg", warn=False)
+
+__author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
+__version__ = 1.0
+__date__    = "6/17/2017"
+
+# =============================================================================
+#
+#                               DEFINITIONS
+#
+# =============================================================================
+
+def parse_commandline():
+    """@Parse the options given on the command-line.
+    """
+    parser = optparse.OptionParser(usage=__doc__,version=__version__)
+
+    parser.add_option("-p", "--paramsFile", help="GW-EM params file.", 
+                      default ="../input/gwem_params_PS1.txt")
+    parser.add_option("-s", "--skymap", help="GW skymap.", default='../output/skymaps/G268556.fits')
+
+    parser.add_option("-v", "--verbose", action="store_true", default=False,
+                      help="Run verbosely. (Default: False)")
+
+    opts, args = parser.parse_args()
+
+    # show parameters
+    if opts.verbose:
+        print >> sys.stderr, ""
+        print >> sys.stderr, "running gwemopt_run..."
+        print >> sys.stderr, "version: %s"%__version__
+        print >> sys.stderr, ""
+        print >> sys.stderr, "***************** PARAMETERS ********************"
+        for o in opts.__dict__.items():
+          print >> sys.stderr, o[0]+":"
+          print >> sys.stderr, o[1]
+        print >> sys.stderr, ""
+
+    return opts
+
+def params_struct(opts):
+    """@Creates seismon params structure
+    @param opts
+        seismon command line options
+    """
+
+    params = seismon.utils.readParamsFromFile(opts.paramsFile)
+    params["skymap"] = opts.skymap
+
+    return params
+
+# =============================================================================
+#
+#                                    MAIN
+#
+# =============================================================================
+
+warnings.filterwarnings("ignore")
+
+# Parse command line
+opts = parse_commandline()
+params = params_struct(opts)
+
+# Function to read maps
+map_struct = gwemopt.utils.read_skymap(params)
+

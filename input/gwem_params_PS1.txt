@@ -1,0 +1,5 @@
+filter i
+magnitude 21.5
+exposuretime 45.0
+latitude 20.7204
+longitude -156.1552

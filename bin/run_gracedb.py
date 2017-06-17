@@ -96,7 +96,7 @@ def download_events(events):
  
         triggerfile = "%s/%s.txt"%(triggerDir,eventinfo['graceid'])
         #skymapfile = '%s/%s.fits.gz'%(skymapDir,eventinfo['graceid'])
-        skymapfile = '%s/%s'%(skymapDir,eventinfo['graceid'])
+        skymapfile = '%s/%s.fits'%(skymapDir,eventinfo['graceid'])
         if os.path.isfile(triggerfile) and os.path.isfile(skymapfile):
             print "Already have info for %s... continuing."%event["graceid"]
             continue
@@ -152,6 +152,8 @@ def download_events(events):
 
             with open('embright.json') as data_file:    
                 emdata = json.load(data_file)          
+
+            os.system('rm embright.json')
 
             embright_keys = ["Prob remnant_mass_greater_than 0M_sun","Prob EMbright"]  
             ns_keys = ["Prob Mass2_less_than 3M_sun","Prob NS2"]
