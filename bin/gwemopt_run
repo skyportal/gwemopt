@@ -120,4 +120,3 @@ else:
 
 if opts.doPlots:
     gwemopt.utils.plot_skymap(params,map_struct)
-print map_struct
