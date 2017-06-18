@@ -29,7 +29,7 @@ Comments should be e-mailed to michael.coughlin@ligo.org.
 
 import os, sys, glob, optparse, shutil, warnings
 
-import gwemopt.utils
+import gwemopt.utils, gwemopt.gracedb
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -53,8 +53,15 @@ def parse_commandline():
     parser.add_option("-p", "--paramsFile", help="GW-EM params file.", 
                       default ="../input/gwem_params_PS1.txt")
     parser.add_option("-s", "--skymap", help="GW skymap.", default='../output/skymaps/G268556.fits')
-
     parser.add_option("--do3D",  action="store_true", default=False)
+
+    parser.add_option("-o", "--outputDir", help="output directory",default="output")
+    parser.add_option("-n", "--event", help="event name",default="G268556")
+
+    parser.add_option("--doEvent",  action="store_true", default=False)
+    parser.add_option("--doSkymap",  action="store_true", default=False)
+    parser.add_option("--doPlots",  action="store_true", default=False)
+
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
 
@@ -82,6 +89,8 @@ def params_struct(opts):
 
     params = gwemopt.utils.readParamsFromFile(opts.paramsFile)
     params["skymap"] = opts.skymap
+    params["outputDir"] = opts.outputDir
+    params["event"] = opts.event
 
     return params
 
@@ -95,12 +104,20 @@ warnings.filterwarnings("ignore")
 
 # Parse command line
 opts = parse_commandline()
+if not os.path.isdir(opts.outputDir): os.mkdir(opts.outputDir)
+
 params = params_struct(opts)
+if opts.doEvent:
+    skymapfile, eventinfo = gwemopt.gracedb.get_event(params)
+elif opts.doSkymap:
+    skymapfile = params["skymap"]
 
 # Function to read maps
 if opts.do3D:
-    map_struct = gwemopt.utils.read_skymap(params["skymap"],is3D=True)
+    map_struct = gwemopt.utils.read_skymap(skymapfile,is3D=True)
 else:
-    map_struct = gwemopt.utils.read_skymap(params["skymap"],is3D=False)
+    map_struct = gwemopt.utils.read_skymap(skymapfile,is3D=False)
 
+if opts.doPlots:
+    gwemopt.utils.plot_skymap(params,map_struct)
 print map_struct

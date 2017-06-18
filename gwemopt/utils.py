@@ -3,6 +3,13 @@ import os, sys
 import numpy as np
 import healpy as hp
 
+import matplotlib
+#matplotlib.rc('text', usetex=True)
+matplotlib.use('Agg')
+matplotlib.rcParams.update({'font.size': 16})
+matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
+import matplotlib.pyplot as plt
+
 def readParamsFromFile(file):
     """@read gwemopt params file
 
@@ -44,3 +51,12 @@ def read_skymap(filename,is3D=False):
         map_struct["prob"] = prob_data
 
     return map_struct   
+
+def plot_skymap(params,map_struct):
+
+    plotName = os.path.join(params["outputDir"],'mollview.png')
+    hp.mollview(map_struct["prob"])
+    plt.show()
+    plt.savefig(plotName,dpi=200)
+    plt.close('all')
+
