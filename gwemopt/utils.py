@@ -25,7 +25,10 @@ def readParamsFromFile(file):
                 line_split = line_without_return[0].split(" ")
                 line_split = filter(None, line_split)
                 if line_split:
-                    params[line_split[0]] = line_split[1]
+                    try:
+                        params[line_split[0]] = float(line_split[1])
+                    except:
+                        params[line_split[0]] = line_split[1]
     return params
 
 def read_skymap(filename,is3D=False):
@@ -50,11 +53,20 @@ def read_skymap(filename,is3D=False):
 
         map_struct["prob"] = prob_data
 
+    nside = hp.pixelfunc.get_nside(prob_data)
+    npix = hp.nside2npix(nside)
+    theta, phi = hp.pix2ang(nside, np.arange(npix))
+    ra = np.rad2deg(phi)
+    dec = np.rad2deg(0.5*np.pi - theta)
+
+    map_struct["ra"] = ra
+    map_struct["dec"] = dec
+
     return map_struct   
 
 def plot_skymap(params,map_struct):
 
-    plotName = os.path.join(params["outputDir"],'mollview.png')
+    plotName = os.path.join(params["outputDir"],'mollview.pdf')
     hp.mollview(map_struct["prob"])
     plt.show()
     plt.savefig(plotName,dpi=200)
