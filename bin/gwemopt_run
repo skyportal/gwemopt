@@ -176,6 +176,19 @@ if opts.doStrategy:
     T_int = params["config"][params["telescopes"][0]]["exposuretime"]
     strategy_struct = gwemopt.waw.construct_followup_strategy(map_struct["prob"],detmaps,t,Afov,T_int,T_available,limit_to_region=cr90)
 
+    nside = hp.pixelfunc.get_nside(strategy_struct)
+    npix = hp.nside2npix(nside)
+    theta, phi = hp.pix2ang(nside, np.arange(npix))
+    ra = np.rad2deg(phi)
+    dec = np.rad2deg(0.5*np.pi - theta)
+
+    idx = np.where(strategy_struct>0.0)[0]
+    strategyfile = os.path.join(params["outputDir"],'strategy.dat')
+    fid = open(strategyfile,'w')
+    for r,d,s in zip(ra[idx],dec[idx],strategy_struct[idx]):
+        fid.write('%.5f %.5f %.5f\n'%(r,d,s))
+    fid.close()
+
     if opts.doPlots:
         gwemopt.plotting.strategy(params,detmaps,t,strategy_struct)
 
