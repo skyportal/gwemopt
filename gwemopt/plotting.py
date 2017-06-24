@@ -38,7 +38,7 @@ def strategy(params, detmaps, t_detmaps, strategy_struct):
 
         plotName = os.path.join(moviedir,'detmap-%04d.png'%ii)
         title = "Detectability Map: %.2f Days"%t_detmap
-        hp.mollview(detmap,title=title,min=0.0,max=1.0)
+        hp.mollview(detmap,title=title,min=0.0,max=1.0,unit="Probability of Detection")
         plt.show()
         plt.savefig(plotName,dpi=200)
         plt.close('all')
@@ -54,7 +54,7 @@ def strategy(params, detmaps, t_detmaps, strategy_struct):
     os.system(rm_command)
 
     plotName = os.path.join(params["outputDir"],'strategy.pdf')
-    hp.mollview(strategy_struct)
+    hp.mollview(strategy_struct,title="Time Allocation",unit="Time [Hours]")
     plt.show()
     plt.savefig(plotName,dpi=200)
     plt.close('all')
