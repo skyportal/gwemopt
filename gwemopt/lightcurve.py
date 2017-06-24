@@ -11,6 +11,28 @@ matplotlib.use('Agg')
 matplotlib.rcParams.update({'font.size': 16})
 import matplotlib.pyplot as plt
 
+def compute_apparent_magnitude_samples(params, lightcurve_struct, samples_struct, t):
+
+    filt = params["config"][params["telescopes"][0]]["filter"]
+    F = np.zeros((len(samples_struct['ra']),len(t)))
+    lightcurve_t = lightcurve_struct["t"]
+    lightcurve_mag = lightcurve_struct[filt]
+    lightcurve_mag_interp = np.interp(t,lightcurve_t,lightcurve_mag)
+
+    for ii in xrange(len(samples_struct['dist'])):
+        F[ii,:] = lightcurve_mag_interp + 5*(np.log10(samples_struct['dist'][ii]*1e6) - 1)
+
+    return F
+
+def compute_apparent_magnitude(params, lightcurve_struct, t):
+
+    filt = params["config"][params["telescopes"][0]]["filter"]
+    lightcurve_t = lightcurve_struct["t"]
+    lightcurve_mag = lightcurve_struct[filt]
+    lightcurve_mag_interp = np.interp(t,lightcurve_t,lightcurve_mag)
+
+    return lightcurve_mag_interp
+
 def read_files_lbol(files,tmin=-100.0,tmax=100.0):
 
     names = []

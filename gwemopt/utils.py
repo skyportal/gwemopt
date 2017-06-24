@@ -3,6 +3,8 @@ import os, sys
 import numpy as np
 import healpy as hp
 
+from scipy.stats import norm
+
 import matplotlib
 #matplotlib.rc('text', usetex=True)
 matplotlib.use('Agg')
@@ -31,7 +33,7 @@ def readParamsFromFile(file):
                         params[line_split[0]] = line_split[1]
     return params
 
-def read_skymap(filename,is3D=False):
+def read_skymap(params,filename,is3D=False):
 
     map_struct = {}
 
@@ -43,10 +45,10 @@ def read_skymap(filename,is3D=False):
         prob_data = healpix_data[0]
         norm_data = healpix_data[3]
 
-        map_struct["distmu"] = distmu_data
-        map_struct["diststd"] = diststd_data
+        map_struct["distmu"] = distmu_data / params["DScale"]
+        map_struct["diststd"] = diststd_data / params["DScale"]
         map_struct["prob"] = prob_data
-        map_struct["norm"] = healpix_data[3]
+        map_struct["distnorm"] = norm_data
     else:
         prob_data = hp.read_map(filename, field=0)
         prob_data = prob_data / np.sum(prob_data)
@@ -62,13 +64,50 @@ def read_skymap(filename,is3D=False):
     map_struct["ra"] = ra
     map_struct["dec"] = dec
 
+    sort_idx = np.argsort(prob_data)[::-1]
+    csm = np.empty(len(prob_data))
+    csm[sort_idx] = np.cumsum(prob_data[sort_idx])
+
+    map_struct["cumprob"] = csm
+
     return map_struct   
 
-def plot_skymap(params,map_struct):
+def samples_from_skymap(map_struct, is3D = False, Nsamples = 100):
 
-    plotName = os.path.join(params["outputDir"],'mollview.pdf')
-    hp.mollview(map_struct["prob"])
-    plt.show()
-    plt.savefig(plotName,dpi=200)
-    plt.close('all')
+    prob_data_sorted = np.sort(map_struct["prob"])[::-1]
+    prob_data_indexes = np.argsort(map_struct["prob"])[::-1]
+    prob_data_cumsum = np.cumsum(prob_data_sorted)
 
+    rand_values = np.random.rand(Nsamples,)
+
+    ras = []
+    decs = []
+    dists = []
+
+    if is3D:
+        r = np.linspace(0, 2000)
+        rand_values_dist = np.random.rand(Nsamples,)
+
+    for ii in xrange(Nsamples):
+        ipix = np.argmin(np.abs(prob_data_cumsum-rand_values[ii]))
+        ra_inj = map_struct["ra"][prob_data_indexes][ipix]
+        dec_inj = map_struct["dec"][prob_data_indexes][ipix]
+
+        ras.append(ra_inj)
+        decs.append(dec_inj)    
+
+        if is3D:
+            dp_dr = r**2 * map_struct["distnorm"][prob_data_indexes][ipix] * norm(map_struct["distmu"][prob_data_indexes][ipix], map_struct["diststd"][prob_data_indexes][ipix]).pdf(r)
+            dp_dr_norm = np.cumsum(dp_dr / np.sum(dp_dr))
+            idx = np.argmin(np.abs(dp_dr_norm-rand_values_dist[ii]))
+            dist_inj = r[idx]
+            dists.append(dist_inj)
+        else:
+            dists.append(50.0)
+
+    samples_struct = {}
+    samples_struct["ra"] = np.array(ras)
+    samples_struct["dec"] = np.array(decs)
+    samples_struct["dist"] = np.array(dists)
+
+    return samples_struct

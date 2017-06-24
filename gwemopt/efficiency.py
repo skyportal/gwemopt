@@ -32,9 +32,9 @@ def compute_efficiency(params, map_struct, eventinfo, lightcurve_struct, coverag
     decs = []
 
     for ii in xrange(Ninj):
-        idx = np.argmin(np.abs(prob_data_cumsum-rand_values[ii]))
-        ra_inj = map_struct["ra"][prob_data_indexes][idx]
-        dec_inj = map_struct["dec"][prob_data_indexes][idx]
+        ipix = np.argmin(np.abs(prob_data_cumsum-rand_values[ii]))
+        ra_inj = map_struct["ra"][prob_data_indexes][ipix]
+        dec_inj = map_struct["dec"][prob_data_indexes][ipix]
 
         ras.append(ra_inj)
         decs.append(dec_inj)
@@ -73,38 +73,3 @@ def compute_efficiency(params, map_struct, eventinfo, lightcurve_struct, coverag
 
     return efficiency_struct
 
-def plot_efficiency(params, map_struct, coverage_struct, efficiency_structs):
-
-    plotName = os.path.join(params["outputDir"],'efficiency.pdf')
-    for key in efficiency_structs:
-        efficiency_struct = efficiency_structs[key]
-        plt.loglog(efficiency_struct["distances"],efficiency_struct["efficiency"],label=efficiency_struct["legend_label"])
-    plt.xlabel('Distance [Mpc]')
-    plt.ylabel('Efficiency')
-    plt.legend(loc="best")
-    plt.ylim([0.01,1])
-    plt.show()
-    plt.savefig(plotName,dpi=200)
-    plt.close('all')
-
-    plotName = os.path.join(params["outputDir"],'injs.pdf')
-    plt.plot(efficiency_struct["ra"],efficiency_struct["dec"],'kx')
-    plt.xlabel('RA [Degrees]')
-    plt.ylabel('Declination [Degrees]')
-    plt.show()
-    plt.savefig(plotName,dpi=200)
-    plt.close('all')
-
-    plotName = os.path.join(params["outputDir"],'mollview_injs.pdf')
-    hp.mollview(map_struct["prob"])
-    hp.projplot(efficiency_struct["ra"], efficiency_struct["dec"], 'wx', lonlat=True, coord='G')
-    plt.show()
-    plt.savefig(plotName,dpi=200)
-    plt.close('all')
-
-    plotName = os.path.join(params["outputDir"],'mollview_coverage.pdf')
-    hp.mollview(map_struct["prob"])
-    hp.projplot(coverage_struct["data"][:,0], coverage_struct["data"][:,1], 'wx', lonlat=True, coord='G')
-    plt.show()
-    plt.savefig(plotName,dpi=200)
-    plt.close('all')

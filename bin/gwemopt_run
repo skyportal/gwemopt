@@ -28,11 +28,12 @@ Comments should be e-mailed to michael.coughlin@ligo.org.
 
 
 import os, sys, glob, optparse, shutil, warnings
+import numpy as np
 
 import gwemopt.utils, gwemopt.gracedb
-import gwemopt.rankedTilesGenerator
+import gwemopt.rankedTilesGenerator, gwemopt.waw
 import gwemopt.lightcurve, gwemopt.coverage
-import gwemopt.efficiency
+import gwemopt.efficiency, gwemopt.plotting
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -62,6 +63,8 @@ def parse_commandline():
 
     parser.add_option("--doEvent",  action="store_true", default=False)
     parser.add_option("--doSkymap",  action="store_true", default=False)
+    parser.add_option("--doSamples",  action="store_true", default=False)
+    parser.add_option("--doStrategy",  action="store_true", default=False)
     parser.add_option("--doPlots",  action="store_true", default=False)
     parser.add_option("--doTiles",  action="store_true", default=False)
 
@@ -74,6 +77,7 @@ def parse_commandline():
                       default ="../lightcurves/neutron_precursor3.dat,../lightcurves/rpft_m005_v2.dat,../lightcurves/APR4-1215_k1.dat")
     parser.add_option("--Ninj",default=1000,type=int)
     parser.add_option("--Ndet",default=1,type=int)
+    parser.add_option("--DScale",default=1.0,type=float)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -115,6 +119,7 @@ def params_struct(opts):
     params["lightcurveFiles"] = opts.lightcurveFiles.split(",")
     params["Ninj"] = opts.Ninj
     params["Ndet"] = opts.Ndet
+    params["DScale"] = opts.DScale
 
     return params
 
@@ -141,12 +146,38 @@ else:
 
 # Function to read maps
 if opts.do3D:
-    map_struct = gwemopt.utils.read_skymap(skymapfile,is3D=True)
+    map_struct = gwemopt.utils.read_skymap(params, skymapfile, is3D=True)
 else:
-    map_struct = gwemopt.utils.read_skymap(skymapfile,is3D=False)
+    map_struct = gwemopt.utils.read_skymap(params, skymapfile, is3D=False)
 
+if opts.doSamples:
+    if opts.do3D:
+        samples_struct = gwemopt.utils.samples_from_skymap(map_struct,is3D=True)
+    else:
+        samples_struct = gwemopt.utils.samples_from_skymap(map_struct,is3D=False)
 if opts.doPlots:
-    gwemopt.utils.plot_skymap(params,map_struct)
+    gwemopt.plotting.skymap(params,map_struct)
+
+if opts.doTiles:
+    tileObj = gwemopt.rankedTilesGenerator.RankedTileGenerator(skymapfile)
+    print tileObj
+    [ranked_tile_index, ranked_tile_probs] = tileObj.ZTF_RT(resolution=512)
+    print ranked_tile_index, ranked_tile_probs
+
+if opts.doStrategy:
+    #t = np.arange(0,7,0.25)
+    #t = np.arange(0,7,1/24.0)
+    t = np.arange(0,2,1/96.0)
+    cr90 = map_struct["cumprob"] < 0.9
+    detmaps = gwemopt.waw.detectability_maps(params, t, map_struct, samples_struct, verbose=True, limit_to_region=cr90)
+    # create strategy
+    T_available = (1.,1.125,2.,2.125,3.,3.125,4.,4.125,5.,5.125) # 3h per night, starting 24h after merger
+    Afov = params["config"][params["telescopes"][0]]["FOV"]**2
+    T_int = params["config"][params["telescopes"][0]]["exposuretime"]
+    strategy_struct = gwemopt.waw.construct_followup_strategy(map_struct["prob"],detmaps,t,Afov,T_int,T_available,limit_to_region=cr90)
+
+    if opts.doPlots:
+        gwemopt.plotting.strategy(params,detmaps,t,strategy_struct)
 
 if opts.doEfficiency:
     coverage_struct = gwemopt.coverage.read_files(params)
@@ -155,14 +186,9 @@ if opts.doEfficiency:
     efficiency_structs = {}
     for key in lightcurve_structs.iterkeys():
         lightcurve_struct = lightcurve_structs[key]
-        efficiency_struct = gwemopt.efficiency.compute_efficiency(params,map_struct, eventinfo, lightcurve_struct, coverage_struct) 
+        efficiency_struct = gwemopt.efficiency.compute_efficiency(params,map_struct, eventinfo, lightcurve_struct, coverage_struct)
         efficiency_structs[key] = efficiency_struct
         efficiency_structs[key]["legend_label"] = lightcurve_struct["legend_label"]
 
-    gwemopt.efficiency.plot_efficiency(params, map_struct, coverage_struct, efficiency_structs)
-
-if opts.doTiles:
-    tileObj = gwemopt.rankedTilesGenerator.RankedTileGenerator(skymapfile)
-    print tileObj
-    [ranked_tile_index, ranked_tile_probs] = tileObj.ZTF_RT(resolution=512)
-    print ranked_tile_index, ranked_tile_probs
+    if opts.doPlots: 
+        gwemopt.plotting.efficiency(params, map_struct, coverage_struct, efficiency_structs)
