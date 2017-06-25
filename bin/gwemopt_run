@@ -29,6 +29,7 @@ Comments should be e-mailed to michael.coughlin@ligo.org.
 
 import os, sys, glob, optparse, shutil, warnings
 import numpy as np
+import healpy as hp
 
 import gwemopt.utils, gwemopt.gracedb
 import gwemopt.rankedTilesGenerator, gwemopt.waw
