@@ -11,14 +11,21 @@ The code needs to:
 - do the scheduling based on when a tile is above the horizon, away from the moon, etc.
 - test the efficiency of the tiling, exposure time method choices, for a given lightcurve.
 
-Sources:
-1. Rana et al: http://iopscience.iop.org/article/10.3847/1538-4357/838/2/108/meta
+Related repositories:
+- https://github.com/shaonghosh/sky_tiling.git
 
-2. Salafia et al: https://arxiv.org/abs/1704.05851
+- https://github.com/omsharansalafia/waw
 
-3. Ghosh et al: https://www.aanda.org/articles/aa/abs/2016/08/aa27712-15/aa27712-15.html
+- https://github.com/manleongchan/optimizationcode 
 
-4. Chan et al: http://iopscience.iop.org/article/10.3847/1538-4357/834/1/84/meta
+References:
+- Rana et al: http://iopscience.iop.org/article/10.3847/1538-4357/838/2/108/meta
 
-5. Coughlin and Stubbs: https://link.springer.com/article/10.1007/s10686-016-9503-4 
+- Salafia et al: https://arxiv.org/abs/1704.05851
+
+- Ghosh et al: https://www.aanda.org/articles/aa/abs/2016/08/aa27712-15/aa27712-15.html
+
+- Chan et al: http://iopscience.iop.org/article/10.3847/1538-4357/834/1/84/meta
+
+- Coughlin and Stubbs: https://link.springer.com/article/10.1007/s10686-016-9503-4 
 
