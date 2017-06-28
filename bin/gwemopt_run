@@ -70,14 +70,19 @@ def parse_commandline():
     parser.add_option("--doTiles",  action="store_true", default=False)
 
     parser.add_option("--doEfficiency",  action="store_true", default=False)
+    #parser.add_option("-t", "--telescopes", help="Telescope names.",
+    #                  default ="PS1")
+    #parser.add_option("-d", "--dataFiles", help="Telescope data files.",
+    #                  default ="../data/PS1_GW170104.dat")
     parser.add_option("-t", "--telescopes", help="Telescope names.",
-                      default ="PS1")
+                      default ="ATLAS")
     parser.add_option("-d", "--dataFiles", help="Telescope data files.",
-                      default ="../data/PS1_GW170104.dat")
+                      default ="../data/ATLAS_GW170104.dat")
     parser.add_option("-l", "--lightcurveFiles", help="Lightcurve files.",
                       default ="../lightcurves/neutron_precursor3.dat,../lightcurves/rpft_m005_v2.dat,../lightcurves/APR4-1215_k1.dat")
     parser.add_option("--Ninj",default=1000,type=int)
     parser.add_option("--Ndet",default=1,type=int)
+    parser.add_option("--nside",default=256,type=int)
     parser.add_option("--DScale",default=1.0,type=float)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
@@ -121,6 +126,7 @@ def params_struct(opts):
     params["Ninj"] = opts.Ninj
     params["Ndet"] = opts.Ndet
     params["DScale"] = opts.DScale
+    params["nside"] = opts.nside
 
     return params
 

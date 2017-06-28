@@ -49,6 +49,8 @@ def read_skymap(params,filename,is3D=False):
         map_struct["diststd"] = diststd_data / params["DScale"]
         map_struct["prob"] = prob_data
         map_struct["distnorm"] = norm_data
+
+
     else:
         prob_data = hp.read_map(filename, field=0)
         prob_data = prob_data / np.sum(prob_data)
@@ -56,6 +58,13 @@ def read_skymap(params,filename,is3D=False):
         map_struct["prob"] = prob_data
 
     nside = hp.pixelfunc.get_nside(prob_data)
+    nside = params["nside"]
+    map_struct["prob"] = hp.ud_grade(map_struct["prob"],nside)
+    if is3D:
+        map_struct["distmu"] = hp.ud_grade(map_struct["distmu"],nside) 
+        map_struct["diststd"] = hp.ud_grade(map_struct["diststd"],nside) 
+        map_struct["distnorm"] = hp.ud_grade(map_struct["distnorm"],nside) 
+
     npix = hp.nside2npix(nside)
     theta, phi = hp.pix2ang(nside, np.arange(npix))
     ra = np.rad2deg(phi)
@@ -111,3 +120,33 @@ def samples_from_skymap(map_struct, is3D = False, Nsamples = 100):
     samples_struct["dist"] = np.array(dists)
 
     return samples_struct
+
+def getExpPixels(ra_pointing, dec_pointing, tileSide, nside):
+
+    decCorners = (dec_pointing - tileSide / 2.0, dec_pointing + tileSide / 2.0)
+ 
+    corners = []
+    for d in decCorners:
+        if d > 90.:
+            d = 180. - d
+        elif d < -90.:
+            d = -180 - d
+
+        raCorners = (ra_pointing - (tileSide / 2.0) / np.cos(np.deg2rad(d)) , ra_pointing + (tileSide / 2.0) / np.cos(np.deg2rad(d)))
+
+        for r in raCorners:
+            if r > 360.:
+                r = 720. - r
+            elif r < 0.:
+                r = 360. + r
+            corners.append(hp.ang2vec(r, d, lonlat=True))
+
+    # FLIP CORNERS 3 & 4 SO HEALPY UNDERSTANDS POLYGON SHAPE
+    corners = [corners[0], corners[1],
+           corners[3], corners[2]]
+
+    # RETURN HEALPIXELS IN EXPOSURE AREA
+    expPixels = hp.query_polygon(nside, np.array(
+        corners))
+    
+    return expPixels

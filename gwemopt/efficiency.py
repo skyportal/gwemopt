@@ -12,8 +12,11 @@ matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
 
+import gwemopt.utils
+
 def compute_efficiency(params, map_struct, eventinfo, lightcurve_struct, coverage_struct):
 
+    nside = params["nside"]
     Ninj = params["Ninj"]
     Ndet = params["Ndet"]
     gpstime = eventinfo["gpstime"]
@@ -39,10 +42,19 @@ def compute_efficiency(params, map_struct, eventinfo, lightcurve_struct, coverag
         ras.append(ra_inj)
         decs.append(dec_inj)
 
+        # THE SKY-LOCATION AS A HEALPIXEL ID
+        pinpoint = hp.ang2pix(nside, theta=ra_inj, phi=dec_inj, lonlat=True)
+
         #idxs = np.where(np.sqrt((coverage_struct["data"][:,0]-ra_inj)**2 + (coverage_struct["data"][:,1]-dec_inj)**2) <= FOV_r)[0]
-        idxs_ra = np.where(np.abs(coverage_struct["data"][:,0]-ra_inj)<=coverage_struct["FOV"]/2.0)[0]
-        idxs_dec = np.where(np.abs(coverage_struct["data"][:,1]-dec_inj)<=coverage_struct["FOV"]/2.0)[0]
-        idxs = np.intersect1d(idxs_ra,idxs_dec)
+        #idxs_ra = np.where(np.abs(coverage_struct["data"][:,0]-ra_inj)<=coverage_struct["FOV"]/2.0)[0]
+        #idxs_dec = np.where(np.abs(coverage_struct["data"][:,1]-dec_inj)<=coverage_struct["FOV"]/2.0)[0]
+        #idxs = np.intersect1d(idxs_ra,idxs_dec)
+
+        idxs = []
+        for jj in xrange(len(coverage_struct["ipix"])):
+            expPixels = coverage_struct["ipix"][jj]
+            if pinpoint in expPixels:
+                idxs.append(jj)
         if len(idxs) == 0:
             continue
 
