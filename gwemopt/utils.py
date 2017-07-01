@@ -11,6 +11,8 @@ matplotlib.use('Agg')
 matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
+import matplotlib.patches
+import matplotlib.path
 
 def readParamsFromFile(file):
     """@read gwemopt params file
@@ -121,11 +123,70 @@ def samples_from_skymap(map_struct, is3D = False, Nsamples = 100):
 
     return samples_struct
 
-def getExpPixels(ra_pointing, dec_pointing, tileSide, nside):
+def get_ellipse_coords(a=0.0, b=0.0, x=0.0, y=0.0, angle=0.0, npts=10):
+    """ Draws an ellipse using (360*k + 1) discrete points; based on pseudo code
+    given at http://en.wikipedia.org/wiki/Ellipse
+    k = 1 means 361 points (degree by degree)
+    a = major axis distance,
+    b = minor axis distance,
+    x = offset along the x-axis
+    y = offset along the y-axis
+    angle = clockwise rotation [in degrees] of the ellipse;
+        * angle=0  : the ellipse is aligned with the positive x-axis
+        * angle=30 : rotated 30 degrees clockwise from positive x-axis
+    """
+    pts = np.zeros((npts, 2))
+
+    beta = -angle * np.pi/180.0
+    sin_beta = np.sin(beta)
+    cos_beta = np.cos(beta)
+    alpha = np.linspace(0,2*np.pi,npts) 
+
+    sin_alpha = np.sin(alpha)
+    cos_alpha = np.cos(alpha)
+    
+    pts[:, 0] = x + (a * cos_alpha * cos_beta - b * sin_alpha * sin_beta)
+    pts[:, 1] = y + (a * cos_alpha * sin_beta + b * sin_alpha * cos_beta)
+
+    return pts
+
+def getCirclePixels(ra_pointing, dec_pointing, radius, nside):
+
+    theta = 0.5 * np.pi - np.deg2rad(dec_pointing)
+    phi = np.deg2rad(ra_pointing)
+
+    xyz = hp.ang2vec(theta, phi)
+    ipix = hp.query_disc(nside, xyz, np.deg2rad(radius))
+
+    radecs = get_ellipse_coords(a=radius/np.cos(np.deg2rad(dec_pointing)), b=radius, x=ra_pointing, y=dec_pointing, angle=0.0, npts=25)
+    idx = np.where(radecs[:,1] > 90.0)[0]
+    radecs[idx,1] = 180.0 - radecs[idx,1] 
+    idx = np.where(radecs[:,1] < -90.0)[0]
+    radecs[idx,1] = -180.0 - radecs[idx,1]    
+    idx = np.where(radecs[:,0] > 360.0)[0]
+    radecs[idx,0] = 720.0 - radecs[idx,0]
+    idx = np.where(radecs[:,0] < 0.0)[0]
+    radecs[idx,0] = 360.0 + radecs[idx,0]
+
+    xyz = hp.ang2vec(radecs[:,0],radecs[:,1],lonlat=True)
+
+    proj = hp.projector.MollweideProj(rot=None, coord=None)
+    x,y = proj.vec2xy(xyz[:,0],xyz[:,1],xyz[:,2])
+    xy = np.zeros(radecs.shape)
+    xy[:,0] = x
+    xy[:,1] = y
+    #path = matplotlib.path.Path(xyz[:,1:3])
+    path = matplotlib.path.Path(xy)
+    patch = matplotlib.patches.PathPatch(path, alpha=0.2, color='#6c71c4', fill=True, zorder=3,)
+
+    return ipix, radecs, patch
+
+def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside):
 
     decCorners = (dec_pointing - tileSide / 2.0, dec_pointing + tileSide / 2.0)
  
-    corners = []
+    radecs = []
+    xyz = []
     for d in decCorners:
         if d > 90.:
             d = 180. - d
@@ -139,14 +200,26 @@ def getExpPixels(ra_pointing, dec_pointing, tileSide, nside):
                 r = 720. - r
             elif r < 0.:
                 r = 360. + r
-            corners.append(hp.ang2vec(r, d, lonlat=True))
+            xyz.append(hp.ang2vec(r, d, lonlat=True))
+
+            radecs.append([r,d])
+    radecs = np.array(radecs)
 
     # FLIP CORNERS 3 & 4 SO HEALPY UNDERSTANDS POLYGON SHAPE
-    corners = [corners[0], corners[1],
-           corners[3], corners[2]]
+    xyz = [xyz[0], xyz[1],
+           xyz[3], xyz[2]]
 
     # RETURN HEALPIXELS IN EXPOSURE AREA
-    expPixels = hp.query_polygon(nside, np.array(
-        corners))
+    ipix = hp.query_polygon(nside, np.array(
+        xyz))
+
+    xyz = np.array(xyz)
+    proj = hp.projector.MollweideProj(rot=None, coord=None) 
+    x,y = proj.vec2xy(xyz[:,0],xyz[:,1],xyz[:,2])
+    xy = np.zeros(radecs.shape)
+    xy[:,0] = x
+    xy[:,1] = y
+    path = matplotlib.path.Path(xy)
+    patch = matplotlib.patches.PathPatch(path, alpha=0.2, color='#6c71c4', fill=True, zorder=3,)
     
-    return expPixels
+    return ipix, radecs, patch

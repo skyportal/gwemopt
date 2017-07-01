@@ -35,6 +35,7 @@ import gwemopt.utils, gwemopt.gracedb
 import gwemopt.rankedTilesGenerator, gwemopt.waw
 import gwemopt.lightcurve, gwemopt.coverage
 import gwemopt.efficiency, gwemopt.plotting
+import gwemopt.moc
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -68,6 +69,7 @@ def parse_commandline():
     parser.add_option("--doStrategy",  action="store_true", default=False)
     parser.add_option("--doPlots",  action="store_true", default=False)
     parser.add_option("--doTiles",  action="store_true", default=False)
+    parser.add_option("--doMOC",  action="store_true", default=False)
 
     parser.add_option("--doEfficiency",  action="store_true", default=False)
     #parser.add_option("-t", "--telescopes", help="Telescope names.",
@@ -116,6 +118,8 @@ def params_struct(opts):
     for configFile in configFiles:
         telescopeName = configFile.split("/")[-1].replace(".config","")
         params["config"][telescopeName] = gwemopt.utils.readParamsFromFile(configFile)
+        if "tesselationFile" in params["config"][telescopeName]:
+            params["config"][telescopeName]["tesselation"] = np.loadtxt(params["config"][telescopeName]["tesselationFile"])
 
     params["skymap"] = opts.skymap
     params["outputDir"] = opts.outputDir
@@ -164,6 +168,14 @@ if opts.doSamples:
         samples_struct = gwemopt.utils.samples_from_skymap(map_struct,is3D=False)
 if opts.doPlots:
     gwemopt.plotting.skymap(params,map_struct)
+
+if opts.doMOC:
+    print "Generating MOC struct..."
+    moc_structs = gwemopt.moc.create_moc(params)
+
+    if opts.doPlots:
+        print "Plotting MOC struct..."
+        gwemopt.plotting.moc(params, map_struct, moc_structs)
 
 if opts.doTiles:
     tileObj = gwemopt.rankedTilesGenerator.RankedTileGenerator(skymapfile)

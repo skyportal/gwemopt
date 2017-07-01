@@ -27,11 +27,11 @@ def read_coverage(params, telescope, filename):
         coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[ra,dec,mjd,mag]]),axis=0)
         coverage_struct["filters"].append(filt)
 
-        expPixels = gwemopt.utils.getExpPixels(ra, dec, config_struct["FOV_cell"], nside)
+        expPixels, radecs = gwemopt.utils.getExpPixels(ra, dec, config_struct["FOV_coverage"], nside)
         coverage_struct["ipix"].append(expPixels)
 
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
-    coverage_struct["FOV"] = config_struct["FOV_cell"]*np.ones((len(coverage_struct["filters"]),))
+    coverage_struct["FOV"] = config_struct["FOV_coverage"]*np.ones((len(coverage_struct["filters"]),))
 
     return coverage_struct
 

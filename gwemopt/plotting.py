@@ -12,6 +12,23 @@ matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
 
+def moc(params,map_struct,moc_structs):
+
+    plotName = os.path.join(params["outputDir"],'moc.pdf')
+    ax = plt.gca()
+    hp.mollview(map_struct["prob"],title='Probability')
+    ax = plt.gca()
+    for telescope in moc_structs:
+        moc_struct = moc_structs[telescope]
+        for index in moc_struct.iterkeys():
+            ipix, moc, corners, patch = moc_struct[index]["ipix"],  moc_struct[index]["moc"], moc_struct[index]["corners"], moc_struct[index]["patch"]
+            #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
+            hp.projaxes.HpxMollweideAxes.add_patch(ax,patch)
+            #moc.plot()
+    plt.show()
+    plt.savefig(plotName,dpi=200)
+    plt.close('all')
+
 def skymap(params,map_struct):
 
     plotName = os.path.join(params["outputDir"],'prob.pdf')
