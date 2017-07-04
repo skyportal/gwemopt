@@ -149,18 +149,29 @@ def efficiency(params, map_struct, coverage_struct, efficiency_structs):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
+    idx = np.isfinite(coverage_struct["data"][:,2])
+    mjd_min = np.min(coverage_struct["data"][idx,2])
+    mjd_max = np.max(coverage_struct["data"][idx,2])
+    mjd_N = 100
+
+    mjds = np.linspace(mjd_min,mjd_max,num=mjd_N)
     moviedir = os.path.join(params["outputDir"],'movie')
     if not os.path.isdir(moviedir): os.mkdir(moviedir)
 
-    for jj in xrange(len(coverage_struct["ipix"])):
-        mjd = coverage_struct["data"][jj,3]
+    #for jj in xrange(len(coverage_struct["ipix"])):
+    #    mjd = coverage_struct["data"][jj,3]
+    for jj in xrange(len(mjds)):
+        mjd = mjds[jj]
         plotName = os.path.join(moviedir,'coverage-%04d.png'%jj)
         title = "Coverage Map: %.2f"%mjd       
 
         plt.figure()
         hp.mollview(map_struct["prob"],title=title)
         ax = plt.gca()
-        for ii in xrange(jj):
+
+        idx = np.where(coverage_struct["data"][:,2]<=mjd)[0]
+        #for ii in xrange(jj):
+        for ii in idx: 
             data = coverage_struct["data"][ii,:]
             filt = coverage_struct["filters"][ii]
             ipix = coverage_struct["ipix"][ii]
