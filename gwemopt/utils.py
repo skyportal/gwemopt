@@ -2,6 +2,7 @@
 import os, sys
 import numpy as np
 import healpy as hp
+import itertools
 
 from scipy.stats import norm
 
@@ -35,20 +36,21 @@ def readParamsFromFile(file):
                         params[line_split[0]] = line_split[1]
     return params
 
-def read_skymap(params,filename,is3D=False):
+def read_skymap(params,is3D=False):
 
+    filename = params["skymap"]
     map_struct = {}
 
     if is3D:
         healpix_data = hp.read_map(filename, field=(0,1,2,3))
 
         distmu_data = healpix_data[1]
-        diststd_data = healpix_data[2]
+        distsigma_data = healpix_data[2]
         prob_data = healpix_data[0]
         norm_data = healpix_data[3]
 
         map_struct["distmu"] = distmu_data / params["DScale"]
-        map_struct["diststd"] = diststd_data / params["DScale"]
+        map_struct["distsigma"] = distsigma_data / params["DScale"]
         map_struct["prob"] = prob_data
         map_struct["distnorm"] = norm_data
 
@@ -64,7 +66,7 @@ def read_skymap(params,filename,is3D=False):
     map_struct["prob"] = hp.ud_grade(map_struct["prob"],nside)
     if is3D:
         map_struct["distmu"] = hp.ud_grade(map_struct["distmu"],nside) 
-        map_struct["diststd"] = hp.ud_grade(map_struct["diststd"],nside) 
+        map_struct["distsigma"] = hp.ud_grade(map_struct["distsigma"],nside) 
         map_struct["distnorm"] = hp.ud_grade(map_struct["distnorm"],nside) 
 
     npix = hp.nside2npix(nside)
@@ -80,6 +82,14 @@ def read_skymap(params,filename,is3D=False):
     csm[sort_idx] = np.cumsum(prob_data[sort_idx])
 
     map_struct["cumprob"] = csm
+
+    pixarea = hp.nside2pixarea(nside)
+    pixarea_deg2 = hp.nside2pixarea(nside, degrees=True)
+
+    map_struct["nside"] = nside
+    map_struct["npix"] = npix
+    map_struct["pixarea"] = pixarea
+    map_struct["pixarea_deg2"] = pixarea_deg2
 
     return map_struct   
 
@@ -108,7 +118,7 @@ def samples_from_skymap(map_struct, is3D = False, Nsamples = 100):
         decs.append(dec_inj)    
 
         if is3D:
-            dp_dr = r**2 * map_struct["distnorm"][prob_data_indexes][ipix] * norm(map_struct["distmu"][prob_data_indexes][ipix], map_struct["diststd"][prob_data_indexes][ipix]).pdf(r)
+            dp_dr = r**2 * map_struct["distnorm"][prob_data_indexes][ipix] * norm(map_struct["distmu"][prob_data_indexes][ipix], map_struct["distsigma"][prob_data_indexes][ipix]).pdf(r)
             dp_dr_norm = np.cumsum(dp_dr / np.sum(dp_dr))
             idx = np.argmin(np.abs(dp_dr_norm-rand_values_dist[ii]))
             dist_inj = r[idx]
@@ -206,12 +216,11 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside):
     radecs = np.array(radecs)
 
     # FLIP CORNERS 3 & 4 SO HEALPY UNDERSTANDS POLYGON SHAPE
-    xyz = [xyz[0], xyz[1],
-           xyz[3], xyz[2]]
-
-    # RETURN HEALPIXELS IN EXPOSURE AREA
-    ipix = hp.query_polygon(nside, np.array(
-        xyz))
+    xyz = [xyz[0], xyz[1],xyz[3], xyz[2]]
+    try:
+        ipix = hp.query_polygon(nside, np.array(xyz))
+    except:
+        ipix = []
 
     xyz = np.array(xyz)
     proj = hp.projector.MollweideProj(rot=None, coord=None) 
@@ -223,3 +232,33 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside):
     patch = matplotlib.patches.PathPatch(path, alpha=0.2, color='#6c71c4', fill=True, zorder=3,)
     
     return ipix, radecs, patch
+
+def integrationTime(T_obs, pValTiles, func=None, T_int=60.0):
+    '''
+    METHOD :: This method accepts the probability values of the ranked tiles, the 
+              total observation time and the rank of the source tile. It returns 
+              the array of time to be spent in each tile which is determined based
+              on the localizaton probability of the tile. How the weight factor is 
+              computed can also be supplied in functional form. Default is linear.
+                      
+    pValTiles :: The probability value of the ranked tiles. Obtained from ZTF_RT 
+                             output
+    T_obs     :: Total observation time available for the follow-up.
+    func      :: functional form of the weight. Default is linear. 
+                             For example, use x**2 to use a quadratic function.
+    '''
+
+    if func is None:
+            f = lambda x: x
+    else:
+            f = lambda x: eval(func)
+    fpValTiles = f(pValTiles)
+    modified_prob = fpValTiles/np.sum(fpValTiles)
+    t_tiles = modified_prob * T_obs ### Time spent in each tile if not constrained
+    #t_tiles[t_tiles > 1200.0] = 1200.0 ### Upper limit of exposure time
+    #t_tiles[t_tiles < 60] = 60.0 ### Lower limit of exposure time
+    t_tiles = T_int*np.round(t_tiles/T_int)
+    Obs = np.cumsum(t_tiles) <= T_obs ### Tiles observable in T_obs seconds
+    time_per_tile = t_tiles[Obs] ### Actual time spent per tile
+
+    return time_per_tile

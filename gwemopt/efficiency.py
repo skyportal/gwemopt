@@ -2,8 +2,8 @@
 import os, sys
 
 import numpy as np
-from astropy.time import Time
 import healpy as hp
+from astropy.time import Time
 
 import matplotlib
 #matplotlib.rc('text', usetex=True)

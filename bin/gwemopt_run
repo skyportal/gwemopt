@@ -35,7 +35,8 @@ import gwemopt.utils, gwemopt.gracedb
 import gwemopt.rankedTilesGenerator, gwemopt.waw
 import gwemopt.lightcurve, gwemopt.coverage
 import gwemopt.efficiency, gwemopt.plotting
-import gwemopt.moc
+import gwemopt.moc, gwemopt.catalog
+import gwemopt.tiles
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -62,23 +63,27 @@ def parse_commandline():
 
     parser.add_option("-o", "--outputDir", help="output directory",default="../output")
     parser.add_option("-n", "--event", help="event name",default="G268556")
+    parser.add_option("--tilingDir", help="tiling directory",default="../tiling")
 
     parser.add_option("--doEvent",  action="store_true", default=False)
     parser.add_option("--doSkymap",  action="store_true", default=False)
     parser.add_option("--doSamples",  action="store_true", default=False)
-    parser.add_option("--doStrategy",  action="store_true", default=False)
+    parser.add_option("--doWAW",  action="store_true", default=False)
+    parser.add_option("--doCoverage",  action="store_true", default=False)
     parser.add_option("--doPlots",  action="store_true", default=False)
     parser.add_option("--doTiles",  action="store_true", default=False)
-    parser.add_option("--doMOC",  action="store_true", default=False)
+    parser.add_option("--tilesType", help="tiling type",default="moc")
+    parser.add_option("--doGreedy",  action="store_true", default=False)
+    parser.add_option("--doCatalog",  action="store_true", default=False)
 
     parser.add_option("--doEfficiency",  action="store_true", default=False)
     #parser.add_option("-t", "--telescopes", help="Telescope names.",
     #                  default ="PS1")
-    #parser.add_option("-d", "--dataFiles", help="Telescope data files.",
+    #parser.add_option("-d", "--coverageFiles", help="Telescope data files.",
     #                  default ="../data/PS1_GW170104.dat")
     parser.add_option("-t", "--telescopes", help="Telescope names.",
                       default ="ATLAS")
-    parser.add_option("-d", "--dataFiles", help="Telescope data files.",
+    parser.add_option("-d", "--coverageFiles", help="Telescope coverage files.",
                       default ="../data/ATLAS_GW170104.dat")
     parser.add_option("-l", "--lightcurveFiles", help="Lightcurve files.",
                       default ="../lightcurves/neutron_precursor3.dat,../lightcurves/rpft_m005_v2.dat,../lightcurves/APR4-1215_k1.dat")
@@ -86,6 +91,7 @@ def parse_commandline():
     parser.add_option("--Ndet",default=1,type=int)
     parser.add_option("--nside",default=256,type=int)
     parser.add_option("--DScale",default=1.0,type=float)
+    parser.add_option("--Tobs",default="1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0,5.5")
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -123,14 +129,17 @@ def params_struct(opts):
 
     params["skymap"] = opts.skymap
     params["outputDir"] = opts.outputDir
+    params["tilingDir"] = opts.tilingDir
     params["event"] = opts.event
-    params["dataFiles"] = opts.dataFiles.split(",")
+    params["coverageFiles"] = opts.coverageFiles.split(",")
     params["telescopes"] = opts.telescopes.split(",")
     params["lightcurveFiles"] = opts.lightcurveFiles.split(",")
+    params["tilesType"] = opts.tilesType
     params["Ninj"] = opts.Ninj
     params["Ndet"] = opts.Ndet
     params["DScale"] = opts.DScale
     params["nside"] = opts.nside
+    params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
 
     return params
 
@@ -147,73 +156,75 @@ opts = parse_commandline()
 if not os.path.isdir(opts.outputDir): os.mkdir(opts.outputDir)
 
 params = params_struct(opts)
+
+if opts.doEfficiency:
+    efficiencyTypes = [opts.doGreedy, opts.doWAW,opts.doCoverage]
+    efficiencyCount = sum(1 for x in efficiencyTypes if x)
+    if not efficiencyCount == 1:
+        print "Need to enable --doGreedy, --doWAW, or --doCoverage"
+        exit(0)
+
 if opts.doEvent:
-    skymapfile, eventinfo = gwemopt.gracedb.get_event(params)
+    params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)
 elif opts.doSkymap:
-    skymapfile = params["skymap"]
+    params["skymap"]
 else:
     print "Need to enable --doEvent or --doSkymap"
     exit(0)
 
+print "Loading skymap..."
 # Function to read maps
 if opts.do3D:
-    map_struct = gwemopt.utils.read_skymap(params, skymapfile, is3D=True)
+    map_struct = gwemopt.utils.read_skymap(params, is3D=True)
 else:
-    map_struct = gwemopt.utils.read_skymap(params, skymapfile, is3D=False)
+    map_struct = gwemopt.utils.read_skymap(params, is3D=False)
+
+if opts.doPlots:
+    print "Plotting skymap..."
+    gwemopt.plotting.skymap(params,map_struct)
 
 if opts.doSamples:
+    print "Generating samples from skymap..."
     if opts.do3D:
         samples_struct = gwemopt.utils.samples_from_skymap(map_struct,is3D=True)
     else:
         samples_struct = gwemopt.utils.samples_from_skymap(map_struct,is3D=False)
-if opts.doPlots:
-    gwemopt.plotting.skymap(params,map_struct)
-
-if opts.doMOC:
-    print "Generating MOC struct..."
-    moc_structs = gwemopt.moc.create_moc(params)
-
-    if opts.doPlots:
-        print "Plotting MOC struct..."
-        gwemopt.plotting.moc(params, map_struct, moc_structs)
 
 if opts.doTiles:
-    tileObj = gwemopt.rankedTilesGenerator.RankedTileGenerator(skymapfile)
-    print tileObj
-    [ranked_tile_index, ranked_tile_probs] = tileObj.ZTF_RT(resolution=512)
-    print ranked_tile_index, ranked_tile_probs
-
-if opts.doStrategy:
-    #t = np.arange(0,7,0.25)
-    #t = np.arange(0,7,1/24.0)
-    t = np.arange(0,2,1/96.0)
-    cr90 = map_struct["cumprob"] < 0.9
-    detmaps = gwemopt.waw.detectability_maps(params, t, map_struct, samples_struct, verbose=True, limit_to_region=cr90)
-    # create strategy
-    T_available = (1.,1.125,2.,2.125,3.,3.125,4.,4.125,5.,5.125) # 3h per night, starting 24h after merger
-    Afov = params["config"][params["telescopes"][0]]["FOV"]**2
-    T_int = params["config"][params["telescopes"][0]]["exposuretime"]
-    strategy_struct = gwemopt.waw.construct_followup_strategy(map_struct["prob"],detmaps,t,Afov,T_int,T_available,limit_to_region=cr90)
-
-    nside = hp.pixelfunc.get_nside(strategy_struct)
-    npix = hp.nside2npix(nside)
-    theta, phi = hp.pix2ang(nside, np.arange(npix))
-    ra = np.rad2deg(phi)
-    dec = np.rad2deg(0.5*np.pi - theta)
-
-    idx = np.where(strategy_struct>0.0)[0]
-    strategyfile = os.path.join(params["outputDir"],'strategy.dat')
-    fid = open(strategyfile,'w')
-    for r,d,s in zip(ra[idx],dec[idx],strategy_struct[idx]):
-        fid.write('%.5f %.5f %.5f\n'%(r,d,s))
-    fid.close()
+    if params["tilesType"] == "moc":
+        print "Generating MOC struct..."
+        moc_structs = gwemopt.moc.create_moc(params)
+        tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
+    elif params["tilesType"] == "ranked":
+        print "Generating ranked struct..."
+        tile_structs = gwemopt.tiles.rankedTiles(params)
+    else:
+        print "Need tilesType to be moc or ranked"
+        exit(0)
 
     if opts.doPlots:
-        gwemopt.plotting.strategy(params,detmaps,t,strategy_struct)
+        print "Plotting tiles struct..."
+        gwemopt.plotting.tiles(params, map_struct, tile_structs)
+
+if opts.doCatalog:
+    print "Generating catalog..."
+    catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
+
+if opts.doGreedy:
+    print "Generating greedy schedule..."
+    coverage_struct = gwemopt.coverage.greedy(params, eventinfo, tile_structs) 
+elif opts.doWAW:
+    print "Generating WAW schedule..."
+    if opts.doTiles:
+        coverage_struct = gwemopt.coverage.waw(params, eventinfo, map_struct, tile_structs = tile_structs, doPlots = opts.doPlots)
+    else:
+        coverage_struct = gwemopt.coverage.waw(params, eventinfo, map_struct, tile_structs = None, doPlots = opts.doPlots)
+elif opts.doCoverage:
+    print "Reading coverage from file..."
+    coverage_struct = gwemopt.coverage.read_coverage_files(params)
 
 if opts.doEfficiency:
-    coverage_struct = gwemopt.coverage.read_files(params)
-
+    print "Computing efficiency..."
     lightcurve_structs = gwemopt.lightcurve.read_files(params["lightcurveFiles"])
     efficiency_structs = {}
     for key in lightcurve_structs.iterkeys():
@@ -223,4 +234,5 @@ if opts.doEfficiency:
         efficiency_structs[key]["legend_label"] = lightcurve_struct["legend_label"]
 
     if opts.doPlots: 
+        print "Plotting efficiency..."
         gwemopt.plotting.efficiency(params, map_struct, coverage_struct, efficiency_structs)

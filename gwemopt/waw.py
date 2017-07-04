@@ -11,7 +11,7 @@ from scipy.stats import norm
 
 import gwemopt.lightcurve
 
-def detectability_maps(params, t, map_struct, samples_struct, nside=64, verbose=False, limit_to_region=None):
+def detectability_maps(params, t, map_struct, samples_struct=None, nside=256, verbose=False, limit_to_region=None):
     """
     Compute the detectability maps P(F(t)>Flim|ra,dec,...) for a given EM
     counterpart, at a given obs frequency, with a given flux limit, at
@@ -75,13 +75,75 @@ def detectability_maps(params, t, map_struct, samples_struct, nside=64, verbose=
 
         #detmaps[i] = sky_pos_cond_prob_gt(F[:, i], Flim, samples_struct['ra'], samples_struct['dec'], nside,limit_to_region)
         #detmaps[i] = sky_pos_cond_prob_gt(10**(F[:, i]/-2.5), 10**(Flim/-2.5), samples_struct['ra'], samples_struct['dec'], nside,limit_to_region)
-        print(F[i])
         detmaps[i] = sky_pos_cond_prob(F[i], Flim, map_struct, nside, limit_to_region)
 
     if verbose:
         print(" #### {} detmaps computed (100 percent completed) ####".format(len(t)))
 
     return detmaps
+
+def construct_followup_strategy_moc(skymap, detmaps, t_detmaps, moc_struct, T_int, T_available, min_detectability=0.01):
+
+    # make sure that the detectability is above the minimum at some point
+    if np.all(detmaps[np.isfinite(detmaps)] < min_detectability):
+        print("No point in the detmaps is above the minumum required detectability.")
+        return None
+
+    T = T_int
+ 
+    nmoc = len(moc_struct.keys())
+    dm = np.empty([len(detmaps), nmoc])
+    for i in range(len(detmaps)):
+        dm[i] = gwemopt.moc.compute_moc_map(moc_struct, detmaps[i], func='np.mean(x)') 
+
+    # bring the skymap to the same resolution, and take only the region
+    sm = gwemopt.moc.compute_moc_map(moc_struct, skymap, func='np.sum(x)')
+    # also, find the descending probability sorted indices of the skymap
+    descending_prob_idx = np.argsort(sm)[::-1]
+
+    # how much total observing time is available? Just sum the differences
+    # between ending and starting times of the available time windows,
+    # then convert to seconds
+    n_windows = len(T_available) // 2
+    tot_obs_time = np.sum(np.diff(T_available)[::2]) * 86400.
+    # compute the number of time slots, and their starting times in days.
+    # Note that the number of slots per window must be an integer, thus
+    # a the end of each window there might be some remainder time unused
+    slots_in_window = (np.diff(T_available)[::2] * 86400./T).astype(int)
+    n_slots = np.sum(slots_in_window)
+    t0_slot = np.empty(n_slots)
+    k = 0
+    for i in range(n_windows):
+        for j in range(slots_in_window[i]):
+            t0_slot[k] = T_available[2 * i] + j * T/86400.
+            k = k + 1
+    # mark all slots as available
+    available_slots = np.ones(n_slots,dtype=bool)
+
+    # the strategy will be a healpix map of observation times
+    strategy = np.ones(len(sm))*np.nan
+
+    # assign the available time slots to the skymap pixels in order
+    # of descending sky position probability. Each pixel is assigned
+    # the available time slot where the detectability is highest
+    for p in descending_prob_idx:
+        try: # find the time of best detectability
+            detp = np.interp(t0_slot[available_slots],t_detmaps,dm[:,p])
+            i_best = np.argmax(detp)
+            i0_best = np.arange(len(available_slots))[available_slots][i_best] #original index of the best time slot
+        except:
+            continue
+
+        # do not assign observation if the best detectability is below the requested limit
+        if detp[i_best]<min_detectability:
+            continue
+        else:
+            strategy[ridx[p]]=t0_slot[i0_best] # assign the observation time
+            available_slots[i0_best]=False # mark the assigned slot as not available anymore
+
+    strategy[np.isnan(strategy)] = 0.0
+    return strategy
+    #return np.ma.masked_invalid(strategy)
 
 def construct_followup_strategy(skymap, detmaps, t_detmaps, Afov, T_int, T_available, min_detectability=0.01, limit_to_region=None):
     """
@@ -204,7 +266,7 @@ def construct_followup_strategy(skymap, detmaps, t_detmaps, Afov, T_int, T_avail
     return strategy
     #return np.ma.masked_invalid(strategy)
 
-def sky_pos_cond_prob(x,x0,map_struct,nside=32,limit_to_region=None):
+def sky_pos_cond_prob(x,x0,map_struct,nside=256,limit_to_region=None):
 
         npix = hp.nside2npix(nside)
         # precompute mask that selects x_i>x0
@@ -226,14 +288,14 @@ def sky_pos_cond_prob(x,x0,map_struct,nside=32,limit_to_region=None):
 
         distmu = hp.ud_grade(map_struct["distmu"],nside)
         distnorm = hp.ud_grade(map_struct["distnorm"],nside) 
-        diststd = hp.ud_grade(map_struct["diststd"],nside)
+        distsigma = hp.ud_grade(map_struct["distsigma"],nside)
 
         # to compute the angular distances of all posterior samples to all pixels of the
         # skymap is quite memory intensive, so we better do it one skymap pixel at a time
         r = np.linspace(1, 2000, 2000)
 
         for p in np.arange(npix)[region]:
-                dp_dr = r**2 * distnorm[p] * norm(distmu[p],diststd[p]).pdf(r)
+                dp_dr = r**2 * distnorm[p] * norm(distmu[p],distsigma[p]).pdf(r)
                 dp_dr_norm = np.cumsum(dp_dr / np.sum(dp_dr))
 
                 app_m = x + 5*(np.log10(r*1e6) - 1) 
@@ -247,7 +309,7 @@ def sky_pos_cond_prob(x,x0,map_struct,nside=32,limit_to_region=None):
 
 # sky_pos_cond_prob_gt, i.e. sky-position-conditional probability that x is greater than x0. 
 # In a more compact form: P(x>x0|ra,dec)
-def sky_pos_cond_prob_gt(x,x0,ra,dec,nside=32,limit_to_region=None):
+def sky_pos_cond_prob_gt(x,x0,ra,dec,nside=256,limit_to_region=None):
 	"""
 	
 	Return a numpy array which represents the healpix projection of the 

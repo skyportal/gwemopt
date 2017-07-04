@@ -42,6 +42,8 @@ def Fov2Moc(config_struct, ra_pointing, dec_pointing, nside):
     elif config_struct["FOV_type"] == "circle":
         ipix, radecs, patch = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside)
 
+    moc_struct["ra"] = ra_pointing
+    moc_struct["dec"] = dec_pointing
     moc_struct["ipix"] = ipix
     moc_struct["corners"] = radecs
     moc_struct["patch"] = patch
@@ -62,3 +64,17 @@ def Fov2Moc(config_struct, ra_pointing, dec_pointing, nside):
     moc_struct["moc"] = moc
 
     return moc_struct
+
+def compute_moc_map(moc_struct, skymap, func=None):
+
+    if func is None:
+        f = lambda x: np.sum(x)
+    else:
+        f = lambda x: eval(func)
+
+    nmocs = len(moc_struct.keys())
+    vals = np.nan*np.ones((nmocs,))
+    for ii in moc_struct.iterkeys():
+        vals[ii] = f(skymap[moc_struct[ii]["ipix"]])
+
+    return vals
