@@ -119,9 +119,9 @@ def efficiency(params, map_struct, coverage_struct, efficiency_structs):
     n_windows = len(params["Tobs"]) // 2
     tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400.
 
-    min_time = 0.0
-    #max_time = 10.0*config_struct["exposuretime"]
-    max_time = 3600.0
+    idx = np.isfinite(coverage_struct["data"][:,4])
+    min_time = np.min(coverage_struct["data"][idx,4])
+    max_time = np.max(coverage_struct["data"][idx,4])
 
     plotName = os.path.join(params["outputDir"],'mollview_tiles_coverage.pdf')
     plt.figure()
