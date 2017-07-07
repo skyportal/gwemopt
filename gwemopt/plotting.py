@@ -29,17 +29,38 @@ def tiles(params,map_struct,tiles_structs):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
+def add_edges():
+
+    hp.graticule()
+    plt.grid(True)
+    lons = np.arange(-150.0,180,30.0)
+    lats = np.zeros(lons.shape)
+    for lon, lat in zip(lons,lats):
+        hp.projtext(lon,lat,"%.0f"%lon,lonlat=True)
+    lats = np.arange(-60.0,90,30.0)
+    lons = np.zeros(lons.shape)
+    for lon, lat in zip(lons,lats):
+        hp.projtext(lon,lat,"%.0f"%lat,lonlat=True)
+
 def skymap(params,map_struct):
 
+    unit='Gravitational-wave probability'
+    cbar=False
+
+    lons = np.arange(-150.0,180,30.0)
+    lats = np.zeros(lons.shape)
+
     plotName = os.path.join(params["outputDir"],'prob.pdf')
-    hp.mollview(map_struct["prob"],title='Probability')
+    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
+    add_edges()
     plt.show()
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
     if "distmu" in map_struct:
         plotName = os.path.join(params["outputDir"],'dist.pdf')
-        hp.mollview(map_struct["distmu"],title='Probability',min=0.0,max=100.0)
+        hp.mollview(map_struct["distmu"],unit='Distance [Mpc]',min=0.0,max=100.0)
+        add_edges()
         plt.show()
         plt.savefig(plotName,dpi=200)
         plt.close('all')
@@ -56,6 +77,7 @@ def strategy(params, detmaps, t_detmaps, strategy_struct):
         plotName = os.path.join(moviedir,'detmap-%04d.png'%ii)
         title = "Detectability Map: %.2f Days"%t_detmap
         hp.mollview(detmap,title=title,min=0.0,max=1.0,unit="Probability of Detection")
+        add_edges()
         plt.show()
         plt.savefig(plotName,dpi=200)
         plt.close('all')
@@ -72,11 +94,15 @@ def strategy(params, detmaps, t_detmaps, strategy_struct):
 
     plotName = os.path.join(params["outputDir"],'strategy.pdf')
     hp.mollview(strategy_struct,title="Time Allocation",unit="Time [Hours]")
+    add_edges()
     plt.show()
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
-def efficiency(params, map_struct, coverage_struct, efficiency_structs):
+def efficiency(params, map_struct, efficiency_structs):
+
+    unit='Gravitational-wave probability'
+    cbar=False
 
     plotName = os.path.join(params["outputDir"],'efficiency.pdf')
     plt.figure()
@@ -102,16 +128,23 @@ def efficiency(params, map_struct, coverage_struct, efficiency_structs):
 
     plotName = os.path.join(params["outputDir"],'mollview_injs.pdf')
     plt.figure()
-    hp.mollview(map_struct["prob"])
+    hp.mollview(map_struct["prob"],unit=unit,cbar=cbar)
     hp.projplot(efficiency_struct["ra"], efficiency_struct["dec"], 'wx', lonlat=True, coord='G')
+    add_edges()
     plt.show()
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
+def coverage(params, map_struct, coverage_struct):
+
+    unit='Gravitational-wave probability'
+    cbar=False
+
     plotName = os.path.join(params["outputDir"],'mollview_coverage.pdf')
     plt.figure()
-    hp.mollview(map_struct["prob"])
+    hp.mollview(map_struct["prob"],unit='Gravitational-wave Probability')
     hp.projplot(coverage_struct["data"][:,0], coverage_struct["data"][:,1], 'wx', lonlat=True, coord='G')
+    add_edges()
     plt.show()
     plt.savefig(plotName,dpi=200)
     plt.close('all')
@@ -123,9 +156,33 @@ def efficiency(params, map_struct, coverage_struct, efficiency_structs):
     min_time = np.min(coverage_struct["data"][idx,4])
     max_time = np.max(coverage_struct["data"][idx,4])
 
-    plotName = os.path.join(params["outputDir"],'mollview_tiles_coverage.pdf')
+    plotName = os.path.join(params["outputDir"],'tiles_coverage.pdf')
     plt.figure()
-    hp.mollview(map_struct["prob"],title='Probability')
+    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
+    add_edges()
+    ax = plt.gca()
+    for ii in xrange(len(coverage_struct["ipix"])):
+        data = coverage_struct["data"][ii,:]
+        filt = coverage_struct["filters"][ii]
+        ipix = coverage_struct["ipix"][ii]
+        patch = coverage_struct["patch"][ii]
+        FOV = coverage_struct["FOV"][ii]
+
+        #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
+        patch_cpy = copy.copy(patch)
+        patch_cpy.axes = None
+        patch_cpy.figure = None
+        patch_cpy.set_transform(ax.transData)
+        hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
+        #tiles.plot()
+    plt.show()
+    plt.savefig(plotName,dpi=200)
+    plt.close('all')
+
+    plotName = os.path.join(params["outputDir"],'tiles_coverage_scaled.pdf')
+    plt.figure()
+    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
+    add_edges()
     ax = plt.gca()
     for ii in xrange(len(coverage_struct["ipix"])):
         data = coverage_struct["data"][ii,:]
@@ -166,7 +223,8 @@ def efficiency(params, map_struct, coverage_struct, efficiency_structs):
         title = "Coverage Map: %.2f"%mjd       
 
         plt.figure()
-        hp.mollview(map_struct["prob"],title=title)
+        hp.mollview(map_struct["prob"],title=title,unit=unit,cbar=cbar)
+        add_edges()
         ax = plt.gca()
 
         idx = np.where(coverage_struct["data"][:,2]<=mjd)[0]
@@ -183,10 +241,10 @@ def efficiency(params, map_struct, coverage_struct, efficiency_structs):
             patch_cpy.axes = None
             patch_cpy.figure = None
             patch_cpy.set_transform(ax.transData)
-            alpha = data[4]/max_time
-            if alpha > 1:
-                alpha = 1.0
-            patch_cpy.set_alpha(alpha)
+            #alpha = data[4]/max_time
+            #if alpha > 1:
+            #    alpha = 1.0
+            #patch_cpy.set_alpha(alpha)
             hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
             #tiles.plot()
         plt.show()

@@ -63,11 +63,11 @@ def read_skymap(params,is3D=False):
 
     nside = hp.pixelfunc.get_nside(prob_data)
     nside = params["nside"]
-    map_struct["prob"] = hp.ud_grade(map_struct["prob"],nside)
+    map_struct["prob"] = hp.ud_grade(map_struct["prob"],nside,power=-2)
     if is3D:
-        map_struct["distmu"] = hp.ud_grade(map_struct["distmu"],nside) 
-        map_struct["distsigma"] = hp.ud_grade(map_struct["distsigma"],nside) 
-        map_struct["distnorm"] = hp.ud_grade(map_struct["distnorm"],nside) 
+        map_struct["distmu"] = hp.ud_grade(map_struct["distmu"],nside,power=-2) 
+        map_struct["distsigma"] = hp.ud_grade(map_struct["distsigma"],nside,power=-2) 
+        map_struct["distnorm"] = hp.ud_grade(map_struct["distnorm"],nside,power=-2) 
 
     npix = hp.nside2npix(nside)
     theta, phi = hp.pix2ang(nside, np.arange(npix))
@@ -160,7 +160,7 @@ def get_ellipse_coords(a=0.0, b=0.0, x=0.0, y=0.0, angle=0.0, npts=10):
 
     return pts
 
-def getCirclePixels(ra_pointing, dec_pointing, radius, nside):
+def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.2, color='#859900'):
 
     theta = 0.5 * np.pi - np.deg2rad(dec_pointing)
     phi = np.deg2rad(ra_pointing)
@@ -187,16 +187,17 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside):
     xy[:,1] = y
     #path = matplotlib.path.Path(xyz[:,1:3])
     path = matplotlib.path.Path(xy)
-    patch = matplotlib.patches.PathPatch(path, alpha=0.2, color='#6c71c4', fill=True, zorder=3,)
+    patch = matplotlib.patches.PathPatch(path, alpha=alpha, color=color, fill=True, zorder=3,)
 
-    return ipix, radecs, patch
+    area = np.pi * radius**2
 
-def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside):
+    return ipix, radecs, patch, area
+
+def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.2, color='#6c71c4'):
 
     decCorners = (dec_pointing - tileSide / 2.0, dec_pointing + tileSide / 2.0)
  
     radecs = []
-    xyz = []
     for d in decCorners:
         if d > 90.:
             d = 180. - d
@@ -210,10 +211,15 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside):
                 r = 720. - r
             elif r < 0.:
                 r = 360. + r
-            xyz.append(hp.ang2vec(r, d, lonlat=True))
-
             radecs.append([r,d])
+
     radecs = np.array(radecs)
+    idx = np.where(radecs[:,0]>=180.0)[0]
+    radecs[idx,0] = 175.0
+
+    xyz = []
+    for r, d in radecs:
+        xyz.append(hp.ang2vec(r, d, lonlat=True))
 
     # FLIP CORNERS 3 & 4 SO HEALPY UNDERSTANDS POLYGON SHAPE
     xyz = [xyz[0], xyz[1],xyz[3], xyz[2]]
@@ -229,9 +235,11 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside):
     xy[:,0] = x
     xy[:,1] = y
     path = matplotlib.path.Path(xy)
-    patch = matplotlib.patches.PathPatch(path, alpha=0.2, color='#6c71c4', fill=True, zorder=3,)
+    patch = matplotlib.patches.PathPatch(path, alpha=alpha, color=color, fill=True, zorder=3,)
     
-    return ipix, radecs, patch
+    area = tileSide*tileSide
+
+    return ipix, radecs, patch, area
 
 def integrationTime(T_obs, pValTiles, func=None, T_int=60.0):
     '''

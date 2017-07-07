@@ -19,12 +19,14 @@ def combine_coverage_structs(coverage_structs):
     coverage_struct_combined["ipix"] = []
     coverage_struct_combined["patch"] = []
     coverage_struct_combined["FOV"] = np.empty((0,1))
+    coverage_struct_combined["area"] = np.empty((0,1))
     for coverage_struct in coverage_structs:
         coverage_struct_combined["data"] = np.append(coverage_struct_combined["data"],coverage_struct["data"],axis=0)
         coverage_struct_combined["filters"] = np.append(coverage_struct_combined["filters"],coverage_struct["filters"])
         coverage_struct_combined["ipix"] = coverage_struct_combined["ipix"] + coverage_struct["ipix"]
         coverage_struct_combined["patch"] = coverage_struct_combined["patch"] + coverage_struct["patch"]
         coverage_struct_combined["FOV"] = np.append(coverage_struct_combined["FOV"],coverage_struct["FOV"])
+        coverage_struct_combined["area"] = np.append(coverage_struct_combined["area"],coverage_struct["area"])
 
     return coverage_struct_combined
 
@@ -42,6 +44,7 @@ def read_coverage(params, telescope, filename):
     coverage_struct["filters"] = []
     coverage_struct["ipix"] = []
     coverage_struct["patch"] = []
+    coverage_struct["area"] = []
 
     for line in lines:
         lineSplit = line.split(",")
@@ -54,15 +57,27 @@ def read_coverage(params, telescope, filename):
         coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[ra,dec,mjd,mag,config_struct["exposuretime"]]]),axis=0)
         coverage_struct["filters"].append(filt)
 
+        if telescope == "ATLAS":
+            alpha=0.2
+            color='#6c71c4'
+        elif telescope == "PS1":
+            alpha=0.1
+            color='#859900'
+        else:
+            alpha=0.2
+            color='#6c71c4'
+
         if config_struct["FOV_coverage_type"] == "square":
-            ipix, radecs, patch = gwemopt.utils.getSquarePixels(ra, dec, config_struct["FOV_coverage"], nside)
+            ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra, dec, config_struct["FOV_coverage"], nside, alpha=alpha, color=color)
         elif config_struct["FOV_coverage_type"] == "circle":
-            ipix, radecs, patch = gwemopt.utils.getCirclePixels(ra, dec, config_struct["FOV_coverage"], nside)
+            ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra, dec, config_struct["FOV_coverage"], nside, alpha=alpha, color=color)
 
         coverage_struct["patch"].append(patch)
         coverage_struct["ipix"].append(ipix)
+        coverage_struct["area"].append(area)
 
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
+    coverage_struct["area"] = np.array(coverage_struct["area"])
     coverage_struct["FOV"] = config_struct["FOV_coverage"]*np.ones((len(coverage_struct["filters"]),))
 
     return coverage_struct
@@ -87,6 +102,7 @@ def tiles_coverage(params, eventinfo, config_struct, tile_struct):
     coverage_struct["filters"] = []
     coverage_struct["ipix"] = []
     coverage_struct["patch"] = []
+    coverage_struct["area"] = []
 
     segmentlist = glue.segments.segmentlist()
     n_windows = len(params["Tobs"]) // 2
@@ -124,7 +140,9 @@ def tiles_coverage(params, eventinfo, config_struct, tile_struct):
         coverage_struct["filters"].append(config_struct["filter"])
         coverage_struct["patch"].append(tile_struct_hold["patch"])
         coverage_struct["ipix"].append(tile_struct_hold["ipix"])
+        coverage_struct["area"].append(tile_struct_hold["area"])
 
+    coverage_struct["area"] = np.array(coverage_struct["area"])
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
     coverage_struct["FOV"] = config_struct["FOV"]*np.ones((len(coverage_struct["filters"]),))
 
@@ -187,3 +205,60 @@ def greedy(params, eventinfo, tile_structs):
         coverage_structs.append(coverage_struct)
 
     return combine_coverage_structs(coverage_structs)
+
+def summary(params, map_struct, eventinfo, coverage_struct):
+
+    summaryfile = os.path.join(params["outputDir"],'summary.dat')
+    fid = open(summaryfile,'w')
+
+    gpstime = eventinfo["gpstime"]
+    mjd_inj = Time(gpstime, format='gps', scale='utc').mjd
+
+    tts = np.array([1,7,60])
+    for tt in tts:
+
+        radecs = np.empty((0,2))
+        mjds_floor = []
+        mjds = []
+        ipixs = np.empty((0,2))
+        cum_prob = 0.0
+        cum_area = 0.0
+
+        for ii in xrange(len(coverage_struct["ipix"])):
+            data = coverage_struct["data"][ii,:]
+            filt = coverage_struct["filters"][ii]
+            ipix = coverage_struct["ipix"][ii]
+            patch = coverage_struct["patch"][ii]
+            FOV = coverage_struct["FOV"][ii]
+            area = coverage_struct["area"][ii]
+
+            prob = np.sum(map_struct["prob"][ipix])
+
+            if data[2] > mjd_inj+tt:
+                continue
+
+            ipixs = np.append(ipixs,ipix)
+            ipixs = np.unique(ipixs).astype(int)
+
+            cum_prob = np.sum(map_struct["prob"][ipixs])
+            cum_area = len(ipixs) * map_struct["pixarea_deg2"]
+            mjds.append(data[2])
+            mjds_floor.append(int(np.floor(data[2])))
+        if len(mjds_floor) == 0:
+            print "No images after %.1f days..."%tt
+            fid.write('%.1f,-1,-1,-1,-1\n'%(tt))
+        else: 
+
+            mjds = np.unique(mjds)
+            mjds_floor = np.unique(mjds_floor)
+
+            print "After %.1f days..."%tt
+            print "Number of hours after first image: %.5f"%(24*(np.min(mjds)-mjd_inj))
+            print "MJDs covered: %s"%(" ".join(str(x) for x in mjds_floor))
+            print "Cumultative probability: %.5f"%cum_prob
+            print "Cumultative area: %.5f degrees"%cum_area
+
+            fid.write('%.1f,%.5f,%.5f,%.5f,%s\n'%(tt,24*(np.min(mjds)-mjd_inj),cum_prob,cum_area," ".join(str(x) for x in mjds_floor)))
+
+    fid.close()
+

@@ -36,13 +36,14 @@ def rankedTiles_struct(params,config_struct,telescope):
         tile_struct[ii]["dec"] = config_struct["tesselation"][index,2]
 
         if config_struct["FOV_type"] == "square":
-            ipix, radecs, patch = gwemopt.utils.getSquarePixels(tile_struct[ii]["ra"], tile_struct[ii]["dec"], config_struct["FOV"], nside)
+            ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(tile_struct[ii]["ra"], tile_struct[ii]["dec"], config_struct["FOV"], nside)
         elif config_struct["FOV_type"] == "circle":
-            ipix, radecs, patch = gwemopt.utils.getCirclePixels(tile_struct[ii]["ra"], tile_struct[ii]["dec"], config_struct["FOV"], nside)
+            ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(tile_struct[ii]["ra"], tile_struct[ii]["dec"], config_struct["FOV"], nside)
 
         tile_struct[ii]["ipix"] = ipix
         tile_struct[ii]["corners"] = radecs
-        tile_struct[ii]["patch"] = patch        
+        tile_struct[ii]["patch"] = patch  
+        tile_struct[ii]["area"] = area      
         ii = ii + 1
 
     return tile_struct
@@ -63,7 +64,7 @@ def moc_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
     n_windows = len(params["Tobs"]) // 2
     tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400.
 
-    ranked_tile_probs = gwemopt.moc.compute_moc_map(tile_struct, map_struct["prob"], func='np.sum(x)')
+    ranked_tile_probs = compute_tiles_map(tile_struct, map_struct["prob"], func='np.sum(x)')
     ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
 
     keys = tile_struct.keys()
@@ -84,3 +85,17 @@ def moc(params, map_struct, moc_structs):
         tile_structs[telescope] = tile_struct
 
     return tile_structs
+
+def compute_tiles_map(moc_struct, skymap, func=None):
+
+    if func is None:
+        f = lambda x: np.sum(x)
+    else:
+        f = lambda x: eval(func)
+
+    nmocs = len(moc_struct.keys())
+    vals = np.nan*np.ones((nmocs,))
+    for ii in moc_struct.iterkeys():
+        vals[ii] = f(skymap[moc_struct[ii]["ipix"]])
+
+    return vals

@@ -223,6 +223,14 @@ elif opts.doCoverage:
     print "Reading coverage from file..."
     coverage_struct = gwemopt.coverage.read_coverage_files(params)
 
+if opts.doGreedy or opts.doWAW or opts.doCoverage:
+    print "Summary of coverage..."
+    gwemopt.coverage.summary(params,map_struct,eventinfo,coverage_struct)
+
+    if opts.doPlots:
+        print "Plotting coverage..."
+        gwemopt.plotting.coverage(params, map_struct, coverage_struct)
+
 if opts.doEfficiency:
     print "Computing efficiency..."
     lightcurve_structs = gwemopt.lightcurve.read_files(params["lightcurveFiles"])
@@ -235,4 +243,4 @@ if opts.doEfficiency:
 
     if opts.doPlots: 
         print "Plotting efficiency..."
-        gwemopt.plotting.efficiency(params, map_struct, coverage_struct, efficiency_structs)
+        gwemopt.plotting.efficiency(params, map_struct, efficiency_structs)
