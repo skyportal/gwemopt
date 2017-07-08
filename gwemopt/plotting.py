@@ -12,6 +12,20 @@ matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
 
+def tauprob(params,tau,prob):
+
+    plotName = os.path.join(params["outputDir"],'tau_prob.pdf')
+    plt.figure()
+    plt.plot(tau, prob)
+    plt.grid()
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel('Log of observing time $\tau$',fontsize = 20)
+    plt.ylabel('Log of detection prob. given the target is at the observing field',fontsize = 20)
+    plt.show()
+    plt.savefig(plotName,dpi=200)
+    plt.close('all')
+
 def tiles(params,map_struct,tiles_structs):
 
     plotName = os.path.join(params["outputDir"],'tiles.pdf')

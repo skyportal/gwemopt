@@ -74,6 +74,7 @@ def parse_commandline():
     parser.add_option("--doTiles",  action="store_true", default=False)
     parser.add_option("--tilesType", help="tiling type",default="moc")
     parser.add_option("--doGreedy",  action="store_true", default=False)
+    parser.add_option("--doPEM",  action="store_true", default=False)
     parser.add_option("--doCatalog",  action="store_true", default=False)
 
     parser.add_option("--doEfficiency",  action="store_true", default=False)
@@ -140,6 +141,8 @@ def params_struct(opts):
     params["DScale"] = opts.DScale
     params["nside"] = opts.nside
     params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
+
+    params["doPlots"] = opts.doPlots
 
     return params
 
@@ -219,6 +222,9 @@ elif opts.doWAW:
         coverage_struct = gwemopt.coverage.waw(params, eventinfo, map_struct, tile_structs = tile_structs, doPlots = opts.doPlots)
     else:
         coverage_struct = gwemopt.coverage.waw(params, eventinfo, map_struct, tile_structs = None, doPlots = opts.doPlots)
+elif opts.doPEM:
+    print "Generating PEM schedule..."
+    coverage_struct = gwemopt.coverage.pem(params, eventinfo, map_struct, tile_structs)
 elif opts.doCoverage:
     print "Reading coverage from file..."
     coverage_struct = gwemopt.coverage.read_coverage_files(params)

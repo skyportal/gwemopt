@@ -9,7 +9,7 @@ import glue.segments, glue.segmentsUtils
 
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
-import gwemopt.moc
+import gwemopt.moc, gwemopt.pem
 
 def combine_coverage_structs(coverage_structs):
 
@@ -112,7 +112,7 @@ def tiles_coverage(params, eventinfo, config_struct, tile_struct):
         segmentlist.append(glue.segments.segment(start_segment,end_segment))
 
     keys = tile_struct.keys()
-    while len(keys) > 0:
+    while len(keys) > 0 and len(segmentlist) > 0:
         key = keys[0]
         tile_struct_hold = tile_struct[key] 
         exposureTime = tile_struct_hold["exposureTime"]
@@ -201,6 +201,22 @@ def greedy(params, eventinfo, tile_structs):
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
         tile_struct = tile_structs[telescope]
+        coverage_struct = tiles_coverage(params, eventinfo, config_struct, tile_struct)
+        coverage_structs.append(coverage_struct)
+
+    return combine_coverage_structs(coverage_structs)
+
+def pem(params, eventinfo, map_struct, tile_structs):
+
+    n_windows = len(params["Tobs"]) // 2
+    tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400
+
+    coverage_structs = []
+    for telescope in params["telescopes"]:
+        config_struct = params["config"][telescope]
+        tile_struct = tile_structs[telescope]
+        tile_struct = gwemopt.tiles.pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
+
         coverage_struct = tiles_coverage(params, eventinfo, config_struct, tile_struct)
         coverage_structs.append(coverage_struct)
 

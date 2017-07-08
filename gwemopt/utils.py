@@ -214,8 +214,8 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.2, col
             radecs.append([r,d])
 
     radecs = np.array(radecs)
-    idx = np.where(radecs[:,0]>=180.0)[0]
-    radecs[idx,0] = 175.0
+    #idx = np.where(radecs[:,0]>=180.0)[0]
+    #radecs[idx,0] = 175.0
 
     xyz = []
     for r, d in radecs:
