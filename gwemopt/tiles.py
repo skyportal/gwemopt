@@ -146,8 +146,6 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
         tile_struct[key]["prob"] = prob
         tile_struct[key]["exposureTime"] = exposureTime
 
-        print prob, exposureTime
-
     return tile_struct
 
 def compute_tiles_map(moc_struct, skymap, func=None):
