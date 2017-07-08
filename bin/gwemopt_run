@@ -161,10 +161,10 @@ if not os.path.isdir(opts.outputDir): os.mkdir(opts.outputDir)
 params = params_struct(opts)
 
 if opts.doEfficiency:
-    efficiencyTypes = [opts.doGreedy, opts.doWAW,opts.doCoverage]
+    efficiencyTypes = [opts.doGreedy, opts.doWAW,opts.doCoverage,opts.doPEM]
     efficiencyCount = sum(1 for x in efficiencyTypes if x)
     if not efficiencyCount == 1:
-        print "Need to enable --doGreedy, --doWAW, or --doCoverage"
+        print "Need to enable --doGreedy, --doWAW, --doPEM or --doCoverage"
         exit(0)
 
 if opts.doEvent:
@@ -229,7 +229,7 @@ elif opts.doCoverage:
     print "Reading coverage from file..."
     coverage_struct = gwemopt.coverage.read_coverage_files(params)
 
-if opts.doGreedy or opts.doWAW or opts.doCoverage:
+if opts.doGreedy or opts.doWAW or opts.doPEM or opts.doCoverage:
     print "Summary of coverage..."
     gwemopt.coverage.summary(params,map_struct,eventinfo,coverage_struct)
 
