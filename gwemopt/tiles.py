@@ -11,7 +11,18 @@ import glue.segments, glue.segmentsUtils
 
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
-import gwemopt.moc
+import gwemopt.moc, gwemopt.multinest
+
+def greedy(params, map_struct):
+
+    tile_structs = {}
+    for telescope in params["telescopes"]:
+        config_struct = params["config"][telescope]
+
+        tile_struct = gwemopt.multinest.greedy_tiles_struct(params, config_struct, telescope, map_struct)
+        tile_structs[telescope] = tile_struct
+
+    return tile_structs
 
 def rankedTiles_struct(params,config_struct,telescope):
 
@@ -148,16 +159,16 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
     return tile_struct
 
-def compute_tiles_map(moc_struct, skymap, func=None):
+def compute_tiles_map(tile_struct, skymap, func=None):
 
     if func is None:
         f = lambda x: np.sum(x)
     else:
         f = lambda x: eval(func)
 
-    nmocs = len(moc_struct.keys())
-    vals = np.nan*np.ones((nmocs,))
-    for ii in moc_struct.iterkeys():
-        vals[ii] = f(skymap[moc_struct[ii]["ipix"]])
+    ntiles = len(tile_struct.keys())
+    vals = np.nan*np.ones((ntiles,))
+    for ii in tile_struct.iterkeys():
+        vals[ii] = f(skymap[tile_struct[ii]["ipix"]])
 
     return vals

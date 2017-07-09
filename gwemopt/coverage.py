@@ -148,12 +148,12 @@ def tiles_coverage(params, eventinfo, config_struct, tile_struct):
 
     return coverage_struct
 
-def waw(params, eventinfo, map_struct, tile_structs=None, doPlots = False): 
+def waw(params, eventinfo, map_struct, tile_structs): 
 
     nside = params["nside"]
 
-    #t = np.arange(0,2,1/96.0)
-    t = np.arange(0,7,1.0)
+    t = np.arange(0,7,1/24.0)
+    #t = np.arange(0,7,1.0)
     cr90 = map_struct["cumprob"] < 0.9
     detmaps = gwemopt.waw.detectability_maps(params, t, map_struct, verbose=True, limit_to_region=cr90, nside=nside)
 
@@ -161,37 +161,29 @@ def waw(params, eventinfo, map_struct, tile_structs=None, doPlots = False):
     tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400.
 
     coverage_structs = []
-    if tile_structs == None:
-        for telescope in params["telescopes"]:
-            config_struct = params["config"][telescope]
+    for telescope in params["telescopes"]: 
+        tile_struct = tile_structs[telescope]
+        config_struct = params["config"][telescope]
+        T_int = config_struct["exposuretime"]
+        ranked_tile_probs = gwemopt.tiles.compute_tiles_map(tile_struct, map_struct["prob"], func='np.sum(x)')
+        strategy_struct = gwemopt.waw.construct_followup_strategy_tiles(map_struct["prob"],detmaps,t,tile_struct,T_int,params["Tobs"])
+        print np.sum(strategy_struct)
+        strategy_struct = strategy_struct*86400.0
 
-            Afov = config_struct["FOV"]**2
-            T_int = config_struct["exposuretime"]
-            strategy_struct = gwemopt.waw.construct_followup_strategy(map_struct["prob"],detmaps,t,Afov,T_int,params["Tobs"],limit_to_region=cr90)
+        if strategy_struct == None:
+            print "Change distance scale..."
+            exit(0)
+        keys = tile_struct.keys()
+        for key, prob, exposureTime in zip(keys, ranked_tile_probs, strategy_struct):
+            tile_struct[key]["prob"] = prob
+            tile_struct[key]["exposureTime"] = exposureTime
 
-            nside = hp.pixelfunc.get_nside(strategy_struct)
-            npix = hp.nside2npix(nside)
-            theta, phi = hp.pix2ang(nside, np.arange(npix))
-            ra = np.rad2deg(phi)
-            dec = np.rad2deg(0.5*np.pi - theta)
-
-            idx = np.where(strategy_struct>0.0)[0]
-            strategyfile = os.path.join(params["outputDir"],'strategy.dat')
-            fid = open(strategyfile,'w')
-            for r,d,s in zip(ra[idx],dec[idx],strategy_struct[idx]):
-                fid.write('%.5f %.5f %.5f\n'%(r,d,s))
-            fid.close()
-    else:
-        for telescope in params["telescopes"]: 
-            moc_struct = moc_structs[telescope]
-            config_struct = params["config"][telescope]
-            T_int = config_struct["exposuretime"]
-            strategy_struct = gwemopt.waw.construct_followup_strategy_moc(map_struct["prob"],detmaps,t,moc_struct,T_int,params["Tobs"])
+        coverage_struct = tiles_coverage(params, eventinfo, config_struct, tile_struct)
 
         coverage_structs.append(coverage_struct)
 
-    if doPlots:
-        gwemopt.plotting.strategy(params,detmaps,t,strategy_struct)
+    if params["doPlots"]:
+        gwemopt.plotting.waw(params,detmaps,t,strategy_struct)
 
     return combine_coverage_structs(coverage_structs)
 

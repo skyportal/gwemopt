@@ -45,7 +45,7 @@ def tiles(params,map_struct,tiles_structs):
 
 def add_edges():
 
-    hp.graticule()
+    hp.graticule(verbose=False)
     plt.grid(True)
     lons = np.arange(-150.0,180,30.0)
     lats = np.zeros(lons.shape)
@@ -79,7 +79,7 @@ def skymap(params,map_struct):
         plt.savefig(plotName,dpi=200)
         plt.close('all')
 
-def strategy(params, detmaps, t_detmaps, strategy_struct):
+def waw(params, detmaps, t_detmaps, strategy_struct):
 
     moviedir = os.path.join(params["outputDir"],'movie')
     if not os.path.isdir(moviedir): os.mkdir(moviedir)
@@ -105,13 +105,6 @@ def strategy(params, detmaps, t_detmaps, strategy_struct):
     os.system(ffmpeg_command)    
     rm_command = "rm %s/*.png"%(moviedir)
     os.system(rm_command)
-
-    plotName = os.path.join(params["outputDir"],'strategy.pdf')
-    hp.mollview(strategy_struct,title="Time Allocation",unit="Time [Hours]")
-    add_edges()
-    plt.show()
-    plt.savefig(plotName,dpi=200)
-    plt.close('all')
 
 def efficiency(params, map_struct, efficiency_structs):
 
@@ -210,9 +203,12 @@ def coverage(params, map_struct, coverage_struct):
         patch_cpy.axes = None
         patch_cpy.figure = None
         patch_cpy.set_transform(ax.transData)
-        alpha = data[4]/max_time
-        if alpha > 1:
-            alpha = 1.0
+        current_alpha = patch_cpy.get_alpha()
+
+        if current_alpha > 0.0:
+            alpha = data[4]/max_time
+            if alpha > 1:
+                alpha = 1.0
         patch_cpy.set_alpha(alpha)
         hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
         #tiles.plot()

@@ -42,7 +42,7 @@ def read_skymap(params,is3D=False):
     map_struct = {}
 
     if is3D:
-        healpix_data = hp.read_map(filename, field=(0,1,2,3))
+        healpix_data = hp.read_map(filename, field=(0,1,2,3), verbose=False)
 
         distmu_data = healpix_data[1]
         distsigma_data = healpix_data[2]
@@ -56,7 +56,7 @@ def read_skymap(params,is3D=False):
 
 
     else:
-        prob_data = hp.read_map(filename, field=0)
+        prob_data = hp.read_map(filename, field=0, verbose=False)
         prob_data = prob_data / np.sum(prob_data)
 
         map_struct["prob"] = prob_data
@@ -178,6 +178,13 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.2, color='
     idx = np.where(radecs[:,0] < 0.0)[0]
     radecs[idx,0] = 360.0 + radecs[idx,0]
 
+    idx1 = np.where(radecs[:,0]>=180.0)[0]
+    idx2 = np.where(radecs[:,0]<180.0)[0]
+    idx3 = np.where(radecs[:,1]>80.0)[0]
+    idx4 = np.where(radecs[:,1]<-80.0)[0]
+    if len(idx1)>0 and len(idx2)>0 and (len(idx3)>0 or len(idx4)>0):
+        alpha = 0.0
+
     xyz = hp.ang2vec(radecs[:,0],radecs[:,1],lonlat=True)
 
     proj = hp.projector.MollweideProj(rot=None, coord=None)
@@ -214,8 +221,12 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.2, col
             radecs.append([r,d])
 
     radecs = np.array(radecs)
-    #idx = np.where(radecs[:,0]>=180.0)[0]
-    #radecs[idx,0] = 175.0
+    idx1 = np.where(radecs[:,0]>=180.0)[0]
+    idx2 = np.where(radecs[:,0]<180.0)[0]
+    idx3 = np.where(radecs[:,1]>80.0)[0]
+    idx4 = np.where(radecs[:,1]<-80.0)[0]
+    if len(idx1)>0 and len(idx2)>0 and (len(idx3)>0 or len(idx4)>0):
+        alpha = 0.0
 
     xyz = []
     for r, d in radecs:

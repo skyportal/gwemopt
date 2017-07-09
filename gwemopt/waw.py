@@ -82,7 +82,7 @@ def detectability_maps(params, t, map_struct, samples_struct=None, nside=256, ve
 
     return detmaps
 
-def construct_followup_strategy_moc(skymap, detmaps, t_detmaps, moc_struct, T_int, T_available, min_detectability=0.01):
+def construct_followup_strategy_tiles(skymap, detmaps, t_detmaps, tile_struct, T_int, T_available, min_detectability=0.01):
 
     # make sure that the detectability is above the minimum at some point
     if np.all(detmaps[np.isfinite(detmaps)] < min_detectability):
@@ -91,13 +91,14 @@ def construct_followup_strategy_moc(skymap, detmaps, t_detmaps, moc_struct, T_in
 
     T = T_int
  
-    nmoc = len(moc_struct.keys())
-    dm = np.empty([len(detmaps), nmoc])
+    ntiles = len(tile_struct.keys())
+    ridx = np.arange(ntiles) # this keeps track of the original healpix indices corresponding to the region
+    dm = np.empty([len(detmaps), ntiles])
     for i in range(len(detmaps)):
-        dm[i] = gwemopt.moc.compute_moc_map(moc_struct, detmaps[i], func='np.mean(x)') 
+        dm[i] = gwemopt.tiles.compute_tiles_map(tile_struct, detmaps[i], func='np.mean(x)') 
 
     # bring the skymap to the same resolution, and take only the region
-    sm = gwemopt.moc.compute_moc_map(moc_struct, skymap, func='np.sum(x)')
+    sm = gwemopt.tiles.compute_tiles_map(tile_struct, skymap, func='np.sum(x)')
     # also, find the descending probability sorted indices of the skymap
     descending_prob_idx = np.argsort(sm)[::-1]
 

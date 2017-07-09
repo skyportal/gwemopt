@@ -201,6 +201,9 @@ if opts.doTiles:
     elif params["tilesType"] == "ranked":
         print "Generating ranked struct..."
         tile_structs = gwemopt.tiles.rankedTiles(params)
+    elif params["tilesType"] == "greedy":
+        print "Generating greedy struct..."
+        tile_structs = gwemopt.tiles.greedy(params, map_struct)
     else:
         print "Need tilesType to be moc or ranked"
         exit(0)
@@ -218,10 +221,7 @@ if opts.doGreedy:
     coverage_struct = gwemopt.coverage.greedy(params, eventinfo, tile_structs) 
 elif opts.doWAW:
     print "Generating WAW schedule..."
-    if opts.doTiles:
-        coverage_struct = gwemopt.coverage.waw(params, eventinfo, map_struct, tile_structs = tile_structs, doPlots = opts.doPlots)
-    else:
-        coverage_struct = gwemopt.coverage.waw(params, eventinfo, map_struct, tile_structs = None, doPlots = opts.doPlots)
+    coverage_struct = gwemopt.coverage.waw(params, eventinfo, map_struct, tile_structs)
 elif opts.doPEM:
     print "Generating PEM schedule..."
     coverage_struct = gwemopt.coverage.pem(params, eventinfo, map_struct, tile_structs)
