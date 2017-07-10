@@ -6,6 +6,10 @@ import itertools
 
 from scipy.stats import norm
 
+import astropy.coordinates
+from astropy.time import Time, TimeDelta
+import astropy.units as u
+
 import matplotlib
 #matplotlib.rc('text', usetex=True)
 matplotlib.use('Agg')
@@ -53,7 +57,6 @@ def read_skymap(params,is3D=False):
         map_struct["distsigma"] = distsigma_data / params["DScale"]
         map_struct["prob"] = prob_data
         map_struct["distnorm"] = norm_data
-
 
     else:
         prob_data = hp.read_map(filename, field=0, verbose=False)
@@ -180,8 +183,8 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.2, color='
 
     idx1 = np.where(radecs[:,0]>=180.0)[0]
     idx2 = np.where(radecs[:,0]<180.0)[0]
-    idx3 = np.where(radecs[:,1]>80.0)[0]
-    idx4 = np.where(radecs[:,1]<-80.0)[0]
+    idx3 = np.where(radecs[:,1]>75.0)[0]
+    idx4 = np.where(radecs[:,1]<750.0)[0]
     if len(idx1)>0 and len(idx2)>0 and (len(idx3)>0 or len(idx4)>0):
         alpha = 0.0
 
@@ -223,8 +226,8 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.2, col
     radecs = np.array(radecs)
     idx1 = np.where(radecs[:,0]>=180.0)[0]
     idx2 = np.where(radecs[:,0]<180.0)[0]
-    idx3 = np.where(radecs[:,1]>80.0)[0]
-    idx4 = np.where(radecs[:,1]<-80.0)[0]
+    idx3 = np.where(radecs[:,1]>75.0)[0]
+    idx4 = np.where(radecs[:,1]<-75.0)[0]
     if len(idx1)>0 and len(idx2)>0 and (len(idx3)>0 or len(idx4)>0):
         alpha = 0.0
 
@@ -281,3 +284,54 @@ def integrationTime(T_obs, pValTiles, func=None, T_int=60.0):
     time_per_tile = t_tiles[Obs] ### Actual time spent per tile
 
     return time_per_tile
+
+def observability(params, eventinfo, map_struct):
+
+    nside = params["nside"]
+    npix = hp.nside2npix(nside)
+    gpstime = eventinfo["gpstime"]
+    event_time = Time(gpstime, format='gps', scale='utc')
+    dts = np.arange(0,7,1.0/24.0)
+    dts = np.arange(0,7,1.0/4.0)
+
+    observatory_struct = {}
+
+    for telescope in params["telescopes"]:
+        config_struct = params["config"][telescope]
+
+        observatory = astropy.coordinates.EarthLocation(
+            lat=config_struct["latitude"]*u.deg, lon=config_struct["longitude"]*u.deg, height=config_struct["elevation"]*u.m)
+
+        # Look up (celestial) spherical polar coordinates of HEALPix grid.
+        theta, phi = hp.pix2ang(nside, np.arange(npix))
+        # Convert to RA, Dec.
+        radecs = astropy.coordinates.SkyCoord(
+            ra=phi*u.rad, dec=(0.5*np.pi - theta)*u.rad)
+
+        observatory_struct[telescope] = {}
+        observatory_struct[telescope]["prob"] = map_struct["prob"].copy()
+        observatory_struct[telescope]["observability"] = np.zeros((npix,))
+        observatory_struct[telescope]["dts"] = {}
+
+        for dt in dts:
+            time = event_time+TimeDelta(dt*u.day)
+
+            # Alt/az reference frame at observatory, now
+            frame = astropy.coordinates.AltAz(obstime=time, location=observatory)
+            # Transform grid to alt/az coordinates at observatory, now
+            altaz = radecs.transform_to(frame)
+
+            # Where is the sun, now?
+            sun_altaz = astropy.coordinates.get_sun(time).transform_to(altaz)
+
+            # How likely is it that the (true, unknown) location of the source
+            # is within the area that is visible, now? Demand that sun is at
+            # least 18 degrees below the horizon and that the airmass
+            # (secant of zenith angle approximation) is at most 2.5.
+            idx = np.where((altaz.alt >= 30*u.deg) &  (sun_altaz.alt <= -18*u.deg) & (altaz.secz <= 2.5))[0]
+            observatory_struct[telescope]["dts"][dt] = np.zeros((npix,))
+            observatory_struct[telescope]["dts"][dt][idx] = 1
+            observatory_struct[telescope]["observability"][idx] = 1
+        observatory_struct[telescope]["prob"] = observatory_struct[telescope]["prob"]*observatory_struct[telescope]["observability"]
+
+    return observatory_struct

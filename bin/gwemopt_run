@@ -73,9 +73,10 @@ def parse_commandline():
     parser.add_option("--doPlots",  action="store_true", default=False)
     parser.add_option("--doTiles",  action="store_true", default=False)
     parser.add_option("--tilesType", help="tiling type",default="moc")
-    parser.add_option("--doGreedy",  action="store_true", default=False)
+    parser.add_option("--doWaterfall",  action="store_true", default=False)
     parser.add_option("--doPEM",  action="store_true", default=False)
     parser.add_option("--doCatalog",  action="store_true", default=False)
+    parser.add_option("--doObservability",  action="store_true", default=False)
 
     parser.add_option("--doEfficiency",  action="store_true", default=False)
     #parser.add_option("-t", "--telescopes", help="Telescope names.",
@@ -143,6 +144,7 @@ def params_struct(opts):
     params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
 
     params["doPlots"] = opts.doPlots
+    params["doObservability"] = opts.doObservability
 
     return params
 
@@ -161,10 +163,10 @@ if not os.path.isdir(opts.outputDir): os.mkdir(opts.outputDir)
 params = params_struct(opts)
 
 if opts.doEfficiency:
-    efficiencyTypes = [opts.doGreedy, opts.doWAW,opts.doCoverage,opts.doPEM]
+    efficiencyTypes = [opts.doWaterfall, opts.doWAW,opts.doCoverage,opts.doPEM]
     efficiencyCount = sum(1 for x in efficiencyTypes if x)
     if not efficiencyCount == 1:
-        print "Need to enable --doGreedy, --doWAW, --doPEM or --doCoverage"
+        print "Need to enable --doWaterfall, --doWAW, --doPEM or --doCoverage"
         exit(0)
 
 if opts.doEvent:
@@ -186,6 +188,14 @@ if opts.doPlots:
     print "Plotting skymap..."
     gwemopt.plotting.skymap(params,map_struct)
 
+if opts.doObservability:
+    print "Generating observability"
+    observability_struct = gwemopt.utils.observability(params, eventinfo, map_struct)
+    map_struct["observability"] = observability_struct
+    if opts.doPlots:
+        print "Plotting observability..."
+        gwemopt.plotting.observability(params,map_struct)
+
 if opts.doSamples:
     print "Generating samples from skymap..."
     if opts.do3D:
@@ -200,12 +210,12 @@ if opts.doTiles:
         tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
     elif params["tilesType"] == "ranked":
         print "Generating ranked struct..."
-        tile_structs = gwemopt.tiles.rankedTiles(params)
+        tile_structs = gwemopt.tiles.rankedTiles(params, map_struct)
     elif params["tilesType"] == "greedy":
         print "Generating greedy struct..."
         tile_structs = gwemopt.tiles.greedy(params, map_struct)
     else:
-        print "Need tilesType to be moc or ranked"
+        print "Need tilesType to be moc, greedy, or ranked"
         exit(0)
 
     if opts.doPlots:
@@ -216,9 +226,9 @@ if opts.doCatalog:
     print "Generating catalog..."
     catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
 
-if opts.doGreedy:
-    print "Generating greedy schedule..."
-    coverage_struct = gwemopt.coverage.greedy(params, eventinfo, tile_structs) 
+if opts.doWaterfall:
+    print "Generating waterfall schedule..."
+    coverage_struct = gwemopt.coverage.waterfall(params, eventinfo, map_struct, tile_structs) 
 elif opts.doWAW:
     print "Generating WAW schedule..."
     coverage_struct = gwemopt.coverage.waw(params, eventinfo, map_struct, tile_structs)
@@ -229,7 +239,7 @@ elif opts.doCoverage:
     print "Reading coverage from file..."
     coverage_struct = gwemopt.coverage.read_coverage_files(params)
 
-if opts.doGreedy or opts.doWAW or opts.doPEM or opts.doCoverage:
+if opts.doWaterfall or opts.doWAW or opts.doPEM or opts.doCoverage:
     print "Summary of coverage..."
     gwemopt.coverage.summary(params,map_struct,eventinfo,coverage_struct)
 

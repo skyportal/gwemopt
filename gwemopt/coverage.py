@@ -187,12 +187,14 @@ def waw(params, eventinfo, map_struct, tile_structs):
 
     return combine_coverage_structs(coverage_structs)
 
-def greedy(params, eventinfo, tile_structs):
+def waterfall(params, eventinfo, map_struct, tile_structs):
 
     coverage_structs = []
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
         tile_struct = tile_structs[telescope]
+        tile_struct = gwemopt.tiles.waterfall_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)      
+ 
         coverage_struct = tiles_coverage(params, eventinfo, config_struct, tile_struct)
         coverage_structs.append(coverage_struct)
 

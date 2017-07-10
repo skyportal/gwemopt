@@ -11,7 +11,12 @@ import glue.segments, glue.segmentsUtils
 
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
-import gwemopt.moc, gwemopt.multinest
+import gwemopt.moc
+
+try:
+    import gwemopt.multinest
+except:
+    print "No Multinest present."
 
 def greedy(params, map_struct):
 
@@ -24,7 +29,7 @@ def greedy(params, map_struct):
 
     return tile_structs
 
-def rankedTiles_struct(params,config_struct,telescope):
+def rankedTiles_struct(params,config_struct,telescope,map_struct):
 
     nside = params["nside"]
 
@@ -33,6 +38,9 @@ def rankedTiles_struct(params,config_struct,telescope):
 
     preComputed_256 = os.path.join(params["tilingDir"],'preComputed_%s_pixel_indices_256.dat'%telescope)
     tileObj = gwemopt.rankedTilesGenerator.RankedTileGenerator(params["skymap"],preComputed_256=preComputed_256)
+
+    if "observability" in map_struct:
+        tileObj.skymap = map_struct["observability"][telescope]["prob"]
     ranked_tile_index, ranked_tile_probs, ipixs = tileObj.getRankedTiles(resolution=params["nside"])
     ranked_tile_times = tileObj.integrationTime(tot_obs_time, pValTiles=ranked_tile_probs, func=None)
     ranked_tile_times = config_struct["exposuretime"]*np.round(ranked_tile_times/config_struct["exposuretime"])
@@ -61,23 +69,28 @@ def rankedTiles_struct(params,config_struct,telescope):
 
     return tile_struct
 
-def rankedTiles(params):
+def rankedTiles(params, map_struct):
 
     tile_structs = {}
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
 
-        tile_struct = rankedTiles_struct(params, config_struct, telescope)
+        tile_struct = rankedTiles_struct(params, config_struct, telescope, map_struct)
         tile_structs[telescope] = tile_struct 
 
     return tile_structs
 
-def moc_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
+def waterfall_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
     n_windows = len(params["Tobs"]) // 2
     tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400.
 
-    ranked_tile_probs = compute_tiles_map(tile_struct, map_struct["prob"], func='np.sum(x)')
+    if "observability" in map_struct:
+        prob = map_struct["observability"][telescope]["prob"]
+    else:
+        prob = map_struct["prob"]
+ 
+    ranked_tile_probs = compute_tiles_map(tile_struct, prob, func='np.sum(x)')
     ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
 
     keys = tile_struct.keys()
@@ -87,14 +100,14 @@ def moc_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
     return tile_struct
 
-def moc(params, map_struct, moc_structs):
+def moc(params, map_struct, tile_structs):
 
     tile_structs = {}
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
-        moc_struct = moc_structs[telescope]
+        tile_struct = tile_structs[telescope]
  
-        tile_struct = moc_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+        tile_struct = waterfall_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
         tile_structs[telescope] = tile_struct
 
     return tile_structs
@@ -104,7 +117,12 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
     n_windows = len(params["Tobs"]) // 2
     tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400.
 
-    ranked_tile_probs = compute_tiles_map(tile_struct, map_struct["prob"], func='np.sum(x)')
+    if "observability" in map_struct:
+        prob = map_struct["observability"][telescope]["prob"]
+    else:
+        prob = map_struct["prob"]
+
+    ranked_tile_probs = compute_tiles_map(tile_struct, prob, func='np.sum(x)')
     ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
 
     if config_struct["FOV_type"] == "square":
@@ -144,8 +162,6 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
         p_R = None
 
     tau, prob = gwemopt.pem.Pem(FOV, lim_mag, lim_time, N_ref = N_ref, L_min = L_min, L_max = L_max, tau = tau, Loftau = Loftau, D_mu = D_mu, D_sig = D_sig, R = R, p_R = p_R)
-
-    ranked_tile_probs = gwemopt.tiles.compute_tiles_map(tile_struct, map_struct["prob"], func='np.sum(x)')
 
     tprob, time_allocation = gwemopt.pem.Main(tot_obs_time, 0, 0, ranked_tile_probs, tau, prob, 'Eq')
 

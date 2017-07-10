@@ -12,6 +12,45 @@ matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
 
+def observability(params,map_struct):
+    observability_struct = map_struct["observability"]
+
+    unit='Gravitational-wave probability'
+    cbar=False
+
+    for telescope in observability_struct.keys():
+        plotName = os.path.join(params["outputDir"],'observability_%s.pdf'%telescope)
+        hp.mollview(map_struct["prob"]*observability_struct[telescope]["observability"],title='',unit=unit,cbar=cbar,min=np.min(map_struct["prob"]),max=np.max(map_struct["prob"]))
+        add_edges()
+        plt.show()
+        plt.savefig(plotName,dpi=200)
+        plt.close('all')
+
+    moviedir = os.path.join(params["outputDir"],'movie')
+    if not os.path.isdir(moviedir): os.mkdir(moviedir)
+
+    for telescope in observability_struct.keys():
+        dts = observability_struct[telescope]["dts"].keys()
+        dts = np.sort(dts)
+        for ii,dt in enumerate(dts):
+            plotName = os.path.join(moviedir,'observability-%04d.png'%ii)
+            title = "Detectability Map: %.2f Days"%dt
+            hp.mollview(map_struct["prob"]*observability_struct[telescope]["dts"][dt],title=title,cbar=cbar,min=np.min(map_struct["prob"]),max=np.max(map_struct["prob"]))
+            add_edges()
+            plt.show()
+            plt.savefig(plotName,dpi=200)
+            plt.close('all')
+
+        moviefiles = os.path.join(moviedir,"observability-%04d.png")
+        filename = os.path.join(params["outputDir"],"observability_%s.mpg"%telescope)
+        ffmpeg_command = 'ffmpeg -an -y -r 20 -i %s -b:v %s %s'%(moviefiles,'5000k',filename)
+        os.system(ffmpeg_command)
+        filename = os.path.join(params["outputDir"],"observability_%s.gif"%telescope)
+        ffmpeg_command = 'ffmpeg -an -y -r 20 -i %s -b:v %s %s'%(moviefiles,'5000k',filename)
+        os.system(ffmpeg_command)
+        rm_command = "rm %s/*.png"%(moviedir)
+        os.system(rm_command)
+
 def tauprob(params,tau,prob):
 
     plotName = os.path.join(params["outputDir"],'tau_prob.pdf')
