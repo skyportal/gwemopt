@@ -125,10 +125,6 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
     ranked_tile_probs = compute_tiles_map(tile_struct, prob, func='np.sum(x)')
     ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
 
-    if config_struct["FOV_type"] == "square":
-        FOV = config_struct["FOV"]*config_struct["FOV"]
-    elif config_struct["FOV_type"] == "circle":
-        FOV = np.pi*config_struct["FOV"]*config_struct["FOV"]
     lim_mag = config_struct["magnitude"]
     lim_time = config_struct["exposuretime"]
 
@@ -161,7 +157,7 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
         R = None
         p_R = None
 
-    tau, prob = gwemopt.pem.Pem(FOV, lim_mag, lim_time, N_ref = N_ref, L_min = L_min, L_max = L_max, tau = tau, Loftau = Loftau, D_mu = D_mu, D_sig = D_sig, R = R, p_R = p_R)
+    tau, prob = gwemopt.pem.Pem(lim_mag, lim_time, N_ref = N_ref, L_min = L_min, L_max = L_max, tau = tau, Loftau = Loftau, D_mu = D_mu, D_sig = D_sig, R = R, p_R = p_R)
 
     tprob, time_allocation = gwemopt.pem.Main(tot_obs_time, 0, 0, ranked_tile_probs, tau, prob, 'Eq')
 

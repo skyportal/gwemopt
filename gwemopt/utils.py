@@ -183,9 +183,9 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.2, color='
 
     idx1 = np.where(radecs[:,0]>=180.0)[0]
     idx2 = np.where(radecs[:,0]<180.0)[0]
-    idx3 = np.where(radecs[:,1]>75.0)[0]
-    idx4 = np.where(radecs[:,1]<750.0)[0]
-    if len(idx1)>0 and len(idx2)>0 and (len(idx3)>0 or len(idx4)>0):
+    idx3 = np.where(radecs[:,0]>300.0)[0]
+    idx4 = np.where(radecs[:,0]<60.0)[0]
+    if len(idx1)>0 and len(idx2)>0 and not (len(idx3)>0 or len(idx4)>0):
         alpha = 0.0
 
     xyz = hp.ang2vec(radecs[:,0],radecs[:,1],lonlat=True)
@@ -226,9 +226,9 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.2, col
     radecs = np.array(radecs)
     idx1 = np.where(radecs[:,0]>=180.0)[0]
     idx2 = np.where(radecs[:,0]<180.0)[0]
-    idx3 = np.where(radecs[:,1]>75.0)[0]
-    idx4 = np.where(radecs[:,1]<-75.0)[0]
-    if len(idx1)>0 and len(idx2)>0 and (len(idx3)>0 or len(idx4)>0):
+    idx3 = np.where(radecs[:,0]>300.0)[0]
+    idx4 = np.where(radecs[:,0]<60.0)[0]
+    if len(idx1)>0 and len(idx2)>0 and not (len(idx3)>0 or len(idx4)>0):
         alpha = 0.0
 
     xyz = []
