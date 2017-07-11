@@ -104,11 +104,9 @@ def Main(T_tot, readout_time, slew_time, PGW, tau, prob, method):
 # In[96]:
 
 
-def Pem(FOV, lim_mag, lim_time, N_ref = 9.7847e9, L_min = 4.9370e31, L_max = 4.9370e33, tau = None, Loftau = None, D_mu = None, D_sig = None, R = None, p_R = None):
-    #[tau,prob]= Pem(r,lim_mag,lim_time,D_mu,D_sig,Loftau,N_ref,L_min,L_max)
+def Pem(lim_mag, lim_time, N_ref = 9.7847e9, L_min = 4.9370e31, L_max = 4.9370e33, model = '', sample_length = None, pMdM = None, tau = None, Loftau = 61, D_mu = 200.0e6, D_sig = 60.0e6, R = None, p_R = None):
+    #tau,prob = lim_mag, lim_time, N_ref = 9.7847e9, L_min = 4.9370e31, L_max = 4.9370e33, model = '', sample_length = None, pMdM = None, tau = None, Loftau = 61, D_mu = 200.0e6, D_sig = 60.0e6, R = None, p_R = None)
     #Pem calculates the values of the P_EM integral 
-
-    #r: the raidus of the aperture, in meters.
     
     #lim_mag: the limiting magnitude of the telescope. For kilonovae, the
     #         magnitude should be in R-band.
@@ -118,36 +116,72 @@ def Pem(FOV, lim_mag, lim_time, N_ref = 9.7847e9, L_min = 4.9370e31, L_max = 4.9
     #          band magnitude 21 in 3 minutes, then lim_time is 180 seconds,
     #          and lim_mag is 21.
 
-    #D_mu: this method employs a Gaussian distribution to approximate the 
-    #       distance information. D_mu is the mean, in par sec.
-
-    #D_sig: The sigma on distance, in par sec.
-
-    #Loftau: the length of the tau vector. The the smallest value of tau is
-    #        0.1s, the largest is 1e(-1+(Loftau-1)*0.1)s. 
-    #       If the input is [], the value will be set to 61. 
-    #
     #N_ref: the number of photons expected at apparent magnitude equal to
-    #       zero. If [] is input, the value would be equal to 9.7847*10^9.  
+    #       zero. The default value is 9.7847*10^9.  
 
-    #L_min: the minimum peak Luminosity of kilonovae, in w. If the input is [],
-    #       the value will be set equal to 4.970e31w (M = -8) from  
+    #L_min: the minimum peak Luminosity of kilonovae, in w.
+    #       The default value is 4.970e31w (M = -8) 
 
-    #L_max: the maximum peak Luminosity of kilonovae, in w. If the input is [],
-    #       the value will be set equal to 4.970e33w (M = -13) from (Barnes &
-    #      Kasen, 2013).
+    #L_max: the maximum peak Luminosity of kilonovae, in w. 
+    #       The default value is 4.970e33w (M = -13) from (Barnes &
+    #       Kasen, 2013).
+    
+    # model: the model that determines whether telescopes will see a target given
+    #        a specific observation time. 
+    #        'Poisson': Poisson distribution. The function will use a Poisson distribution
+    #             to determines how many photons will be seen at a given observation time
+    #             lambda is the expected number of photons per second per unit area given 
+    #             a peak luminosity
+    #        '': The function will use a scaling equation to compute the observation time 
+    #           needed to achieve a detection given a magnitude. 
+    
+    # sample_length: the number of points in distance and magnitudes(luminosity) spaces for 
+    #               calculating the integral over magnitude and distance (Eq. 5b in 
+    #               DOI:10.3847/1538-4357/834/1/84.
+    #               The larger the value, the more accurate the intergral is.
+    #               the default value is 100. 
+    
+    # pMdM: p(M) dM where p(M) is the probability of M. 
+    #        A vector the same length as sample_length.
+    #        The default is that derived from the prior on peak luminosity ( ~1/sqrt(L) )
+    #        If this is a user input value, L_min and L_max will not be used.
+    
+    # tau: The points in observation time space. 
+    
+    # Loftau: the number of points is observation time space. The default is 61.
+    #         tau will then be defined as tau = 10 ^ (-1 + i * 0.1) with i ranging 
+    #         from 0 to Loftau - 1.
+    
+    # D_mu: This function assumes a gaussian distribution to approximate the distribution on 
+    #       distance. D_mu is the mean of the distribution, in par sec.
+    
+    # D_sig: the variance of the gaussian distribution on distance, in par sec.
+    
+    # R: A vector in distance space. The interval between the elements should be equal
+    #    so that dR = R[1] - R[0]. The default is derived from D_min, D_max equal to 1e7
+    #    1e9 par sec.
+    
+    # p_R: the probability distribution density of R. default is gaussian distribution.
+    
     start_time = time.time()
         
-    sample_length = 100
+    if sample_length == None:
+        sample_length = 100
+        
     L = np.linspace(L_min, L_max, sample_length)
     logL = np.log10(L)
     dL = L[1] - L[0]
     L_sun = 3.85e26
     logL_sun = np.log10(L_sun)
-    k = 1.0 / (2.0 * (np.sqrt(L_max) - np.sqrt(L_min)))
-    L_prior = k / np.sqrt(L)
     M = 4.77 - 2.5 * logL + 2.5 * logL_sun
-    pMdM = L_prior * dL
+    
+    if pMdM == None:
+        k = 1.0 / (2.0 * (np.sqrt(L_max) - np.sqrt(L_min)))
+        L_prior = k / np.sqrt(L)
+        pMdM = L_prior * dL
+    elif len(pMdM) != sample_length:
+        sys.exit('pMdm has to have length equal to sample_length.') 
+    
     
     if p_R == None:
         D_min = 1.0e7
@@ -155,6 +189,7 @@ def Pem(FOV, lim_mag, lim_time, N_ref = 9.7847e9, L_min = 4.9370e31, L_max = 4.9
         Rstepsize = (D_max - D_min) / sample_length
         Rsteps = (D_max - D_min) / Rstepsize
         R = np.linspace(D_min, D_max, int(Rsteps))
+        
         p_R = scipy.stats.norm(D_mu, D_sig).pdf(R)   
     else:
         Rstepsize = R[1] - R[0]
@@ -169,8 +204,9 @@ def Pem(FOV, lim_mag, lim_time, N_ref = 9.7847e9, L_min = 4.9370e31, L_max = 4.9
     prob = np.zeros(Loftau)
     N_exp = np.zeros((len(R), sample_length))
     
+    
     scaling_num = 10 ** (np.log10(N_ref) - lim_mag / 2.5);
-    scaling_flux = lim_time * scaling_num * FOV
+    scaling_flux = lim_time * scaling_num 
 
     message1='Computing the values of P_EM at tau equal to ';
     message2='This calculation will be repeated ';
@@ -178,20 +214,35 @@ def Pem(FOV, lim_mag, lim_time, N_ref = 9.7847e9, L_min = 4.9370e31, L_max = 4.9
     message4='There are still ';
     message5=' times to go. \n';
     
-    for i in range(Loftau):
-        message = [message1, str(tau[i]), 's.']
-        print(''.join(message))
-        message = [message2, str(Loftau), message3]
-        print(''.join(message))
-        message = [message4, str(Loftau - i - 1), message5]
-        print(''.join(message))
-        
-        for dist in range(len(R)):
-            for mag in range(sample_length):
-                N_exp[dist][mag] = 10 ** (np.log10(N_ref) - (M[mag] + 5.0 * np.log10(R[dist]) - 5)/2.5)
-                int_value = (1 - scipy.stats.poisson.cdf(scaling_flux, N_exp[dist][mag] * tau[i] * FOV)) * p_R[dist] * pMdM[mag] * Rstepsize
+    if model == 'Poisson':
+        for i in range(Loftau):
+            message = [message1, str(tau[i]), 's.']
+            print(''.join(message))
+            message = [message2, str(Loftau), message3]
+            print(''.join(message))
+            message = [message4, str(Loftau - i - 1), message5]
+            print(''.join(message))
 
-                prob[i] += int_value
+            for dist in range(len(R)):
+                for mag in range(sample_length):
+                    N_exp[dist][mag] = 10 ** (np.log10(N_ref) - (M[mag] + 5.0 * np.log10(R[dist]) - 5)/2.5)
+                    int_value = (1 - scipy.stats.poisson.cdf(scaling_flux, N_exp[dist][mag] * tau[i])) * p_R[dist] * pMdM[mag] * Rstepsize
+                    prob[i] += int_value
+    else:
+        for i in range(Loftau):
+            message = [message1, str(tau[i]), 's.']
+            print(''.join(message))
+            message = [message2, str(Loftau), message3]
+            print(''.join(message))
+            message = [message4, str(Loftau - i - 1), message5]
+            print(''.join(message))
+
+            for dist in range(len(R)):
+                for mag in range(sample_length):
+                    N_exp[dist][mag] = 10 ** (np.log10(N_ref) - (M[mag] + 5.0 * np.log10(R[dist]) - 5)/2.5)
+                    if N_exp[dist][mag] * tau[i] >= scaling_flux:
+                        int_value = p_R[dist] * pMdM[mag] * Rstepsize
+                        prob[i] += int_value            
 
     finish_time = time.time() - start_time
     print(''.join(['The calculation has taken ', str(round(finish_time,2)), ' seconds.']))
