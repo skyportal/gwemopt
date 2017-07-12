@@ -7,7 +7,7 @@ from scipy.stats import norm
 
 from astropy.time import Time
 
-import glue.segments, glue.segmentsUtils
+import glue.segments
 
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
