@@ -200,7 +200,7 @@ def tesselation_spiral(config_struct):
         FOV = np.pi*config_struct["FOV"]*config_struct["FOV"]
 
     area_of_sphere = 4*np.pi*(180/np.pi)**2
-    n = np.ceil(area_of_sphere/FOV)
+    n = int(np.ceil(area_of_sphere/FOV))
     print "Using %d points to tile the sphere..."%n
  
     golden_angle = np.pi * (3 - np.sqrt(5))
