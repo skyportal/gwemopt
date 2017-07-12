@@ -49,20 +49,24 @@ def Fov2Moc(config_struct, ra_pointing, dec_pointing, nside):
     moc_struct["patch"] = patch
     moc_struct["area"] = area
 
-    # from index to polar coordinates
-    theta, phi = hp.pix2ang(nside, ipix)
+    if False:
+    #if len(ipix) > 0:
+        # from index to polar coordinates
+        theta, phi = hp.pix2ang(nside, ipix)
 
-    # converting these to right ascension and declination in degrees
-    ra = np.rad2deg(phi)
-    dec = np.rad2deg(0.5 * np.pi - theta)
+        # converting these to right ascension and declination in degrees
+        ra = np.rad2deg(phi)
+        dec = np.rad2deg(0.5 * np.pi - theta)
 
-    box_ipix = Table([ra, dec], names = ('RA[deg]', 'DEC[deg]'),
+        box_ipix = Table([ra, dec], names = ('RA[deg]', 'DEC[deg]'),
                  meta = {'ipix': 'ipix table'})
 
-    moc_order = int(np.log(nside)/ np.log(2))
-    moc = MOC.from_table( box_ipix, 'RA[deg]', 'DEC[deg]', moc_order )
+        moc_order = int(np.log(nside)/ np.log(2))
+        moc = MOC.from_table( box_ipix, 'RA[deg]', 'DEC[deg]', moc_order )
 
-    moc_struct["moc"] = moc
+        moc_struct["moc"] = moc
+    else:
+        moc_struct["moc"] = []
 
     return moc_struct
 

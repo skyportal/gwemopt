@@ -36,8 +36,15 @@ def rankedTiles_struct(params,config_struct,telescope,map_struct):
     n_windows = len(params["Tobs"]) // 2
     tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400.
 
-    preComputed_256 = os.path.join(params["tilingDir"],'preComputed_%s_pixel_indices_256.dat'%telescope)
-    tileObj = gwemopt.rankedTilesGenerator.RankedTileGenerator(params["skymap"],preComputed_256=preComputed_256)
+    preComputedFile = os.path.join(params["tilingDir"],'preComputed_%s_pixel_indices_%d.dat'%(telescope,nside))
+    if not os.path.isfile(preComputedFile):
+        print "Creating tiles file..."
+        gwemopt.rankedTilesGenerator.createTileFile(params,preComputedFile,radecs=config_struct["tesselation"])
+
+    preCompDictFiles = {64:None, 128:None,256:None, 512:None, 1024:None, 2048:None}
+    preCompDictFiles[nside] = preComputedFile
+
+    tileObj = gwemopt.rankedTilesGenerator.RankedTileGenerator(params["skymap"],preCompDictFiles=preCompDictFiles)
 
     if "observability" in map_struct:
         tileObj.skymap = map_struct["observability"][telescope]["prob"]
@@ -100,14 +107,15 @@ def waterfall_tiles_struct(params, config_struct, telescope, map_struct, tile_st
 
     return tile_struct
 
-def moc(params, map_struct, tile_structs):
+def moc(params, map_struct, moc_structs):
 
     tile_structs = {}
     for telescope in params["telescopes"]:
-        config_struct = params["config"][telescope]
-        tile_struct = tile_structs[telescope]
  
-        tile_struct = waterfall_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
+        config_struct = params["config"][telescope]
+        moc_struct = moc_structs[telescope]
+ 
+        tile_struct = waterfall_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
         tile_structs[telescope] = tile_struct
 
     return tile_structs
@@ -184,3 +192,68 @@ def compute_tiles_map(tile_struct, skymap, func=None):
         vals[ii] = f(skymap[tile_struct[ii]["ipix"]])
 
     return vals
+
+def tesselation_spiral(config_struct):
+    if config_struct["FOV_type"] == "square":
+        FOV = config_struct["FOV"]*config_struct["FOV"]
+    elif config_struct["FOV_type"] == "circle":
+        FOV = np.pi*config_struct["FOV"]*config_struct["FOV"]
+
+    area_of_sphere = 4*np.pi*(180/np.pi)**2
+    n = np.ceil(area_of_sphere/FOV)
+    print "Using %d points to tile the sphere..."%n
+ 
+    golden_angle = np.pi * (3 - np.sqrt(5))
+    theta = golden_angle * np.arange(n)
+    z = np.linspace(1 - 1.0 / n, 1.0 / n - 1, n)
+    radius = np.sqrt(1 - z * z)
+ 
+    points = np.zeros((n, 3))
+    points[:,0] = radius * np.cos(theta)
+    points[:,1] = radius * np.sin(theta)
+    points[:,2] = z
+
+    #arclens = []
+    ra, dec = hp.pixelfunc.vec2ang(points, lonlat=True)
+    #for ii in xrange(len(ra)):
+    #    arclen = np.inf
+    #    for jj in xrange(len(ra)):
+    #        if ii == jj: continue
+    #        arclen = np.min([arclen,hp.rotator.angdist([ra[ii],dec[ii]], [ra[jj],dec[jj]], lonlat=True)])
+    #        arclens.append(arclen)
+    fid = open(config_struct["tesselationFile"],'w')
+    for ii in xrange(len(ra)):
+        fid.write('%d %.5f %.5f\n'%(ii,ra[ii],dec[ii]))
+    fid.close()   
+
+def tesselation_packing(config_struct):
+    sphere_radius = 1.0
+    if config_struct["FOV_type"] == "square":
+        circle_radius = np.deg2rad(config_struct["FOV"]/2.0)
+    elif config_struct["FOV_type"] == "circle":
+        circle_radius = np.deg2rad(config_struct["FOV"])
+    vertical_count = int( (np.pi*sphere_radius)/(2*circle_radius) )
+
+    phis = []
+    thetas = []
+
+    phi = -0.5*np.pi
+    phi_step = np.pi/vertical_count
+    while phi<0.5*np.pi:
+        horizontal_count = int( (2*np.pi*np.cos(phi)*sphere_radius)/(2*circle_radius) )
+        if horizontal_count==0: horizontal_count=1
+        theta = 0
+        theta_step = 2*np.pi/horizontal_count
+        while theta<2*np.pi-1e-8:
+            phis.append(phi)
+            thetas.append(theta)
+            theta += theta_step
+        phi += phi_step
+    dec = np.array(np.rad2deg(phis))
+    ra = np.array(np.rad2deg(thetas))
+
+    fid = open(config_struct["tesselationFile"],'w')
+    for ii in xrange(len(ra)):
+        fid.write('%d %.5f %.5f\n'%(ii,ra[ii],dec[ii]))
+    fid.close()
+

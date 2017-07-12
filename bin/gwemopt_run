@@ -124,10 +124,15 @@ def params_struct(opts):
     params["config"] = {}
     configFiles = glob.glob("%s/*.config"%opts.configDirectory)
     for configFile in configFiles:
-        telescopeName = configFile.split("/")[-1].replace(".config","")
-        params["config"][telescopeName] = gwemopt.utils.readParamsFromFile(configFile)
-        if "tesselationFile" in params["config"][telescopeName]:
-            params["config"][telescopeName]["tesselation"] = np.loadtxt(params["config"][telescopeName]["tesselationFile"])
+        telescope = configFile.split("/")[-1].replace(".config","")
+        params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
+        if "tesselationFile" in params["config"][telescope]:
+            if not os.path.isfile(params["config"][telescope]["tesselationFile"]):
+                if params["config"][telescope]["FOV_type"] == "circle": 
+                    gwemopt.tiles.tesselation_spiral(params["config"][telescope])
+                elif params["config"][telescope]["FOV_type"] == "square":
+                    gwemopt.tiles.tesselation_packing(params["config"][telescope])
+            params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2))
 
     params["skymap"] = opts.skymap
     params["outputDir"] = opts.outputDir

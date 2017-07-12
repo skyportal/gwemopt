@@ -48,6 +48,48 @@ from astropy.coordinates import get_moon
 from astropy.coordinates import get_body
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
 
+def createTileFile(params, preComputedFile, radecs=None, tileFile=None):
+
+    nside = params["nside"]
+    npix = hp.nside2npix(nside)
+
+    theta, phi = hp.pix2ang(nside, np.arange(0, npix)) # Construct the theta and phi arrays
+    ra = np.rad2deg(phi) # Construct ra array
+    dec = np.rad2deg(0.5*np.pi - theta) # Construct dec array
+    pixelIndex = np.arange(npix)
+
+    if not tileFile == None:
+        data = np.recfromtxt(tileFile, names=True)
+        RA_tile = data['ra_center'] ### RA value of the telescope fields
+        Dec_tile = data['dec_center'] ### Dec values of the telescope fields
+        tile_index = data['ID']-1 ### Indexing the tiles
+    elif not radecs == None:
+        RA_tile = radecs[:,1]
+        Dec_tile = radecs[:,2]
+        tile_index = np.arange(len(RA_tile)) + 1.0
+
+    closestTileIndex = []
+
+    for ii in pixelIndex:
+            s = np.arccos( np.sin(np.pi*dec[ii]/180.)\
+                    * np.sin(np.pi*Dec_tile/180.)\
+                    + np.cos(np.pi*dec[ii]/180.)\
+                    * np.cos(np.pi*Dec_tile/180.) \
+                    * np.cos(np.pi*(RA_tile - ra[ii])/180.) )
+            index = np.argmin(s) ### minimum angular distance index
+            closestTileIndex.append(tile_index[index])
+
+    closestTileIndex = np.array(closestTileIndex)
+    uniqueTiles = np.unique(closestTileIndex)
+
+    pixelsInTile = []
+    for tile in uniqueTiles:
+        whereThisTile = tile == closestTileIndex ### pixels indices in this tile
+        pixelsInTile.append(pixelIndex[whereThisTile])
+
+    File = open(preComputedFile, 'wb')
+    pickle.dump(pixelsInTile, File)
+    File.close()
 
 def getTileBounds(FOV, ra_cent, dec_cent):
     dec_down = dec_cent - 0.5*np.sqrt(FOV)
@@ -63,31 +105,15 @@ def getTileBounds(FOV, ra_cent, dec_cent):
 
 
 class RankedTileGenerator:
-	def __init__(self, skymapfile, preComputed_64=None, preComputed_128=None, 
-				preComputed_256=None, preComputed_512=None, 
-				preComputed_1024=None, preComputed_2048=None):
+	def __init__(self, skymapfile, preComputed_64=None, preComputed_128=None, preComputed_256=None, preComputed_512=None, preComputed_1024=None, preComputed_2048=None, preCompDictFiles=None):
 		self.skymap = hp.read_map(skymapfile, verbose=False)
 		npix = len(self.skymap)
 		self.nside = hp.npix2nside(npix)
-		if preComputed_64 is None:
-			preComputed_64 = 'preComputed_ZTF_pixel_indices_64.dat'
-		if preComputed_128 is None:
-			preComputed_128 = 'preComputed_ZTF_pixel_indices_128.dat'
-		if preComputed_256 is None:
-			preComputed_256 = 'preComputed_ZTF_pixel_indices_256.dat'
-		if preComputed_512 is None:
-			preComputed_512 = 'preComputed_ZTF_pixel_indices_512.dat'
-		if preComputed_1024 is None:
-			preComputed_1024 = 'preComputed_ZTF_pixel_indices_1024.dat'
-		if preComputed_2048 is None:
-			preComputed_2048 = 'preComputed_ZTF_pixel_indices_2048.dat'
-		
-		
-		
-		self.preCompDictFiles = {64:preComputed_64, 128:preComputed_128,
-					256:preComputed_256, 512:preComputed_512,
-					1024:preComputed_1024, 2048:preComputed_2048}
-				
+
+		if preCompDictFiles==None:
+			self.preCompDictFiles = {64:preComputed_64, 128:preComputed_128,256:preComputed_256, 512:preComputed_512, 1024:preComputed_1024, 2048:preComputed_2048}
+		else:
+                        self.preCompDictFiles = preCompDictFiles
 
 	def sourceTile(self, ra, dec, tiles):
 		'''
