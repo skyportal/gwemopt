@@ -5,7 +5,7 @@ import healpy as hp
 
 from astropy.time import Time
 
-import glue.segments, glue.segmentsUtils
+import glue.segments
 
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
