@@ -12,6 +12,8 @@ The code needs to:
 - test the efficiency of the tiling, exposure time method choices, for a given lightcurve.
 
 Related repositories:
+- https://github.com/JavedRANA/emgwfollowup
+
 - https://github.com/shaonghosh/sky_tiling.git
 
 - https://github.com/omsharansalafia/waw
