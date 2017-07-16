@@ -6,6 +6,10 @@ import itertools
 
 from scipy.stats import norm
 
+import glue.segments
+
+import ephem
+
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u
@@ -285,11 +289,11 @@ def integrationTime(T_obs, pValTiles, func=None, T_int=60.0):
 
     return time_per_tile
 
-def observability(params, eventinfo, map_struct):
+def observability(params, map_struct):
 
     nside = params["nside"]
     npix = hp.nside2npix(nside)
-    gpstime = eventinfo["gpstime"]
+    gpstime = params["gpstime"]
     event_time = Time(gpstime, format='gps', scale='utc')
     dts = np.arange(0,7,1.0/24.0)
     dts = np.arange(0,7,1.0/4.0)
@@ -335,3 +339,67 @@ def observability(params, eventinfo, map_struct):
         observatory_struct[telescope]["prob"] = observatory_struct[telescope]["prob"]*observatory_struct[telescope]["observability"]
 
     return observatory_struct
+
+def get_segments(params, config_struct):
+
+    gpstime = params["gpstime"]
+    event_mjd = Time(gpstime, format='gps', scale='utc').mjd
+
+    segmentlist = glue.segments.segmentlist()
+    n_windows = len(params["Tobs"]) // 2
+    start_segments = event_mjd + params["Tobs"][::2]
+    end_segments = event_mjd + params["Tobs"][1::2]
+    for start_segment, end_segment in zip(start_segments,end_segments):
+        segmentlist.append(glue.segments.segment(start_segment,end_segment))
+
+    observer = ephem.Observer()
+    observer.lat = str(config_struct["latitude"])
+    observer.lon = str(config_struct["longitude"])
+    observer.horizon = str(-12.0)
+    observer.elevation = config_struct["elevation"]
+
+    date_start = ephem.Date(Time(segmentlist[0][0], format='mjd', scale='utc').iso)
+    date_end = ephem.Date(Time(segmentlist[-1][1], format='mjd', scale='utc').iso)
+    observer.date = ephem.Date(Time(segmentlist[0][0], format='mjd', scale='utc').iso)
+
+    sun = ephem.Sun()
+    nightsegmentlist = glue.segments.segmentlist()
+    while date_start < date_end:
+        date_rise = observer.next_rising(sun, start = date_start)
+        date_set = observer.next_setting(sun, start = date_start)
+        if date_set > date_rise:
+            date_set = observer.previous_setting(sun, start = date_start)
+
+        astropy_rise = Time(date_rise.datetime(), scale='utc').mjd
+        astropy_set  = Time(date_set.datetime(), scale='utc').mjd
+
+        segment = glue.segments.segment(astropy_set,astropy_rise)
+        nightsegmentlist = nightsegmentlist + glue.segments.segmentlist([segment])
+        nightsegmentlist.coalesce()
+
+        date_start = date_rise
+        observer.date = date_rise
+
+    segmentlistdic = glue.segments.segmentlistdict()
+    segmentlistdic["observations"] = segmentlist
+    segmentlistdic["night"] = nightsegmentlist
+    segmentlist = segmentlistdic.intersection(["observations","night"])
+    segmentlist.coalesce()
+
+    return segmentlist
+
+def get_exposures(params, config_struct, segmentlist):
+
+    exposurelist = glue.segments.segmentlist()
+
+    for ii in xrange(len(segmentlist)):
+        start_segment, end_segment = segmentlist[ii][0], segmentlist[ii][1]
+        exposures = np.arange(start_segment, end_segment, config_struct["exposuretime"]/86400.0)
+        #exposurelist = np.append(exposurelist,exposures)
+
+        for jj in xrange(len(exposures)):
+            exposurelist.append(glue.segments.segment(exposures[jj],exposures[jj]+config_struct["exposuretime"]/86400.0))
+
+    return exposurelist
+
+

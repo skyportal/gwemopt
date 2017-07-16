@@ -92,7 +92,7 @@ def read_coverage_files(params):
 
     return combine_coverage_structs(coverage_structs)
 
-def waw(params, eventinfo, map_struct, tile_structs): 
+def waw(params, map_struct, tile_structs): 
 
     nside = params["nside"]
 
@@ -100,9 +100,6 @@ def waw(params, eventinfo, map_struct, tile_structs):
     #t = np.arange(0,7,1.0)
     cr90 = map_struct["cumprob"] < 0.9
     detmaps = gwemopt.waw.detectability_maps(params, t, map_struct, verbose=True, limit_to_region=cr90, nside=nside)
-
-    n_windows = len(params["Tobs"]) // 2
-    tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400.
 
     coverage_structs = []
     for telescope in params["telescopes"]: 
@@ -131,7 +128,7 @@ def waw(params, eventinfo, map_struct, tile_structs):
 
     return combine_coverage_structs(coverage_structs)
 
-def waterfall(params, eventinfo, map_struct, tile_structs):
+def waterfall(params, map_struct, tile_structs):
 
     coverage_structs = []
     for telescope in params["telescopes"]:
@@ -144,10 +141,7 @@ def waterfall(params, eventinfo, map_struct, tile_structs):
 
     return combine_coverage_structs(coverage_structs)
 
-def pem(params, eventinfo, map_struct, tile_structs):
-
-    n_windows = len(params["Tobs"]) // 2
-    tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400
+def pem(params, map_struct, tile_structs):
 
     coverage_structs = []
     for telescope in params["telescopes"]:

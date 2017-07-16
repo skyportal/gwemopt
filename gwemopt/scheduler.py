@@ -15,7 +15,11 @@ import gwemopt.utils
 import gwemopt.rankedTilesGenerator
 import gwemopt.moc, gwemopt.pem
 
-def get_altaz_tiles(radecs, observatory, obstime):
+def get_altaz_tiles(ras, decs, observatory, obstime):
+
+    # Convert to RA, Dec.
+    radecs = astropy.coordinates.SkyCoord(
+            ra=np.array(ras)*u.degree, dec=np.array(decs)*u.degree, frame='icrs')
 
     # Alt/az reference frame at observatory, now
     frame = astropy.coordinates.AltAz(obstime=obstime, location=observatory)
@@ -25,12 +29,12 @@ def get_altaz_tiles(radecs, observatory, obstime):
 
     return altaz
 
-def get_segments_tile(config_struct, radec, segmentlist):
+def get_segments_tile(config_struct, observatory, radec, segmentlist):
 
     observer = ephem.Observer()
     observer.lat = str(config_struct["latitude"])
     observer.lon = str(config_struct["longitude"])
-    observer.horizon = str(-12.0)
+    observer.horizon = str(30.0)
     observer.elevation = config_struct["elevation"]
     observer.date = ephem.Date(Time(segmentlist[0][0], format='mjd', scale='utc').iso)
 
@@ -55,11 +59,22 @@ def get_segments_tile(config_struct, radec, segmentlist):
         except ephem.NeverUpError:
             date_rise = ephem.Date(0.0)
             date_set = ephem.Date(0.0)
+            break
 
-        astropy_rise = Time(date_rise.datetime(), scale='utc').mjd
-        astropy_set  = Time(date_set.datetime(), scale='utc').mjd
+        astropy_rise = Time(date_rise.datetime(), scale='utc')
+        astropy_set  = Time(date_set.datetime(), scale='utc')
 
-        segment = glue.segments.segment(astropy_rise,astropy_set)
+        astropy_rise_mjd = astropy_rise.mjd
+        astropy_set_mjd  = astropy_set.mjd
+
+        # Alt/az reference frame at observatory, now
+        #frame_rise = astropy.coordinates.AltAz(obstime=astropy_rise, location=observatory)
+        #frame_set = astropy.coordinates.AltAz(obstime=astropy_set, location=observatory)    
+        # Transform grid to alt/az coordinates at observatory, now
+        #altaz_rise = radec.transform_to(frame_rise)
+        #altaz_set = radec.transform_to(frame_set)        
+
+        segment = glue.segments.segment(astropy_rise_mjd,astropy_set_mjd)
         tilesegmentlist = tilesegmentlist + glue.segments.segmentlist([segment])
         tilesegmentlist.coalesce()
 
@@ -74,11 +89,17 @@ def get_segments_tile(config_struct, radec, segmentlist):
 
     return tilesegmentlist
 
-def get_segments_tiles(config_struct, radecs, segmentlist):
-  
+def get_segments_tiles(config_struct, observatory, ras, decs, segmentlist):
+
+    print "Generating segments for tiles..."
+
+    # Convert to RA, Dec.
+    radecs = astropy.coordinates.SkyCoord(
+            ra=np.array(ras)*u.degree, dec=np.array(decs)*u.degree, frame='icrs') 
     tilesegmentlists = []
-    for radec in radecs:
-        tilesegmentlist = get_segments_tile(config_struct, radec, segmentlist)
+    for ii,radec in enumerate(radecs):
+        #print "Generating segments for tile %d/%d"%(ii,len(radecs))
+        tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
         tilesegmentlists.append(tilesegmentlist)
 
     return tilesegmentlists
@@ -101,72 +122,88 @@ def sort_tiles(tile_struct):
     idx = np.argsort(probs)[::-1]
 
     keys = keys[idx].tolist()
-    ras = ras[idx]
-    decs = decs[idx]
-    probs = probs[idx]
+    ras = ras[idx].tolist()
+    decs = decs[idx].tolist()
+    probs = probs[idx].tolist()
 
-    # Convert to RA, Dec.
-    radecs = astropy.coordinates.SkyCoord(
-            ra=ras*u.degree, dec=decs*u.degree, frame='icrs')
+    return keys, ras, decs, probs
 
-    return keys, radecs, probs
+def get_observation(params,config_struct,segmentlist,altaz,probs,tilesegmentlists):
 
-def get_exposures(params, config_struct, segmentlist):
+    if params["scheduleType"] == "greedy":
+        idx = np.where((altaz.alt >= 30.0*u.deg) & (altaz.secz <= 2.5))[0]
+        if len(idx) == 0:
+            idx = None
+        else:
+            idx = idx[0]
+    elif params["scheduleType"] == "sear":
+        idx1 = np.where((altaz.alt >= 30.0*u.deg) & (altaz.secz <= 2.5))[0]
+        # Is any tile going to set soon?
+        idx2 = []
+        for ii in idx1:
+            tilesegmentlist = np.array(tilesegmentlists[ii])
+            idx = np.where((tilesegmentlist[:,1] >= segmentlist[0][0]) & (tilesegmentlist[:,1] <= segmentlist[0][0]+config_struct["exposuretime"]/86400.0))[0]
+            if len(idx) > 0:
+                idx2.append(ii)
+        if len(idx2) > 0:
+            idx3 = np.argmax(np.array(probs)[idx2])
+            idx = idx2[idx3]
+        else:
+            if len(idx1) == 0:
+                idx = None
+            else:
+                idx = idx1[0]
+    elif params["scheduleType"] == "optimal":
+        idx = np.where((altaz.alt >= 30.0*u.deg) & (altaz.secz <= 2.5))[0]
+        if len(idx) == 0:
+            idx = None
+        else:
+            idx = idx[0]
+    return idx
 
-    exposurelist = np.empty((0,1))
-    for ii in xrange(len(segmentlist)):
-        start_segment, end_segment = segmentlist[ii][0], segmentlist[ii][1]
-        exposures = np.arange(start_segment, end_segment, config_struct["exposuretime"]/86400.0)
-        exposurelist = np.append(exposurelist,exposures)
-    return exposurelist
+def get_order(tile_struct,keys,tilesegmentlists,exposurelist):
+   
+    exposureids_tiles = {}
+    for ii in xrange(len(exposurelist)):
+        exposureids_tiles[ii] = {}
+        exposureids = []
+        probs = []
+        for jj, key in enumerate(keys):
+            tilesegmentlist = tilesegmentlists[jj]
+            if tilesegmentlist.intersects_segment(exposurelist[ii]):
+                exposureids.append(key)
+                probs.append(tile_struct[key]["prob"])
+        exposureids_tiles[ii]["exposureids"] = exposureids
+        exposureids_tiles[ii]["probs"] = probs
 
-def get_segments(params, config_struct):
+    exposureids = []
+    probs = []
+    for ii, key in enumerate(keys):
+        for jj in xrange(tile_struct[key]["nexposures"]):
+            exposureids.append(key)
+            probs.append(tile_struct[key]["prob"])
+    
+    idxs = []
+    for ii in exposureids_tiles.iterkeys(): 
+        findTile = True
+        while findTile:
+            if not exposureids_tiles[ii]["probs"]:
+                idxs.append(-1)
+                findTile = False
+                break
+            idx = np.argmax(exposureids_tiles[ii]["probs"])
+            idx2 = exposureids_tiles[ii]["exposureids"][idx]
+            if idx2 in exposureids:
+                idxs.append(idx2)
+                idx = exposureids.index(idx2)
+                exposureids.pop(idx)
+                probs.pop(idx)       
+                findTile = False 
+            else:    
+                exposureids_tiles[ii]["exposureids"].pop(idx)
+                exposureids_tiles[ii]["probs"].pop(idx)
 
-    gpstime = params["gpstime"]
-    event_mjd = Time(gpstime, format='gps', scale='utc').mjd
-
-    segmentlist = glue.segments.segmentlist()
-    n_windows = len(params["Tobs"]) // 2
-    start_segments = event_mjd + params["Tobs"][::2]
-    end_segments = event_mjd + params["Tobs"][1::2]
-    for start_segment, end_segment in zip(start_segments,end_segments):
-        segmentlist.append(glue.segments.segment(start_segment,end_segment))
-
-    observer = ephem.Observer()
-    observer.lat = str(config_struct["latitude"])
-    observer.lon = str(config_struct["longitude"])
-    observer.horizon = str(-12.0)
-    observer.elevation = config_struct["elevation"]
-
-    date_start = ephem.Date(Time(segmentlist[0][0], format='mjd', scale='utc').iso)
-    date_end = ephem.Date(Time(segmentlist[-1][1], format='mjd', scale='utc').iso)
-    observer.date = ephem.Date(Time(segmentlist[0][0], format='mjd', scale='utc').iso)
-
-    sun = ephem.Sun()
-    nightsegmentlist = glue.segments.segmentlist()
-    while date_start < date_end:
-        date_rise = observer.next_rising(sun, start = date_start)
-        date_set = observer.next_setting(sun, start = date_start)
-        if date_set > date_rise:
-            date_set = observer.previous_setting(sun, start = date_start)
-
-        astropy_rise = Time(date_rise.datetime(), scale='utc').mjd
-        astropy_set  = Time(date_set.datetime(), scale='utc').mjd
-
-        segment = glue.segments.segment(astropy_set,astropy_rise)
-        nightsegmentlist = nightsegmentlist + glue.segments.segmentlist([segment])
-        nightsegmentlist.coalesce()
-
-        date_start = date_rise
-        observer.date = date_rise
-
-    segmentlistdic = glue.segments.segmentlistdict()
-    segmentlistdic["observations"] = segmentlist
-    segmentlistdic["night"] = nightsegmentlist
-    segmentlist = segmentlistdic.intersection(["observations","night"])
-    segmentlist.coalesce()
-
-    return segmentlist
+    return idxs
 
 def scheduler(params, config_struct, tile_struct):
 
@@ -177,58 +214,37 @@ def scheduler(params, config_struct, tile_struct):
     coverage_struct["patch"] = []
     coverage_struct["area"] = []
 
-    keys, radecs, probs = sort_tiles(tile_struct)
+    keys, ras, decs, probs = sort_tiles(tile_struct)
     observatory = astropy.coordinates.EarthLocation(
         lat=config_struct["latitude"]*u.deg, lon=config_struct["longitude"]*u.deg, height=config_struct["elevation"]*u.m)
 
-    segmentlist = get_segments(params, config_struct)
-    exposurelist = get_exposures(params, config_struct, segmentlist)
-    tilesegmentlists = get_segments_tiles(config_struct, radecs, segmentlist)
+    segmentlist = config_struct["segmentlist"]
+    exposurelist = config_struct["exposurelist"]
+    tilesegmentlists = get_segments_tiles(config_struct, observatory, ras, decs, segmentlist)
+    keys = get_order(tile_struct,keys,tilesegmentlists,exposurelist)
 
-    while len(segmentlist) > 0:
-        obstime = Time(segmentlist[0][0], format='mjd', scale='utc')
-        altaz = get_altaz_tiles(radecs, observatory, obstime)
-
-        if params["scheduleType"] == "greedy":
-            idx = np.where((altaz.alt >= 30.0*u.deg) & (altaz.secz <= 2.5))[0]
-        elif params["scheduleType"] == "sear":
-            idx1 = np.where((altaz.alt >= 30.0*u.deg) & (altaz.secz <= 2.5))[0]
-            # Is anyone going to set soon?
-            idx2 = np.where(set_time[idx1] <= segmentlist[0][0]+config_struct["exposuretime"]/86400.0)[0]
-            if len(idx2) > 0:
-                print idx2
-            else:
-                idx = idx1   
-        elif params["scheduleType"] == "optimal":
-            idx = np.where((altaz.alt >= 30.0*u.deg) & (altaz.secz <= 2.5))[0]
-
-        if len(idx) == 0:
-            segment = glue.segments.segment(segmentlist[0][0],segmentlist[0][0]+config_struct["exposuretime"]/86400.0)
-            segmentlist = segmentlist - glue.segments.segmentlist([segment])
-            segmentlist.coalesce()
+    while len(exposurelist) > 0:
+        key = keys[0]
+        if key == -1:
+            keys = keys[1:]
+            exposurelist = exposurelist[1:]
         else:
-            key = keys[idx[0]]
-            tile_struct_hold = tile_struct[key] 
-            exposureTime = tile_struct_hold["exposureTime"]
+            tile_struct_hold = tile_struct[key]
 
-            mjd_exposure_start = segmentlist[0][0]
-            mjd_exposure_end = mjd_exposure_start + exposureTime/86400.0
-            if mjd_exposure_end > segmentlist[0][1]:
-                mjd_exposure_end = segmentlist[0][1]
-                exposureTime = (mjd_exposure_end - mjd_exposure_start)*86400.0
-                tile_struct[key]["exposureTime"] = tile_struct[key]["exposureTime"] - exposureTime 
-            else:
-                del tile_struct[key]
-                keys.pop(idx[0])
-
-            segment = glue.segments.segment(mjd_exposure_start,mjd_exposure_end)
-            segmentlist = segmentlist - glue.segments.segmentlist([segment])
-            segmentlist.coalesce()
-
+            mjd_exposure_start = exposurelist[0][0]
+            for jj in xrange(len(keys)):
+                if keys[jj] == key:
+                    mjd_exposure_end = exposurelist[jj][1]
+                else:
+                    nexp = jj + 1
+                    keys = keys[jj:]
+                    exposurelist = exposurelist[jj:]
+                    break    
+        
             mjd_exposure_mid = (mjd_exposure_start+mjd_exposure_end)/2.0
-            nexp = np.round(exposureTime/config_struct["exposuretime"])
             nmag = np.log(nexp) / np.log(2.5)
             mag = config_struct["magnitude"] + nmag
+            exposureTime = (mjd_exposure_end-mjd_exposure_start)*86400.0
 
             coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_mid,mag,exposureTime]]),axis=0)
 

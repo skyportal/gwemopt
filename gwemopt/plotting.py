@@ -195,9 +195,6 @@ def coverage(params, map_struct, coverage_struct):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
-    n_windows = len(params["Tobs"]) // 2
-    tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400.
-
     idx = np.isfinite(coverage_struct["data"][:,4])
     min_time = np.min(coverage_struct["data"][idx,4])
     max_time = np.max(coverage_struct["data"][idx,4])
@@ -248,7 +245,7 @@ def coverage(params, map_struct, coverage_struct):
             alpha = data[4]/max_time
             if alpha > 1:
                 alpha = 1.0
-        patch_cpy.set_alpha(alpha)
+            patch_cpy.set_alpha(alpha)
         hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
         #tiles.plot()
     plt.show()

@@ -34,8 +34,8 @@ def rankedTiles_struct(params,config_struct,telescope,map_struct):
 
     nside = params["nside"]
 
-    n_windows = len(params["Tobs"]) // 2
-    tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400.
+    n_windows = config_struct["n_windows"]
+    tot_obs_time = config_struct["tot_obs_time"]
 
     preComputedFile = os.path.join(params["tilingDir"],'preComputed_%s_pixel_indices_%d.dat'%(telescope,nside))
     if not os.path.isfile(preComputedFile):
@@ -61,6 +61,7 @@ def rankedTiles_struct(params,config_struct,telescope,map_struct):
         tile_struct[ii]["prob"] = prob
         tile_struct[ii]["ipix"] = ipix
         tile_struct[ii]["exposureTime"] = exposureTime
+        tile_struct[ii]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
         tile_struct[ii]["ra"] = config_struct["tesselation"][index,1]
         tile_struct[ii]["dec"] = config_struct["tesselation"][index,2]
 
@@ -90,8 +91,8 @@ def rankedTiles(params, map_struct):
 
 def waterfall_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
-    n_windows = len(params["Tobs"]) // 2
-    tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400.
+    n_windows = config_struct["n_windows"]
+    tot_obs_time = config_struct["tot_obs_time"]
 
     if "observability" in map_struct:
         prob = map_struct["observability"][telescope]["prob"]
@@ -105,6 +106,7 @@ def waterfall_tiles_struct(params, config_struct, telescope, map_struct, tile_st
     for key, prob, exposureTime in zip(keys, ranked_tile_probs, ranked_tile_times):
         tile_struct[key]["prob"] = prob
         tile_struct[key]["exposureTime"] = exposureTime
+        tile_struct[key]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
 
     return tile_struct
 
@@ -123,8 +125,8 @@ def moc(params, map_struct, moc_structs):
 
 def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
-    n_windows = len(params["Tobs"]) // 2
-    tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400.
+    n_windows = config_struct["n_windows"]
+    tot_obs_time = config_struct["tot_obs_time"]
 
     if "observability" in map_struct:
         prob = map_struct["observability"][telescope]["prob"]
@@ -177,30 +179,7 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
     for key, prob, exposureTime in zip(keys, ranked_tile_probs, time_allocation):
         tile_struct[key]["prob"] = prob
         tile_struct[key]["exposureTime"] = exposureTime
-
-    return tile_struct
-
-def optcounterpart_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
-
-    n_windows = len(params["Tobs"]) // 2
-    tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400.
-
-    if "observability" in map_struct:
-        prob = map_struct["observability"][telescope]["prob"]
-    else:
-        prob = map_struct["prob"]
-
-    ranked_tile_times = gwemopt.optcounterpart.schedule(params, config_struct, map_struct, tile_struct)
-
-    print stop
-
-    ranked_tile_probs = compute_tiles_map(tile_struct, prob, func='np.sum(x)')
-    ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
-
-    keys = tile_struct.keys()
-    for key, prob, exposureTime in zip(keys, ranked_tile_probs, ranked_tile_times):
-        tile_struct[key]["prob"] = prob
-        tile_struct[key]["exposureTime"] = exposureTime
+        tile_struct[key]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
 
     return tile_struct
 
@@ -238,14 +217,7 @@ def tesselation_spiral(config_struct):
     points[:,1] = radius * np.sin(theta)
     points[:,2] = z
 
-    #arclens = []
     ra, dec = hp.pixelfunc.vec2ang(points, lonlat=True)
-    #for ii in xrange(len(ra)):
-    #    arclen = np.inf
-    #    for jj in xrange(len(ra)):
-    #        if ii == jj: continue
-    #        arclen = np.min([arclen,hp.rotator.angdist([ra[ii],dec[ii]], [ra[jj],dec[jj]], lonlat=True)])
-    #        arclens.append(arclen)
     fid = open(config_struct["tesselationFile"],'w')
     for ii in xrange(len(ra)):
         fid.write('%d %.5f %.5f\n'%(ii,ra[ii],dec[ii]))

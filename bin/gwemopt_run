@@ -165,6 +165,20 @@ def params_struct(opts):
 
     return params
 
+def get_segments(params):
+
+    for telescope in params["telescopes"]:
+
+        params["config"][telescope]["segmentlist"] = gwemopt.utils.get_segments(params, params["config"][telescope])
+        params["config"][telescope]["exposurelist"] = gwemopt.utils.get_exposures(params, params["config"][telescope], params["config"][telescope]["segmentlist"])
+
+        nexp, junk = np.array(params["config"][telescope]["exposurelist"]).shape
+        params["config"][telescope]["n_windows"] = nexp
+        tot_obs_time = np.sum(np.diff(np.array(params["config"][telescope]["exposurelist"]))) * 86400.
+        params["config"][telescope]["tot_obs_time"] = tot_obs_time 
+
+    return params
+
 # =============================================================================
 #
 #                                    MAIN
@@ -196,6 +210,8 @@ else:
     print "Need to enable --doEvent or --doSkymap"
     exit(0)
 
+params = get_segments(params)
+
 print "Loading skymap..."
 # Function to read maps
 if opts.do3D:
@@ -209,7 +225,7 @@ if opts.doPlots:
 
 if opts.doObservability:
     print "Generating observability"
-    observability_struct = gwemopt.utils.observability(params, eventinfo, map_struct)
+    observability_struct = gwemopt.utils.observability(params, map_struct)
     map_struct["observability"] = observability_struct
     if opts.doPlots:
         print "Plotting observability..."
@@ -247,13 +263,13 @@ if opts.doCatalog:
 
 if opts.doWaterfall:
     print "Generating waterfall schedule..."
-    coverage_struct = gwemopt.coverage.waterfall(params, eventinfo, map_struct, tile_structs) 
+    coverage_struct = gwemopt.coverage.waterfall(params, map_struct, tile_structs) 
 elif opts.doWAW:
     print "Generating WAW schedule..."
-    coverage_struct = gwemopt.coverage.waw(params, eventinfo, map_struct, tile_structs)
+    coverage_struct = gwemopt.coverage.waw(params, map_struct, tile_structs)
 elif opts.doPEM:
     print "Generating PEM schedule..."
-    coverage_struct = gwemopt.coverage.pem(params, eventinfo, map_struct, tile_structs)
+    coverage_struct = gwemopt.coverage.pem(params, map_struct, tile_structs)
 elif opts.doCoverage:
     print "Reading coverage from file..."
     coverage_struct = gwemopt.coverage.read_coverage_files(params)
