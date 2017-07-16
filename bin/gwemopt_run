@@ -30,13 +30,14 @@ Comments should be e-mailed to michael.coughlin@ligo.org.
 import os, sys, glob, optparse, shutil, warnings
 import numpy as np
 import healpy as hp
+import ephem
 
 import gwemopt.utils, gwemopt.gracedb
 import gwemopt.rankedTilesGenerator, gwemopt.waw
 import gwemopt.lightcurve, gwemopt.coverage
 import gwemopt.efficiency, gwemopt.plotting
 import gwemopt.moc, gwemopt.catalog
-import gwemopt.tiles
+import gwemopt.tiles, gwemopt.optcounterpart
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -59,6 +60,7 @@ def parse_commandline():
 
     parser.add_option("-c", "--configDirectory", help="GW-EM config file directory.", default ="../config/")
     parser.add_option("-s", "--skymap", help="GW skymap.", default='../output/skymaps/G268556.fits')
+    parser.add_option("-g", "--gpstime", help="GPS time.", default=1167559936.0, type=float)
     parser.add_option("--do3D",  action="store_true", default=False)
 
     parser.add_option("-o", "--outputDir", help="output directory",default="../output")
@@ -73,6 +75,8 @@ def parse_commandline():
     parser.add_option("--doPlots",  action="store_true", default=False)
     parser.add_option("--doTiles",  action="store_true", default=False)
     parser.add_option("--tilesType", help="tiling type",default="moc")
+    parser.add_option("--scheduleType", help="schedule type",default="greedy")
+
     parser.add_option("--doWaterfall",  action="store_true", default=False)
     parser.add_option("--doPEM",  action="store_true", default=False)
     parser.add_option("--doCatalog",  action="store_true", default=False)
@@ -93,7 +97,7 @@ def parse_commandline():
     parser.add_option("--Ndet",default=1,type=int)
     parser.add_option("--nside",default=256,type=int)
     parser.add_option("--DScale",default=1.0,type=float)
-    parser.add_option("--Tobs",default="1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0,5.5")
+    parser.add_option("--Tobs",default="0.0,1.0,1.0,2.0,2.0,3.0,3.0,4.0")
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -134,6 +138,13 @@ def params_struct(opts):
                     gwemopt.tiles.tesselation_packing(params["config"][telescope])
             params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2))
 
+        observer = ephem.Observer()
+        observer.lat = str(params["config"][telescope]["latitude"])
+        observer.lon = str(params["config"][telescope]["longitude"])
+        observer.horizon = str(-12.0)
+        observer.elevation = params["config"][telescope]["elevation"]
+        params["config"][telescope]["observer"] = observer
+
     params["skymap"] = opts.skymap
     params["outputDir"] = opts.outputDir
     params["tilingDir"] = opts.tilingDir
@@ -142,6 +153,7 @@ def params_struct(opts):
     params["telescopes"] = opts.telescopes.split(",")
     params["lightcurveFiles"] = opts.lightcurveFiles.split(",")
     params["tilesType"] = opts.tilesType
+    params["scheduleType"] = opts.scheduleType
     params["Ninj"] = opts.Ninj
     params["Ndet"] = opts.Ndet
     params["DScale"] = opts.DScale
@@ -176,8 +188,10 @@ if opts.doEfficiency:
 
 if opts.doEvent:
     params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)
+    params["gpstime"] = eventinfo["gpstime"]
 elif opts.doSkymap:
     params["skymap"]
+    params["gpstime"]
 else:
     print "Need to enable --doEvent or --doSkymap"
     exit(0)
@@ -246,7 +260,7 @@ elif opts.doCoverage:
 
 if opts.doWaterfall or opts.doWAW or opts.doPEM or opts.doCoverage:
     print "Summary of coverage..."
-    gwemopt.coverage.summary(params,map_struct,eventinfo,coverage_struct)
+    gwemopt.scheduler.summary(params,map_struct,coverage_struct)
 
     if opts.doPlots:
         print "Plotting coverage..."

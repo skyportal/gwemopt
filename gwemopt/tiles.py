@@ -12,6 +12,7 @@ import glue.segments
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
 import gwemopt.moc
+import gwemopt.optcounterpart
 
 try:
     import gwemopt.multinest
@@ -174,6 +175,30 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
     keys = tile_struct.keys()
     for key, prob, exposureTime in zip(keys, ranked_tile_probs, time_allocation):
+        tile_struct[key]["prob"] = prob
+        tile_struct[key]["exposureTime"] = exposureTime
+
+    return tile_struct
+
+def optcounterpart_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
+
+    n_windows = len(params["Tobs"]) // 2
+    tot_obs_time = np.sum(np.diff(params["Tobs"])[::2]) * 86400.
+
+    if "observability" in map_struct:
+        prob = map_struct["observability"][telescope]["prob"]
+    else:
+        prob = map_struct["prob"]
+
+    ranked_tile_times = gwemopt.optcounterpart.schedule(params, config_struct, map_struct, tile_struct)
+
+    print stop
+
+    ranked_tile_probs = compute_tiles_map(tile_struct, prob, func='np.sum(x)')
+    ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
+
+    keys = tile_struct.keys()
+    for key, prob, exposureTime in zip(keys, ranked_tile_probs, ranked_tile_times):
         tile_struct[key]["prob"] = prob
         tile_struct[key]["exposureTime"] = exposureTime
 
