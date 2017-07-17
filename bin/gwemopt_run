@@ -37,7 +37,7 @@ import gwemopt.rankedTilesGenerator, gwemopt.waw
 import gwemopt.lightcurve, gwemopt.coverage
 import gwemopt.efficiency, gwemopt.plotting
 import gwemopt.moc, gwemopt.catalog
-import gwemopt.tiles, gwemopt.optcounterpart
+import gwemopt.tiles
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -77,7 +77,7 @@ def parse_commandline():
     parser.add_option("--tilesType", help="tiling type",default="moc")
     parser.add_option("--scheduleType", help="schedule type",default="greedy")
 
-    parser.add_option("--doWaterfall",  action="store_true", default=False)
+    parser.add_option("--doPowerlaw",  action="store_true", default=False)
     parser.add_option("--doPEM",  action="store_true", default=False)
     parser.add_option("--doCatalog",  action="store_true", default=False)
     parser.add_option("--doObservability",  action="store_true", default=False)
@@ -98,6 +98,9 @@ def parse_commandline():
     parser.add_option("--nside",default=256,type=int)
     parser.add_option("--DScale",default=1.0,type=float)
     parser.add_option("--Tobs",default="0.0,1.0,1.0,2.0,2.0,3.0,3.0,4.0")
+
+    parser.add_option("--powerlaw_cl",default=0.9,type=float)
+    parser.add_option("--powerlaw_n",default=0.66,type=float)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -159,6 +162,8 @@ def params_struct(opts):
     params["DScale"] = opts.DScale
     params["nside"] = opts.nside
     params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
+    params["powerlaw_cl"] = opts.powerlaw_cl
+    params["powerlaw_n"] = opts.powerlaw_n
 
     params["doPlots"] = opts.doPlots
     params["doObservability"] = opts.doObservability
@@ -194,10 +199,10 @@ if not os.path.isdir(opts.outputDir): os.mkdir(opts.outputDir)
 params = params_struct(opts)
 
 if opts.doEfficiency:
-    efficiencyTypes = [opts.doWaterfall, opts.doWAW,opts.doCoverage,opts.doPEM]
+    efficiencyTypes = [opts.doPowerlaw, opts.doWAW,opts.doCoverage,opts.doPEM]
     efficiencyCount = sum(1 for x in efficiencyTypes if x)
     if not efficiencyCount == 1:
-        print "Need to enable --doWaterfall, --doWAW, --doPEM or --doCoverage"
+        print "Need to enable --doPowerlaw, --doWAW, --doPEM or --doCoverage"
         exit(0)
 
 if opts.doEvent:
@@ -246,11 +251,14 @@ if opts.doTiles:
     elif params["tilesType"] == "ranked":
         print "Generating ranked struct..."
         tile_structs = gwemopt.tiles.rankedTiles(params, map_struct)
+    elif params["tilesType"] == "hierarchical":
+        print "Generating hierarchical struct..."
+        tile_structs = gwemopt.tiles.hierarchical(params, map_struct)
     elif params["tilesType"] == "greedy":
         print "Generating greedy struct..."
         tile_structs = gwemopt.tiles.greedy(params, map_struct)
     else:
-        print "Need tilesType to be moc, greedy, or ranked"
+        print "Need tilesType to be moc, greedy, hierarchical, or ranked"
         exit(0)
 
     if opts.doPlots:
@@ -261,9 +269,9 @@ if opts.doCatalog:
     print "Generating catalog..."
     catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
 
-if opts.doWaterfall:
-    print "Generating waterfall schedule..."
-    coverage_struct = gwemopt.coverage.waterfall(params, map_struct, tile_structs) 
+if opts.doPowerlaw:
+    print "Generating powerlaw schedule..."
+    coverage_struct = gwemopt.coverage.powerlaw(params, map_struct, tile_structs) 
 elif opts.doWAW:
     print "Generating WAW schedule..."
     coverage_struct = gwemopt.coverage.waw(params, map_struct, tile_structs)
@@ -274,7 +282,7 @@ elif opts.doCoverage:
     print "Reading coverage from file..."
     coverage_struct = gwemopt.coverage.read_coverage_files(params)
 
-if opts.doWaterfall or opts.doWAW or opts.doPEM or opts.doCoverage:
+if opts.doPowerlaw or opts.doWAW or opts.doPEM or opts.doCoverage:
     print "Summary of coverage..."
     gwemopt.scheduler.summary(params,map_struct,coverage_struct)
 

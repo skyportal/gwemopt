@@ -1,5 +1,6 @@
 
 import os, sys
+import copy
 import numpy as np
 import healpy as hp
 import itertools
@@ -280,14 +281,15 @@ def integrationTime(T_obs, pValTiles, func=None, T_int=60.0):
             f = lambda x: eval(func)
     fpValTiles = f(pValTiles)
     modified_prob = fpValTiles/np.sum(fpValTiles)
+    modified_prob[np.isnan(modified_prob)] = 0.0
     t_tiles = modified_prob * T_obs ### Time spent in each tile if not constrained
     #t_tiles[t_tiles > 1200.0] = 1200.0 ### Upper limit of exposure time
     #t_tiles[t_tiles < 60] = 60.0 ### Lower limit of exposure time
     t_tiles = T_int*np.round(t_tiles/T_int)
-    Obs = np.cumsum(t_tiles) <= T_obs ### Tiles observable in T_obs seconds
-    time_per_tile = t_tiles[Obs] ### Actual time spent per tile
+    #Obs = np.cumsum(t_tiles) <= T_obs ### Tiles observable in T_obs seconds
+    #time_per_tile = t_tiles[Obs] ### Actual time spent per tile
 
-    return time_per_tile
+    return t_tiles
 
 def observability(params, map_struct):
 
@@ -313,7 +315,7 @@ def observability(params, map_struct):
             ra=phi*u.rad, dec=(0.5*np.pi - theta)*u.rad)
 
         observatory_struct[telescope] = {}
-        observatory_struct[telescope]["prob"] = map_struct["prob"].copy()
+        observatory_struct[telescope]["prob"] = copy.deepcopy(map_struct["prob"])
         observatory_struct[telescope]["observability"] = np.zeros((npix,))
         observatory_struct[telescope]["dts"] = {}
 

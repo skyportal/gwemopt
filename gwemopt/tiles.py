@@ -1,5 +1,7 @@
 
 import os, sys
+import copy
+
 import numpy as np
 import healpy as hp
 
@@ -12,12 +14,7 @@ import glue.segments
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
 import gwemopt.moc
-import gwemopt.optcounterpart
-
-try:
-    import gwemopt.multinest
-except:
-    print "No Multinest present."
+import gwemopt.samplers
 
 def greedy(params, map_struct):
 
@@ -25,7 +22,18 @@ def greedy(params, map_struct):
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
 
-        tile_struct = gwemopt.multinest.greedy_tiles_struct(params, config_struct, telescope, map_struct)
+        tile_struct = gwemopt.samplers.greedy_tiles_struct(params, config_struct, telescope, map_struct)
+        tile_structs[telescope] = tile_struct
+
+    return tile_structs
+
+def hierarchical(params, map_struct):
+
+    tile_structs = {}
+    for telescope in params["telescopes"]:
+        config_struct = params["config"][telescope]
+
+        tile_struct = gwemopt.samplers.hierarchical_tiles_struct(params, config_struct, telescope, map_struct)
         tile_structs[telescope] = tile_struct
 
     return tile_structs
@@ -89,7 +97,7 @@ def rankedTiles(params, map_struct):
 
     return tile_structs
 
-def waterfall_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
+def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
     n_windows = config_struct["n_windows"]
     tot_obs_time = config_struct["tot_obs_time"]
@@ -98,8 +106,21 @@ def waterfall_tiles_struct(params, config_struct, telescope, map_struct, tile_st
         prob = map_struct["observability"][telescope]["prob"]
     else:
         prob = map_struct["prob"]
- 
-    ranked_tile_probs = compute_tiles_map(tile_struct, prob, func='np.sum(x)')
+
+    n, cl = params["powerlaw_n"], params["powerlaw_cl"]
+
+    prob_sorted = np.sort(prob)[::-1]
+    prob_indexes = np.argsort(prob)[::-1]
+    prob_cumsum = np.cumsum(prob_sorted)
+    index = np.argmin(np.abs(prob_cumsum - cl)) + 1
+
+    prob_scaled = copy.deepcopy(prob)
+    prob_scaled[prob_indexes[index:]] = 0.0
+    prob_scaled = prob_scaled**n
+    prob_scaled[np.isnan(prob_scaled)] = 0.0
+    prob_scaled = prob_scaled / np.nansum(prob_scaled)
+
+    ranked_tile_probs = compute_tiles_map(tile_struct, prob_scaled, func='np.sum(x)')
     ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
 
     keys = tile_struct.keys()
@@ -118,7 +139,7 @@ def moc(params, map_struct, moc_structs):
         config_struct = params["config"][telescope]
         moc_struct = moc_structs[telescope]
  
-        tile_struct = waterfall_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+        tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
         tile_structs[telescope] = tile_struct
 
     return tile_structs
@@ -190,10 +211,11 @@ def compute_tiles_map(tile_struct, skymap, func=None):
     else:
         f = lambda x: eval(func)
 
-    ntiles = len(tile_struct.keys())
+    keys = tile_struct.keys()
+    ntiles = len(keys)
     vals = np.nan*np.ones((ntiles,))
-    for ii in tile_struct.iterkeys():
-        vals[ii] = f(skymap[tile_struct[ii]["ipix"]])
+    for ii,key in enumerate(tile_struct.iterkeys()):
+        vals[ii] = f(skymap[tile_struct[key]["ipix"]])
 
     return vals
 

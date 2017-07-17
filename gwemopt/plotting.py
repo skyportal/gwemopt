@@ -195,6 +195,9 @@ def coverage(params, map_struct, coverage_struct):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
+    print coverage_struct["data"]
+    print stop
+
     idx = np.isfinite(coverage_struct["data"][:,4])
     min_time = np.min(coverage_struct["data"][idx,4])
     max_time = np.max(coverage_struct["data"][idx,4])

@@ -128,14 +128,15 @@ def waw(params, map_struct, tile_structs):
 
     return combine_coverage_structs(coverage_structs)
 
-def waterfall(params, map_struct, tile_structs):
+def powerlaw(params, map_struct, tile_structs):
 
     coverage_structs = []
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
         tile_struct = tile_structs[telescope]
-        tile_struct = gwemopt.tiles.waterfall_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)      
- 
+
+        tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)      
+
         coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
         coverage_structs.append(coverage_struct)
 

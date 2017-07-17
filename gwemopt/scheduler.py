@@ -106,12 +106,12 @@ def get_segments_tiles(config_struct, observatory, ras, decs, segmentlist):
 
 def sort_tiles(tile_struct):
 
-    keys = []
     probs = []
     ras = []
     decs = []
-    for key in tile_struct.iterkeys():
-        keys.append(key)
+    keys = tile_struct.keys()
+
+    for key in keys:
         probs.append(tile_struct[key]["prob"])
         ras.append(tile_struct[key]["ra"])
         decs.append(tile_struct[key]["dec"])
@@ -182,7 +182,7 @@ def get_order(tile_struct,keys,tilesegmentlists,exposurelist):
         for jj in xrange(tile_struct[key]["nexposures"]):
             exposureids.append(key)
             probs.append(tile_struct[key]["prob"])
-    
+
     idxs = []
     for ii in exposureids_tiles.iterkeys(): 
         findTile = True
