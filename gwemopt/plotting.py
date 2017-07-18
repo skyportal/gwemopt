@@ -195,9 +195,6 @@ def coverage(params, map_struct, coverage_struct):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
-    print coverage_struct["data"]
-    print stop
-
     idx = np.isfinite(coverage_struct["data"][:,4])
     min_time = np.min(coverage_struct["data"][idx,4])
     max_time = np.max(coverage_struct["data"][idx,4])
@@ -309,4 +306,19 @@ def coverage(params, map_struct, coverage_struct):
     os.system(ffmpeg_command)
     rm_command = "rm %s/*.png"%(moviedir)
     os.system(rm_command)
+
+def scheduler(params,exposurelist,keys): 
+
+    xs = []
+    ys = []
+    for ii,key in zip(np.arange(len(exposurelist)),keys):
+        xs.append(ii)
+        ys.append(key)    
+
+    plotName = os.path.join(params["outputDir"],'scheduler.pdf')
+    plt.figure()
+    plt.plot(xs,ys,'kx')
+    plt.show()
+    plt.savefig(plotName,dpi=200)
+    plt.close('all')
 

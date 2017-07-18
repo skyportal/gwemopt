@@ -128,42 +128,48 @@ def sort_tiles(tile_struct):
 
     return keys, ras, decs, probs
 
-def get_observation(params,config_struct,segmentlist,altaz,probs,tilesegmentlists):
+def find_tile(exposureids_tile,exposureids,probs, idxs = None):
 
-    if params["scheduleType"] == "greedy":
-        idx = np.where((altaz.alt >= 30.0*u.deg) & (altaz.secz <= 2.5))[0]
-        if len(idx) == 0:
-            idx = None
-        else:
-            idx = idx[0]
-    elif params["scheduleType"] == "sear":
-        idx1 = np.where((altaz.alt >= 30.0*u.deg) & (altaz.secz <= 2.5))[0]
-        # Is any tile going to set soon?
-        idx2 = []
-        for ii in idx1:
-            tilesegmentlist = np.array(tilesegmentlists[ii])
-            idx = np.where((tilesegmentlist[:,1] >= segmentlist[0][0]) & (tilesegmentlist[:,1] <= segmentlist[0][0]+config_struct["exposuretime"]/86400.0))[0]
-            if len(idx) > 0:
-                idx2.append(ii)
-        if len(idx2) > 0:
-            idx3 = np.argmax(np.array(probs)[idx2])
-            idx = idx2[idx3]
-        else:
-            if len(idx1) == 0:
-                idx = None
+    if not idxs == None:
+        for idx in idxs:
+            idx2 = exposureids_tile["exposureids"][idx]
+            if idx2 in exposureids:
+                idx = exposureids.index(idx2)
+                exposureids.pop(idx)
+                probs.pop(idx)
+                return idx2, exposureids, probs
+
+    findTile = True
+    while findTile:
+        if not exposureids_tile["probs"]:
+            idx2 = -1
+            findTile = False
+            break
+        idx = np.argmax(exposureids_tile["probs"])
+        idx2 = exposureids_tile["exposureids"][idx]
+
+        if exposureids:
+            if idx2 in exposureids:
+                idx = exposureids.index(idx2)
+                exposureids.pop(idx)
+                probs.pop(idx)
+                findTile = False
             else:
-                idx = idx1[0]
-    elif params["scheduleType"] == "optimal":
-        idx = np.where((altaz.alt >= 30.0*u.deg) & (altaz.secz <= 2.5))[0]
-        if len(idx) == 0:
-            idx = None
+                exposureids_tile["exposureids"].pop(idx)
+                exposureids_tile["probs"].pop(idx)
         else:
-            idx = idx[0]
-    return idx
+            findTile = False
 
-def get_order(tile_struct,keys,tilesegmentlists,exposurelist):
-   
+    return idx2, exposureids, probs
+
+def get_order(params, tile_struct, keys, tilesegmentlists, exposurelist):    
+ 
     exposureids_tiles = {}
+    first_exposure = np.inf*np.ones((len(keys),))
+    last_exposure = -np.inf*np.ones((len(keys),))
+    tileprobs = np.zeros((len(keys),))
+    tilenexps = np.zeros((len(keys),))
+
     for ii in xrange(len(exposurelist)):
         exposureids_tiles[ii] = {}
         exposureids = []
@@ -173,6 +179,12 @@ def get_order(tile_struct,keys,tilesegmentlists,exposurelist):
             if tilesegmentlist.intersects_segment(exposurelist[ii]):
                 exposureids.append(key)
                 probs.append(tile_struct[key]["prob"])
+
+                first_exposure[jj] = np.min([first_exposure[jj],ii])
+                last_exposure[jj] = np.max([last_exposure[jj],ii])
+                tileprobs[jj] = tile_struct[key]["prob"]
+                tilenexps[jj] = tile_struct[key]["nexposures"]
+
         exposureids_tiles[ii]["exposureids"] = exposureids
         exposureids_tiles[ii]["probs"] = probs
 
@@ -183,25 +195,31 @@ def get_order(tile_struct,keys,tilesegmentlists,exposurelist):
             exposureids.append(key)
             probs.append(tile_struct[key]["prob"])
 
-    idxs = []
-    for ii in exposureids_tiles.iterkeys(): 
-        findTile = True
-        while findTile:
-            if not exposureids_tiles[ii]["probs"]:
-                idxs.append(-1)
-                findTile = False
-                break
-            idx = np.argmax(exposureids_tiles[ii]["probs"])
-            idx2 = exposureids_tiles[ii]["exposureids"][idx]
-            if idx2 in exposureids:
-                idxs.append(idx2)
-                idx = exposureids.index(idx2)
-                exposureids.pop(idx)
-                probs.pop(idx)       
-                findTile = False 
-            else:    
-                exposureids_tiles[ii]["exposureids"].pop(idx)
-                exposureids_tiles[ii]["probs"].pop(idx)
+    idxs = -1*np.ones((len(exposureids_tiles.keys()),))
+    if params["scheduleType"] == "greedy":
+        for ii in np.arange(len(exposurelist)): 
+            idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs)
+            tilenexps[idx2] = tilenexps[idx2] - 1
+            idxs[ii] = idx2
+
+    elif params["scheduleType"] == "sear":
+        #for ii in np.arange(len(exposurelist)):
+        iis = np.arange(len(exposurelist)).tolist()
+        while len(iis) > 0: 
+            ii = iis[0]
+            mask = np.where((ii == last_exposure) & (tilenexps > 0))[0]
+            if len(mask) > 0:
+                idxsort = mask[np.argsort(tileprobs[mask])]
+                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,idxs=idxsort) 
+                last_exposure[mask] = last_exposure[mask] + 1
+            else:
+                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs)
+            tilenexps[idx2] = tilenexps[idx2] - 1
+            idxs[ii] = idx2 
+            iis.pop(0)
+    else:
+        print "Only greedy implemented..."
+        exit(0)
 
     return idxs
 
@@ -221,7 +239,10 @@ def scheduler(params, config_struct, tile_struct):
     segmentlist = config_struct["segmentlist"]
     exposurelist = config_struct["exposurelist"]
     tilesegmentlists = get_segments_tiles(config_struct, observatory, ras, decs, segmentlist)
-    keys = get_order(tile_struct,keys,tilesegmentlists,exposurelist)
+    keys = get_order(params,tile_struct,keys,tilesegmentlists,exposurelist)
+
+    if params["doPlots"]:
+        gwemopt.plotting.scheduler(params,exposurelist,keys)
 
     while len(exposurelist) > 0:
         key = keys[0]

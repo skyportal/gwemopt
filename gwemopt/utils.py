@@ -240,12 +240,15 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.2, col
     for r, d in radecs:
         xyz.append(hp.ang2vec(r, d, lonlat=True))
 
-    # FLIP CORNERS 3 & 4 SO HEALPY UNDERSTANDS POLYGON SHAPE
-    xyz = [xyz[0], xyz[1],xyz[3], xyz[2]]
     try:
-        ipix = hp.query_polygon(nside, np.array(xyz))
+        ipix = hp.query_polygon(nside, np.array([xyz[0], xyz[1],xyz[3], xyz[2]]))
+        xyz = [xyz[0], xyz[1],xyz[3], xyz[2]]
     except:
-        ipix = []
+        try:
+            ipix = hp.query_polygon(nside, np.array(xyz))
+        except:
+            print radecs
+            ipix = []
 
     xyz = np.array(xyz)
     proj = hp.projector.MollweideProj(rot=None, coord=None) 
