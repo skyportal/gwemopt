@@ -4,12 +4,16 @@ Gravitational-wave Electromagnetic Optimization
 The code currently can:
 - interact with gracedb, download the skymaps, read them etc. 
 - read telescope configuration files with location, FOV, limiting magnitude, exposure times, etc.
-
-The code needs to:
 - create the tiling based on telescope configuration (MOC, Shaon's method).
 - generate exposure time as a function of tile, which accounts for number of hours available. 
-- do the scheduling based on when a tile is above the horizon, away from the moon, etc.
+- perform scheduling to include most of the requested exposures
 - test the efficiency of the tiling, exposure time method choices, for a given lightcurve.
+
+Current planned improvements / open questions:
+- Include moon and sky brightness when scheduling
+- How to improve scheduling when multiple (and different numbers of exposures are expected)
+- How to use WAW when inclination is not immediately available
+- How to include distance estimates as function of sky location in PEM
 
 Related repositories:
 - https://github.com/JavedRANA/emgwfollowup
