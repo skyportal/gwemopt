@@ -5,10 +5,10 @@
 """
 
 __author__ = 'Duncan Macleod <duncan.macleod@ligo.org>'
-__version__ = 'cc6f425f21d189ceee48078be3696bd7d37235ee'
-__date__ = '2017-07-17 19:15:55 +0000'
+__version__ = 'a96cfd590cf96a85db78e82b0c5c57beadda1df0'
+__date__ = '2017-07-18 20:22:24 +0000'
 
-git_id = 'cc6f425f21d189ceee48078be3696bd7d37235ee'
+git_id = 'a96cfd590cf96a85db78e82b0c5c57beadda1df0'
 git_branch = 'master'
 git_tag = None
 git_author = 'Michael Coughlin <michael.coughlin@ligo.org>'

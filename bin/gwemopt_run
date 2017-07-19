@@ -98,6 +98,7 @@ def parse_commandline():
     parser.add_option("--nside",default=256,type=int)
     parser.add_option("--DScale",default=1.0,type=float)
     parser.add_option("--Tobs",default="0.0,1.0,1.0,2.0,2.0,3.0,3.0,4.0")
+    #parser.add_option("--Tobs",default="0.0,1.0")
 
     parser.add_option("--powerlaw_cl",default=0.9,type=float)
     parser.add_option("--powerlaw_n",default=0.66,type=float)

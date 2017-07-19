@@ -89,9 +89,16 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
 
     return tilesegmentlist
 
-def get_segments_tiles(config_struct, observatory, ras, decs, segmentlist):
+def get_segments_tiles(config_struct, tile_struct, observatory, segmentlist):
 
     print "Generating segments for tiles..."
+
+    ras = []
+    decs = []
+    keys = tile_struct.keys()
+    for key in keys:
+        ras.append(tile_struct[key]["ra"])
+        decs.append(tile_struct[key]["dec"])
 
     # Convert to RA, Dec.
     radecs = astropy.coordinates.SkyCoord(
@@ -104,7 +111,7 @@ def get_segments_tiles(config_struct, observatory, ras, decs, segmentlist):
 
     return tilesegmentlists
 
-def sort_tiles(tile_struct):
+def get_tiles(tile_struct):
 
     probs = []
     ras = []
@@ -162,14 +169,23 @@ def find_tile(exposureids_tile,exposureids,probs, idxs = None):
 
     return idx2, exposureids, probs
 
-def get_order(params, tile_struct, keys, tilesegmentlists, exposurelist):    
+def get_order(params, tile_struct, tilesegmentlists, exposurelist):    
  
+    keys = tile_struct.keys()
+
     exposureids_tiles = {}
     first_exposure = np.inf*np.ones((len(keys),))
     last_exposure = -np.inf*np.ones((len(keys),))
     tileprobs = np.zeros((len(keys),))
     tilenexps = np.zeros((len(keys),))
+    tileavailable = np.zeros((len(keys),))
+    tileavailable_tiles = {} 
 
+    for jj, key in enumerate(keys):
+        tileprobs[jj] = tile_struct[key]["prob"]
+        tilenexps[jj] = tile_struct[key]["nexposures"]
+        tileavailable_tiles[jj] = []
+ 
     for ii in xrange(len(exposurelist)):
         exposureids_tiles[ii] = {}
         exposureids = []
@@ -182,8 +198,8 @@ def get_order(params, tile_struct, keys, tilesegmentlists, exposurelist):
 
                 first_exposure[jj] = np.min([first_exposure[jj],ii])
                 last_exposure[jj] = np.max([last_exposure[jj],ii])
-                tileprobs[jj] = tile_struct[key]["prob"]
-                tilenexps[jj] = tile_struct[key]["nexposures"]
+                tileavailable_tiles[jj].append(ii)
+                tileavailable[jj] = tileavailable[jj] + 1
 
         exposureids_tiles[ii]["exposureids"] = exposureids
         exposureids_tiles[ii]["probs"] = probs
@@ -217,6 +233,17 @@ def get_order(params, tile_struct, keys, tilesegmentlists, exposurelist):
             tilenexps[idx2] = tilenexps[idx2] - 1
             idxs[ii] = idx2 
             iis.pop(0)
+    elif params["scheduleType"] == "weighted":
+        for ii in np.arange(len(exposurelist)):
+            jj = exposureids_tiles[ii]["exposureids"]
+            weights = tileprobs[jj] * tilenexps[jj] / tileavailable[jj]
+            weights[~np.isfinite(weights)] = 0.0
+            if np.any(weights >= 0):
+                idxmax = np.argmax(weights)
+                idx2 = jj[idxmax]
+                tilenexps[idx2] = tilenexps[idx2] - 1
+                idxs[ii] = idx2
+            tileavailable[jj] = tileavailable[jj] - 1           
     else:
         print "Only greedy implemented..."
         exit(0)
@@ -232,14 +259,13 @@ def scheduler(params, config_struct, tile_struct):
     coverage_struct["patch"] = []
     coverage_struct["area"] = []
 
-    keys, ras, decs, probs = sort_tiles(tile_struct)
     observatory = astropy.coordinates.EarthLocation(
         lat=config_struct["latitude"]*u.deg, lon=config_struct["longitude"]*u.deg, height=config_struct["elevation"]*u.m)
 
     segmentlist = config_struct["segmentlist"]
     exposurelist = config_struct["exposurelist"]
-    tilesegmentlists = get_segments_tiles(config_struct, observatory, ras, decs, segmentlist)
-    keys = get_order(params,tile_struct,keys,tilesegmentlists,exposurelist)
+    tilesegmentlists = get_segments_tiles(config_struct, tile_struct, observatory, segmentlist)
+    keys = get_order(params,tile_struct,tilesegmentlists,exposurelist)
 
     if params["doPlots"]:
         gwemopt.plotting.scheduler(params,exposurelist,keys)
@@ -253,15 +279,21 @@ def scheduler(params, config_struct, tile_struct):
             tile_struct_hold = tile_struct[key]
 
             mjd_exposure_start = exposurelist[0][0]
-            for jj in xrange(len(keys)):
-                if keys[jj] == key:
+            nkeys = len(keys)
+            for jj in xrange(nkeys):
+                if (keys[jj] == key) and not (nkeys == jj+1):
                     mjd_exposure_end = exposurelist[jj][1]
+                elif (keys[jj] == key) and (nkeys == jj+1):
+                    mjd_exposure_end = exposurelist[jj][1]
+                    nexp = jj + 1
+                    keys = []
+                    exposurelist = []
                 else:
                     nexp = jj + 1
                     keys = keys[jj:]
                     exposurelist = exposurelist[jj:]
                     break    
-        
+ 
             mjd_exposure_mid = (mjd_exposure_start+mjd_exposure_end)/2.0
             nmag = np.log(nexp) / np.log(2.5)
             mag = config_struct["magnitude"] + nmag
