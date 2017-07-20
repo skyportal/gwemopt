@@ -229,26 +229,25 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.2, col
             radecs.append([r,d])
 
     radecs = np.array(radecs)
-    idx1 = np.where(radecs[:,0]>=180.0)[0]
-    idx2 = np.where(radecs[:,0]<180.0)[0]
-    idx3 = np.where(radecs[:,0]>300.0)[0]
-    idx4 = np.where(radecs[:,0]<60.0)[0]
-    if len(idx1)>0 and len(idx2)>0 and not (len(idx3)>0 or len(idx4)>0):
+    idx1 = np.where((radecs[:,0]>=180.0) & (radecs[:,0]<180.0))[0]
+    idx2 = np.where((radecs[:,0]>300.0) | (radecs[:,0]<60.0))[0]
+    if len(idx1)>0 and not len(idx2)>0:
         alpha = 0.0
+
+    idx1 = np.where((radecs[:,1]>=87.0) | (radecs[:,1]<=-87.0))[0]
+    if len(idx1)>0:
+        radecs = np.delete(radecs, idx1[0], 0)
 
     xyz = []
     for r, d in radecs:
         xyz.append(hp.ang2vec(r, d, lonlat=True))
 
-    try:
-        ipix = hp.query_polygon(nside, np.array([xyz[0], xyz[1],xyz[3], xyz[2]]))
+    npts, junk = radecs.shape
+    if npts == 4:
         xyz = [xyz[0], xyz[1],xyz[3], xyz[2]]
-    except:
-        try:
-            ipix = hp.query_polygon(nside, np.array(xyz))
-        except:
-            print radecs
-            ipix = []
+        ipix = hp.query_polygon(nside, np.array(xyz))
+    else:    
+        ipix = hp.query_polygon(nside, np.array(xyz))
 
     xyz = np.array(xyz)
     proj = hp.projector.MollweideProj(rot=None, coord=None) 
