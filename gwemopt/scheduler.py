@@ -30,30 +30,6 @@ def get_altaz_tiles(ras, decs, observatory, obstime):
 
     return altaz
 
-def get_tiles(tile_struct):
-
-    probs = []
-    ras = []
-    decs = []
-    keys = tile_struct.keys()
-
-    for key in keys:
-        probs.append(tile_struct[key]["prob"])
-        ras.append(tile_struct[key]["ra"])
-        decs.append(tile_struct[key]["dec"])
-    keys = np.array(keys)
-    probs = np.array(probs)
-    ras = np.array(ras)
-    decs = np.array(decs)
-    idx = np.argsort(probs)[::-1]
-
-    keys = keys[idx].tolist()
-    ras = ras[idx].tolist()
-    decs = decs[idx].tolist()
-    probs = probs[idx].tolist()
-
-    return keys, ras, decs, probs
-
 def find_tile(exposureids_tile,exposureids,probs, idxs = None):
 
     if not idxs == None:
@@ -184,6 +160,8 @@ def scheduler(params, config_struct, tile_struct):
     segmentlist = config_struct["segmentlist"]
     exposurelist = config_struct["exposurelist"]
     tilesegmentlists = gwemopt.segments.get_segments_tiles(config_struct, tile_struct, observatory, segmentlist)
+
+    print "Generating schedule order..."
     keys = get_order(params,tile_struct,tilesegmentlists,exposurelist)
 
     if params["doPlots"]:

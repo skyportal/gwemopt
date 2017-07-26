@@ -2,6 +2,7 @@
 import os, sys
 import numpy as np
 import healpy as hp
+import copy
 
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
@@ -55,28 +56,18 @@ def get_skybrightness(config_struct,segmentlist,observer,fxdbdy,radec):
     # Determine sun data for this phase
     sun_data_passband = sun_data[passband]
 
-    dt = 1.0/96.0
+    dt = 1.0/24.0
     tt = np.arange(segmentlist[0][0],segmentlist[-1][1]+dt,dt)
+
+    ra2 = radec.ra.radian
+    d2 = radec.dec.radian
+
     # Where is the moon?
     moon = ephem.Moon()
     for ii in xrange(len(tt)-1):
         observer.date = ephem.Date(Time(tt[ii], format='mjd', scale='utc').iso)
         moon.compute(observer)
         fxdbdy.compute(observer)
-
-        ra_moon = (180/np.pi)*float(repr(moon.ra))
-        dec_moon = (180/np.pi)*float(repr(moon.dec))
-
-        # Coverting both target and moon ra and dec to radians
-        ra1 = float(repr(moon.ra))
-        ra2 = radec.ra.radian
-        d1 = float(repr(moon.dec))
-        d2 = radec.dec.radian
-
-        # Calculate angle between target and moon
-        cosA = np.sin(d1)*np.sin(d2) + np.cos(d1)*np.cos(d2)*np.cos(ra1-ra2)
-        angle = np.arccos(cosA)*(360/(2*np.pi))
-        #print "Angle between moon and target: %.5f"%(angle)
 
         alt_target = float(repr(fxdbdy.alt)) * (360/(2*np.pi))
         az_target = float(repr(fxdbdy.az)) * (360/(2*np.pi))
@@ -86,32 +77,62 @@ def get_skybrightness(config_struct,segmentlist,observer,fxdbdy,radec):
         az_moon = float(repr(moon.az)) * (360/(2*np.pi))
         #print "Altitude / Azimuth of moon: %.5f / %.5f"%(alt_moon,az_moon)
 
-        delta_mag = np.interp(moon.moon_phase,moon_phases,moon_data_passband)
-        delta_mag_error = 0.1*delta_mag
+        if (alt_target < 30.0) or (alt_moon < 30.0):
+            total_mag, total_mag_error, flux_mag, flux_mag_error = np.inf, np.inf, np.inf, np.inf
+        else:
+            ra_moon = (180/np.pi)*float(repr(moon.ra))
+            dec_moon = (180/np.pi)*float(repr(moon.dec))
 
-        flux = sun_data_passband[0] + sun_data_passband[1]*angle +\
-           sun_data_passband[2]*alt_target + sun_data_passband[3]*alt_moon
-        flux_zp = sun_data_passband[0] + sun_data_passband[1]*90.0 +\
-           sun_data_passband[2]*45.0 + sun_data_passband[3]*45.0
+            # Coverting both target and moon ra and dec to radians
+            ra1 = float(repr(moon.ra))
+            d1 = float(repr(moon.dec))
 
-        flux = flux* (10**11)
-        flux_zp = flux_zp* (10**11)
-        flux_mag = -2.5 * (np.log10(flux) - np.log10(flux_zp))
+            # Calculate angle between target and moon
+            cosA = np.sin(d1)*np.sin(d2) + np.cos(d1)*np.cos(d2)*np.cos(ra1-ra2)
+            angle = np.arccos(cosA)*(360/(2*np.pi))
+            #print "Angle between moon and target: %.5f"%(angle)
 
-        sun_data_passband_error = sun_data_error[passband]
-        flux_error = np.sqrt(sun_data_passband_error[0]**2 + sun_data_passband_error[1]**2 * angle**2 +\
-           sun_data_passband_error[2]**2 * alt_target**2 + sun_data_passband_error[3]**2 * alt_moon**2)
-        flux_error = flux_error * (10**11)
-        flux_mag_error = 1.08574 * flux_error / flux
+            delta_mag = np.interp(moon.moon_phase*100.0,moon_phases,moon_data_passband)
+            delta_mag_error = 0.1*delta_mag
 
-        # Determine total magnitude contribution
-        total_mag = delta_mag + flux_mag
-        total_mag_error = np.sqrt(delta_mag_error**2 + flux_mag_error**2)
+            flux = sun_data_passband[0] + sun_data_passband[1]*angle +\
+                sun_data_passband[2]*alt_target + sun_data_passband[3]*alt_moon
+            flux_zp = sun_data_passband[0] + sun_data_passband[1]*90.0 +\
+                sun_data_passband[2]*90.0 + sun_data_passband[3]*45.0
 
-        if total_mag < 2.0:
+            # check if flux < 0: too small to fit
+            if flux < 0:
+                flux = 1e-10
+
+            flux = flux* (10**11)
+            flux_zp = flux_zp* (10**11)
+            flux_mag = -2.5 * (np.log10(flux) - np.log10(flux_zp))
+
+            sun_data_passband_error = sun_data_error[passband]
+            flux_error = np.sqrt(sun_data_passband_error[0]**2 + sun_data_passband_error[1]**2 * angle**2 +\
+                sun_data_passband_error[2]**2 * alt_target**2 + sun_data_passband_error[3]**2 * alt_moon**2)
+            flux_error = flux_error * (10**11)
+
+            flux_mag_error = 1.08574 * flux_error / flux
+
+            # Determine total magnitude contribution
+            total_mag = delta_mag + flux_mag
+            total_mag_error = np.sqrt(delta_mag_error**2 + flux_mag_error**2)
+            #print tt[ii], angle, alt_target, alt_moon, total_mag, total_mag_error
+        if total_mag > 0.0:
             segment = glue.segments.segment(tt[ii],tt[ii+1])
             moonsegmentlist = moonsegmentlist + glue.segments.segmentlist([segment])
             moonsegmentlist.coalesce()
+        #else:
+        #    print tt[ii], angle, alt_target, alt_moon, total_mag, total_mag_error
+
+    moonsegmentlistdic = glue.segments.segmentlistdict()
+    moonsegmentlistdic["observations"] = segmentlist
+    moonsegmentlistdic["moon"] = moonsegmentlist
+    moonsegmentlist = moonsegmentlistdic.intersection(["observations","moon"])
+    moonsegmentlist.coalesce()
+
+    #print "Keeping %.2f %% of data"%(100.0*np.sum(np.diff(moonsegmentlist))/np.sum(np.diff(segmentlist)))
 
     return moonsegmentlist
 
@@ -242,7 +263,8 @@ def get_segments_tiles(config_struct, tile_struct, observatory, segmentlist):
             ra=np.array(ras)*u.degree, dec=np.array(decs)*u.degree, frame='icrs')
     tilesegmentlists = []
     for ii,radec in enumerate(radecs):
-        #print "Generating segments for tile %d/%d"%(ii,len(radecs))
+        #if np.mod(ii,100) == 0: 
+        #    print "Generating segments for tile %d/%d"%(ii+1,len(radecs))
         tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
         tilesegmentlists.append(tilesegmentlist)
 
