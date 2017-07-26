@@ -186,11 +186,12 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.2, color='
     idx = np.where(radecs[:,0] < 0.0)[0]
     radecs[idx,0] = 360.0 + radecs[idx,0]
 
+    radecs = np.array(radecs)
     idx1 = np.where(radecs[:,0]>=180.0)[0]
     idx2 = np.where(radecs[:,0]<180.0)[0]
     idx3 = np.where(radecs[:,0]>300.0)[0]
     idx4 = np.where(radecs[:,0]<60.0)[0]
-    if len(idx1)>0 and len(idx2)>0 and not (len(idx3)>0 or len(idx4)>0):
+    if (len(idx1)>0 and len(idx2)>0) and not (len(idx3)>0 and len(idx4)>0):
         alpha = 0.0
 
     xyz = hp.ang2vec(radecs[:,0],radecs[:,1],lonlat=True)
@@ -209,6 +210,8 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.2, color='
     return ipix, radecs, patch, area
 
 def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.2, color='#6c71c4'):
+
+    area = tileSide*tileSide
 
     decCorners = (dec_pointing - tileSide / 2.0, dec_pointing + tileSide / 2.0)
  
@@ -229,9 +232,11 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.2, col
             radecs.append([r,d])
 
     radecs = np.array(radecs)
-    idx1 = np.where((radecs[:,0]>=180.0) & (radecs[:,0]<180.0))[0]
-    idx2 = np.where((radecs[:,0]>300.0) | (radecs[:,0]<60.0))[0]
-    if len(idx1)>0 and not len(idx2)>0:
+    idx1 = np.where(radecs[:,0]>=180.0)[0] 
+    idx2 = np.where(radecs[:,0]<180.0)[0]
+    idx3 = np.where(radecs[:,0]>300.0)[0]
+    idx4 = np.where(radecs[:,0]<60.0)[0]
+    if (len(idx1)>0 and len(idx2)>0) and not (len(idx3)>0 and len(idx4)>0):
         alpha = 0.0
 
     idx1 = np.where((radecs[:,1]>=87.0) | (radecs[:,1]<=-87.0))[0]
@@ -249,6 +254,11 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.2, col
     else:    
         ipix = hp.query_polygon(nside, np.array(xyz))
 
+    #idx1 = np.where((radecs[:,1]>=70.0) | (radecs[:,1]<=-70.0))[0]
+    #idx2 = np.where((radecs[:,0]>300.0) | (radecs[:,0]<60.0))[0]
+    #if (len(idx1) == 0) or (len(idx2) > 0):
+    #    return [], [], [], []
+
     xyz = np.array(xyz)
     proj = hp.projector.MollweideProj(rot=None, coord=None) 
     x,y = proj.vec2xy(xyz[:,0],xyz[:,1],xyz[:,2])
@@ -258,8 +268,6 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.2, col
     path = matplotlib.path.Path(xy)
     patch = matplotlib.patches.PathPatch(path, alpha=alpha, color=color, fill=True, zorder=3,)
     
-    area = tileSide*tileSide
-
     return ipix, radecs, patch, area
 
 def integrationTime(T_obs, pValTiles, func=None, T_int=60.0):
@@ -343,54 +351,6 @@ def observability(params, map_struct):
         observatory_struct[telescope]["prob"] = observatory_struct[telescope]["prob"]*observatory_struct[telescope]["observability"]
 
     return observatory_struct
-
-def get_segments(params, config_struct):
-
-    gpstime = params["gpstime"]
-    event_mjd = Time(gpstime, format='gps', scale='utc').mjd
-
-    segmentlist = glue.segments.segmentlist()
-    n_windows = len(params["Tobs"]) // 2
-    start_segments = event_mjd + params["Tobs"][::2]
-    end_segments = event_mjd + params["Tobs"][1::2]
-    for start_segment, end_segment in zip(start_segments,end_segments):
-        segmentlist.append(glue.segments.segment(start_segment,end_segment))
-
-    observer = ephem.Observer()
-    observer.lat = str(config_struct["latitude"])
-    observer.lon = str(config_struct["longitude"])
-    observer.horizon = str(-12.0)
-    observer.elevation = config_struct["elevation"]
-
-    date_start = ephem.Date(Time(segmentlist[0][0], format='mjd', scale='utc').iso)
-    date_end = ephem.Date(Time(segmentlist[-1][1], format='mjd', scale='utc').iso)
-    observer.date = ephem.Date(Time(segmentlist[0][0], format='mjd', scale='utc').iso)
-
-    sun = ephem.Sun()
-    nightsegmentlist = glue.segments.segmentlist()
-    while date_start < date_end:
-        date_rise = observer.next_rising(sun, start = date_start)
-        date_set = observer.next_setting(sun, start = date_start)
-        if date_set > date_rise:
-            date_set = observer.previous_setting(sun, start = date_start)
-
-        astropy_rise = Time(date_rise.datetime(), scale='utc').mjd
-        astropy_set  = Time(date_set.datetime(), scale='utc').mjd
-
-        segment = glue.segments.segment(astropy_set,astropy_rise)
-        nightsegmentlist = nightsegmentlist + glue.segments.segmentlist([segment])
-        nightsegmentlist.coalesce()
-
-        date_start = date_rise
-        observer.date = date_rise
-
-    segmentlistdic = glue.segments.segmentlistdict()
-    segmentlistdic["observations"] = segmentlist
-    segmentlistdic["night"] = nightsegmentlist
-    segmentlist = segmentlistdic.intersection(["observations","night"])
-    segmentlist.coalesce()
-
-    return segmentlist
 
 def get_exposures(params, config_struct, segmentlist):
 

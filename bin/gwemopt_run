@@ -37,7 +37,7 @@ import gwemopt.rankedTilesGenerator, gwemopt.waw
 import gwemopt.lightcurve, gwemopt.coverage
 import gwemopt.efficiency, gwemopt.plotting
 import gwemopt.moc, gwemopt.catalog
-import gwemopt.tiles
+import gwemopt.tiles, gwemopt.segments
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -70,17 +70,20 @@ def parse_commandline():
     parser.add_option("--doEvent",  action="store_true", default=False)
     parser.add_option("--doSkymap",  action="store_true", default=False)
     parser.add_option("--doSamples",  action="store_true", default=False)
-    parser.add_option("--doWAW",  action="store_true", default=False)
+
     parser.add_option("--doCoverage",  action="store_true", default=False)
+
+    parser.add_option("--doSchedule",  action="store_true", default=False)
+    parser.add_option("--scheduleType", help="schedule type",default="greedy")
+    parser.add_option("--timeallocationType", help="time allocation type",default="powerlaw")
+
     parser.add_option("--doPlots",  action="store_true", default=False)
     parser.add_option("--doTiles",  action="store_true", default=False)
     parser.add_option("--tilesType", help="tiling type",default="moc")
-    parser.add_option("--scheduleType", help="schedule type",default="greedy")
 
-    parser.add_option("--doPowerlaw",  action="store_true", default=False)
-    parser.add_option("--doPEM",  action="store_true", default=False)
     parser.add_option("--doCatalog",  action="store_true", default=False)
     parser.add_option("--doObservability",  action="store_true", default=False)
+    parser.add_option("--doSkybrightness",  action="store_true", default=False)
 
     parser.add_option("--doEfficiency",  action="store_true", default=False)
     #parser.add_option("-t", "--telescopes", help="Telescope names.",
@@ -158,6 +161,7 @@ def params_struct(opts):
     params["lightcurveFiles"] = opts.lightcurveFiles.split(",")
     params["tilesType"] = opts.tilesType
     params["scheduleType"] = opts.scheduleType
+    params["timeallocationType"] = opts.timeallocationType
     params["Ninj"] = opts.Ninj
     params["Ndet"] = opts.Ndet
     params["DScale"] = opts.DScale
@@ -175,7 +179,7 @@ def get_segments(params):
 
     for telescope in params["telescopes"]:
 
-        params["config"][telescope]["segmentlist"] = gwemopt.utils.get_segments(params, params["config"][telescope])
+        params["config"][telescope]["segmentlist"] = gwemopt.segments.get_segments(params, params["config"][telescope])
         params["config"][telescope]["exposurelist"] = gwemopt.utils.get_exposures(params, params["config"][telescope], params["config"][telescope]["segmentlist"])
 
         nexp, junk = np.array(params["config"][telescope]["exposurelist"]).shape
@@ -270,24 +274,14 @@ if opts.doCatalog:
     print "Generating catalog..."
     catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
 
-if opts.doPowerlaw:
-    print "Generating powerlaw schedule..."
-    coverage_struct = gwemopt.coverage.powerlaw(params, map_struct, tile_structs) 
-elif opts.doWAW:
-    if opts.do3D:
-        print "Generating WAW schedule..."
-        coverage_struct = gwemopt.coverage.waw(params, map_struct, tile_structs)
-    else:
-        print "Need to enable --do3D for --doWAW"
-        exit(0)
-elif opts.doPEM:
-    print "Generating PEM schedule..."
-    coverage_struct = gwemopt.coverage.pem(params, map_struct, tile_structs)
+if opts.doSchedule:
+    print "Generating coverage..."
+    coverage_struct = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
 elif opts.doCoverage:
     print "Reading coverage from file..."
     coverage_struct = gwemopt.coverage.read_coverage_files(params)
 
-if opts.doPowerlaw or opts.doWAW or opts.doPEM or opts.doCoverage:
+if opts.doSchedule or opts.doCoverage:
     print "Summary of coverage..."
     gwemopt.scheduler.summary(params,map_struct,coverage_struct)
 

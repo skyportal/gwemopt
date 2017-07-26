@@ -155,3 +155,21 @@ def pem(params, map_struct, tile_structs):
 
     return combine_coverage_structs(coverage_structs)
 
+def timeallocation(params, map_struct, tile_structs):
+
+    if params["timeallocationType"] == "powerlaw":
+        print "Generating powerlaw schedule..."
+        coverage_struct = gwemopt.coverage.powerlaw(params, map_struct, tile_structs)
+    elif params["timeallocationType"] == "waw":
+        if opts.do3D:
+            print "Generating WAW schedule..."
+            coverage_struct = gwemopt.coverage.waw(params, map_struct, tile_structs)
+        else:
+            print "Need to enable --do3D for waw"
+            exit(0)
+    elif params["timeallocationType"] == "pem":
+        print "Generating PEM schedule..."
+        coverage_struct = gwemopt.coverage.pem(params, map_struct, tile_structs)
+
+    return coverage_struct 
+

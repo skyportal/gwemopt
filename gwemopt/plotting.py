@@ -76,6 +76,7 @@ def tiles(params,map_struct,tiles_structs):
         for index in tiles_struct.iterkeys():
             ipix, corners, patch = tiles_struct[index]["ipix"], tiles_struct[index]["corners"], tiles_struct[index]["patch"]
             #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
+            if not patch: continue
             hp.projaxes.HpxMollweideAxes.add_patch(ax,patch)
             #tiles.plot()
     plt.show()

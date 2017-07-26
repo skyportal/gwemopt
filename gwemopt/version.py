@@ -5,12 +5,12 @@
 """
 
 __author__ = 'Duncan Macleod <duncan.macleod@ligo.org>'
-__version__ = '16176a0b0e03a109bdc69c32c92c1c67e692df29'
-__date__ = '2017-07-20 20:27:06 +0000'
+__version__ = '11decaca88360734bb3e2b9fa25ad96030032d73'
+__date__ = '2017-07-22 20:17:06 +0000'
 
-git_id = '16176a0b0e03a109bdc69c32c92c1c67e692df29'
+git_id = '11decaca88360734bb3e2b9fa25ad96030032d73'
 git_branch = 'master'
 git_tag = None
-git_author = 'Michael Coughlin <michael.coughlin@ligo.org>'
-git_committer = 'Michael Coughlin <michael.coughlin@ligo.org>'
-git_status = 'UNCLEAN: Modified working tree'
+git_author = 'Michael Coughlin <coughlin@physics.harvard.edu>'
+git_committer = 'Michael Coughlin <coughlin@physics.harvard.edu>'
+git_status = None

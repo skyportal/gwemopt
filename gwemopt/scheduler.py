@@ -14,6 +14,7 @@ import glue.segments
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
 import gwemopt.moc, gwemopt.pem
+import gwemopt.segments
 
 def get_altaz_tiles(ras, decs, observatory, obstime):
 
@@ -28,88 +29,6 @@ def get_altaz_tiles(ras, decs, observatory, obstime):
     altaz = radecs.transform_to(frame)    
 
     return altaz
-
-def get_segments_tile(config_struct, observatory, radec, segmentlist):
-
-    observer = ephem.Observer()
-    observer.lat = str(config_struct["latitude"])
-    observer.lon = str(config_struct["longitude"])
-    observer.horizon = str(30.0)
-    observer.elevation = config_struct["elevation"]
-    observer.date = ephem.Date(Time(segmentlist[0][0], format='mjd', scale='utc').iso)
-
-    date_start = ephem.Date(Time(segmentlist[0][0], format='mjd', scale='utc').iso)
-    date_end = ephem.Date(Time(segmentlist[-1][1], format='mjd', scale='utc').iso)
-
-    fxdbdy = ephem.FixedBody()
-    fxdbdy._ra = ephem.degrees(str(radec.ra.degree))
-    fxdbdy._dec = ephem.degrees(str(radec.dec.degree))
-    fxdbdy.compute(observer)
-
-    tilesegmentlist = glue.segments.segmentlist()
-    while date_start < date_end:
-        try:
-            date_rise = observer.next_rising(fxdbdy, start=observer.date)
-            date_set = observer.next_setting(fxdbdy, start=observer.date)
-            if date_rise > date_set:
-                date_rise = observer.previous_rising(fxdbdy, start=observer.date)
-        except ephem.AlwaysUpError:
-            date_rise = date_start
-            date_set = date_end
-        except ephem.NeverUpError:
-            date_rise = ephem.Date(0.0)
-            date_set = ephem.Date(0.0)
-            break
-
-        astropy_rise = Time(date_rise.datetime(), scale='utc')
-        astropy_set  = Time(date_set.datetime(), scale='utc')
-
-        astropy_rise_mjd = astropy_rise.mjd
-        astropy_set_mjd  = astropy_set.mjd
-
-        # Alt/az reference frame at observatory, now
-        #frame_rise = astropy.coordinates.AltAz(obstime=astropy_rise, location=observatory)
-        #frame_set = astropy.coordinates.AltAz(obstime=astropy_set, location=observatory)    
-        # Transform grid to alt/az coordinates at observatory, now
-        #altaz_rise = radec.transform_to(frame_rise)
-        #altaz_set = radec.transform_to(frame_set)        
-
-        segment = glue.segments.segment(astropy_rise_mjd,astropy_set_mjd)
-        tilesegmentlist = tilesegmentlist + glue.segments.segmentlist([segment])
-        tilesegmentlist.coalesce()
-
-        date_start = date_set
-        observer.date = date_set
-
-    tilesegmentlistdic = glue.segments.segmentlistdict()
-    tilesegmentlistdic["observations"] = segmentlist
-    tilesegmentlistdic["tile"] = tilesegmentlist
-    tilesegmentlist = tilesegmentlistdic.intersection(["observations","tile"])
-    tilesegmentlist.coalesce()
-
-    return tilesegmentlist
-
-def get_segments_tiles(config_struct, tile_struct, observatory, segmentlist):
-
-    print "Generating segments for tiles..."
-
-    ras = []
-    decs = []
-    keys = tile_struct.keys()
-    for key in keys:
-        ras.append(tile_struct[key]["ra"])
-        decs.append(tile_struct[key]["dec"])
-
-    # Convert to RA, Dec.
-    radecs = astropy.coordinates.SkyCoord(
-            ra=np.array(ras)*u.degree, dec=np.array(decs)*u.degree, frame='icrs') 
-    tilesegmentlists = []
-    for ii,radec in enumerate(radecs):
-        #print "Generating segments for tile %d/%d"%(ii,len(radecs))
-        tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
-        tilesegmentlists.append(tilesegmentlist)
-
-    return tilesegmentlists
 
 def get_tiles(tile_struct):
 
@@ -264,7 +183,7 @@ def scheduler(params, config_struct, tile_struct):
 
     segmentlist = config_struct["segmentlist"]
     exposurelist = config_struct["exposurelist"]
-    tilesegmentlists = get_segments_tiles(config_struct, tile_struct, observatory, segmentlist)
+    tilesegmentlists = gwemopt.segments.get_segments_tiles(config_struct, tile_struct, observatory, segmentlist)
     keys = get_order(params,tile_struct,tilesegmentlists,exposurelist)
 
     if params["doPlots"]:
