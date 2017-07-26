@@ -265,6 +265,9 @@ The time that each tile is available for observation above the altitude limit is
 Using the set of segments available to the telescope, these tile-specific segments  are intersected with these segments to form a set of visibility segments for each tile.
 This has the benefit of avoiding issues related to simply tracking the rise and set times of each tile.
 
+To account for lunar sky brightness, we use a model from Coughlin et al. \cite{CoSt2016}. 
+Any tile whose sky brightness is increased by at least 1\,mag is excluded.
+
 There are three options related to scheduling observations, greedy, sear, and weighted.
 
 \emph{Greedy.} The simplest version of scheduling employs a schedule simply on the basis of probability contained. The idea is that higher ranked tiles are observed before lower ranked tiles based on this ranking scheme. Rana et al. \cite{RaSi2017} implemented a greedy algorithm whereby the field with the highest probability region in a given time window is observed. As this analysis did not include the possibility of multiple exposures for each pointing, it is modified in the analysis to include multiple exposures. The algorithm is as follows:
