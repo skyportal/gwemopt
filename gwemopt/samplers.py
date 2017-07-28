@@ -8,9 +8,11 @@ import healpy as hp
 
 import gwemopt.utils
 
-def hierarchical_tiles_struct(params, config_struct, telescope, map_struct, Ntiles = 10):
+def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
 
     import pymultinest
+
+    Ntiles = params["Ntiles"]
 
     map_struct_copy = copy.deepcopy(map_struct)
 
@@ -98,6 +100,8 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct, Ntil
     return tile_struct
 
 def greedy_tiles_struct(params, config_struct, telescope, map_struct, Ntiles = 10):
+
+    Ntiles = params["Ntiles"]
 
     map_struct_copy = copy.deepcopy(map_struct)
     skymapData = []
