@@ -67,9 +67,12 @@ def tauprob(params,tau,prob):
 
 def tiles(params,map_struct,tiles_structs):
 
+    unit='Gravitational-wave probability'
+    cbar=False
+
     plotName = os.path.join(params["outputDir"],'tiles.pdf')
     plt.figure()
-    hp.mollview(map_struct["prob"],title='Probability')
+    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
     ax = plt.gca()
     for telescope in tiles_structs:
         tiles_struct = tiles_structs[telescope]
