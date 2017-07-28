@@ -288,15 +288,19 @@ if opts.doSchedule or opts.doCoverage:
         gwemopt.plotting.coverage(params, map_struct, coverage_struct)
 
 if opts.doEfficiency:
-    print "Computing efficiency..."
-    lightcurve_structs = gwemopt.lightcurve.read_files(params["lightcurveFiles"])
-    efficiency_structs = {}
-    for key in lightcurve_structs.iterkeys():
-        lightcurve_struct = lightcurve_structs[key]
-        efficiency_struct = gwemopt.efficiency.compute_efficiency(params,map_struct, eventinfo, lightcurve_struct, coverage_struct)
-        efficiency_structs[key] = efficiency_struct
-        efficiency_structs[key]["legend_label"] = lightcurve_struct["legend_label"]
+    if opts.doSchedule or opts.doCoverage:
+        print "Computing efficiency..."
+        lightcurve_structs = gwemopt.lightcurve.read_files(params["lightcurveFiles"])
+        efficiency_structs = {}
+        for key in lightcurve_structs.iterkeys():
+            lightcurve_struct = lightcurve_structs[key]
+            efficiency_struct = gwemopt.efficiency.compute_efficiency(params,map_struct, eventinfo, lightcurve_struct, coverage_struct)
+            efficiency_structs[key] = efficiency_struct
+            efficiency_structs[key]["legend_label"] = lightcurve_struct["legend_label"]
 
-    if opts.doPlots: 
-        print "Plotting efficiency..."
-        gwemopt.plotting.efficiency(params, map_struct, efficiency_structs)
+        if opts.doPlots: 
+            print "Plotting efficiency..."
+            gwemopt.plotting.efficiency(params, map_struct, efficiency_structs)
+    else:
+        print "Need to enable --doSchedule or --doCoverage for --doEfficiency"
+        exit(0)
