@@ -194,7 +194,7 @@ In addition, information such as the time of the event, the time delay between t
 \begin{lstlisting}
 python gwemopt_run --doEvent --do3D --telescope LSST
 \end{lstlisting}
-\begin{table}[H]
+\begin{table*}[t]
 \scriptsize
 \centering
 \begin{tabular}{|c|c|c|c|c|c|c|c|c|}
@@ -208,7 +208,7 @@ ZTF            & 33.3563            & -116.8648           & 1742.0            & 
 \end{tabular}
 \caption{Configuration of telescopes.}
 \label{table:config}
-\end{table}
+\end{table*}
 We require standardized configuration files for the telescopes to be analyzed. 
 The information includes the filter being used, the limiting magnitude of the instrument and the exposure time required to achieve that magnitude, site location information, and information about the field of view shape and size. For the field of view, two options, square and circle are available, with the FOV being specified by the length of the square side and the radius of the circle. In addition, a tesselationFile is requested. This is especially useful for telescopes such as ZTF which use fixed telescope pointings which ensures the availability of reference images. In case a tesselation file is not available, one is automatically generated, described in the next section.
 Configuration files for ATLAS, BlackGEM, LSST, PS1, and ZTF are available.
