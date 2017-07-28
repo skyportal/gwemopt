@@ -13,7 +13,7 @@
 \usepackage{epstopdf}
 \usepackage{hyperref}
 \usepackage{multirow}
-
+\usepackage{float}
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows}
 
@@ -189,8 +189,10 @@ First of all, it downloads the gravitational-wave skymap for a given event; an e
 In addition, information such as the time of the event, the time delay between the time-of-arrival at the detectors, and \rednote{EM bright} information is noted.
 
 \subsection{Telescope configuration}
-
-\begin{table}[]
+\begin{lstlisting}
+python gwemopt_run --doEvent --do3D --telescope LSST
+\end{lstlisting}
+\begin{table}[H]
 \scriptsize
 \centering
 \begin{tabular}{|c|c|c|c|c|c|c|c|c|}
@@ -205,14 +207,14 @@ ZTF            & 33.3563            & -116.8648           & 1742.0            & 
 \caption{Configuration of telescopes.}
 \label{table:config}
 \end{table}
-
 We require standardized configuration files for the telescopes to be analyzed. 
 The information includes the filter being used, the limiting magnitude of the instrument and the exposure time required to achieve that magnitude, site location information, and information about the field of view shape and size. For the field of view, two options, square and circle are available, with the FOV being specified by the length of the square side and the radius of the circle. In addition, a tesselationFile is requested. This is especially useful for telescopes such as ZTF which use fixed telescope pointings which ensures the availability of reference images. In case a tesselation file is not available, one is automatically generated, described in the next section.
 Configuration files for ATLAS, BlackGEM, LSST, PS1, and ZTF are available.
-Table~\ref{table:config} provides the information assumed for these telescopes.
-
+Table~\ref{table:config} provides the information assumed for these telescopes.\\
 \subsection{Skymap tiling}
-
+\begin{lstlisting}
+python gwemopt_run --doEvent --do3D --doTiles --tilesType ranked
+\end{lstlisting}
 There are a variety of algorithms in the literature for sky-map tiling, and the ones implemented in \emph{gwemopt} will be detailed below. The idea is to cover the sky with tiles the size of the telescope's field-of-view with minimal overlap. In some cases, these tiles are pre-determined by survey constraints in order to simplify difference imaging. In other cases, it is possible to optimize the tile locations based on the gravitational-wave skymaps, such that the tiles maximize the probability contained. In the following, we will check the difference between these tile locations to determine their effect. Due to the fields-of-view for these telescopes being in general much smaller than the probability region, the effect is expected to be relatively minimal.
 
 Gravitational-wave skymaps in general contain metrics that report the spatial probability of a gravitational-wave source lying within a certain location.
@@ -233,7 +235,9 @@ There are four options related to skymap tiling currently available, moc, ranked
 \emph{greedy}. An emcee based optimization which optimizes tiles for a given skymap by placing them simultaneously.
 
 \subsection{Time allocations}
-
+\begin{lstlisting}
+python gwemopt_run --doEvent --doPlots --doTiles --doSchedule —-timeallocationType coverage
+\end{lstlisting}
 Once the tile locations have been assigned, whether dynamically or having been fixed previously, the next task is to assign time allocations to each tile, based on a variety of metrics. 
 Because telescopes have fields of view that are in general significantly smaller than the probability region and typical exposure times for these telescopes are of order minutes (see Table~\ref{table:config}), it is not possible to image the entire probability region to interesting limiting magnitudes in a reasonable amount of time.
 There are further constraints that arise from the diurnal cycle, observing time available for followup, limitations on the pointing a particular telescope is capable of, and the rise and set of tiles.
@@ -250,14 +254,16 @@ There are four options related to time allocations as a function of sky location
 
 \emph{Coverage.} This is an option whereby coverage from existing surveys, including the right ascension and declination of the pointing and the limiting magnitude, are used.
 
-\emph{Powerlaw.} Many searches have used a variation on simply scaling the time allocation proportional to the probability skymaps, a technique employed in the Powerlaw method below. Coughlin and Stubbs \cite{CoSt2016} derived scaling relations for the time allocated to any given field, $t_i$, given the graviational-wave likelihood. We showed that under certain assumptions, $t_i \propto \left(\frac{L_\textrm{GW}(\alpha_i,\delta_i)}{a(\alpha_i,\delta_i)}\right)^{2/3}$, where $L_\textrm{GW}(\alpha_i,\delta_i)$ is the gravitational-wave likelihood and $a(\alpha_i,\delta_i)$ is Galactic extinction.  While the powerlaw based analysis is straightforward, it does not account for the fact that the telescope must be sensitive enough to detect the counterpart. In this sense, this algorithm is the least model dependent. Although the detectability is model-dependent, both in the distances returned by the gravitational-wave detectors and the absolute magnitude of the sources, the following algorithms account for this in multiple ways.
+\emph{Powerlaw.} Many searches have used a variation on simply scaling the time allocation proportional to the probability skymaps, a technique employed in the Powerlaw method below. Coughlin and Stubbs \cite{CoSt2016Maximizing} derived scaling relations for the time allocated to any given field, $t_i$, given the graviational-wave likelihood. We showed that under certain assumptions, $t_i \propto \left(\frac{L_\textrm{GW}(\alpha_i,\delta_i)}{a(\alpha_i,\delta_i)}\right)^{2/3}$, where $L_\textrm{GW}(\alpha_i,\delta_i)$ is the gravitational-wave likelihood and $a(\alpha_i,\delta_i)$ is Galactic extinction.  While the powerlaw based analysis is straightforward, it does not account for the fact that the telescope must be sensitive enough to detect the counterpart. In this sense, this algorithm is the least model dependent. Although the detectability is model-dependent, both in the distances returned by the gravitational-wave detectors and the absolute magnitude of the sources, the following algorithms account for this in multiple ways.
 
 \emph{WAW (Where and when).} Salafia et al. \cite{SoCo2017} use counterpart lightcurve models in the optical, infrared and radio constructed from information from the gravitational-wave signals to create a time- and sky location dependent probability for detecting electromagnetic transients.
 
 \emph{PEM (Probability of electomagnetic counterpart).} Chan et al. \cite{ChHu2017} optimize the number of fields to observe and their time allocations by adopting priors on the intrinsic luminosity of the sources and using knowledge of distance to the counterparts provided for compact binary coalescence.
 
 \subsection{Scheduling}
-
+\begin{lstlisting}
+python gwemopt_run --doEvent --doPlots --doTiles --doSchedule —-scheduleType sear
+\end{lstlisting}
 Once the time allocated to each tile has been set, the next task is to schedule the observations that both best represent the time requested and optimize the times that are chosen in some way, for example, such that tiles are re-imaged at an approximately fixed cadence so as to measure possible lightcurve evolution or to go as deep as possible in one set.
 Other optimizations might employ ordering based on airmass, as sources imaged through higher airmass will have lower signal-to-noise ratios due to scattering.
 
@@ -265,7 +271,7 @@ The time that each tile is available for observation above the altitude limit is
 Using the set of segments available to the telescope, these tile-specific segments  are intersected with these segments to form a set of visibility segments for each tile.
 This has the benefit of avoiding issues related to simply tracking the rise and set times of each tile.
 
-To account for lunar sky brightness, we use a model from Coughlin et al. \cite{CoSt2016}. 
+To account for lunar sky brightness, we use a model from Coughlin et al. \cite{CoSt2016Adaytime}. 
 Any tile whose sky brightness is increased by at least 1\,mag is excluded.
 
 There are three options related to scheduling observations, greedy, sear, and weighted.
@@ -289,7 +295,9 @@ w_i = L_\textrm{GW}(\alpha_i,\delta_i) \times \frac{N_\textrm{R}}{N_\textrm{A}}
 \end{equation}
 
 \subsection{Efficiency}
-
+\begin{lstlisting}
+python gwemopt_run --doEvent --doPlots --doEfficiency
+\end{lstlisting}
 We are able to test and compare the performance of these algorithms by performing simulated observations. 
 We adopt observational constraints as follows. 
 We use an observing limit of an altitude of 30$^\circ$, corresponding to an airmass of 2.0. 

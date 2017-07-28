@@ -203,13 +203,6 @@ if not os.path.isdir(opts.outputDir): os.mkdir(opts.outputDir)
 
 params = params_struct(opts)
 
-if opts.doEfficiency:
-    efficiencyTypes = [opts.doPowerlaw, opts.doWAW,opts.doCoverage,opts.doPEM]
-    efficiencyCount = sum(1 for x in efficiencyTypes if x)
-    if not efficiencyCount == 1:
-        print "Need to enable --doPowerlaw, --doWAW, --doPEM or --doCoverage"
-        exit(0)
-
 if opts.doEvent:
     params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)
     params["gpstime"] = eventinfo["gpstime"]
@@ -275,8 +268,13 @@ if opts.doCatalog:
     catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
 
 if opts.doSchedule:
-    print "Generating coverage..."
-    coverage_struct = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
+    if opts.doTiles:
+        print "Generating coverage..."
+        coverage_struct = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
+    else:
+        print "Need to enable --doTiles to use --doSchedule"
+        exit(0)
+
 elif opts.doCoverage:
     print "Reading coverage from file..."
     coverage_struct = gwemopt.coverage.read_coverage_files(params)
