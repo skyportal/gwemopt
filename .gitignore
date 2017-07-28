@@ -89,4 +89,4 @@ ENV/
 .ropeproject
 
 gwemopt/version.py
-
+.DS_Store
