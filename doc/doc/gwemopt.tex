@@ -254,7 +254,7 @@ There are four options related to time allocations as a function of sky location
 
 \emph{Coverage.} This is an option whereby coverage from existing surveys, including the right ascension and declination of the pointing and the limiting magnitude, are used.
 
-\emph{Powerlaw.} Many searches have used a variation on simply scaling the time allocation proportional to the probability skymaps, a technique employed in the Powerlaw method below. Coughlin and Stubbs \cite{CoSt2016Maximizing} derived scaling relations for the time allocated to any given field, $t_i$, given the graviational-wave likelihood. We showed that under certain assumptions, $t_i \propto \left(\frac{L_\textrm{GW}(\alpha_i,\delta_i)}{a(\alpha_i,\delta_i)}\right)^{2/3}$, where $L_\textrm{GW}(\alpha_i,\delta_i)$ is the gravitational-wave likelihood and $a(\alpha_i,\delta_i)$ is Galactic extinction.  While the powerlaw based analysis is straightforward, it does not account for the fact that the telescope must be sensitive enough to detect the counterpart. In this sense, this algorithm is the least model dependent. Although the detectability is model-dependent, both in the distances returned by the gravitational-wave detectors and the absolute magnitude of the sources, the following algorithms account for this in multiple ways.
+\emph{Powerlaw.} Many searches have used a variation on simply scaling the time allocation proportional to the probability skymaps, a technique employed in the Powerlaw method below. Coughlin and Stubbs \cite{CoSt2016a} derived scaling relations for the time allocated to any given field, $t_i$, given the graviational-wave likelihood. We showed that under certain assumptions, $t_i \propto \left(\frac{L_\textrm{GW}(\alpha_i,\delta_i)}{a(\alpha_i,\delta_i)}\right)^{2/3}$, where $L_\textrm{GW}(\alpha_i,\delta_i)$ is the gravitational-wave likelihood and $a(\alpha_i,\delta_i)$ is Galactic extinction.  While the powerlaw based analysis is straightforward, it does not account for the fact that the telescope must be sensitive enough to detect the counterpart. In this sense, this algorithm is the least model dependent. Although the detectability is model-dependent, both in the distances returned by the gravitational-wave detectors and the absolute magnitude of the sources, the following algorithms account for this in multiple ways.
 
 \emph{WAW (Where and when).} Salafia et al. \cite{SoCo2017} use counterpart lightcurve models in the optical, infrared and radio constructed from information from the gravitational-wave signals to create a time- and sky location dependent probability for detecting electromagnetic transients.
 
@@ -271,7 +271,7 @@ The time that each tile is available for observation above the altitude limit is
 Using the set of segments available to the telescope, these tile-specific segments  are intersected with these segments to form a set of visibility segments for each tile.
 This has the benefit of avoiding issues related to simply tracking the rise and set times of each tile.
 
-To account for lunar sky brightness, we use a model from Coughlin et al. \cite{CoSt2016Adaytime}. 
+To account for lunar sky brightness, we use a model from Coughlin et al. \cite{CoSt2016b}. 
 Any tile whose sky brightness is increased by at least 1\,mag is excluded.
 
 There are three options related to scheduling observations, greedy, sear, and weighted.
