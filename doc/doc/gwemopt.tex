@@ -227,12 +227,37 @@ This can introduce quantization errors of \rednote{XXX} \% for the field-of-view
 There are four options related to skymap tiling currently available, moc, ranked, hierarchical and greedy.
 
 \emph{moc}. Multi-order coverage of healpix maps hierarchically predefines cells in order to specify arbitrary sky regions \cite{FeBo2014}.
-
+\begin{figure}[H]
+    \hspace*{-0.5cm}
+    \centering
+    \includegraphics[width=4in]{tiling_moc.pdf}
+    \caption{MOC skymap tiling.}
+    \label{fig:tiling_moc}
+\end{figure}
 \emph{ranked}. Ghosh et al. \cite{GhBl2016} use pre-defined sky cells...
-
+\begin{figure}[H]
+    \hspace*{-0.5cm}
+    \centering
+    \includegraphics[width=4in]{tiling_ranked.pdf}
+    \caption{Ranked skymap tiling.}
+     \label{fig:tiling_ranked}
+\end{figure}
 \emph{hierarchical}. A Multinest based optimization which optimizes tiles for a given skymap by placing them sequentially.
-
+\begin{figure}[H]
+    \hspace*{-0.5cm}
+    \centering
+    \includegraphics[width=4in]{tiling_hierarchical.pdf}
+    \caption{Hierarchical skymap tiling.}
+     \label{fig:tiling_hierarchical}
+\end{figure}
 \emph{greedy}. An emcee based optimization which optimizes tiles for a given skymap by placing them simultaneously.
+\begin{figure}[H]
+    \hspace*{-0.5cm}
+    \centering
+    \includegraphics[width=4in]{tiling_greedy.pdf}
+    \caption{Greedy skymap tiling.}
+    \label{fig:tiling_greedy}
+\end{figure}
 
 \subsection{Time allocations}
 \begin{lstlisting}
