@@ -16,6 +16,8 @@
 \usepackage{multirow}
 \usepackage{float}
 \usepackage{tikz}
+\usepackage{subcaption}
+\captionsetup{compatibility=false}
 \usetikzlibrary{shapes,arrows}
 
 \usepackage{listings}
@@ -175,7 +177,7 @@ We will account for both diurnal and observational constraints and have the poss
 \begin{figure}[t]
 \hspace*{-0.5cm}
 \centering
-\includegraphics[width=4in]{prob.pdf}
+\includegraphics[width=3in]{prob.pdf}
 \caption{The gravitational-wave likelihood $L_\textrm{GW}(\alpha,\delta,R)$ for GW170104.}
  \label{fig:skymap}
  \end{figure}
@@ -188,7 +190,6 @@ GraceDB is a service that provides information on candidate gravitational-wave e
 \emph{gwemopt} uses this API to access information pertinent for gravitational-wave followups.
 First of all, it downloads the gravitational-wave skymap for a given event; an example is shown in figure~\ref{fig:skymap}.
 In addition, information such as the time of the event, the time delay between the time-of-arrival at the detectors, and \rednote{EM bright} information is noted.
-
 \subsection{Telescope configuration}
 \begin{lstlisting}
 python gwemopt_run --doEvent --do3D --telescope LSST
@@ -214,7 +215,7 @@ Configuration files for ATLAS, BlackGEM, LSST, PS1, and ZTF are available.
 Table~\ref{table:config} provides the information assumed for these telescopes.\\
 \subsection{Skymap tiling}
 \begin{lstlisting}
-python gwemopt_run --doEvent --do3D --doTiles --tilesType ranked
+python gwemopt_run --doEvent --do3D --doTiles --doPlots --tilesType ranked
 \end{lstlisting}
 There are a variety of algorithms in the literature for sky-map tiling, and the ones implemented in \emph{gwemopt} will be detailed below. The idea is to cover the sky with tiles the size of the telescope's field-of-view with minimal overlap. In some cases, these tiles are pre-determined by survey constraints in order to simplify difference imaging. In other cases, it is possible to optimize the tile locations based on the gravitational-wave skymaps, such that the tiles maximize the probability contained. In the following, we will check the difference between these tile locations to determine their effect. Due to the fields-of-view for these telescopes being in general much smaller than the probability region, the effect is expected to be relatively minimal.
 
@@ -228,37 +229,31 @@ This can introduce quantization errors of \rednote{XXX} \% for the field-of-view
 There are four options related to skymap tiling currently available, moc, ranked, hierarchical and greedy.
 
 \emph{moc}. Multi-order coverage of healpix maps hierarchically predefines cells in order to specify arbitrary sky regions \cite{FeBo2014}.
-\begin{figure}[H]
-    \hspace*{-0.5cm}
+\begin{figure}[b]
     \centering
-    \includegraphics[width=4in]{tiling_moc.pdf}
-    \caption{MOC skymap tiling.}
-    \label{fig:tiling_moc}
+    \begin{subfigure}[b]{0.4\textwidth}
+        \includegraphics[width=\textwidth]{tiling_greedy}
+        \caption{Greedy skymap tiling.}
+        \label{fig:tiling_greedy}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.4\textwidth}
+        \includegraphics[width=\textwidth]{tiling_hierarchical}
+        \caption{Hierarchical skymap tiling.}
+        \label{fig:tiling_hierarchical}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.4\textwidth}
+        \includegraphics[width=\textwidth]{tiling_moc}
+        \caption{MOC skymap tiling.}
+        \label{fig:tiling_moc}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.4\textwidth}
+        \includegraphics[width=\textwidth]{tiling_ranked}
+        \caption{Ranked skymap tiling.}
+        \label{fig:tiling_ranked}
+    \end{subfigure}
+    \caption{Example outputs of different tiling algorithms}\label{fig:tiling}
 \end{figure}
-\emph{ranked}. Ghosh et al. \cite{GhBl2016} use pre-defined sky cells...
-\begin{figure}[H]
-    \hspace*{-0.5cm}
-    \centering
-    \includegraphics[width=4in]{tiling_ranked.pdf}
-    \caption{Ranked skymap tiling.}
-     \label{fig:tiling_ranked}
-\end{figure}
-\emph{hierarchical}. A Multinest based optimization which optimizes tiles for a given skymap by placing them sequentially.
-\begin{figure}[H]
-    \hspace*{-0.5cm}
-    \centering
-    \includegraphics[width=4in]{tiling_hierarchical.pdf}
-    \caption{Hierarchical skymap tiling.}
-     \label{fig:tiling_hierarchical}
-\end{figure}
-\emph{greedy}. An emcee based optimization which optimizes tiles for a given skymap by placing them simultaneously.
-\begin{figure}[H]
-    \hspace*{-0.5cm}
-    \centering
-    \includegraphics[width=4in]{tiling_greedy.pdf}
-    \caption{Greedy skymap tiling.}
-    \label{fig:tiling_greedy}
-\end{figure}
+
 
 \subsection{Time allocations}
 \begin{lstlisting}
