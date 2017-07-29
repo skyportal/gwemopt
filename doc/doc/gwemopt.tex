@@ -239,7 +239,7 @@ There are four options related to skymap tiling currently available, moc, ranked
 
 \subsection{Time allocations}
 \begin{lstlisting}
-python gwemopt_run --doEvent --doPlots --doTiles --doSchedule —-timeallocationType coverage
+python gwemopt_run --doEvent --doPlots --doTiles --doSchedule --timeallocationType coverage
 \end{lstlisting}
 Once the tile locations have been assigned, whether dynamically or having been fixed previously, the next task is to assign time allocations to each tile, based on a variety of metrics. 
 Because telescopes have fields of view that are in general significantly smaller than the probability region and typical exposure times for these telescopes are of order minutes (see Table~\ref{table:config}), it is not possible to image the entire probability region to interesting limiting magnitudes in a reasonable amount of time.
@@ -265,7 +265,7 @@ There are four options related to time allocations as a function of sky location
 
 \subsection{Scheduling}
 \begin{lstlisting}
-python gwemopt_run --doEvent --doPlots --doTiles --doSchedule —-scheduleType sear
+python gwemopt_run --doEvent --doPlots --doTiles --doSchedule --scheduleType sear
 \end{lstlisting}
 Once the time allocated to each tile has been set, the next task is to schedule the observations that both best represent the time requested and optimize the times that are chosen in some way, for example, such that tiles are re-imaged at an approximately fixed cadence so as to measure possible lightcurve evolution or to go as deep as possible in one set.
 Other optimizations might employ ordering based on airmass, as sources imaged through higher airmass will have lower signal-to-noise ratios due to scattering.
