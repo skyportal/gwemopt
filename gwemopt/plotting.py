@@ -82,6 +82,7 @@ def tiles(params,map_struct,tiles_structs):
             if not patch: continue
             hp.projaxes.HpxMollweideAxes.add_patch(ax,patch)
             #tiles.plot()
+    add_edges()
     plt.show()
     plt.savefig(plotName,dpi=200)
     plt.close('all')

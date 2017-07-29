@@ -16,8 +16,8 @@
 \usepackage{multirow}
 \usepackage{float}
 \usepackage{tikz}
-\usepackage{subcaption}
-\captionsetup{compatibility=false}
+%\usepackage{subcaption}
+%\captionsetup{compatibility=false}
 \usetikzlibrary{shapes,arrows}
 
 \usepackage{listings}
@@ -65,8 +65,6 @@
 
 \graphicspath{{./plots/}}
 \begin{document}
-
-%\pacs{95.75.-z,04.30.-w}
 
 \title{gwemopt: Optimizing searches for electromagnetic counterparts of gravitational wave triggers}
 
@@ -229,31 +227,15 @@ This can introduce quantization errors of \rednote{XXX} \% for the field-of-view
 There are four options related to skymap tiling currently available, moc, ranked, hierarchical and greedy.
 
 \emph{moc}. Multi-order coverage of healpix maps hierarchically predefines cells in order to specify arbitrary sky regions \cite{FeBo2014}.
-\begin{figure}[b]
+\begin{figure*}
     \centering
-    \begin{subfigure}[b]{0.4\textwidth}
-        \includegraphics[width=\textwidth]{tiling_greedy}
-        \caption{Greedy skymap tiling.}
-        \label{fig:tiling_greedy}
-    \end{subfigure}
-    \begin{subfigure}[b]{0.4\textwidth}
-        \includegraphics[width=\textwidth]{tiling_hierarchical}
-        \caption{Hierarchical skymap tiling.}
-        \label{fig:tiling_hierarchical}
-    \end{subfigure}
-    \begin{subfigure}[b]{0.4\textwidth}
-        \includegraphics[width=\textwidth]{tiling_moc}
-        \caption{MOC skymap tiling.}
-        \label{fig:tiling_moc}
-    \end{subfigure}
-    \begin{subfigure}[b]{0.4\textwidth}
-        \includegraphics[width=\textwidth]{tiling_ranked}
-        \caption{Ranked skymap tiling.}
-        \label{fig:tiling_ranked}
-    \end{subfigure}
-    \caption{Example outputs of different tiling algorithms}\label{fig:tiling}
-\end{figure}
-
+    \includegraphics[width=3in]{tiling_greedy}
+    \includegraphics[width=3in]{tiling_hierarchical}
+    \includegraphics[width=3in]{tiling_moc}
+    \includegraphics[width=3in]{tiling_ranked}
+    \caption{Example outputs of different tiling algorithms. On the top left is the greedy version with Ntiles = 10, on the top right is the hierarchical version with the same, on the bottom left is the MOC skymap, and on the bottom right is the ranked skymap tiling.}
+    \label{fig:tiling}
+\end{figure*}
 
 \subsection{Time allocations}
 \begin{lstlisting}
