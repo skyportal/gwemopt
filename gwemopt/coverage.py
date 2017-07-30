@@ -161,7 +161,7 @@ def timeallocation(params, map_struct, tile_structs):
         print "Generating powerlaw schedule..."
         coverage_struct = gwemopt.coverage.powerlaw(params, map_struct, tile_structs)
     elif params["timeallocationType"] == "waw":
-        if opts.do3D:
+        if params["do3D"]:
             print "Generating WAW schedule..."
             coverage_struct = gwemopt.coverage.waw(params, map_struct, tile_structs)
         else:

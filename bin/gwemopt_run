@@ -174,7 +174,7 @@ def params_struct(opts):
 
     params["doPlots"] = opts.doPlots
     params["doObservability"] = opts.doObservability
-
+    params["do3D"] = opts.do3D
     return params
 
 def get_segments(params):
