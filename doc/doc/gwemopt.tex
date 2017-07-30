@@ -130,7 +130,7 @@ In section~\ref{sec:conclusions}, we offer concluding remarks and suggest direct
 \section{Algorithm}
 \label{sec:algorithm}
 
-Figure~\ref{fig:flowchart} shows the flowchart for the \emph{gwemopt} pipeline, developed to optimize the efforts of electromagnetic followup of gravitational-wave events. \emph{gwemopt} is developed in python, which has the benefit of interfaces to both LIGO's gravitational-wave candidate event database (GraceDB) and HEALPIX \cite{GoHi2005}, the format in which LIGO reports skymaps.
+Figure~\ref{fig:flowchart} shows the flowchart for the \emph{gwemopt} pipeline, developed to optimize the efforts of electromagnetic followup of gravitational-wave events. \emph{gwemopt} is developed in python, which has the benefit of interfaces to both LIGO's gravitational-wave candidate event database (GraceDB) and HEALPIX \citep{GoHi2005}, the format in which LIGO reports skymaps.
 
 It uses events provided by gracedb in addition to information about the telescopes to creating tiles and optimize time allocations in the fields.
 It uses information about potential lightcurves from electromagnetic counterparts to schedule the available telescope time.
@@ -226,7 +226,7 @@ This can introduce quantization errors of \rednote{XXX} \% for the field-of-view
 
 There are four options related to skymap tiling currently available, moc, ranked, hierarchical and greedy.
 
-\emph{moc}. Multi-order coverage of healpix maps hierarchically predefines cells in order to specify arbitrary sky regions \cite{FeBo2014}.
+\emph{moc}. Multi-order coverage of healpix maps hierarchically predefines cells in order to specify arbitrary sky regions \citep{FeBo2014}.
 \begin{figure*}
     \centering
     \includegraphics[width=3in]{tiling_greedy}
@@ -257,11 +257,11 @@ There are four options related to time allocations as a function of sky location
 
 \emph{Coverage.} This is an option whereby coverage from existing surveys, including the right ascension and declination of the pointing and the limiting magnitude, are used.
 
-\emph{Powerlaw.} Many searches have used a variation on simply scaling the time allocation proportional to the probability skymaps, a technique employed in the Powerlaw method below. Coughlin and Stubbs \cite{CoSt2016a} derived scaling relations for the time allocated to any given field, $t_i$, given the graviational-wave likelihood. We showed that under certain assumptions, $t_i \propto \left(\frac{L_\textrm{GW}(\alpha_i,\delta_i)}{a(\alpha_i,\delta_i)}\right)^{2/3}$, where $L_\textrm{GW}(\alpha_i,\delta_i)$ is the gravitational-wave likelihood and $a(\alpha_i,\delta_i)$ is Galactic extinction.  While the powerlaw based analysis is straightforward, it does not account for the fact that the telescope must be sensitive enough to detect the counterpart. In this sense, this algorithm is the least model dependent. Although the detectability is model-dependent, both in the distances returned by the gravitational-wave detectors and the absolute magnitude of the sources, the following algorithms account for this in multiple ways.
+\emph{Powerlaw.} Many searches have used a variation on simply scaling the time allocation proportional to the probability skymaps, a technique employed in the Powerlaw method below. \cite{CoSt2016a} derived scaling relations for the time allocated to any given field, $t_i$, given the graviational-wave likelihood. We showed that under certain assumptions, $t_i \propto \left(\frac{L_\textrm{GW}(\alpha_i,\delta_i)}{a(\alpha_i,\delta_i)}\right)^{2/3}$, where $L_\textrm{GW}(\alpha_i,\delta_i)$ is the gravitational-wave likelihood and $a(\alpha_i,\delta_i)$ is Galactic extinction.  While the powerlaw based analysis is straightforward, it does not account for the fact that the telescope must be sensitive enough to detect the counterpart. In this sense, this algorithm is the least model dependent. Although the detectability is model-dependent, both in the distances returned by the gravitational-wave detectors and the absolute magnitude of the sources, the following algorithms account for this in multiple ways.
 
-\emph{WAW (Where and when).} Salafia et al. \cite{SoCo2017} use counterpart lightcurve models in the optical, infrared and radio constructed from information from the gravitational-wave signals to create a time- and sky location dependent probability for detecting electromagnetic transients.
+\emph{WAW (Where and when).} \cite{SoCo2017} use counterpart lightcurve models in the optical, infrared and radio constructed from information from the gravitational-wave signals to create a time- and sky location dependent probability for detecting electromagnetic transients.
 
-\emph{PEM (Probability of electomagnetic counterpart).} Chan et al. \cite{ChHu2017} optimize the number of fields to observe and their time allocations by adopting priors on the intrinsic luminosity of the sources and using knowledge of distance to the counterparts provided for compact binary coalescence.
+\emph{PEM (Probability of electomagnetic counterpart).} \cite{ChHu2017} optimize the number of fields to observe and their time allocations by adopting priors on the intrinsic luminosity of the sources and using knowledge of distance to the counterparts provided for compact binary coalescence.
 
 \subsection{Scheduling}
 \begin{lstlisting}
@@ -274,12 +274,12 @@ The time that each tile is available for observation above the altitude limit is
 Using the set of segments available to the telescope, these tile-specific segments  are intersected with these segments to form a set of visibility segments for each tile.
 This has the benefit of avoiding issues related to simply tracking the rise and set times of each tile.
 
-To account for lunar sky brightness, we use a model from Coughlin et al. \cite{CoSt2016b}. 
+To account for lunar sky brightness, we use a model from \cite{CoSt2016b}. 
 Any tile whose sky brightness is increased by at least 1\,mag is excluded.
 
 There are three options related to scheduling observations, greedy, sear, and weighted.
 
-\emph{Greedy.} The simplest version of scheduling employs a schedule simply on the basis of probability contained. The idea is that higher ranked tiles are observed before lower ranked tiles based on this ranking scheme. Rana et al. \cite{RaSi2017} implemented a greedy algorithm whereby the field with the highest probability region in a given time window is observed. As this analysis did not include the possibility of multiple exposures for each pointing, it is modified in the analysis to include multiple exposures. The algorithm is as follows:
+\emph{Greedy.} The simplest version of scheduling employs a schedule simply on the basis of probability contained. The idea is that higher ranked tiles are observed before lower ranked tiles based on this ranking scheme. \cite{RaSi2017} implemented a greedy algorithm whereby the field with the highest probability region in a given time window is observed. As this analysis did not include the possibility of multiple exposures for each pointing, it is modified in the analysis to include multiple exposures. The algorithm is as follows:
 
 \begin{enumerate}
 \item Construct a list of the tiles and number of exposures for each tile based on the time allocation algorithm utilized.
@@ -288,7 +288,7 @@ There are three options related to scheduling observations, greedy, sear, and we
 \end{enumerate}
 
 \emph{sear (Setting Array).} The greedy algorithm has the short-coming that it does not account for site visibility. This motivates re-ordering the sequence such that as many tiles can be imaged as possible.
-Rana et al. \cite{RaSi2017} also implemented a version whereby the rising and setting of tiles were accounted for. It uses the idea that observes high probability tiles first, subject to the condition that each tile from the
+\cite{RaSi2017} also implemented a version whereby the rising and setting of tiles were accounted for. It uses the idea that observes high probability tiles first, subject to the condition that each tile from the
 observing sequence must be observed before it sets.
 
 \emph{weighted.} Given the impossibility of necessarily observing all of the tiles as they rise and set given the requirement of using multiple exposures per tile, we are motivated to define a scheme whereby each tile is given a weight based on both gravitational-wave likelihood enclosed, the number of exposures required for that tile, and the number of available slots for it to be image. Therefore we define the weights $w_i$ as
@@ -310,11 +310,11 @@ We do not point away from the moon or account for sky brightness.
 To estimate the efficiency for the ``detection'' of the electromagnetic counterparts to gravitational-wave transients, we perform simulated injections of supplied lightcurves. We provide example lightcurves for a variety of lightcurve models, including:
 
 \begin{enumerate}
-\item Tanaka et al. \cite{TaHo2014}: Simulations of binary systems showing ejecta morphology and resulting lightcurves.
-These simulations led to analytical models for black-hole neutron star systems from \item Kawaguchi et al. \cite{KaKy2016}: Analytical models for black-hole neutron star systems based on Tanaka et al. \cite{TaHo2014}
-\item Dietrich and Ujevic \cite{DiUj2017}: Analytical models for binary neutron star systems based on Tanaka et al. \cite{TaHo2014}
-\item Barnes et al. \cite{BaKa2016}: Simulations of binary systems studying the emission profiles of radioactive decay products from the merger.
-\item Metzger et al. \cite{MeBa2015}: Blue ``precursor'' to the kilonovae driven by $\beta$-decay of the ejecta mass.
+\item \cite{TaHo2014}: Simulations of binary systems showing ejecta morphology and resulting lightcurves.
+These simulations led to analytical models for black-hole neutron star systems from \item \cite{KaKy2016}: Analytical models for black-hole neutron star systems based on Tanaka et al. \cite{TaHo2014}
+\item \cite{DiUj2017}: Analytical models for binary neutron star systems based on \cite{TaHo2014}
+\item \cite{BaKa2016}: Simulations of binary systems studying the emission profiles of radioactive decay products from the merger.
+\item \cite{MeBa2015}: Blue ``precursor'' to the kilonovae driven by $\beta$-decay of the ejecta mass.
 \end{enumerate}
 
 The requirements for ``detection'' of the electromagnetic counterparts to gravitational-wave transients are as follows.
