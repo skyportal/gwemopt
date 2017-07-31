@@ -183,7 +183,7 @@ def Pem(lim_mag, lim_time, N_ref = 9.7847e9, L_min = 4.9370e31, L_max = 4.9370e3
         sys.exit('pMdm has to have length equal to sample_length.') 
     
     
-    if p_R == None:
+    if p_R is None:
         D_min = 1.0e7
         D_max = 1.0e9
         Rstepsize = (D_max - D_min) / sample_length
@@ -195,7 +195,7 @@ def Pem(lim_mag, lim_time, N_ref = 9.7847e9, L_min = 4.9370e31, L_max = 4.9370e3
         Rstepsize = R[1] - R[0]
         Rsteps = len(R)
     
-    if tau == None:    
+    if tau is None:    
         tau = np.zeros(Loftau)
         for i in range(Loftau):
             tau[i] = 10 ** (-1 + (i) * 0.1)

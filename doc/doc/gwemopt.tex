@@ -262,7 +262,14 @@ There are four options related to time allocations as a function of sky location
 \emph{WAW (Where and when).} \cite{SoCo2017} use counterpart lightcurve models in the optical, infrared and radio constructed from information from the gravitational-wave signals to create a time- and sky location dependent probability for detecting electromagnetic transients.
 
 \emph{PEM (Probability of electomagnetic counterpart).} \cite{ChHu2017} optimize the number of fields to observe and their time allocations by adopting priors on the intrinsic luminosity of the sources and using knowledge of distance to the counterparts provided for compact binary coalescence.
-
+\begin{figure*}
+    \centering
+    \includegraphics[width=3in]{timealloc_pem}
+    \includegraphics[width=3in]{timealloc_powerlaw}
+    \includegraphics[width=3in]{timealloc_waw}
+    \caption{Example outputs of different time allocation algorithms. On the top left is the tiles coverage with the PEM algorithm. On the top right is the tiles coverage with the Powerlaw algorithm. On the bottom is the tiles coverage with the WAW algorithm.}
+    \label{fig:timealloc}
+\end{figure*}
 \subsection{Scheduling}
 \begin{lstlisting}
 python gwemopt_run --doEvent --doPlots --doTiles --doSchedule --scheduleType sear
