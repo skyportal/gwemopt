@@ -217,16 +217,6 @@ python gwemopt_run --doEvent --do3D --doTiles --doPlots --tilesType ranked
 \end{lstlisting}
 There are a variety of algorithms in the literature for sky-map tiling, and the ones implemented in \emph{gwemopt} will be detailed below. The idea is to cover the sky with tiles the size of the telescope's field-of-view with minimal overlap. In some cases, these tiles are pre-determined by survey constraints in order to simplify difference imaging. In other cases, it is possible to optimize the tile locations based on the gravitational-wave skymaps, such that the tiles maximize the probability contained. In the following, we will check the difference between these tile locations to determine their effect. Due to the fields-of-view for these telescopes being in general much smaller than the probability region, the effect is expected to be relatively minimal.
 
-Gravitational-wave skymaps in general contain metrics that report the spatial probability of a gravitational-wave source lying within a certain location.
-They are composed of HEALPIX arrays that encode either the 2D probability, in right ascension and declination, or 3D probability, which includes fits to the distance uncertainties.
-They are reported in particular number of pixels, usually $\textrm{N}_\textrm{side} = 512$. 
-This can introduce quantization errors, especially for small field-of-view telescopes. 
-The --nside flag allows for the over- or under-sampling of the skymaps in the analysis.
-This can introduce quantization errors of \rednote{XXX} \% for the field-of-view we consider here.
-
-There are four options related to skymap tiling currently available, moc, ranked, hierarchical and greedy.
-
-\emph{moc}. Multi-order coverage of healpix maps hierarchically predefines cells in order to specify arbitrary sky regions \citep{FeBo2014}.
 \begin{figure*}
     \centering
     \includegraphics[width=3in]{tiling_greedy}
@@ -236,6 +226,25 @@ There are four options related to skymap tiling currently available, moc, ranked
     \caption{Example outputs of different tiling algorithms. On the top left is the greedy version with Ntiles = 10, on the top right is the hierarchical version with the same, on the bottom left is the MOC skymap, and on the bottom right is the ranked skymap tiling.}
     \label{fig:tiling}
 \end{figure*}
+
+Gravitational-wave skymaps in general contain metrics that report the spatial probability of a gravitational-wave source lying within a certain location.
+They are composed of HEALPIX arrays that encode either the 2D probability, in right ascension and declination, or 3D probability, which includes fits to the distance uncertainties.
+They are reported in particular number of pixels, usually $\textrm{N}_\textrm{side} = 512$. 
+This can introduce quantization errors, especially for small field-of-view telescopes. 
+The --nside flag allows for the over- or under-sampling of the skymaps in the analysis.
+This can introduce quantization errors of \rednote{XXX} \% for the field-of-view we consider here.
+
+There are four options related to skymap tiling currently available, moc, ranked, hierarchical and greedy.
+
+\rednote{Duo: all of these descriptions could use some expansion, especially the hierarchical and greedy schemes.}
+
+\emph{moc}. Multi-order coverage of healpix maps hierarchically predefines cells in order to specify arbitrary sky regions \citep{FeBo2014}.
+
+\emph{ranked}. Ghosh et al. \cite{GhBl2016} use pre-defined sky cells.
+ 
+\emph{hierarchical}. A Multinest based optimization which optimizes tiles for a given skymap by placing them sequentially.
+ 
+\emph{greedy}. An emcee based optimization which optimizes tiles for a given skymap by placing them simultaneously.
 
 \subsection{Time allocations}
 \begin{lstlisting}
@@ -253,7 +262,9 @@ This defines the segments available for the analysis.
 The time available for the analysis is then determined from these segments.
 This assumes implicitly that the electromagnetic counterpart has not faded beyond detection limits in the time available. Some of the time allocation algorithms below will use models to determine when the counterpart is expected to be too faint to be detectable.
 
-There are four options related to time allocations as a function of sky location available, powerlaw, WAW, PEM, and coverage.
+There are four options related to time allocations as a function of sky location available, powerlaw, WAW, PEM, and coverage. Figure~\ref{fig:timealloc} shows examples of the powerlaw, WAW, and PEM types.
+
+\rednote{Duo: In addition to expanding these descriptions based on your reading, I think it makes sense to try to state in a common mathematical formalism what each tries to do.}
 
 \emph{Coverage.} This is an option whereby coverage from existing surveys, including the right ascension and declination of the pointing and the limiting magnitude, are used.
 
@@ -262,6 +273,7 @@ There are four options related to time allocations as a function of sky location
 \emph{WAW (Where and when).} \cite{SoCo2017} use counterpart lightcurve models in the optical, infrared and radio constructed from information from the gravitational-wave signals to create a time- and sky location dependent probability for detecting electromagnetic transients.
 
 \emph{PEM (Probability of electomagnetic counterpart).} \cite{ChHu2017} optimize the number of fields to observe and their time allocations by adopting priors on the intrinsic luminosity of the sources and using knowledge of distance to the counterparts provided for compact binary coalescence.
+
 \begin{figure*}
     \centering
     \includegraphics[width=3in]{timealloc_pem}
@@ -270,6 +282,8 @@ There are four options related to time allocations as a function of sky location
     \caption{Example outputs of different time allocation algorithms. On the top left is the tiles coverage with the PEM algorithm. On the top right is the tiles coverage with the Powerlaw algorithm. On the bottom is the tiles coverage with the WAW algorithm.}
     \label{fig:timealloc}
 \end{figure*}
+
+
 \subsection{Scheduling}
 \begin{lstlisting}
 python gwemopt_run --doEvent --doPlots --doTiles --doSchedule --scheduleType sear
