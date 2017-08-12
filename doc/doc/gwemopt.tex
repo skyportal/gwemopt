@@ -117,7 +117,7 @@ In addition, a joint observation with a short gamma-ray burst would not only con
 To facilitate the detection of gravitational-wave counterparts, probability skymaps as a function of sky direction and distance are released for gravitational wave triggers produced by the detectors \citep{SiPr2014,BeMa2015}. 
 Due to the significant sky coverage required to observe the gravitational-wave sky localization regions, usually spanning $\approx 100\,\textrm{deg}^2$, techniques to optimize the followup efforts are of significant utility \citep{Fair2009,Fair2011,Grover:2013,WeCh2010,SiAy2014,SiPr2014,BeMa2015,EsVi2015,CoLi2015,KlVe2016}.
 Given the large sky localization regions involved, wide-field survey telescopes have the best opportunities to make a detection. 
-The Panoramic Survey Telescope and Rapid Response System (Pan-STARRS) \cite{MoKa2012}, Asteroid Terrestrial-impact Last Alert System (ATLAS) \cite{Ton2011}, the intermediate Palomar Transient Factory (PTF) \cite{RaSh2009} and (what will become) the Zwicky Transient Facility (ZTF), BlackGEM \cite{BlGr2015} and the Large Synoptic Survey Telescope (LSST) \cite{Ivezic2014} are all examples of such systems.
+The Panoramic Survey Telescope and Rapid Response System (Pan-STARRS) \citep{MoKa2012}, Asteroid Terrestrial-impact Last Alert System (ATLAS) \citep{Ton2011}, the intermediate Palomar Transient Factory (PTF) \citep{RaSh2009} and (what will become) the Zwicky Transient Facility (ZTF), BlackGEM \citep{BlGr2015} and the Large Synoptic Survey Telescope (LSST) \citep{Ivezic2014} are all examples of such systems.
 For example, Pan-STARRS has a 7$^\circ$ field of view (FOV), achieving a 5 $\sigma$ limit of 21.5 (AB mag) in the i band in a 45 second exposure. ATLAS has a 29.2$^\circ$ field of view, achieving a 5 $\sigma$ limit of 18.7 in the cyan band in a 30 second exposure. For comparison, LSST will have a $9.6\textrm{deg}^2$ FOV and will require a 21\,s r-band exposure length to reach 22 mag.
 
 Due to the significant difference in telescope configurations, including FOV, filter, typical exposure times, and limiting magnitudes, in addition to placement on the earth and therefore different seeing and sky conditions, optimizing gravitational wave followups for generic telescopes is difficult. Therefore, in the following, we will take the telescopes mentioned above as examples. 
@@ -253,7 +253,7 @@ Here are two relevant implementation details about MOC.
  \label{fig:tiling_moc_demo}
  \end{figure}
 
-\emph{ranked}. Ghosh et al. \cite{GhBl2016} use pre-defined sky cells. This tiling scheme is also based on a grid system with grids of equal sizes such as the one used by MOC. The sizes of the grids are the same as the size of the telescope FOV. For each tile in the grid at $(\alpha_i, \delta_i)$, we calculate a double integral that accumulates the probability distribution in this tile, shown in Eq.\ref{eqn:tile_ranked}.
+\emph{ranked}. \cite{GhBl2016} use pre-defined sky cells. This tiling scheme is also based on a grid system with grids of equal sizes such as the one used by MOC. The sizes of the grids are the same as the size of the telescope FOV. For each tile in the grid at $(\alpha_i, \delta_i)$, we calculate a double integral that accumulates the probability distribution in this tile, shown in Eq.\ref{eqn:tile_ranked}.
 \begin{equation}\label{eqn:tile_ranked}
 T_{ij} = \int_{\alpha_i}^{\alpha_i+\Delta \alpha}\int_{\delta_i}^{\delta_i+\Delta \delta}L(\alpha, \delta)d\Omega
 \end{equation}
@@ -349,7 +349,7 @@ To estimate the efficiency for the ``detection'' of the electromagnetic counterp
 
 \begin{enumerate}
 \item \cite{TaHo2014}: Simulations of binary systems showing ejecta morphology and resulting lightcurves.
-These simulations led to analytical models for black-hole neutron star systems from \item \cite{KaKy2016}: Analytical models for black-hole neutron star systems based on Tanaka et al. \cite{TaHo2014}
+These simulations led to analytical models for black-hole neutron star systems from \item \cite{KaKy2016}: Analytical models for black-hole neutron star systems based on \cite{TaHo2014}
 \item \cite{DiUj2017}: Analytical models for binary neutron star systems based on \cite{TaHo2014}
 \item \cite{BaKa2016}: Simulations of binary systems studying the emission profiles of radioactive decay products from the merger.
 \item \cite{MeBa2015}: Blue ``precursor'' to the kilonovae driven by $\beta$-decay of the ejecta mass.
@@ -371,7 +371,7 @@ We simulate the transients at a variety of location and distances consistent wit
 \section{Acknowledgments}
 MC is supported by National Science Foundation Graduate Research Fellowship Program, under NSF grant number DGE 1144152.
 
-\bibliographystyle{plainnat}
+\bibliographystyle{aasjournal}
 \bibliography{references}
 
 \end{document} 
