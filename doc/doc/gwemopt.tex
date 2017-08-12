@@ -238,10 +238,27 @@ There are four options related to skymap tiling currently available, moc, ranked
 
 \rednote{Duo: all of these descriptions could use some expansion, especially the hierarchical and greedy schemes.}
 
-\emph{moc}. Multi-order coverage of healpix maps hierarchically predefines cells in order to specify arbitrary sky regions \citep{FeBo2014}.
+\emph{moc}. Multi-order coverage of healpix maps hierarchically predefines cells in order to specify arbitrary sky regions \citep{FeBo2014}. MOC is proposed in order to provide fast set operations between regions on the sky. In MOC, the spherical sky is recursively divided into 4 regions and each region is a diamond. The process is demonstrated in Fig.\ref{fig:tiling_moc_demo}, where we can see that the sphere is divided recursively into four diamonds. The division stops according to the resolution necessary for a particular usage.
 
-\emph{ranked}. Ghosh et al. \cite{GhBl2016} use pre-defined sky cells.
- 
+Here are two relevant implementation details about MOC.
+\begin{itemize}
+\item MOC uses equatorial coordinate system. 
+\item MOC numbers each tile as such: the initial tile is numbered 0 on level 0. Then if we divided it, we get tile 0, 1, 2, 3 on level 1. if we start from a tile numbered M, its children will be numbered $M\times 4$, $M\times 4 + 1$, $M\times 4 + 2$,$M\times 4 + 3$ on the next level.
+\end{itemize}
+\begin{figure}[t]
+\hspace*{-0.5cm}
+\centering
+\includegraphics[width=3in]{tiling_moc_demo.png}
+\caption{Diagram of the MOC tiling algorithm. The sky is divided into four diamond regions in level 0, 16 regions in level 1, 64 regions in level 2 and so on.}
+ \label{fig:tiling_moc_demo}
+ \end{figure}
+
+\emph{ranked}. Ghosh et al. \cite{GhBl2016} use pre-defined sky cells. This tiling scheme is also based on a grid system with grids of equal sizes such as the one used by MOC. The sizes of the grids are the same as the size of the telescope FOV. For each tile in the grid at $(\alpha_i, \delta_i)$, we calculate a double integral that accumulates the probability distribution in this tile, shown in Eq.\ref{eqn:tile_ranked}.
+\begin{equation}\label{eqn:tile_ranked}
+T_{ij} = \int_{\alpha_i}^{\alpha_i+\Delta \alpha}\int_{\delta_i}^{\delta_i+\Delta \delta}L(\alpha, \delta)d\Omega
+\end{equation}
+Then we rank all the tiles with their $T_{ij}$ and select from the top of the rankings until we reach the target probability of 95\%.
+
 \emph{hierarchical}. A Multinest based optimization which optimizes tiles for a given skymap by placing them sequentially.
  
 \emph{greedy}. An emcee based optimization which optimizes tiles for a given skymap by placing them simultaneously.
