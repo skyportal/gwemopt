@@ -259,9 +259,9 @@ T_{ij} = \int_{\alpha_i}^{\alpha_i+\Delta \alpha}\int_{\delta_i}^{\delta_i+\Delt
 \end{equation}
 Then we rank all the tiles with their $T_{ij}$ and select from the top of the rankings until we reach the target probability of 95\%.
 
-\emph{hierarchical}. A Multinest based optimization which optimizes tiles for a given skymap by placing them sequentially.
+\emph{hierarchical}. A Multinest based optimization which optimizes tiles for a given skymap by placing them sequentially. This method starts by selecting the tile that covers the most probability. Then, it sets the probability in that tile to be zero before going to the next iteration, when it again selects the tile that covers the most probability. It stops until a user-specified number of tiles are selected. The tiles selected might overlap on the corners when there are higher probability distributions around that corner. 
  
-\emph{greedy}. An emcee based optimization which optimizes tiles for a given skymap by placing them simultaneously.
+\emph{greedy}. An emcee based optimization which optimizes tiles for a given skymap by placing them simultaneously. This method selects tiles that cover the highest probability altogether from the skymap. It ranks all possible tiles and select from the top. Thus, the tiles selected by greedy method might overlap a lot when the probability distribution is concentrated.
 
 \subsection{Time allocations}
 \begin{lstlisting}
