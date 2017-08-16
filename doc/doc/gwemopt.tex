@@ -289,8 +289,33 @@ There are four options related to time allocations as a function of sky location
 
 \emph{WAW (Where and when).} \cite{SoCo2017} use counterpart lightcurve models in the optical, infrared and radio constructed from information from the gravitational-wave signals to create a time- and sky location dependent probability for detecting electromagnetic transients.
 
-\emph{PEM (Probability of electomagnetic counterpart).} \cite{ChHu2017} optimize the number of fields to observe and their time allocations by adopting priors on the intrinsic luminosity of the sources and using knowledge of distance to the counterparts provided for compact binary coalescence.
+\emph{PEM (Probability of electomagnetic counterpart).} \cite{ChHu2017} optimize the number of fields to observe and their time allocations by adopting priors on the intrinsic luminosity of the sources and using knowledge of distance to the counterparts provided for compact binary coalescence. More concretely, its input is the sky localization map and information about the telescope. It selects the tiles to observe with a greedy algorithm and allocate the observation time for each tile to maximizes the probability of detecting the EM counterpart of the GW event. The outputs are the tiles to be observed and the time allocated on each tile.
 
+The procedures are shown below.
+\begin{enumerate}
+\item Based on the sky localization map, locate the tiles that cover the region enclosed by the contour of the target confidence level.
+\item These n tiles are ranked based on the total probability covered.
+\item We optimize the number of tiles selected and then the time allocation for each selected tile. For all k from 1 to n, we do the following:
+\begin{enumerate}
+\item the top k tiles from the rankings are selected. 
+
+\item Eq.\ref{eqn:pem_obj} is optimized with Lagrange multiplier with the constraint of Eq.\ref{eqn:pem_const}. 
+\begin{equation}\label{eqn:pem_obj}
+P(D_{EM}|k)=\Sigma_{i=1}^{k\leq n}P(D_{EM}|\omega_i^{(k)}, \tau_i^{(i)},I)
+\end{equation}
+\begin{equation}\label{eqn:pem_const}
+kT_0+\Sigma_{i=1}^k\tau_i^{(i)}=T
+\end{equation}
+Eq.\ref{eqn:pem_obj} is the total detection probability of all the tiles, and Eq.\ref{eqn:pem_const} is the constraint given by the observation resource of the telescope. 
+
+Eq.\ref{eqn:pem_obj} is the sum of its detection probability of each tile: $\omega_i$ is the probability density; $\tau_i$ is the time allocated and $I$ is the parameters of the telescope. Its calculation is given in Eq.4 and 5 of \cite{ChHu2017}.
+
+In Eq.\ref{eqn:pem_const}, $T_0$ is the time to adjust the telescope before each observation; $\tau_i$ is the time allocated to each tile; T is total observation resource.
+\item We keep track of the best k, the tiles and the time allocation.
+\end{enumerate}
+
+\item The optimal tiles $\{\omega_i\}$ and their allocated times $\{\tau_i\}$ for $i=1...k$ are the output.
+\end{enumerate}
 \begin{figure*}
     \centering
     \includegraphics[width=3in]{timealloc_pem}
