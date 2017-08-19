@@ -287,6 +287,16 @@ There are four options related to time allocations as a function of sky location
 
 \emph{Powerlaw.} Many searches have used a variation on simply scaling the time allocation proportional to the probability skymaps, a technique employed in the Powerlaw method below. \cite{CoSt2016a} derived scaling relations for the time allocated to any given field, $t_i$, given the graviational-wave likelihood. We showed that under certain assumptions, $t_i \propto \left(\frac{L_\textrm{GW}(\alpha_i,\delta_i)}{a(\alpha_i,\delta_i)}\right)^{2/3}$, where $L_\textrm{GW}(\alpha_i,\delta_i)$ is the gravitational-wave likelihood and $a(\alpha_i,\delta_i)$ is Galactic extinction.  While the powerlaw based analysis is straightforward, it does not account for the fact that the telescope must be sensitive enough to detect the counterpart. In this sense, this algorithm is the least model dependent. Although the detectability is model-dependent, both in the distances returned by the gravitational-wave detectors and the absolute magnitude of the sources, the following algorithms account for this in multiple ways.
 
+This algorithm optimizes the probability of detecting the transient with N observations, which is the sum of the detecting probability of each observation. The expression is shown in Eq.\ref{eqn:powerlaw}:
+\begin{equation}\label{eqn:powerlaw}
+p_{tot}=\Sigma_{i=1}^N \frac{M_i}{M_{tot}}\frac{L_{GW}(\alpha_i, \delta_i, R_i)}{L_{GW_tot}}\frac{F_i(t_i)}{a(\alpha_i, \delta_i)},
+\end{equation}
+where $M_i$ is the mass for galaxy $i$; $M_{tot}$ is the total mass of galaxies in the field; $L_{GW}(\alpha_i, \delta_i, R_i)$ is the likelihood of the gravitational wave source in this galaxy; $F(t)$ is the luminosity as a function of allocated time; $a(\alpha_i, \delta_i)$ is the attenuation. Eq.\ref{eqn:powerlaw} is optimized with the constraint that the total observation time is limited, shown as
+\begin{equation}
+\Sigma_{i=1}^N t_i=T,
+\end{equation}
+where T is the total observation time.
+
 \emph{WAW (Where and when).} \cite{SoCo2017} use counterpart lightcurve models in the optical, infrared and radio constructed from information from the gravitational-wave signals to create a time- and sky location dependent probability for detecting electromagnetic transients. The WAW approach introduces time into the model by defining a concept detectability. Detectability is the probability of detecting a light flux greater than the flux limit at position $\alpha$ and time $t$. Thus, by having detectability introduced, the algorithm can optimize "where" and "when" to schedule the observation based on $\alpha$ and $t$ with a greedy approach. The procedures of the algorithm are shown below.
 \begin{enumerate}
 \item The tiles are generated covering the confidence region based on the probability distribution, which comes from the gravitational wave signal.
