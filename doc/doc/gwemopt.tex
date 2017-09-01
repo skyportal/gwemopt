@@ -374,15 +374,25 @@ There are three options related to scheduling observations, greedy, sear, and we
 \end{enumerate}
 
 \emph{sear (Setting Array).} The greedy algorithm has the short-coming that it does not account for site visibility. This motivates re-ordering the sequence such that as many tiles can be imaged as possible.
-\cite{RaSi2017} also implemented a version whereby the rising and setting of tiles were accounted for. It uses the idea that observes high probability tiles first, subject to the condition that each tile from the
-observing sequence must be observed before it sets.
+\cite{RaSi2017} also implemented a version whereby the rising and setting of tiles were accounted for. It uses the idea that observes high probability tiles first, subject to the condition that each tile from the observing sequence must be observed before it sets. The concept of imaging windows are used in this algorithm. We call a tile belongs to a window when the end of its observation time is in the window and denote the $i$th window with $W_i$. The algorithm uses the recursive relation between the optimal observation arrangement between the first $k$ windows $S_k$ and the first $k + 1$ windows $S_{k+1}$. The details are shown below. 
+\begin{enumerate}
+\item Consider the first window $W_1$ and initialize $S_1$ to be the tile that has the highest probability for $W_1$.
+\item Move on to $W_2$ and find the two tiles $c_1$ and $c_2$ that have the greatest probability density.
+\item Compare $c_1$ and $c_2$ with $S_1$ and act depending on the following conditions:
+\begin{itemize}
+\item If both $c_1$ and $c_2$ contain greater probability than $S_1$, set $S_2$ to be \{$c_1$, $c_2$\}.
+\item Otherwise, put the tile with higher probability coverage between $c_1$ and $c_2$ into $S_2$, which becomes $S_3$.
+\end{itemize}
+We can see that either way, $S_2$ will have two elements.
+\item Move on to the next observation windows until the last one. The only difference for the coming iterations from the descriptions above is that $S_k$ will have k elements.
+\item Return the last set $S_w$ where $w$ is the total number of observation windows.
+\end{enumerate}
 
 \emph{weighted.} Given the impossibility of necessarily observing all of the tiles as they rise and set given the requirement of using multiple exposures per tile, we are motivated to define a scheme whereby each tile is given a weight based on both gravitational-wave likelihood enclosed, the number of exposures required for that tile, and the number of available slots for it to be image. Therefore we define the weights $w_i$ as
-
 \begin{equation}
 w_i = L_\textrm{GW}(\alpha_i,\delta_i) \times \frac{N_\textrm{R}}{N_\textrm{A}} 
 \end{equation}
-
+Therefore, for each exposure segment, we calculate the weight for each possible tile and select the tile with the highest weight to fill that slot.
 \subsection{Efficiency}
 \begin{lstlisting}
 python gwemopt_run --doEvent --doPlots --doTiles --doSchedule --doEfficiency
