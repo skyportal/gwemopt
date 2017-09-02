@@ -34,6 +34,7 @@ def find_tile(exposureids_tile,exposureids,probs, idxs = None):
 
     if idxs is not None:
         for idx in idxs:
+            if len(exposureids_tile["exposureids"])-1 < idx: continue
             idx2 = exposureids_tile["exposureids"][idx]
             if idx2 in exposureids:
                 idx = exposureids.index(idx2)
