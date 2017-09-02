@@ -33,9 +33,7 @@ def get_altaz_tiles(ras, decs, observatory, obstime):
 def find_tile(exposureids_tile,exposureids,probs, idxs = None):
 
     if idxs is not None:
-        print 'len:' + str(len(exposureids_tile["exposureids"]))
         for idx in idxs:
-            print idx
             idx2 = exposureids_tile["exposureids"][idx]
             if idx2 in exposureids:
                 idx = exposureids.index(idx2)
@@ -142,7 +140,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
                 idxs[ii] = idx2
             tileavailable[jj] = tileavailable[jj] - 1
     else:
-        print "Only greedy implemented..."
+        print "Scheduling options are greedy/sear/weighted."
         exit(0)
 
     return idxs

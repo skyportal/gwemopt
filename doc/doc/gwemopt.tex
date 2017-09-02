@@ -351,7 +351,7 @@ In Eq.\ref{eqn:pem_const}, $T_0$ is the time to adjust the telescope before each
 
 \subsection{Scheduling}
 \begin{lstlisting}
-python gwemopt_run --doEvent --doPlots --doTiles --doSchedule --scheduleType sear
+python gwemopt_run --doEvent --doPlots --doTiles --doSchedule --scheduleType weighted
 \end{lstlisting}
 Once the time allocated to each tile has been set, the next task is to schedule the observations that both best represent the time requested and optimize the times that are chosen in some way, for example, such that tiles are re-imaged at an approximately fixed cadence so as to measure possible lightcurve evolution or to go as deep as possible in one set.
 Other optimizations might employ ordering based on airmass, as sources imaged through higher airmass will have lower signal-to-noise ratios due to scattering.
