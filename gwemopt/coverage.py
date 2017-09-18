@@ -12,6 +12,7 @@ import gwemopt.rankedTilesGenerator
 import gwemopt.moc, gwemopt.pem
 import gwemopt.scheduler
 
+
 def combine_coverage_structs(coverage_structs):
 
     coverage_struct_combined = {}
@@ -117,7 +118,7 @@ def waw(params, map_struct, tile_structs):
         for key, prob, exposureTime in zip(keys, ranked_tile_probs, strategy_struct):
             tile_struct[key]["prob"] = prob
             tile_struct[key]["exposureTime"] = exposureTime
-
+            tile_struct[key]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
         coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
 
         coverage_structs.append(coverage_struct)
