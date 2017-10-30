@@ -1,0 +1,30 @@
+
+import os, sys
+
+baseoutputDir = "/home/mcoughlin/Skymaps/O2/"
+dataDir = "../data"
+telescopes = ["ATLAS","PS1","ATLAS,PS1"]
+telescopes = ["ATLAS,PS1"]
+events = ["G268556","G274296","G277583"]
+#events = ["G268556"]
+#events = ["G274296"]
+#events = ["G277583"]
+
+for event in events:
+    for telescope in telescopes:
+        telescopeSplit = telescope.split(",")
+        outputDir = "%s/%s/%s/"%(baseoutputDir,event,"_".join(telescopeSplit))
+        os.system("mkdir -p %s"%outputDir)
+ 
+        datafiles = []
+        for tel in telescopeSplit:
+            datafile = "%s/%s_%s.dat"%(dataDir,tel,event)
+            datafiles.append(datafile)
+
+        system_command = "python gwemopt_run --doPlots --doCoverage --doEvent --event %s -t %s -d %s -o %s"%(event,telescope,",".join(datafiles),outputDir)
+        #system_command = "python gwemopt_run --doPlots --doCoverage --doEvent --doEfficiency --event %s -t %s -d %s -o %s"%(event,telescope,",".join(datafiles),outputDir)
+        #system_command = "python gwemopt_run --doCoverage --doEvent --doEfficiency --event %s -t %s -d %s -o %s"%(event,telescope,",".join(datafiles),outputDir)
+        os.system(system_command)
+        #print system_command
+        #print stop
+
