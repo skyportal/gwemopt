@@ -74,8 +74,8 @@
 \author{Deep Chatterjee}
 \affil{University of Wisconsin-Milwaukee, Milwaukee, WI 53201, USA}
 
-\author{Michael Coughlin}
-\affil{Department of Physics, Harvard University, Cambridge, MA 02138, USA}
+\author{Michael W. Coughlin}
+\affil{Division of Physics, Math, and Astronomy, California Institute of Technology, Pasadena, CA 91125, USA}
 
 \author{Shaon Ghosh}
 \affil{University of Wisconsin-Milwaukee, Milwaukee, WI 53201, USA}
@@ -109,10 +109,15 @@ Documentation for gwemopt
 \section{Introduction}
 \label{sec:Intro}
 
-There has been significant effort expended in the search for the electromagnetic counterpart of the gravitational waves found by compact binary black hole systems \citep{AbEA2016a,AbEA2016g,AbEA2017}.
-In general, there is significant optimism for the potential counterparts for emission from binary neutron star and black hole - neutron star systems across timescales and wavelengths \citep{Nakar2007,MeBe2012}. 
-The scientific output from a joint gravitational-wave and electromagnetic observation is expected to be significant. For example, detection of a kilonova coincident with a gravitational wave would allow for the exploration of r-process nucleosynthesis in the unbound ejecta from a merger involving a neutron star \cite{MeBa2015}.
-In addition, a joint observation with a short gamma-ray burst would not only confirm that these phenomena are driven by compact binary mergers, but also allow for the study of their beaming, energetics, and galactic environment \cite{MeBe2012}.
+Gravitational-wave astronomy has arrived with the detection of GW170817 \citep{AbEA2017} by Advanced LIGO \citep{aLIGO} and Advanced Virgo \citep{adVirgo} coincident with the detection of both a short gamma-ray burst (SGRB) and kilonova detected in coincidence. 
+This work is the culmination of significant effort expended in the search for the electromagnetic counterpart of the gravitational waves found by compact binary black hole systems \citep{AbEA2016a,AbEA2016g,AbEA2017}.
+
+There has been significant optimism for the potential counterparts for emission from binary neutron star and black hole - neutron star systems across timescales and wavelengths \citep{Nakar2007,MeBe2012}. 
+The kilonova, arising from sub-relativistic ejecta, in particular has bolometric luminosities of $\approx 10^{40}-10^{41}$\,ergs/s \citep{MeBa2015,BaKa2013}
+and color and durations dependent on the physical conditions of the merger \citep{MeMa2010,KaBa2013,BaKa2013,TaHo2013,KaFe2015,BaKa2016,Me2017}.
+
+The scientific output from a joint gravitational-wave and electromagnetic observation is significant, as the detection of a kilonova coincident with a gravitational wave allows for the exploration of the neutron star equation of state \cite{BaBa2013} and r-process nucleosynthesis in the unbound ejecta from a merger involving a neutron star \cite{MeBa2015,JuBa2015,RoLi2017,WuFe2016}.
+In addition, the joint observation with a short gamma-ray burst confirms these phenomena are driven by compact binary mergers, but also allow for the study of their beaming, energetics, and galactic environment \cite{MeBe2012}.
 
 To facilitate the detection of gravitational-wave counterparts, probability skymaps as a function of sky direction and distance are released for gravitational wave triggers produced by the detectors \citep{SiPr2014,BeMa2015}. 
 Due to the significant sky coverage required to observe the gravitational-wave sky localization regions, usually spanning $\approx 100\,\textrm{deg}^2$, techniques to optimize the followup efforts are of significant utility \citep{Fair2009,Fair2011,Grover:2013,WeCh2010,SiAy2014,SiPr2014,BeMa2015,EsVi2015,CoLi2015,KlVe2016}.
@@ -236,8 +241,6 @@ This can introduce quantization errors of \rednote{XXX} \% for the field-of-view
 
 There are four options related to skymap tiling currently available, moc, ranked, hierarchical and greedy.
 
-\rednote{Duo: all of these descriptions could use some expansion, especially the hierarchical and greedy schemes.}
-
 \emph{moc}. Multi-order coverage of healpix maps hierarchically predefines cells in order to specify arbitrary sky regions \citep{FeBo2014}. MOC is proposed in order to provide fast set operations between regions on the sky. In MOC, the spherical sky is recursively divided into 4 regions and each region is a diamond. The process is demonstrated in Fig.\ref{fig:tiling_moc_demo}, where we can see that the sphere is divided recursively into four diamonds. The division stops according to the resolution necessary for a particular usage.
 
 Here are two relevant implementation details about MOC.
@@ -281,8 +284,6 @@ This assumes implicitly that the electromagnetic counterpart has not faded beyon
 
 There are four options related to time allocations as a function of sky location available, powerlaw, WAW, PEM, and coverage. Figure~\ref{fig:timealloc} shows examples of the powerlaw, WAW, and PEM types.
 
-\rednote{Duo: In addition to expanding these descriptions based on your reading, I think it makes sense to try to state in a common mathematical formalism what each tries to do.}
-
 \emph{Coverage.} This is an option whereby coverage from existing surveys, including the right ascension and declination of the pointing and the limiting magnitude, are used.
 
 \emph{Powerlaw.} Many searches have used a variation on simply scaling the time allocation proportional to the probability skymaps, a technique employed in the Powerlaw method below. \cite{CoSt2016a} derived scaling relations for the time allocated to any given field, $t_i$, given the graviational-wave likelihood. We showed that under certain assumptions, $t_i \propto \left(\frac{L_\textrm{GW}(\alpha_i,\delta_i)}{a(\alpha_i,\delta_i)}\right)^{2/3}$, where $L_\textrm{GW}(\alpha_i,\delta_i)$ is the gravitational-wave likelihood and $a(\alpha_i,\delta_i)$ is Galactic extinction.  While the powerlaw based analysis is straightforward, it does not account for the fact that the telescope must be sensitive enough to detect the counterpart. In this sense, this algorithm is the least model dependent. Although the detectability is model-dependent, both in the distances returned by the gravitational-wave detectors and the absolute magnitude of the sources, the following algorithms account for this in multiple ways.
@@ -310,7 +311,6 @@ where H is the Heaviside function so if $F_i(t)$ is greater than $F_{lim}$, it i
 \item We start from the tiles that covers the most probability and arrange their observation times $[t_{E,\lambda},t_{L,\lambda}]$ if the time is available.
 \end{enumerate}
 This method optimizes the search by introducing detectability, defined as Eq.\ref{eqn:detectability} over the the three dimensional observation volume of direction and time, with the constraint that only one location can be observed at the same time.
-
 
 \emph{PEM (Probability of electomagnetic counterpart).} \cite{ChHu2017} optimize the number of fields to observe and their time allocations by adopting priors on the intrinsic luminosity of the sources and using knowledge of distance to the counterparts provided for compact binary coalescence. More concretely, its input is the sky localization map and information about the telescope. It selects the tiles to observe with a greedy algorithm and allocate the observation time for each tile to maximizes the probability of detecting the EM counterpart of the GW event. The outputs are the tiles to be observed and the time allocated on each tile.
 
@@ -411,6 +411,7 @@ These simulations led to analytical models for black-hole neutron star systems f
 \item \cite{DiUj2017}: Analytical models for binary neutron star systems based on \cite{TaHo2014}
 \item \cite{BaKa2016}: Simulations of binary systems studying the emission profiles of radioactive decay products from the merger.
 \item \cite{MeBa2015}: Blue ``precursor'' to the kilonovae driven by $\beta$-decay of the ejecta mass.
+\item \cite{Me2017}: toy model with grey opacity for lanthanide-free matter with a density profile expanding with a range of velocities with $M(< v) = v^{-1}$.
 \end{enumerate}
 
 The requirements for ``detection'' of the electromagnetic counterparts to gravitational-wave transients are as follows.
@@ -422,12 +423,47 @@ We simulate the transients at a variety of location and distances consistent wit
 
 \section{Performance}
 \label{sec:performance}
+\subsection{Tiling algorithms}
+
+\rednote{Duo: Need text comparing and contrasting algorithms.}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1.5in]{plots/tiling/hierarchical_pem_greedy.pdf}
+    \includegraphics[width=1.5in]{plots/tiling/ranked_pem_greedy.pdf}
+    \includegraphics[width=1.5in]{plots/tiling/moc_pem_greedy.pdf}
+    \includegraphics[width=1.5in]{plots/tiling/greedy_pem_greedy.pdf}
+    \caption{Performance comparison of different tiling algorithms.}
+    \label{fig:perf_til}
+\end{figure}
+\subsection{Time allocation algorithms}
+\begin{figure}
+    \centering
+    \includegraphics[width=1.5in]{plots/timealloc/1/moc_pem_greedy.pdf}
+    \includegraphics[width=1.5in]{plots/timealloc/1/moc_powerlaw_greedy.pdf}
+    \includegraphics[width=1.5in]{plots/timealloc/1/moc_waw_greedy.pdf}
+    \includegraphics[width=1.5in]{plots/timealloc/2/greedy_pem_greedy.pdf}
+    \includegraphics[width=1.5in]{plots/timealloc/2/greedy_powerlaw_greedy.pdf}
+    \includegraphics[width=1.5in]{plots/timealloc/2/greedy_waw_greedy.pdf}
+    \caption{Performance comparison of different time allocations algorithms.}
+    \label{fig:perf_ta}
+\end{figure}
+
+\subsection{Scheduling algorithms}
+\begin{figure}
+    \centering
+    \includegraphics[width=1.5in]{plots/scheduling/greedy_pem_greedy.pdf}
+    \includegraphics[width=1.5in]{plots/scheduling/greedy_pem_sear.pdf}
+    \includegraphics[width=1.5in]{plots/scheduling/greedy_pem_weighted.pdf}
+    \caption{Performance comparison of different scheduling algorithms.}
+    \label{fig:perf_sche}
+\end{figure}
 
 \section{Conclusion}
 \label{sec:conclusions}
 
 \section{Acknowledgments}
-MC is supported by National Science Foundation Graduate Research Fellowship Program, under NSF grant number DGE 1144152.
+MC is supported by the David and Ellen Lee Prize Postdoctoral Fellowship at the California Institute of Technology. 
 
 \bibliographystyle{aasjournal}
 \bibliography{references}
