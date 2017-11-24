@@ -76,12 +76,32 @@ def compute_efficiency(params, map_struct, eventinfo, lightcurve_struct, coverag
         idxs_detections = np.where(detections >= Ndet)[0]
         ndetections[idxs_detections] = ndetections[idxs_detections] + 1
     efficiency = ndetections / Ninj
- 
     efficiency_struct = {}
     efficiency_struct["ra"] = np.array(ras)
     efficiency_struct["dec"] = np.array(decs)
     efficiency_struct["efficiency"] = efficiency
     efficiency_struct["distances"] = dists
-
+    efficiency_num = calculate_efficiency_metric(efficiency_struct)
+    save_efficiency_metric(params, "efficiency.txt", efficiency_num)
     return efficiency_struct
 
+def calculate_efficiency_metric(efficiency_struct):
+    dist_sum = 0
+    weighted_sum = 0
+    for i in range(0, len(efficiency_struct["distances"])):
+        dist = efficiency_struct["distances"][i]
+        eff = efficiency_struct["efficiency"][i]
+        dist_sum += dist * dist
+        weighted_sum += dist * dist * eff
+    return weighted_sum / dist_sum
+
+def save_efficiency_metric(params, efficiency_filename, efficiency_num):
+    if os.path.exists(efficiency_filename):
+        append_write = 'a'
+        efficiency_file = open(efficiency_filename, append_write)
+    else:
+        append_write = 'w'
+        efficiency_file = open(efficiency_filename, append_write)
+        efficiency_file.write("tilesType" + "\t" + "timeallocationType" + "\t" + "scheduleType" + "\t" + "efficiencyMetric\n")
+    efficiency_file.write(params["tilesType"] + "\t" + params["timeallocationType"] + "\t" +  params["scheduleType"] + "\t" + str(efficiency_num) + "\n")
+    efficiency_file.close()

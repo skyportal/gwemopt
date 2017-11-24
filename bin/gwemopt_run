@@ -86,6 +86,8 @@ def parse_commandline():
     parser.add_option("--doSkybrightness",  action="store_true", default=False)
 
     parser.add_option("--doEfficiency",  action="store_true", default=False)
+    parser.add_option("-e", "--efficiencyOutput", help="Output file of the efficiency.", 
+                      default="efficiency.txt")
     #parser.add_option("-t", "--telescopes", help="Telescope names.",
     #                  default ="PS1")
     #parser.add_option("-d", "--coverageFiles", help="Telescope data files.",
