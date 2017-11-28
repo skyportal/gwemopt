@@ -81,9 +81,27 @@ def compute_efficiency(params, map_struct, eventinfo, lightcurve_struct, coverag
     efficiency_struct["dec"] = np.array(decs)
     efficiency_struct["efficiency"] = efficiency
     efficiency_struct["distances"] = dists
+    save_efficiency_data(params, efficiency_struct, lightcurve_struct)
     efficiency_num = calculate_efficiency_metric(efficiency_struct)
-    save_efficiency_metric(params, "efficiency.txt", efficiency_num)
+    save_efficiency_metric(params, "efficiency.txt", efficiency_num, lightcurve_struct)
     return efficiency_struct
+
+
+def save_efficiency_data(params, efficiency_struct, lightcurve_struct):
+    for i in range(0, len(efficiency_struct["distances"])):
+        dist = efficiency_struct["distances"][i]
+        eff = efficiency_struct["efficiency"][i]
+        filename = os.path.join(params["outputDir"],'efficiency_' + lightcurve_struct['name'] + '.txt')
+        if os.path.exists(filename):
+            append_write = 'a'
+            efficiency_file = open(filename, append_write)
+        else:
+            append_write = 'w'
+            efficiency_file = open(filename, append_write)
+            efficiency_file.write("Distance" + "\t" + "efficiency\n")
+        efficiency_file.write(str(dist) + "\t" + str(eff) + "\n")
+    efficiency_file.close()
+
 
 def calculate_efficiency_metric(efficiency_struct):
     dist_sum = 0
@@ -95,13 +113,14 @@ def calculate_efficiency_metric(efficiency_struct):
         weighted_sum += dist * dist * eff
     return weighted_sum / dist_sum
 
-def save_efficiency_metric(params, efficiency_filename, efficiency_num):
+
+def save_efficiency_metric(params, efficiency_filename, efficiency_num, lightcurve_struct):
     if os.path.exists(efficiency_filename):
         append_write = 'a'
         efficiency_file = open(efficiency_filename, append_write)
     else:
         append_write = 'w'
         efficiency_file = open(efficiency_filename, append_write)
-        efficiency_file.write("tilesType" + "\t" + "timeallocationType" + "\t" + "scheduleType" + "\t" + "efficiencyMetric\n")
-    efficiency_file.write(params["tilesType"] + "\t" + params["timeallocationType"] + "\t" +  params["scheduleType"] + "\t" + str(efficiency_num) + "\n")
+        efficiency_file.write("tilesType" + "\t" + "timeallocationType" + "\t" + "scheduleType" + "\t" + "efficiencyMetric\t" + "injection\n")
+    efficiency_file.write(params["tilesType"] + "\t" + params["timeallocationType"] + "\t" +  params["scheduleType"] + "\t" + str(efficiency_num) + "\t" + lightcurve_struct["name"] + "\n")
     efficiency_file.close()
