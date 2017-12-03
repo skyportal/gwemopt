@@ -241,7 +241,7 @@ This can introduce quantization errors of \rednote{XXX} \% for the field-of-view
 
 There are four options related to skymap tiling currently available, moc, ranked, hierarchical and greedy.
 
-\emph{moc}. Multi-order coverage of healpix maps hierarchically predefines cells in order to specify arbitrary sky regions \citep{FeBo2014}. MOC is proposed in order to provide fast set operations between regions on the sky. In MOC, the spherical sky is recursively divided into 4 regions and each region is a diamond. The process is demonstrated in Fig.\ref{fig:tiling_moc_demo}, where we can see that the sphere is divided recursively into four diamonds. The division stops according to the resolution necessary for a particular usage.
+\emph{moc}. Multi-order coverage of healpix maps hierarchically predefines cells in order to specify arbitrary sky regions \citep{FeBo2014}. MOC is proposed in order to provide fast set operations between regions on the sky. In MOC, the spherical sky is recursively divided into 4 regions and each region is a diamond. The process is demonstrated in Figure.\ref{fig:tiling_moc_demo}, where we can see that the sphere is divided recursively into four diamonds. The division stops according to the resolution necessary for a particular usage.
 
 Here are two relevant implementation details about MOC.
 \begin{itemize}
@@ -423,42 +423,29 @@ We simulate the transients at a variety of location and distances consistent wit
 
 \section{Performance}
 \label{sec:performance}
-\subsection{Tiling algorithms}
+In this section, we compare the efficiency of the algorithms based on simulated information about what percentage of the events the algorithm can detect. According to the workflow given in Figure~\ref{fig:flowchart} and the algorithms given in the sections above, we will have four options for tiling algorithms, three options for time allocation algorithms and another three options for scheduling algorithms. This combines to 36 total options for the whole workflow. We want to know which combination has the best efficiency and then analyze and compare the algorithms individually.
+\subsection{Method}
+We will focus on the model by \cite{Me2017} to compare the efficiency. All the efficiency values in the distance range between $10^{-1} Mpc$ to $10^3 Mpc$ (logspaced) are calculated and plotted. Thus we will have a plot of efficiency against distance for each of the 36 algorithm combinations. An example plot of efficiency versus distance is shown in Figure~\ref{fig:eff_ex}, where we use greedy algorithm for tiling, powerlaw algorithm for time allocation and greedy algorithm for scheduling.
 
-\rednote{Duo: Need text comparing and contrasting algorithms.}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=1.5in]{plots/tiling/hierarchical_pem_greedy.pdf}
-    \includegraphics[width=1.5in]{plots/tiling/ranked_pem_greedy.pdf}
-    \includegraphics[width=1.5in]{plots/tiling/moc_pem_greedy.pdf}
-    \includegraphics[width=1.5in]{plots/tiling/greedy_pem_greedy.pdf}
-    \caption{Performance comparison of different tiling algorithms.}
-    \label{fig:perf_til}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.5\textwidth]{plots/eff_ex.pdf}
+\caption{Example plot of efficiency against distance for \cite{Me2017} injections. The detection uses greedy tiling algorithm, powerlaw time allocation algorithm and greedy scheduling algorithm. We have 36 such plots, one for each algorithm combinations.}
+\label{fig:eff_ex}
 \end{figure}
-\subsection{Time allocation algorithms}
-\begin{figure}
-    \centering
-    \includegraphics[width=1.5in]{plots/timealloc/1/moc_pem_greedy.pdf}
-    \includegraphics[width=1.5in]{plots/timealloc/1/moc_powerlaw_greedy.pdf}
-    \includegraphics[width=1.5in]{plots/timealloc/1/moc_waw_greedy.pdf}
-    \includegraphics[width=1.5in]{plots/timealloc/2/greedy_pem_greedy.pdf}
-    \includegraphics[width=1.5in]{plots/timealloc/2/greedy_powerlaw_greedy.pdf}
-    \includegraphics[width=1.5in]{plots/timealloc/2/greedy_waw_greedy.pdf}
-    \caption{Performance comparison of different time allocations algorithms.}
-    \label{fig:perf_ta}
+In order to compare the 36 efficiency as is plotted in Figure.\ref{fig:eff_ex}, we use a numeric way to reflect the overall performance of the algorithms based on the efficiency for each distance in the range of $10^{-1} Mpc$ to $10^3 Mpc$. Thus, we come to a metric that reflects what percentage of events that can be detected in a spherical volume of radius $10^3 Mpc$. The events are evenly distributed in the volume. Suppose the event density per volume is $\rho$ and the distance is $r$. Sampling a distance at $d$ corresponds to a shell with volume $\pi r^2 dr$. Assuming that the density is $\rho$, then the total events on that shell is $\pi \rho r^2 dr$. Thus, if the efficiency is $e$, the expected number of detected events on the shell will be $\pi \rho r^2 e dr$. From this we can see that the efficiency at $r$ is weighted by $r^2$. If we treat the efficiency at each distance as an individual sample, a weighted average on the squared radius will then be a good metric of the overral efficiency that reflects how well the algorithm detects events uniformly distributed in a volume of $10^3 Mpc$. A consequence of this metric is that the weight of $r^2$ makes the long range efficiency more important that short range efficiency. An algorithms that does well in far away would be better than an algorithm does better in short range but deteriorates quickly as the distance increases.
+\subsection{Results}
+\begin{figure}[t]
+\includegraphics[width=0.45\textwidth]{plots/efficiency.png}
+\caption{Plot of the efficiency metric for each of the 36 options. On the horizontal axis are tiling algorithms and scheduling algorithms and on the vertical axis are the time allocation algorithms. Abbreviations are used for the algorithms. The first capital letter stands for the tiling algorithm and the second letter stands for the scheduling algorithm. The abbreviations are the first letters of the algorithms: G - greedy. H - hierarchical. M - MOC. R - ranked. S - SEAR. W - weighted. The grids are colors such that highest efficiency combinations are darker and lower efficiency ones are lighter, with the highest being completely blue and the lowest one being completely white.}
+\label{fig:eff_metric}
+\centering
 \end{figure}
+For each of the 36 algorithm options, we compute the efficiency metric as described above so we have 36 numerical efficiency values. The results are plotted in Figure~\ref{fig:eff_metric}. On the horizontal axis are combined options for the tiling algorithm and scheduling algorithm. There are four tiling algorithm and three scheduling algorithm so they combine to 12 columns on the horizontal axis. Abbreviations are used for the algorithms. The first capital letter stands for the tiling algorithm and the second letter stands for the scheduling algorithm. On the vertical axis are the time allocation algorithms. The color in the 36 boxes shows the efficiency as measured above. The colors are scaled to the efficiency such that higher efficiencies are more darkly colored.
 
-\subsection{Scheduling algorithms}
-\begin{figure}
-    \centering
-    \includegraphics[width=1.5in]{plots/scheduling/greedy_pem_greedy.pdf}
-    \includegraphics[width=1.5in]{plots/scheduling/greedy_pem_sear.pdf}
-    \includegraphics[width=1.5in]{plots/scheduling/greedy_pem_weighted.pdf}
-    \caption{Performance comparison of different scheduling algorithms.}
-    \label{fig:perf_sche}
-\end{figure}
+The highest efficiency of $0.19$ is achieved by a combination of ranked tiling, powerlaw time allocation and greedy scheduling. Compared to the lowest efficiency of $0.01$, it can detect roughly 19 times more events within a range of $10^{-1} Mpc$ and $10^3 Mpc$. That corresponds to the darkest box in the 10th column and the second row in Figure.\ref{fig:eff_metric}. 
 
+Also, from Figure.\ref{fig:eff_metric}, we can compare the efficiencies of the individual algorithms. First, among the four tiling algorithms, greedy, sear, MOC and ranked, we can see that MOC and ranked generally have higher efficiencies than greedy and hierarchical tiling algorithms. Second, among the three options for scheduling, greedy and SEAR have higher efficiency, it is more complicated. Generally, we can say that PEM is the best. It is slightly better than powerlaw, and both are better than WAW. However, if we have to use weighted scheduling, WAW might work better than the other two. Third, greedy and SEAR scheduling are more efficient than weighted scheduling.
 \section{Conclusion}
 \label{sec:conclusions}
 
