@@ -354,10 +354,10 @@ In Eq.\ref{eqn:pem_const}, $T_0$ is the time to adjust the telescope before each
 \end{enumerate}
 \begin{figure*}
     \centering
-    \includegraphics[width=3in]{timealloc_pem}
-    \includegraphics[width=3in]{timealloc_powerlaw}
-    \includegraphics[width=3in]{timealloc_waw}
-    \caption{Example outputs of different time allocation algorithms. On the top left is the tiles coverage with the PEM algorithm. On the top right is the tiles coverage with the Powerlaw algorithm. On the bottom is the tiles coverage with the WAW algorithm.}
+    \includegraphics[width=3in]{plots/coverage_pem.pdf}
+    \includegraphics[width=3in]{plots/coverage_powerlaw.pdf}
+    \includegraphics[width=3in]{plots/coverage_waw.pdf}
+    \caption{Example outputs of different time allocation algorithms. On the top left is the tiles coverage with the PEM algorithm. On the top right is the tiles coverage with the Powerlaw algorithm. On the bottom is the tiles coverage with the WAW algorithm. All of them use MOC tiling and greedy scheduling.}
     \label{fig:timealloc}
 \end{figure*}
 
@@ -436,12 +436,12 @@ We simulate the transients at a variety of location and distances consistent wit
 \label{sec:performance}
 In this section, we compare the efficiency of the algorithms based on simulated information about what percentage of the events the algorithm can detect. According to the workflow given in Figure~\ref{fig:flowchart} and the algorithms given in the sections above, we will have four options for tiling algorithms, three options for time allocation algorithms and another three options for scheduling algorithms. This combines to 36 total options for the whole workflow. We want to know which combination has the best efficiency and then analyze and compare the algorithms individually.
 \subsection{Method}
-We will focus on the model by \cite{Me2017} to compare the efficiency. All the efficiency values in the distance range between $10^{-1} Mpc$ to $10^3 Mpc$ (logarithmically spaced) are calculated and plotted. Thus we will have a plot of efficiency against distance for each of the 36 algorithm combinations. An example plot of efficiency versus distance is shown in Figure~\ref{fig:eff_ex}, where we use greedy algorithm for tiling, powerlaw algorithm for time allocation and greedy algorithm for scheduling.
+We will focus on the model by \cite{Me2017} to compare the efficiency. All the efficiency values in the distance range between $10^{-1} Mpc$ to $10^3 Mpc$ (logarithmically spaced) are calculated and plotted. Thus we will have a plot of efficiency against distance for each of the 36 algorithm combinations. An example efficiency plot of efficiency is shown in Figure~\ref{fig:eff_ex}, where difference time allocation algorithms are compared. Greedy algorithm is used for tiling and PEM algorithm is used for time allocation. It can be seen that greedy and sear scheduling does better than weighted at long distance. 
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.5\textwidth]{plots/eff_ex.pdf}
-\caption{Example plot of efficiency against distance for \cite{Me2017} injections. The detection uses greedy tiling algorithm, powerlaw time allocation algorithm and greedy scheduling algorithm. We have 36 such plots, one for each algorithm combinations.}
+\includegraphics[width=0.5\textwidth]{plots/eff_ex.png}
+\caption{Example plot of efficiency for \cite{Me2017} injections, comparing the scheduling algorithms. Greedy algorithm is used for tiling and PEM algorithm is used for time allocation. Greedy and SEAR have similar performance in long distance and both are better than weighted. This difference is also reflected in Figure~\ref{fig:eff_metric}.}
 \label{fig:eff_ex}
 \end{figure}
 In order to compare the 36 efficiency as is plotted in Figure.\ref{fig:eff_ex}, we use a numeric way to reflect the overall performance of the algorithms based on the efficiency for each distance in the range of $10^{-1} Mpc$ to $10^3 Mpc$. Thus, we come to a metric that reflects what percentage of events that can be detected in a spherical volume of radius $10^3 Mpc$. The events are evenly distributed in the volume. Suppose the event density per volume is $\rho$ and the distance is $r$. Sampling a distance at $d$ corresponds to a shell with volume $4 \pi r^2 dr$. Assuming that the density is $\rho$, then the total events on that shell is $4 \pi \rho r^2 dr$. Thus, if the efficiency is $e$, the expected number of detected events on the shell will be $4 \pi \rho r^2 e dr$. From this we can see that the efficiency at $r$ is weighted by $r^2$. If we treat the efficiency at each distance as an individual sample, a weighted average on the squared radius will then be a good metric of the overall efficiency that reflects how well the algorithm detects events uniformly distributed in a volume of $10^3 Mpc$. A consequence of this metric is that the weight of $r^2$ makes the long range efficiency more important than short range efficiency. An algorithm that performs well at further distances would be better than an algorithm does better at short distances but whose performance deteriorates quickly as the distance increases.

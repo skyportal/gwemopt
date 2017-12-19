@@ -168,7 +168,7 @@ def get_ellipse_coords(a=0.0, b=0.0, x=0.0, y=0.0, angle=0.0, npts=10):
 
     return pts
 
-def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.2, color='#859900'):
+def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='#FFFFFF', edgecolor='#FFFFFF'):
 
     theta = 0.5 * np.pi - np.deg2rad(dec_pointing)
     phi = np.deg2rad(ra_pointing)
@@ -203,13 +203,13 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.2, color='
     xy[:,1] = y
     #path = matplotlib.path.Path(xyz[:,1:3])
     path = matplotlib.path.Path(xy)
-    patch = matplotlib.patches.PathPatch(path, alpha=alpha, color=color, fill=True, zorder=3,)
+    patch = matplotlib.patches.PathPatch(path, alpha=alpha, color=color, fill=True, zorder=3, edgecolor=edgecolor)
 
     area = np.pi * radius**2
 
     return ipix, radecs, patch, area
 
-def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.2, color='#6c71c4'):
+def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, color='#FFFFFF', edgecolor='#FFFFFF'):
 
     area = tileSide*tileSide
 
@@ -266,7 +266,7 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.2, col
     xy[:,0] = x
     xy[:,1] = y
     path = matplotlib.path.Path(xy)
-    patch = matplotlib.patches.PathPatch(path, alpha=alpha, color=color, fill=True, zorder=3,)
+    patch = matplotlib.patches.PathPatch(path, alpha=alpha, color=color, fill=True, zorder=3, edgecolor=edgecolor)
     
     return ipix, radecs, patch, area
 
