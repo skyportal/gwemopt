@@ -83,9 +83,9 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
         tile_struct[ii] = {}
 
         if config_struct["FOV_type"] == "square":
-            ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside)
+            ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8)
         elif config_struct["FOV_type"] == "circle":
-            ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside)
+            ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8)
 
         tile_struct[ii]["ra"] = ra_pointing
         tile_struct[ii]["dec"] = dec_pointing
@@ -219,9 +219,9 @@ class PlaceTile:
                     tile_struct[ii] = {}
 
                     if config_struct["FOV_type"] == "square":
-                        ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside)
+                        ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8)
                     elif config_struct["FOV_type"] == "circle":
-                        ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside)
+                        ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8)
 
                     tile_struct[ii]["ra"] = ra_pointing
                     tile_struct[ii]["dec"] = dec_pointing
