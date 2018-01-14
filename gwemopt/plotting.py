@@ -126,30 +126,31 @@ def skymap(params,map_struct):
 
 def waw(params, detmaps, t_detmaps, strategy_struct):
 
-    moviedir = os.path.join(params["outputDir"],'movie')
-    if not os.path.isdir(moviedir): os.mkdir(moviedir)
+    if params["doMovie"]:
+        moviedir = os.path.join(params["outputDir"],'movie')
+        if not os.path.isdir(moviedir): os.mkdir(moviedir)
         
-    for ii in xrange(len(t_detmaps)):
-        t_detmap = t_detmaps[ii]
-        detmap = detmaps[ii]
+        for ii in xrange(len(t_detmaps)):
+            t_detmap = t_detmaps[ii]
+            detmap = detmaps[ii]
 
-        plotName = os.path.join(moviedir,'detmap-%04d.png'%ii)
-        title = "Detectability Map: %.2f Days"%t_detmap
-        hp.mollview(detmap,title=title,min=0.0,max=1.0,unit="Probability of Detection")
-        add_edges()
-        plt.show()
-        plt.savefig(plotName,dpi=200)
-        plt.close('all')
+            plotName = os.path.join(moviedir,'detmap-%04d.png'%ii)
+            title = "Detectability Map: %.2f Days"%t_detmap
+            hp.mollview(detmap,title=title,min=0.0,max=1.0,unit="Probability of Detection")
+            add_edges()
+            plt.show()
+            plt.savefig(plotName,dpi=200)
+            plt.close('all')
 
-    moviefiles = os.path.join(moviedir,"detmap-%04d.png")
-    filename = os.path.join(params["outputDir"],"detmap.mpg")
-    ffmpeg_command = 'ffmpeg -an -y -r 20 -i %s -b:v %s %s'%(moviefiles,'5000k',filename)
-    os.system(ffmpeg_command)
-    filename = os.path.join(params["outputDir"],"detmap.gif")
-    ffmpeg_command = 'ffmpeg -an -y -r 20 -i %s -b:v %s %s'%(moviefiles,'5000k',filename)
-    os.system(ffmpeg_command)    
-    rm_command = "rm %s/*.png"%(moviedir)
-    os.system(rm_command)
+        moviefiles = os.path.join(moviedir,"detmap-%04d.png")
+        filename = os.path.join(params["outputDir"],"detmap.mpg")
+        ffmpeg_command = 'ffmpeg -an -y -r 20 -i %s -b:v %s %s'%(moviefiles,'5000k',filename)
+        os.system(ffmpeg_command)
+        filename = os.path.join(params["outputDir"],"detmap.gif")
+        ffmpeg_command = 'ffmpeg -an -y -r 20 -i %s -b:v %s %s'%(moviefiles,'5000k',filename)
+        os.system(ffmpeg_command)    
+        rm_command = "rm %s/*.png"%(moviedir)
+        os.system(rm_command)
 
 def efficiency(params, map_struct, efficiency_structs):
 
@@ -258,60 +259,61 @@ def coverage(params, map_struct, coverage_struct):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
-    idx = np.isfinite(coverage_struct["data"][:,2])
-    mjd_min = np.min(coverage_struct["data"][idx,2])
-    mjd_max = np.max(coverage_struct["data"][idx,2])
-    mjd_N = 100
-
-    mjds = np.linspace(mjd_min,mjd_max,num=mjd_N)
-    moviedir = os.path.join(params["outputDir"],'movie')
-    if not os.path.isdir(moviedir): os.mkdir(moviedir)
-
-    #for jj in xrange(len(coverage_struct["ipix"])):
-    #    mjd = coverage_struct["data"][jj,3]
-    for jj in xrange(len(mjds)):
-        mjd = mjds[jj]
-        plotName = os.path.join(moviedir,'coverage-%04d.png'%jj)
-        title = "Coverage Map: %.2f"%mjd       
-
-        plt.figure()
-        hp.mollview(map_struct["prob"],title=title,unit=unit,cbar=cbar)
-        add_edges()
-        ax = plt.gca()
-
-        idx = np.where(coverage_struct["data"][:,2]<=mjd)[0]
-        #for ii in xrange(jj):
-        for ii in idx: 
-            data = coverage_struct["data"][ii,:]
-            filt = coverage_struct["filters"][ii]
-            ipix = coverage_struct["ipix"][ii]
-            patch = coverage_struct["patch"][ii]
-            FOV = coverage_struct["FOV"][ii]
-
-            #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
-            patch_cpy = copy.copy(patch)
-            patch_cpy.axes = None
-            patch_cpy.figure = None
-            patch_cpy.set_transform(ax.transData)
-            #alpha = data[4]/max_time
-            #if alpha > 1:
-            #    alpha = 1.0
-            #patch_cpy.set_alpha(alpha)
-            hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
-            #tiles.plot()
-        plt.show()
-        plt.savefig(plotName,dpi=200)
-        plt.close('all')
-        
-    moviefiles = os.path.join(moviedir,"coverage-%04d.png")
-    filename = os.path.join(params["outputDir"],"coverage.mpg")
-    ffmpeg_command = 'ffmpeg -an -y -r 20 -i %s -b:v %s %s'%(moviefiles,'5000k',filename)
-    os.system(ffmpeg_command)
-    filename = os.path.join(params["outputDir"],"coverage.gif")
-    ffmpeg_command = 'ffmpeg -an -y -r 20 -i %s -b:v %s %s'%(moviefiles,'5000k',filename)
-    os.system(ffmpeg_command)
-    rm_command = "rm %s/*.png"%(moviedir)
-    os.system(rm_command)
+    if params["doMovie"]:
+        idx = np.isfinite(coverage_struct["data"][:,2])
+        mjd_min = np.min(coverage_struct["data"][idx,2])
+        mjd_max = np.max(coverage_struct["data"][idx,2])
+        mjd_N = 100
+    
+        mjds = np.linspace(mjd_min,mjd_max,num=mjd_N)
+        moviedir = os.path.join(params["outputDir"],'movie')
+        if not os.path.isdir(moviedir): os.mkdir(moviedir)
+    
+        #for jj in xrange(len(coverage_struct["ipix"])):
+        #    mjd = coverage_struct["data"][jj,3]
+        for jj in xrange(len(mjds)):
+            mjd = mjds[jj]
+            plotName = os.path.join(moviedir,'coverage-%04d.png'%jj)
+            title = "Coverage Map: %.2f"%mjd       
+    
+            plt.figure()
+            hp.mollview(map_struct["prob"],title=title,unit=unit,cbar=cbar)
+            add_edges()
+            ax = plt.gca()
+    
+            idx = np.where(coverage_struct["data"][:,2]<=mjd)[0]
+            #for ii in xrange(jj):
+            for ii in idx: 
+                data = coverage_struct["data"][ii,:]
+                filt = coverage_struct["filters"][ii]
+                ipix = coverage_struct["ipix"][ii]
+                patch = coverage_struct["patch"][ii]
+                FOV = coverage_struct["FOV"][ii]
+    
+                #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
+                patch_cpy = copy.copy(patch)
+                patch_cpy.axes = None
+                patch_cpy.figure = None
+                patch_cpy.set_transform(ax.transData)
+                #alpha = data[4]/max_time
+                #if alpha > 1:
+                #    alpha = 1.0
+                #patch_cpy.set_alpha(alpha)
+                hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
+                #tiles.plot()
+            plt.show()
+            plt.savefig(plotName,dpi=200)
+            plt.close('all')
+            
+        moviefiles = os.path.join(moviedir,"coverage-%04d.png")
+        filename = os.path.join(params["outputDir"],"coverage.mpg")
+        ffmpeg_command = 'ffmpeg -an -y -r 20 -i %s -b:v %s %s'%(moviefiles,'5000k',filename)
+        os.system(ffmpeg_command)
+        filename = os.path.join(params["outputDir"],"coverage.gif")
+        ffmpeg_command = 'ffmpeg -an -y -r 20 -i %s -b:v %s %s'%(moviefiles,'5000k',filename)
+        os.system(ffmpeg_command)
+        rm_command = "rm %s/*.png"%(moviedir)
+        os.system(rm_command)
 
 def scheduler(params,exposurelist,keys): 
 
