@@ -9,8 +9,6 @@ import astropy.units as u
 
 import ephem
 
-import glue.segments
-
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
 import gwemopt.moc, gwemopt.pem

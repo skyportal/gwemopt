@@ -5,13 +5,10 @@ import healpy as hp
 
 from astropy.time import Time
 
-import glue.segments
-
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
 import gwemopt.moc, gwemopt.pem
 import gwemopt.scheduler
-
 
 def combine_coverage_structs(coverage_structs):
 
