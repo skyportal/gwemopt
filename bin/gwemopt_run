@@ -78,6 +78,7 @@ def parse_commandline():
     parser.add_option("--timeallocationType", help="time allocation type",default="powerlaw")
 
     parser.add_option("--doPlots",  action="store_true", default=False)
+    parser.add_option("--doMovie",  action="store_true", default=False)
     parser.add_option("--doTiles",  action="store_true", default=False)
     parser.add_option("--tilesType", help="tiling type",default="moc")
 
@@ -175,6 +176,7 @@ def params_struct(opts):
     params["powerlaw_n"] = opts.powerlaw_n
 
     params["doPlots"] = opts.doPlots
+    params["doMovie"] = opts.doMovie
     params["doObservability"] = opts.doObservability
     params["do3D"] = opts.do3D
     return params
