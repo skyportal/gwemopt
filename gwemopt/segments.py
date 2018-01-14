@@ -12,9 +12,18 @@ import ephem
 
 import glue.segments
 
-import gwemopt.utils
-import gwemopt.rankedTilesGenerator
-import gwemopt.moc, gwemopt.pem
+def get_telescope_segments(params):
+
+    for telescope in params["telescopes"]:
+
+        params["config"][telescope]["segmentlist"] = gwemopt.segments.get_segments(params, params["config"][telescope])
+        params["config"][telescope]["exposurelist"] = gwemopt.utils.get_exposures(params, params["config"][telescope], params["config"][telescope]["segmentlist"])
+
+        nexp, junk = np.array(params["config"][telescope]["exposurelist"]).shape        params["config"][telescope]["n_windows"] = nexp
+        tot_obs_time = np.sum(np.diff(np.array(params["config"][telescope]["exposurelist"]))) * 86400.
+        params["config"][telescope]["tot_obs_time"] = tot_obs_time
+
+    return params
 
 def get_skybrightness(config_struct,segmentlist,observer,fxdbdy,radec):
 
