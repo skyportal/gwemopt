@@ -11,7 +11,6 @@ import ephem
 
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
-import gwemopt.moc, gwemopt.pem
 import gwemopt.segments
 
 def get_altaz_tiles(ras, decs, observatory, obstime):
