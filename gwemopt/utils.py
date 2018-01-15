@@ -7,8 +7,6 @@ import itertools
 
 from scipy.stats import norm
 
-import glue.segments
-
 import ephem
 
 import astropy.coordinates
@@ -354,6 +352,7 @@ def observability(params, map_struct):
 
 def get_exposures(params, config_struct, segmentlist):
 
+    import glue.segments
     exposurelist = glue.segments.segmentlist()
 
     for ii in xrange(len(segmentlist)):

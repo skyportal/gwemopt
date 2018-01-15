@@ -9,12 +9,8 @@ import astropy.units as u
 
 import ephem
 
-import glue.segments
-
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
-import gwemopt.moc, gwemopt.pem
-import gwemopt.segments
 
 def get_altaz_tiles(ras, decs, observatory, obstime):
 
@@ -147,6 +143,8 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
     return idxs
 
 def scheduler(params, config_struct, tile_struct):
+
+    import gwemopt.segments
 
     coverage_struct = {}
     coverage_struct["data"] = np.empty((0,5))

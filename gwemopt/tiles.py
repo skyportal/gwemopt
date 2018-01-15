@@ -9,11 +9,8 @@ from scipy.stats import norm
 
 from astropy.time import Time
 
-import glue.segments
-
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
-import gwemopt.moc
 import gwemopt.samplers
 
 def greedy(params, map_struct):
@@ -42,7 +39,6 @@ def rankedTiles_struct(params,config_struct,telescope,map_struct):
 
     nside = params["nside"]
 
-    n_windows = config_struct["n_windows"]
     tot_obs_time = config_struct["tot_obs_time"]
 
     preComputedFile = os.path.join(params["tilingDir"],'preComputed_%s_pixel_indices_%d.dat'%(telescope,nside))
@@ -99,7 +95,6 @@ def rankedTiles(params, map_struct):
 
 def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
-    n_windows = config_struct["n_windows"]
     tot_obs_time = config_struct["tot_obs_time"]
 
     if "observability" in map_struct:
@@ -146,7 +141,6 @@ def moc(params, map_struct, moc_structs):
 
 def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
-    n_windows = config_struct["n_windows"]
     tot_obs_time = config_struct["tot_obs_time"]
 
     if "observability" in map_struct:

@@ -78,6 +78,7 @@ def parse_commandline():
     parser.add_option("--timeallocationType", help="time allocation type",default="powerlaw")
 
     parser.add_option("--doPlots",  action="store_true", default=False)
+    parser.add_option("--doMovie",  action="store_true", default=False)
     parser.add_option("--doTiles",  action="store_true", default=False)
     parser.add_option("--tilesType", help="tiling type",default="moc")
 
@@ -175,22 +176,9 @@ def params_struct(opts):
     params["powerlaw_n"] = opts.powerlaw_n
 
     params["doPlots"] = opts.doPlots
+    params["doMovie"] = opts.doMovie
     params["doObservability"] = opts.doObservability
     params["do3D"] = opts.do3D
-    return params
-
-def get_segments(params):
-
-    for telescope in params["telescopes"]:
-
-        params["config"][telescope]["segmentlist"] = gwemopt.segments.get_segments(params, params["config"][telescope])
-        params["config"][telescope]["exposurelist"] = gwemopt.utils.get_exposures(params, params["config"][telescope], params["config"][telescope]["segmentlist"])
-
-        nexp, junk = np.array(params["config"][telescope]["exposurelist"]).shape
-        params["config"][telescope]["n_windows"] = nexp
-        tot_obs_time = np.sum(np.diff(np.array(params["config"][telescope]["exposurelist"]))) * 86400.
-        params["config"][telescope]["tot_obs_time"] = tot_obs_time 
-
     return params
 
 # =============================================================================
@@ -217,7 +205,7 @@ else:
     print "Need to enable --doEvent or --doSkymap"
     exit(0)
 
-params = get_segments(params)
+params = gwemopt.segments.get_telescope_segments(params)
 
 print "Loading skymap..."
 # Function to read maps
