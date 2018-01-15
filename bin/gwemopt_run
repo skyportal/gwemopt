@@ -38,6 +38,7 @@ import gwemopt.lightcurve, gwemopt.coverage
 import gwemopt.efficiency, gwemopt.plotting
 import gwemopt.moc, gwemopt.catalog
 import gwemopt.tiles, gwemopt.segments
+import gwemopt.footprint
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -110,6 +111,11 @@ def parse_commandline():
     parser.add_option("--powerlaw_cl",default=0.9,type=float)
     parser.add_option("--powerlaw_n",default=0.66,type=float)
 
+    parser.add_option("--doFootprint", action="store_true", default=False)
+    parser.add_option("--footprint_ra",default=30.0,type=float)
+    parser.add_option("--footprint_dec",default=60.0,type=float)
+    parser.add_option("--footprint_radius",default=10.0,type=float)
+
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
 
@@ -157,6 +163,7 @@ def params_struct(opts):
         params["config"][telescope]["observer"] = observer
 
     params["skymap"] = opts.skymap
+    params["gpstime"] = opts.gpstime
     params["outputDir"] = opts.outputDir
     params["tilingDir"] = opts.tilingDir
     params["event"] = opts.event
@@ -179,6 +186,12 @@ def params_struct(opts):
     params["doMovie"] = opts.doMovie
     params["doObservability"] = opts.doObservability
     params["do3D"] = opts.do3D
+
+    params["doFootprint"] = opts.doFootprint
+    params["footprint_ra"] = opts.footprint_ra
+    params["footprint_dec"] = opts.footprint_dec
+    params["footprint_radius"] = opts.footprint_radius
+
     return params
 
 # =============================================================================
@@ -201,8 +214,10 @@ if opts.doEvent:
 elif opts.doSkymap:
     params["skymap"]
     params["gpstime"]
+elif opts.doFootprint:
+    params["skymap"] = gwemopt.footprint.get_skymap(params)
 else:
-    print "Need to enable --doEvent or --doSkymap"
+    print "Need to enable --doEvent, --doFootprint or --doSkymap"
     exit(0)
 
 params = gwemopt.segments.get_telescope_segments(params)
