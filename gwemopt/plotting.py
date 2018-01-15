@@ -159,7 +159,7 @@ def efficiency(params, map_struct, efficiency_structs):
     plt.figure()
     for key in efficiency_structs:
         efficiency_struct = efficiency_structs[key]
-        plt.loglog(efficiency_struct["distances"],efficiency_struct["efficiency"],label=efficiency_struct["legend_label"])
+        plt.plot(efficiency_struct["distances"],efficiency_struct["efficiency"],label=efficiency_struct["legend_label"])
     plt.xlabel('Distance [Mpc]')
     plt.ylabel('Efficiency')
     plt.legend(loc="best")
