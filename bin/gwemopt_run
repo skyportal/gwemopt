@@ -29,6 +29,8 @@ Comments should be e-mailed to michael.coughlin@ligo.org.
 
 import os, sys, glob, optparse, shutil, warnings
 import numpy as np
+np.random.seed(0)
+
 import healpy as hp
 import ephem
 
