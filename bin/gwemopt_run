@@ -112,6 +112,7 @@ def parse_commandline():
 
     parser.add_option("--powerlaw_cl",default=0.9,type=float)
     parser.add_option("--powerlaw_n",default=0.66,type=float)
+    parser.add_option("--powerlaw_dist_exp",default=0,type=float)
 
     parser.add_option("--doFootprint", action="store_true", default=False)
     parser.add_option("--footprint_ra",default=30.0,type=float)
@@ -183,6 +184,7 @@ def params_struct(opts):
     params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
     params["powerlaw_cl"] = opts.powerlaw_cl
     params["powerlaw_n"] = opts.powerlaw_n
+    params["powerlaw_dist_exp"] = opts.powerlaw_dist_exp
 
     params["doPlots"] = opts.doPlots
     params["doMovie"] = opts.doMovie

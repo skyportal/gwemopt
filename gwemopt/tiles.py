@@ -102,7 +102,7 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
     else:
         prob = map_struct["prob"]
 
-    n, cl = params["powerlaw_n"], params["powerlaw_cl"]
+    n, cl, dist_exp = params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"]
 
     prob_sorted = np.sort(prob)[::-1]
     prob_indexes = np.argsort(prob)[::-1]
@@ -116,6 +116,21 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
     prob_scaled = prob_scaled / np.nansum(prob_scaled)
 
     ranked_tile_probs = compute_tiles_map(tile_struct, prob_scaled, func='np.sum(x)')
+
+    if "distmed" in map_struct:
+        distmed = map_struct["distmed"]
+        distmed[distmed<=0] = np.nan
+        distmed[~np.isfinite(distmed)] = np.nan
+        #distmed[distmed<np.nanmedian(distmed)/4.0] = np.nanmedian(distmed)/4.0
+
+        ranked_tile_distances = compute_tiles_map(tile_struct, distmed, func='np.nanmedian(x)')        
+        ranked_tile_distances_median = ranked_tile_distances / np.nanmedian(ranked_tile_distances)
+        ranked_tile_distances_median = ranked_tile_distances_median**dist_exp
+        idx = np.argsort(ranked_tile_probs)[::-1]
+        ranked_tile_probs = ranked_tile_probs*ranked_tile_distances_median
+        ranked_tile_probs = ranked_tile_probs / np.nansum(ranked_tile_probs)
+        ranked_tile_probs[np.isnan(ranked_tile_probs)] = 0.0
+
     ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
 
     keys = tile_struct.keys()

@@ -75,6 +75,20 @@ def read_skymap(params,is3D=False):
         map_struct["distsigma"] = hp.ud_grade(map_struct["distsigma"],nside,power=-2) 
         map_struct["distnorm"] = hp.ud_grade(map_struct["distnorm"],nside,power=-2) 
 
+        nside_down = 32
+        distmu_down = hp.ud_grade(map_struct["distmu"],nside_down,power=-2)
+        distsigma_down = hp.ud_grade(map_struct["distsigma"],nside_down,power=-2)
+        distnorm_down = hp.ud_grade(map_struct["distnorm"],nside_down,power=-2)
+
+        r = np.linspace(0, 2000)
+        map_struct["distmed"] = np.zeros(distmu_down.shape)
+        for ipix in xrange(len(map_struct["distmed"])):
+            dp_dr = r**2 * distnorm_down[ipix] * norm(distmu_down[ipix],distsigma_down[ipix]).pdf(r)
+            dp_dr_norm = np.cumsum(dp_dr / np.sum(dp_dr))
+            idx = np.argmin(np.abs(dp_dr_norm-0.5))
+            map_struct["distmed"][ipix] = r[idx]
+        map_struct["distmed"] = hp.ud_grade(map_struct["distmu"],nside,power=-2)
+
     npix = hp.nside2npix(nside)
     theta, phi = hp.pix2ang(nside, np.arange(npix))
     ra = np.rad2deg(phi)
