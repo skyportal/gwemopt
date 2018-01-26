@@ -26,6 +26,20 @@ import os
 import subprocess
 import time
 
+try:
+    unicode = unicode
+except NameError:
+    # 'unicode' is undefined, must be Python 3
+    str = str
+    unicode = str
+    bytes = bytes
+    basestring = (str,bytes)
+else:
+    # 'unicode' exists, must be Python 2
+    str = str
+    unicode = unicode
+    bytes = str
+    basestring = basestring
 
 class GitStatus(object):
     """Git repository version information
@@ -75,7 +89,7 @@ class GitStatus(object):
         """Determine basic info about the latest commit
         """
         a, b, c, d, e, f =  self.git(
-            'log', '-1', '--pretty=format:%H,%ct,%an,%ae,%cn,%ce').split(',')
+            'log', '-1', '--pretty=format:%H,%ct,%an,%ae,%cn,%ce').decode().split(',')
         self.id = a
         self.udate = b
         author = c
@@ -88,7 +102,7 @@ class GitStatus(object):
         self.committer = '%s <%s>' % (committer, committer_email)
 
     def get_branch(self):
-        branch = self.git('rev-parse', '--symbolic-full-name', 'HEAD')
+        branch = self.git('rev-parse', '--symbolic-full-name', 'HEAD').decode('utf-8')
         if branch == 'HEAD':
             self.branch = None
         else:
