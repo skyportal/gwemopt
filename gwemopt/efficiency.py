@@ -4,7 +4,6 @@ import os, sys
 import numpy as np
 import healpy as hp
 from astropy.time import Time
-
 import matplotlib
 #matplotlib.rc('text', usetex=True)
 matplotlib.use('Agg')
@@ -81,6 +80,7 @@ def compute_efficiency(params, map_struct, eventinfo, lightcurve_struct, coverag
     efficiency_struct["dec"] = np.array(decs)
     efficiency_struct["efficiency"] = efficiency
     efficiency_struct["distances"] = dists
+    efficiency_struct["uncertainty"] = efficiency * (1 - efficiency) / (Ninj**(1/2))
     save_efficiency_data(params, efficiency_struct, lightcurve_struct)
     efficiency_num = calculate_efficiency_metric(efficiency_struct)
     save_efficiency_metric(params, "efficiency.txt", efficiency_num, lightcurve_struct)

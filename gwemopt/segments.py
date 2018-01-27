@@ -31,10 +31,10 @@ def get_telescope_segments(params):
 def get_skybrightness(config_struct,segmentlist,observer,fxdbdy,radec):
 
     moonsegmentlist = glue.segments.segmentlist()
-    if config_struct["filter"] == "c":
+    if config_struct["filt"] == "c":
         passband = "g"
     else:
-        passband = config_struct["filter"]
+        passband = config_struct["filt"]
 
     # Moon phase data (from Coughlin, Stubbs, and Claver Table 2) 
     moon_phases = [2,10,45,90]

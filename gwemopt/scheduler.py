@@ -197,7 +197,7 @@ def scheduler(params, config_struct, tile_struct):
 
             coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_mid,mag,exposureTime]]),axis=0)
 
-            coverage_struct["filters"].append(config_struct["filter"])
+            coverage_struct["filters"].append(config_struct["filt"])
             coverage_struct["patch"].append(tile_struct_hold["patch"])
             coverage_struct["ipix"].append(tile_struct_hold["ipix"])
             coverage_struct["area"].append(tile_struct_hold["area"])
