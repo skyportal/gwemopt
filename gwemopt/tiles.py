@@ -43,7 +43,7 @@ def rankedTiles_struct(params,config_struct,telescope,map_struct):
 
     preComputedFile = os.path.join(params["tilingDir"],'preComputed_%s_pixel_indices_%d.dat'%(telescope,nside))
     if not os.path.isfile(preComputedFile):
-        print "Creating tiles file..."
+        print("Creating tiles file...")
         gwemopt.rankedTilesGenerator.createTileFile(params,preComputedFile,radecs=config_struct["tesselation"])
 
     preCompDictFiles = {64:None, 128:None,256:None, 512:None, 1024:None, 2048:None}
@@ -236,7 +236,7 @@ def tesselation_spiral(config_struct):
 
     area_of_sphere = 4*np.pi*(180/np.pi)**2
     n = int(np.ceil(area_of_sphere/FOV))
-    print "Using %d points to tile the sphere..."%n
+    print("Using %d points to tile the sphere..."%n)
  
     golden_angle = np.pi * (3 - np.sqrt(5))
     theta = golden_angle * np.arange(n)

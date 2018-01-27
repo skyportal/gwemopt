@@ -7,8 +7,6 @@ import itertools
 
 from scipy.stats import norm
 
-import ephem
-
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u

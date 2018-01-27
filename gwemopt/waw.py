@@ -366,11 +366,12 @@ def sky_pos_cond_prob_gt(x,x0,ra,dec,nside=256,limit_to_region=None):
 	if limit_to_region is None:
 		region = np.ones(npix,dtype=bool)
 	else:
-                limit_to_region_ones = np.zeros(len(limit_to_region))
-                limit_to_region_ones[np.where(limit_to_region==True)[0]] = 1.0
+		limit_to_region_ones = np.zeros(len(limit_to_region))
+		limit_to_region_ones[np.where(limit_to_region==True)[0]] = 1.0
+		
 		region = hp.ud_grade(limit_to_region_ones,nside)
-                region = np.ceil(region)
-                region = region.astype(bool)
+		region = np.ceil(region)
+		region = region.astype(bool)
 
 	# to compute the angular distances of all posterior samples to all pixels of the
 	# skymap is quite memory intensive, so we better do it one skymap pixel at a time
@@ -389,6 +390,6 @@ def sky_pos_cond_prob_gt(x,x0,ra,dec,nside=256,limit_to_region=None):
 		m[p] = np.sum(w[gt_x0])
 	
 	#return the map, masking invalid values
-        m[np.isnan(m)] = 0.0
-        return m
+	m[np.isnan(m)] = 0.0
+	return m
 	#return np.ma.masked_invalid(m)

@@ -54,7 +54,7 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
             prob = -np.inf
 
         if np.isfinite(prob):
-            print ra, dec, prob
+            print(ra, dec, prob)
 
         return prob
 
@@ -123,11 +123,11 @@ def getRandomPos(ra, dec, nums=1):
 
 class PlaceTile:
 	def __init__(self, skymapData, config_struct, numtiles=2):
-                self.skymapData = skymapData
-                self.ra_map = self.skymapData[0]
-                self.dec_map = self.skymapData[1]
-                self.pVal = self.skymapData[2]
-                self.config_struct = config_struct
+		self.skymapData = skymapData
+		self.ra_map = self.skymapData[0]
+		self.dec_map = self.skymapData[1]
+		self.pVal = self.skymapData[2]
+		self.config_struct = config_struct
 		self.numtiles = numtiles
 
 	def lnprior(self, skyposition): ### Basic uniform prior across the sky
@@ -135,7 +135,7 @@ class PlaceTile:
 		ra_centers = reshaped_skyposition[0]
 		dec_centers= reshaped_skyposition[1]
 
-                ignore = (ra_centers > 360.) | (ra_centers < 0.) | (dec_centers > 90.) | (dec_centers < -90.)
+		ignore = (ra_centers > 360.) | (ra_centers < 0.) | (dec_centers > 90.) | (dec_centers < -90.)
 		if np.sum(ignore):
 			return -np.inf
 		else:
@@ -145,22 +145,22 @@ class PlaceTile:
 	def lnlikelihood(self, skyposition_cent):
 		reshaped_skyposition = np.reshape(skyposition_cent, (2, self.numtiles))
 
-                config_struct = self.config_struct
-                pVal = copy.deepcopy(self.pVal)
-                npix = len(pVal)
-                nside = hp.npix2nside(npix) 
+		config_struct = self.config_struct
+		pVal = copy.deepcopy(self.pVal)
+		npix = len(pVal)
+		nside = hp.npix2nside(npix) 
 
 		ra_centers = reshaped_skyposition[0]
 		dec_centers= reshaped_skyposition[1]
 		probabilitySum = 0.0
 		for ii in range(self.numtiles):
-                        if config_struct["FOV_type"] == "square":
-                            ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_centers[ii], dec_centers[ii], config_struct["FOV"], nside)
-                        elif config_struct["FOV_type"] == "circle":
-                            ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_centers[ii], dec_centers[ii], config_struct["FOV"], nside)
+			if config_struct["FOV_type"] == "square":
+				ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_centers[ii], dec_centers[ii], config_struct["FOV"], nside)
+			elif config_struct["FOV_type"] == "circle":
+				ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_centers[ii], dec_centers[ii], config_struct["FOV"], nside)
 
-                        prob = np.sum(pVal[ipix])
-                        pVal[ipix] = 0.0
+			prob = np.sum(pVal[ipix])
+			pVal[ipix] = 0.0
 
 			probabilitySum += prob
 
@@ -177,12 +177,12 @@ class PlaceTile:
 	
 	def getSamples(self):
 
-                import emcee        
+		import emcee        
 
-                config_struct = self.config_struct
-                pVal = copy.copy(self.pVal)
-                npix = len(pVal)
-                nside = hp.npix2nside(npix)
+		config_struct = self.config_struct
+		pVal = copy.copy(self.pVal)
+		npix = len(pVal)
+		nside = hp.npix2nside(npix)
 
 		ndim, nwalkers = 2*self.numtiles, 4*self.numtiles
 		include = np.cumsum(self.pVal) < 0.9
@@ -204,43 +204,43 @@ class PlaceTile:
 		print 'Acceptance fraction = ' + str(np.mean(sampler.acceptance_fraction[:]))
 		print 'Time taken to finish the MCMC = ' + str(end - start)
 		tileCenters = sampler.flatchain
-                samples    = tileCenters.copy()
+		samples    = tileCenters.copy()
 
-                peak_ras, peak_decs = self.localizeTC(samples=samples)
+		peak_ras, peak_decs = self.localizeTC(samples=samples)
 
-                tile_struct = {}
-                #for ii in xrange(self.numtiles):
-                #    ra_pointing = samples[0,ii]
-                #    dec_pointing = samples[0,ii+self.numtiles]
-                for ii in xrange(len(peak_ras)):
-                    ra_pointing = peak_ras[ii]
-                    dec_pointing = peak_decs[ii]
+		tile_struct = {}
+		#for ii in xrange(self.numtiles):
+		#    ra_pointing = samples[0,ii]
+		#    dec_pointing = samples[0,ii+self.numtiles]
+		for ii in xrange(len(peak_ras)):
+			ra_pointing = peak_ras[ii]
+			dec_pointing = peak_decs[ii]
 
-                    tile_struct[ii] = {}
+			tile_struct[ii] = {}
 
-                    if config_struct["FOV_type"] == "square":
-                        ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8)
-                    elif config_struct["FOV_type"] == "circle":
-                        ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8)
+			if config_struct["FOV_type"] == "square":
+				ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8)
+			elif config_struct["FOV_type"] == "circle":
+				ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8)
 
-                    tile_struct[ii]["ra"] = ra_pointing
-                    tile_struct[ii]["dec"] = dec_pointing
-                    tile_struct[ii]["ipix"] = ipix
-                    tile_struct[ii]["corners"] = radecs
-                    tile_struct[ii]["patch"] = patch
-                    tile_struct[ii]["area"] = area
+		tile_struct[ii]["ra"] = ra_pointing
+		tile_struct[ii]["dec"] = dec_pointing
+		tile_struct[ii]["ipix"] = ipix
+		tile_struct[ii]["corners"] = radecs
+		tile_struct[ii]["patch"] = patch
+		tile_struct[ii]["area"] = area
 	
 		return tile_struct
 		
 		
 	def optimizeBins(self, ra, dec, masked_points=np.array([])):
-                config_struct = self.config_struct
+		config_struct = self.config_struct
 
-                pVal = copy.deepcopy(self.pVal)
-                if len(masked_points) > 0:
-                    pVal[masked_points.astype(int)] = 0.0
-                npix = len(pVal)
-                nside = hp.npix2nside(npix)
+		pVal = copy.deepcopy(self.pVal)
+		if len(masked_points) > 0:
+			pVal[masked_points.astype(int)] = 0.0
+		npix = len(pVal)
+		nside = hp.npix2nside(npix)
  
 		binTrials = int(np.sqrt(len(ra)))
 		bins_array = np.arange(2, binTrials + 1)
@@ -257,12 +257,12 @@ class PlaceTile:
 			ra_peak = ra_bin_cent[x]
 			dec_peak = dec_bin_cent[y]
 
-                        if config_struct["FOV_type"] == "square":
-                            ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_peak, dec_peak, config_struct["FOV"], nside)
-                        elif config_struct["FOV_type"] == "circle":
-                            ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_peak, dec_peak, config_struct["FOV"], nside)
+			if config_struct["FOV_type"] == "square":
+				ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_peak, dec_peak, config_struct["FOV"], nside)
+			elif config_struct["FOV_type"] == "circle":
+				ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_peak, dec_peak, config_struct["FOV"], nside)
 
-                        prob_encl = np.sum(pVal[ipix])
+			prob_encl = np.sum(pVal[ipix])
 			probs_allChosenTiles = np.append(probs_allChosenTiles, prob_encl)
 		
 		bin_max = bins_array[np.argmax(probs_allChosenTiles)]
@@ -277,10 +277,10 @@ class PlaceTile:
 		ra_peak = ra_bin_cent[x]
 		dec_peak = dec_bin_cent[y]
 
-                if config_struct["FOV_type"] == "square":
-                    ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_peak, dec_peak, config_struct["FOV"], nside)
-                elif config_struct["FOV_type"] == "circle":
-                    ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_peak, dec_peak, config_struct["FOV"], nside)
+		if config_struct["FOV_type"] == "square":
+			ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_peak, dec_peak, config_struct["FOV"], nside)
+		elif config_struct["FOV_type"] == "circle":
+			ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_peak, dec_peak, config_struct["FOV"], nside)
 	
 		return ra_peak, dec_peak, ipix
 

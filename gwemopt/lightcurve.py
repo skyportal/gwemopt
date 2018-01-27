@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 def compute_apparent_magnitude_samples(params, lightcurve_struct, samples_struct, t):
 
-    filt = params["config"][params["telescopes"][0]]["filter"]
+    filt = params["config"][params["telescopes"][0]]["filt"]
     F = np.zeros((len(samples_struct['ra']),len(t)))
     lightcurve_t = lightcurve_struct["t"]
     lightcurve_mag = lightcurve_struct[filt]
@@ -26,7 +26,7 @@ def compute_apparent_magnitude_samples(params, lightcurve_struct, samples_struct
 
 def compute_apparent_magnitude(params, lightcurve_struct, t):
 
-    filt = params["config"][params["telescopes"][0]]["filter"]
+    filt = params["config"][params["telescopes"][0]]["filt"]
     lightcurve_t = lightcurve_struct["t"]
     lightcurve_mag = lightcurve_struct[filt]
     lightcurve_mag_interp = np.interp(t,lightcurve_t,lightcurve_mag)
@@ -176,7 +176,7 @@ def xcorr_mags(mags1,mags2):
                     chisquare = scipy.stats.chisquare(mag2, f_exp=mag1[kk:len(mag2)])[0] 
                     chisquares.append(chisquare)
 
-            print name1, name2, xcorr_corr, np.min(np.abs(chisquares)), len(mag1), len(mag2)
+            print(name1, name2, xcorr_corr, np.min(np.abs(chisquares)), len(mag1), len(mag2))
             xcorrvals[ii,jj] = xcorr_corr
             chisquarevals[ii,jj] = np.min(np.abs(chisquares))
 

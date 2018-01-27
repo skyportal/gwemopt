@@ -205,9 +205,9 @@ class RankedTileGenerator:
 		resolution = int(2 ** round(n)) ## resolution in powers of 2
 		if resolution > 2048: resolution = 2048
 		if resolution < 64: resolution = 64
-		if verbose: print 'Using resolution of ' + str(resolution)
+		if verbose: print('Using resolution of ' + str(resolution))
 		filename = self.preCompDictFiles[resolution]
-		if verbose: print filename
+		if verbose: print(filename)
 		File = open(filename, 'rb')
 		data = pickle.load(File)
 		tile_index = np.arange(len(data))
@@ -216,20 +216,20 @@ class RankedTileGenerator:
 		theta, phi = hp.pix2ang(resolution, np.arange(0, npix))
 		pVal = skymapUD[np.arange(0, npix)]
 
-                allTiles_ipixs = []
+		allTiles_ipixs = []
 		allTiles_probs = []
 		for ii in range(0, len(data)):
 			pTile = np.sum(pVal[data[ii]])
 			allTiles_probs.append(pTile)
-                        allTiles_ipixs.append(data[ii])
+			allTiles_ipixs.append(data[ii])
 
 		allTiles_probs = np.array(allTiles_probs)
-                allTiles_ipixs = np.array(allTiles_ipixs)
+		allTiles_ipixs = np.array(allTiles_ipixs)
 		index = np.argsort(-allTiles_probs)
 
 		allTiles_probs_sorted = allTiles_probs[index]
 		tile_index_sorted = tile_index[index]
-                allTiles_ipixs_sorted = allTiles_ipixs[index]
+		allTiles_ipixs_sorted = allTiles_ipixs[index]
 		
 		return [tile_index_sorted, allTiles_probs_sorted, allTiles_ipixs_sorted]
 
@@ -608,12 +608,12 @@ class Scheduler(RankedTileGenerator):
 		if altAz_sun.alt.value >= -18.0:
 			if verbose: 
 				localTime = Time(eventTime, format='gps') + self.utcoffset
-				print str(localTime.utc.datetime) + ': Sun above the horizon'
+				print(str(localTime.utc.datetime) + ': Sun above the horizon')
 			eventTime = self.advanceToSunset(eventTime, integrationTime)
 			if verbose:
 				localTime = Time(eventTime, format='gps') + self.utcoffset
-				print 'Advancing time to ' + str(localTime.utc.datetime)
-				print '\n'
+				print('Advancing time to ' + str(localTime.utc.datetime))
+				print('\n')
 
 		
 		while elapsedTime <= duration: 
@@ -622,7 +622,7 @@ class Scheduler(RankedTileGenerator):
 			
 			if altAz_sun.alt.value < -18.0: 
 				if verbose: 
-					print str(localTime.utc.datetime) + ': Observation mode'
+					print(str(localTime.utc.datetime) + ': Observation mode')
 				for jj in np.arange(len(tileIndices)):
 					if tileIndices[jj] not in scheduled:
 						if tileProbs[jj] > thresholdTileProb:
@@ -650,12 +650,12 @@ class Scheduler(RankedTileGenerator):
 			else:
 				if verbose: 
 					localTime = Time(eventTime, format='gps') + self.utcoffset
-					print str(localTime.utc.datetime) + ': Sun above the horizon'
+					print(str(localTime.utc.datetime) + ': Sun above the horizon')
 				eventTime = self.advanceToSunset(eventTime, integrationTime)
 				if verbose:
 					localTime = Time(eventTime, format='gps') + self.utcoffset
-					print 'Advancing time to ' + str(localTime.utc.datetime)
-					print '\n'
+					print('Advancing time to ' + str(localTime.utc.datetime))
+					print('\n')
 			
 
 			ii += 1
@@ -722,7 +722,7 @@ class Scheduler(RankedTileGenerator):
 
 
 		for ii in np.arange(len(scheduled)):
-			print str(ObsTimes[ii].utc.datetime) + '\t' + str(int(scheduled[ii]))
+			print(str(ObsTimes[ii].utc.datetime) + '\t' + str(int(scheduled[ii])))
 			
 		pVal_observed = np.array(pVal_observed)
 		sun_ra = np.array(sun_ra)
@@ -814,7 +814,7 @@ def detectability(rank, time_per_tile, total_observation_time, absolute_mag, sou
 	rank_reached_mask	= rank_reached > rank	# True means rank is reachable
 	if np.all(~rank_reached_mask):	# if rank cannot be reached for 
 									# any integration time	
-		if verbose: print "Tile not reached in ANY allotted observation time"
+		if verbose: print("Tile not reached in ANY allotted observation time")
 		if error_data is not None:
 			return np.zeros(len(time_per_tile))
 		else:
@@ -828,7 +828,7 @@ def detectability(rank, time_per_tile, total_observation_time, absolute_mag, sou
 	if error_data is None:
 		depthReached = (limmag > apparent_mag)
 		if np.any(depthReached) is False:
-			if verbose: print "Depth not reached in ANY allotted integration time"
+			if verbose: print("Depth not reached in ANY allotted integration time")
 		return np.logical_and(depthReached, rank_reached_mask)
 		### Both Depth criteria and rank criteria should be satisfied
 	### If error_data is supplied, return detection probability

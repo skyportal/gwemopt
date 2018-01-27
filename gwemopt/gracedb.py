@@ -46,7 +46,7 @@ def get_event(params):
     #if os.path.isfile(triggerfile) and os.path.isfile(skymapfile):
     #    print "Already have info for %s... continuing."%event["graceid"]
     #    return
-    print "Getting info for %s"%event["graceid"]
+    print("Getting info for %s"%event["graceid"])
 
     mjds = [-1,-1]
     timediff = -1
@@ -90,7 +90,7 @@ def get_event(params):
                 timediff = eventinfo["H1_L1_difference"]
     
     try:       
-        print "Looking for EM bright file..."
+        print("Looking for EM bright file...")
         r = g.files(eventinfo['graceid'], "Source_Classification_%s.json"%eventinfo['graceid'])
         emfile = open('embright.json','w')
         emfile.write(r.read())
@@ -120,10 +120,10 @@ def get_event(params):
         eventinfo['embright']['ns'] = ns_prob
 
     except:
-         print "No EM bright file..."            
+         print("No EM bright file...")            
 
     try:
-        print "Looking for cWB file..."
+        print("Looking for cWB file...")
         r = g.files(eventinfo['graceid'], "trigger_%.4f.txt"%eventinfo['gpstime']) 
         # r = g.files(eventinfo['graceid'], "eventDump.txt")
         cwbfile = open('trigger.txt','w')
@@ -158,7 +158,7 @@ def get_event(params):
             timediff = eventinfo["H1_L1_difference"]
 
     except:
-        print "No cWB file..."
+        print("No cWB file...")
 
     ra = 0
     dec = 0
@@ -172,7 +172,7 @@ def get_event(params):
         except:
             continue
     if r == []:
-        print "Download of skymaps file for %s failed..."%eventinfo['graceid']
+        print("Download of skymaps file for %s failed..."%eventinfo['graceid'])
     else:
    
         skymap = open(skymapfile,'w')
