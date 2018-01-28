@@ -168,7 +168,7 @@ def efficiency(params, map_struct, efficiency_structs):
     plt.figure()
     for key in efficiency_structs:
         efficiency_struct = efficiency_structs[key]
-        plt.errorbar(efficiency_struct["distances"],efficiency_struct["efficiency"],label=efficiency_struct["legend_label"], yerr=efficiency_struct["uncertainty"])
+        plt.plot(efficiency_struct["distances"],efficiency_struct["efficiency"],label=efficiency_struct["legend_label"])
     plt.xlabel('Distance [Mpc]')
     plt.ylabel('Efficiency')
     plt.legend(loc="best")

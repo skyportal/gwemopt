@@ -1,2 +1,0 @@
-tilesType	timeallocationType	scheduleType	efficiencyMetric	injection
-moc	powerlaw	greedy	0.158208567666	Me2017_H4M050V20
