@@ -42,7 +42,6 @@ def readParamsFromFile(file):
     return params
 
 def read_skymap(params,is3D=False):
-
     filename = params["skymap"]
     map_struct = {}
 
@@ -64,7 +63,6 @@ def read_skymap(params,is3D=False):
         prob_data = prob_data / np.sum(prob_data)
 
         map_struct["prob"] = prob_data
-
     nside = hp.pixelfunc.get_nside(prob_data)
     nside = params["nside"]
     map_struct["prob"] = hp.ud_grade(map_struct["prob"],nside,power=-2)
