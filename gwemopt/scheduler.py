@@ -137,7 +137,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
                 idxs[ii] = idx2
             tileavailable[jj] = tileavailable[jj] - 1
     else:
-        print "Scheduling options are greedy/sear/weighted."
+        print("Scheduling options are greedy/sear/weighted.")
         exit(0)
 
     return idxs
@@ -160,7 +160,7 @@ def scheduler(params, config_struct, tile_struct):
     exposurelist = config_struct["exposurelist"]
     tilesegmentlists = gwemopt.segments.get_segments_tiles(config_struct, tile_struct, observatory, segmentlist)
 
-    print "Generating schedule order..."
+    print("Generating schedule order...")
     keys = get_order(params,tile_struct,tilesegmentlists,exposurelist)
 
     if params["doPlots"]:
@@ -197,7 +197,7 @@ def scheduler(params, config_struct, tile_struct):
 
             coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_mid,mag,exposureTime]]),axis=0)
 
-            coverage_struct["filters"].append(config_struct["filter"])
+            coverage_struct["filters"].append(config_struct["filt"])
             coverage_struct["patch"].append(tile_struct_hold["patch"])
             coverage_struct["ipix"].append(tile_struct_hold["ipix"])
             coverage_struct["area"].append(tile_struct_hold["area"])
@@ -248,18 +248,18 @@ def summary(params, map_struct, coverage_struct):
             mjds_floor.append(int(np.floor(data[2])))
 
         if len(mjds_floor) == 0:
-            print "No images after %.1f days..."%tt
+            print("No images after %.1f days..."%tt)
             fid.write('%.1f,-1,-1,-1,-1\n'%(tt))
         else:
 
             mjds = np.unique(mjds)
             mjds_floor = np.unique(mjds_floor)
 
-            print "After %.1f days..."%tt
-            print "Number of hours after first image: %.5f"%(24*(np.min(mjds)-event_mjd))
-            print "MJDs covered: %s"%(" ".join(str(x) for x in mjds_floor))
-            print "Cumultative probability: %.5f"%cum_prob
-            print "Cumultative area: %.5f degrees"%cum_area
+            print("After %.1f days..."%tt)
+            print("Number of hours after first image: %.5f"%(24*(np.min(mjds)-event_mjd)))
+            print("MJDs covered: %s"%(" ".join(str(x) for x in mjds_floor)))
+            print("Cumultative probability: %.5f"%cum_prob)
+            print("Cumultative area: %.5f degrees"%cum_area)
 
             fid.write('%.1f,%.5f,%.5f,%.5f,%s\n'%(tt,24*(np.min(mjds)-event_mjd),cum_prob,cum_area," ".join(str(x) for x in mjds_floor)))
 

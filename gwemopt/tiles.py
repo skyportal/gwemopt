@@ -116,6 +116,7 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
     prob_scaled = prob_scaled / np.nansum(prob_scaled)
 
     ranked_tile_probs = compute_tiles_map(tile_struct, prob_scaled, func='np.sum(x)')
+    ranked_tile_probs = ranked_tile_probs / np.nansum(ranked_tile_probs)
 
     if "distmed" in map_struct:
         distmed = map_struct["distmed"]
