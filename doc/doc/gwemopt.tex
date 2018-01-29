@@ -449,7 +449,7 @@ We will focus on the model by \cite{Me2017} to compare the efficiency. All the e
 \label{fig:eff_ex}
 \end{figure}
 In order to compare the 36 efficiency as is plotted in Figure.\ref{fig:eff_ex}, we use a numeric way to reflect the overall performance of the algorithms based on the efficiency for each distance in the range of $10^{-1} Mpc$ to $10^3 Mpc$. Thus, we come to a metric that reflects what percentage of events that can be detected in a spherical volume of radius $10^3 Mpc$. The events are evenly distributed in the volume. Suppose the event density per volume is $\rho$ and the distance is $r$. Sampling a distance at $d$ corresponds to a shell with volume $4 \pi r^2 dr$. Assuming that the density is $\rho$, then the total events on that shell is $4 \pi \rho r^2 dr$. Thus, if the efficiency is $e$, the expected number of detected events on the shell will be $4 \pi \rho r^2 e dr$. From this we can see that the efficiency at $r$ is weighted by $r^2$. If we treat the efficiency at each distance as an individual sample, a weighted average on the squared radius will then be a good metric of the overall efficiency that reflects how well the algorithm detects events uniformly distributed in a volume of $10^3 Mpc$. A consequence of this metric is that the weight of $r^2$ makes the long range efficiency more important than short range efficiency. An algorithm that performs well at further distances would be better than an algorithm does better at short distances but whose performance deteriorates quickly as the distance increases.
-\subsection{Results}
+\subsection{Performance and algorithms}
 \begin{figure}[t]
 \includegraphics[width=0.45\textwidth]{plots/efficiency.png}
 \caption{Plot of the efficiency metric for each of the 36 options. On the horizontal axis are tiling algorithms and scheduling algorithms and on the vertical axis are the time allocation algorithms. Abbreviations are used for the algorithms. The first capital letter stands for the tiling algorithm and the second letter stands for the scheduling algorithm. The abbreviations are the first letters of the algorithms: G - greedy. H - hierarchical. M - MOC. R - ranked. S - SEAR. W - weighted. The grids are colors such that highest efficiency combinations are darker and lower efficiency ones are lighter, with the highest being completely blue and the lowest one being completely white.}
@@ -461,6 +461,15 @@ For each of the 36 algorithm options, we compute the efficiency metric as descri
 The highest efficiency of $0.19$ is achieved by a combination of ranked tiling, powerlaw time allocation and greedy scheduling. Compared to the lowest efficiency of $0.01$, it can detect roughly 19 times more events within a range of $10^{-1} Mpc$ and $10^3 Mpc$. That corresponds to the darkest box in the 10th column and the second row in Figure.\ref{fig:eff_metric}. 
 
 Also, from Figure.\ref{fig:eff_metric}, we can compare the efficiencies of the individual algorithms. First, among the four tiling algorithms, greedy, sear, MOC and ranked, we can see that MOC and ranked generally have higher efficiencies than greedy and hierarchical tiling algorithms. Second, among the three options for scheduling, greedy and SEAR have higher efficiency, it is more complicated. Generally, we can say that PEM is the best. It is slightly better than powerlaw, and both are better than WAW. However, if we have to use weighted scheduling, WAW might work better than the other two. Third, greedy and SEAR scheduling are more efficient than weighted scheduling.
+\subsection{Performance and the number of tiles}
+We also studied the how the number of tiles affects the performance. 
+\begin{figure}[b]
+    \centering
+    \includegraphics[width=0.45\textwidth]{plots/eff_ntiles.png}\\
+    \includegraphics[width=0.45\textwidth]{plots/eff_ntiles_curves.png}
+    \caption{On the top is the plot of efficiency weighted average as a function of the number of tiles considered. On the bottom is the efficiency curves unpacked from data points corresponding to 4, 16, 28, 40 tiles of the top figure. In the simulation, hierarchical tiling algorithm, power law time allocation algorithm and greedy scheduling algorithm are used to detect 1000 random injections for number of tiles ranging from 1 to 40. The standard deviation is calculated and the 99\% confidence interval is plotted as the grey shaded region in the top figure.}
+    \label{fig:eff_ntiles}
+\end{figure}
 
 \section{Conclusion}
 \label{sec:conclusions}
