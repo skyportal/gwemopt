@@ -10,7 +10,10 @@ import astropy.units as u
 
 import ephem
 
-import glue.segments
+try:
+    import glue.segments
+except:
+    print("glue import failed... segment manipulation will be limited.")
 
 import gwemopt.utils
 
@@ -261,7 +264,7 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
 
 def get_segments_tiles(config_struct, tile_struct, observatory, segmentlist):
 
-    print "Generating segments for tiles..."
+    print("Generating segments for tiles...")
 
     ras = []
     decs = []
