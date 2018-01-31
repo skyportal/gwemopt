@@ -1,0 +1,37 @@
+
+import os, sys
+import glob
+import numpy as np
+
+from astropy.time import Time
+
+fitsfiles = glob.glob(os.path.join("../data/GBM/healpix/*"))
+
+gbmFile = "../data/GBM/Sample_Platinum.txt"
+lines = [line.rstrip('\n') for line in open(gbmFile)]
+lines = filter(None,lines)
+headers = lines[:2]
+lines = lines[2:]
+gbm = {}
+for ii in xrange(len(lines)):
+    lineSplit = filter(None,lines[ii].split(" "))
+    MET = str(int(np.floor(float(lineSplit[8]))))
+    time = Time("%s %s"%(lineSplit[9],lineSplit[10]),format='iso', scale='utc')
+    gpstime = time.gps
+
+    gbm[ii] = {}
+    gbm[ii]["gpstime"] = gpstime
+    gbm[ii]["MET"] = MET
+
+    for fitsfile in fitsfiles:
+        check = MET in fitsfile
+        if check:
+            gbm[ii]["fitsfile"] = fitsfile
+            break
+
+for ii in gbm.keys():
+    system_command = "python gwemopt_run --doTransients --doSkymap --doPlots --skymap %s --gpstime %d -o ../output/GBM/%s"%(gbm[ii]["fitsfile"],gbm[ii]["gpstime"],gbm[ii]["MET"])
+
+    print system_command
+    os.system(system_command)
+    print stop
