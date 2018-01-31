@@ -337,3 +337,20 @@ def scheduler(params,exposurelist,keys):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
+def transients(params, map_struct, transients_struct):
+
+    unit='Gravitational-wave probability'
+    cbar=False
+
+    ra = transients_struct["data"][:,0]
+    dec = transients_struct["data"][:,1]
+
+    plotName = os.path.join(params["outputDir"],'transients.pdf')
+    plt.figure()
+    hp.mollview(map_struct["prob"],unit=unit,cbar=cbar)
+    hp.projplot(ra, dec, 'wx', lonlat=True, coord='G')
+    add_edges()
+    plt.show()
+    plt.savefig(plotName,dpi=200)
+    plt.close('all')
+

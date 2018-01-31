@@ -69,9 +69,9 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
         parameters = ["ra","dec"]
         n_params = len(parameters)
         if config_struct["FOV_type"] == "square":
-             pymultinest.run(myloglike_square, myprior, n_params, importance_nested_sampling = False, resume = True, verbose = False, sampling_efficiency = 'parameter', n_live_points = 1000, outputfiles_basename='%s/2-'%plotDir, evidence_tolerance = 0.05, multimodal = False)
+             pymultinest.run(myloglike_square, myprior, n_params, importance_nested_sampling = False, resume = True, verbose = False, sampling_efficiency = 'parameter', n_live_points = 1000, outputfiles_basename='%s/2-'%plotDir, evidence_tolerance = 0.05, multimodal = False, seed = 1)
         elif config_struct["FOV_type"] == "circle":
-             pymultinest.run(myloglike_circle, myprior, n_params, importance_nested_sampling = False, resume = True, verbose = False, sampling_efficiency = 'parameter', n_live_points = 1000, outputfiles_basename='%s/2-'%plotDir, evidence_tolerance = 0.5, multimodal = False)
+             pymultinest.run(myloglike_circle, myprior, n_params, importance_nested_sampling = False, resume = True, verbose = False, sampling_efficiency = 'parameter', n_live_points = 1000, outputfiles_basename='%s/2-'%plotDir, evidence_tolerance = 0.5, multimodal = False, seed = 1)
 
         multifile= os.path.join(plotDir,'2-.txt')
         data = np.loadtxt(multifile)

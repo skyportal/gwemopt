@@ -4,11 +4,16 @@ import os, sys
 baseoutputDir = "/home/mcoughlin/Skymaps/O2/"
 dataDir = "../data"
 telescopes = ["ATLAS","PS1","ATLAS,PS1"]
-telescopes = ["ATLAS,PS1"]
-events = ["G268556","G274296","G277583"]
+#telescopes = ["ATLAS,PS1"]
+
+#events = ["G184098","G194575","G197392","G211117","G268556","G270580","G274296","G275404","G275697","G277583","G284239","G288732","G296853","G297595","G298048","G298389","G298936","G299232"]
 #events = ["G268556"]
 #events = ["G274296"]
 #events = ["G277583"]
+
+events = ["G268556","G270580","G274296","G275404","G275697","G277583","G284239","G288732","G296853","G297595","G298048","G298389","G298936","G299232"]
+events = ["G298389"]
+events = ["G299232"]
 
 for event in events:
     for telescope in telescopes:
@@ -21,8 +26,8 @@ for event in events:
             datafile = "%s/%s_%s.dat"%(dataDir,tel,event)
             datafiles.append(datafile)
 
-        system_command = "python gwemopt_run --doPlots --doCoverage --doEvent --event %s -t %s -d %s -o %s"%(event,telescope,",".join(datafiles),outputDir)
-        #system_command = "python gwemopt_run --doPlots --doCoverage --doEvent --doEfficiency --event %s -t %s -d %s -o %s"%(event,telescope,",".join(datafiles),outputDir)
+        #system_command = "python gwemopt_run --doPlots --doCoverage --doEvent --event %s -t %s -d %s -o %s"%(event,telescope,",".join(datafiles),outputDir)
+        system_command = "python gwemopt_run --doPlots --doCoverage --doEvent --doEfficiency --event %s -t %s -d %s -o %s"%(event,telescope,",".join(datafiles),outputDir)
         #system_command = "python gwemopt_run --doCoverage --doEvent --doEfficiency --event %s -t %s -d %s -o %s"%(event,telescope,",".join(datafiles),outputDir)
         os.system(system_command)
         #print system_command

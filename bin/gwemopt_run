@@ -40,7 +40,7 @@ import gwemopt.lightcurve, gwemopt.coverage
 import gwemopt.efficiency, gwemopt.plotting
 import gwemopt.moc, gwemopt.catalog
 import gwemopt.tiles, gwemopt.segments
-import gwemopt.footprint
+import gwemopt.footprint, gwemopt.transients
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -119,6 +119,10 @@ def parse_commandline():
     parser.add_option("--footprint_dec",default=60.0,type=float)
     parser.add_option("--footprint_radius",default=10.0,type=float)
 
+    parser.add_option("--doTransients",  action="store_true", default=False)
+    parser.add_option("--transientsFile",default="../transients/ps1_objects.csv")
+    parser.add_option("--dt",default=14.0,type=float)
+
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
 
@@ -196,6 +200,10 @@ def params_struct(opts):
     params["footprint_dec"] = opts.footprint_dec
     params["footprint_radius"] = opts.footprint_radius
 
+    params["doTransients"] = opts.doTransients
+    params["transientsFile"] = opts.transientsFile
+    params["dt"] = opts.dt
+
     return params
 
 # =============================================================================
@@ -208,7 +216,7 @@ warnings.filterwarnings("ignore")
 
 # Parse command line
 opts = parse_commandline()
-if not os.path.isdir(opts.outputDir): os.mkdir(opts.outputDir)
+if not os.path.isdir(opts.outputDir): os.makedirs(opts.outputDir)
 
 params = params_struct(opts)
 
@@ -315,3 +323,17 @@ if opts.doEfficiency:
     else:
         print("Need to enable --doSchedule or --doCoverage for --doEfficiency")
         exit(0)
+
+if opts.doTransients:
+    print("Loading transients list...")
+    transients_struct = gwemopt.transients.read_transients(params, map_struct)
+
+    transientsfile = os.path.join(params["outputDir"],'transients.dat')
+    fid = open(transientsfile,'w')
+    for data,name,classification in zip(transients_struct["data"],transients_struct["name"],transients_struct["classification"]):
+        fid.write("%s %.5f %.5f %.5e\n"%(name,data[0],data[1],data[7]))
+    fid.close()
+
+    if opts.doPlots:
+        print("Plotting transients struct...")
+        gwemopt.plotting.transients(params, map_struct, transients_struct)
