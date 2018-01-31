@@ -24,11 +24,7 @@ def compute_efficiency(params, map_struct, eventinfo, lightcurve_struct, coverag
     prob_data_sorted = np.sort(map_struct["prob"])[::-1]
     prob_data_indexes = np.argsort(map_struct["prob"])[::-1]
     prob_data_cumsum = np.cumsum(prob_data_sorted)
-    if not os.path.isfile('inj_rand.npy'):
-        rand_values = np.random.rand(Ninj,)
-        np.save('inj_rand.npy', rand_values)
-    else:
-        rand_values = np.load('inj_rand.npy')
+    rand_values = np.random.rand(Ninj,)
     dists = np.logspace(-1,3,1000)
     ndetections = np.zeros((len(dists),))
 
