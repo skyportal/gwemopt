@@ -77,7 +77,6 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
         data = np.loadtxt(multifile)
         loglikelihood = -(1/2.0)*data[:,1]
         idx = np.argmax(loglikelihood)
-        np.save('r2.npy', data)
         ra_pointing = data[idx,2]
         dec_pointing = data[idx,3]
 
