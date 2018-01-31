@@ -44,7 +44,7 @@ def get_event(params):
     triggerfile = "%s/%s.txt"%(params["outputDir"],eventinfo['graceid'])
     skymapfile = '%s/%s.fits'%(params["outputDir"],eventinfo['graceid'])
     #if os.path.isfile(triggerfile) and os.path.isfile(skymapfile):
-    #    print "Already have info for %s... continuing."%event["graceid"]
+    #    print("Already have info for %s... continuing."%event["graceid"])
     #    return
     print("Getting info for %s"%event["graceid"])
 

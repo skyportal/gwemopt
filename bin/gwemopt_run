@@ -221,12 +221,12 @@ elif opts.doSkymap:
 elif opts.doFootprint:
     params["skymap"] = gwemopt.footprint.get_skymap(params)
 else:
-    print "Need to enable --doEvent, --doFootprint or --doSkymap"
+    print("Need to enable --doEvent, --doFootprint or --doSkymap")
     exit(0)
 
 params = gwemopt.segments.get_telescope_segments(params)
 
-print "Loading skymap..."
+print("Loading skymap...")
 # Function to read maps
 if opts.do3D:
     map_struct = gwemopt.utils.read_skymap(params, is3D=True)
@@ -234,19 +234,19 @@ else:
     map_struct = gwemopt.utils.read_skymap(params, is3D=False)
 
 if opts.doPlots:
-    print "Plotting skymap..."
+    print("Plotting skymap...")
     gwemopt.plotting.skymap(params,map_struct)
 
 if opts.doObservability:
-    print "Generating observability"
+    print("Generating observability")
     observability_struct = gwemopt.utils.observability(params, map_struct)
     map_struct["observability"] = observability_struct
     if opts.doPlots:
-        print "Plotting observability..."
+        print("Plotting observability...")
         gwemopt.plotting.observability(params,map_struct)
 
 if opts.doSamples:
-    print "Generating samples from skymap..."
+    print("Generating samples from skymap...")
     if opts.do3D:
         samples_struct = gwemopt.utils.samples_from_skymap(map_struct,is3D=True)
     else:
@@ -254,53 +254,53 @@ if opts.doSamples:
 
 if opts.doTiles:
     if params["tilesType"] == "moc":
-        print "Generating MOC struct..."
+        print("Generating MOC struct...")
         moc_structs = gwemopt.moc.create_moc(params)
         tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
     elif params["tilesType"] == "ranked":
-        print "Generating ranked struct..."
+        print("Generating ranked struct...")
         tile_structs = gwemopt.tiles.rankedTiles(params, map_struct)
     elif params["tilesType"] == "hierarchical":
-        print "Generating hierarchical struct..."
+        print("Generating hierarchical struct...")
         tile_structs = gwemopt.tiles.hierarchical(params, map_struct)
     elif params["tilesType"] == "greedy":
-        print "Generating greedy struct..."
+        print("Generating greedy struct...")
         tile_structs = gwemopt.tiles.greedy(params, map_struct)
     else:
-        print "Need tilesType to be moc, greedy, hierarchical, or ranked"
+        print("Need tilesType to be moc, greedy, hierarchical, or ranked")
         exit(0)
 
     if opts.doPlots:
-        print "Plotting tiles struct..."
+        print("Plotting tiles struct...")
         gwemopt.plotting.tiles(params, map_struct, tile_structs)
 
 if opts.doCatalog:
-    print "Generating catalog..."
+    print("Generating catalog...")
     catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
 
 if opts.doSchedule:
     if opts.doTiles:
-        print "Generating coverage..."
+        print("Generating coverage...")
         coverage_struct = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
     else:
-        print "Need to enable --doTiles to use --doSchedule"
+        print("Need to enable --doTiles to use --doSchedule")
         exit(0)
 
 elif opts.doCoverage:
-    print "Reading coverage from file..."
+    print("Reading coverage from file...")
     coverage_struct = gwemopt.coverage.read_coverage_files(params)
 
 if opts.doSchedule or opts.doCoverage:
-    print "Summary of coverage..."
+    print("Summary of coverage...")
     gwemopt.scheduler.summary(params,map_struct,coverage_struct)
 
     if opts.doPlots:
-        print "Plotting coverage..."
+        print("Plotting coverage...")
         gwemopt.plotting.coverage(params, map_struct, coverage_struct)
 
 if opts.doEfficiency:
     if opts.doSchedule or opts.doCoverage:
-        print "Computing efficiency..."
+        print("Computing efficiency...")
         lightcurve_structs = gwemopt.lightcurve.read_files(params["lightcurveFiles"])
         efficiency_structs = {}
         for key in lightcurve_structs.iterkeys():
@@ -310,8 +310,8 @@ if opts.doEfficiency:
             efficiency_structs[key]["legend_label"] = lightcurve_struct["legend_label"]
 
         if opts.doPlots: 
-            print "Plotting efficiency..."
+            print("Plotting efficiency...")
             gwemopt.plotting.efficiency(params, map_struct, efficiency_structs)
     else:
-        print "Need to enable --doSchedule or --doCoverage for --doEfficiency"
+        print("Need to enable --doSchedule or --doCoverage for --doEfficiency")
         exit(0)

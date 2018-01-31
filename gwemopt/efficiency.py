@@ -24,8 +24,11 @@ def compute_efficiency(params, map_struct, eventinfo, lightcurve_struct, coverag
     prob_data_sorted = np.sort(map_struct["prob"])[::-1]
     prob_data_indexes = np.argsort(map_struct["prob"])[::-1]
     prob_data_cumsum = np.cumsum(prob_data_sorted)
-
-    rand_values = np.random.rand(Ninj,)
+    if not os.path.isfile('inj_rand.npy'):
+        rand_values = np.random.rand(Ninj,)
+        np.save('inj_rand.npy', rand_values)
+    else:
+        rand_values = np.load('inj_rand.npy')
     dists = np.logspace(-1,3,1000)
     ndetections = np.zeros((len(dists),))
 
@@ -33,7 +36,9 @@ def compute_efficiency(params, map_struct, eventinfo, lightcurve_struct, coverag
     decs = []
 
     for ii in xrange(Ninj):
-        ipix = np.argmin(np.abs(prob_data_cumsum-rand_values[ii]))
+        # this returns the index of the value in cumsum of probablity closest to a random value
+        ipix = np.argmin(np.abs(prob_data_cumsum-rand_values[ii])) 
+        # the point corresponding to that
         ra_inj = map_struct["ra"][prob_data_indexes][ipix]
         dec_inj = map_struct["dec"][prob_data_indexes][ipix]
 

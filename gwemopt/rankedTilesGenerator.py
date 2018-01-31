@@ -639,7 +639,7 @@ class Scheduler(RankedTileGenerator):
 										np.cos(sunMoonAngle))
 							illumination = 0.5*(1.0 + np.cos(phaseAngle))
 							
-							if verbose: print 'Lunar illumination = ' + str(illumination)
+							if verbose: print('Lunar illumination = ' + str(illumination))
 							lunar_ilumination.append(illumination)
 							
 							moon_ra.append(Moon.ra.value)
@@ -662,17 +662,17 @@ class Scheduler(RankedTileGenerator):
 
 			eventTime += integrationTime
 			elapsedTime += integrationTime
-			print 'elapsedTime --->' + str(elapsedTime)
-			print 'observedTime --->' + str(observedTime)
+			print('elapsedTime --->' + str(elapsedTime))
+			print('observedTime --->' + str(observedTime))
 
 
 	
 # 		while observedTime <= duration:
 # 		while elapsedTime <= duration: 
-# 			print 'Observed time = ' + str(observedTime/3600.)
+# 			print('Observed time = ' + str(observedTime/3600.))
 # 			dt = integrationTime * ii
 # 			elapsedTime += integrationTime
-# 			print '**** Elapsed time = ' + str(elapsedTime) + '****'
+# 			print('**** Elapsed time = ' + str(elapsedTime) + '****')
 # 			[tileIndices, tileProbs, altAz_sun] = self.tileVisibility(eventTime,
 # 																		 gps=True)
 # 			localTime = Time(eventTime, format='gps') + self.utcoffset
@@ -683,7 +683,7 @@ class Scheduler(RankedTileGenerator):
 # 				observed_count += 1
 # 				observedTime += integrationTime ### Augment observed time
 # 				if verbose: 
-# 					print str(localTime.utc.datetime) + ': Observation mode'
+# 					print(str(localTime.utc.datetime) + ': Observation mode')
 # 
 # 				for jj in np.arange(len(tileIndices)):
 # 					if tileIndices[jj] not in scheduled:
@@ -701,7 +701,7 @@ class Scheduler(RankedTileGenerator):
 # 										np.cos(sunMoonAngle))
 # 							illumination = 0.5*(1.0 + np.cos(phaseAngle))
 # 							
-# 							if verbose: print 'Lunar illumination = ' + str(illumination)
+# 							if verbose: print('Lunar illumination = ' + str(illumination))
 # 							lunar_ilumination.append(illumination)
 # 							
 # 							moon_ra.append(Moon.ra.value)
@@ -711,12 +711,12 @@ class Scheduler(RankedTileGenerator):
 # 			else:
 # 				if verbose: 
 # 					localTime = Time(eventTime, format='gps') + self.utcoffset
-# 					print str(localTime.utc.datetime) + ': Sun above the horizon'
+# 					print(str(localTime.utc.datetime) + ': Sun above the horizon')
 # 				eventTime = self.advanceToSunset(eventTime, integrationTime)
 # 				if verbose:
 # 					localTime = Time(eventTime, format='gps') + self.utcoffset
-# 					print 'Advancing time to ' + str(localTime.utc.datetime)
-# 					print '\n'
+# 					print('Advancing time to ' + str(localTime.utc.datetime))
+# 					print('\n')
 
 
 
