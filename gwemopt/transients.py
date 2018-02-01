@@ -76,6 +76,14 @@ def read_transients(params, map_struct):
         transients_struct["name"].append(name)
         transients_struct["classification"].append(classification)
 
+    transients_struct["name"] = np.array(transients_struct["name"])
+    transients_struct["classification"] = np.array(transients_struct["classification"])
+
+    idx = np.argsort(transients_struct["data"][:,7])
+    transients_struct["data"] = transients_struct["data"][idx,:]
+    transients_struct["name"] = transients_struct["name"][idx]
+    transients_struct["classification"] = transients_struct["classification"][idx]
+
     return transients_struct
 
 

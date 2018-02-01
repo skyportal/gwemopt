@@ -1,0 +1,14 @@
+
+import os, sys
+
+events = ["G268556","G274296","G277583"]
+
+for event in events:
+    system_command = "python gwemopt_run --doCoverage --doEvent --doPlots --doEfficiency --event %s -t ATLAS,PS1 -d ../data/ATLAS_%s.dat,../data/PS1_%s.dat -o ../output/ATLAS_PS1_%s"%(event,event,event,event)
+    os.system(system_command)
+
+    system_command = "python gwemopt_run --doCoverage --doEvent --doPlots --doEfficiency --event %s -t PS1 -d ../data/PS1_%s.dat -o ../output/PS1_%s"%(event,event,event)
+    os.system(system_command)
+
+    system_command = "python gwemopt_run --doCoverage --doEvent --doPlots --doEfficiency --event %s -t ATLAS -d ../data/ATLAS_%s.dat -o ../output/ATLAS_%s"%(event,event,event)
+    os.system(system_command)
