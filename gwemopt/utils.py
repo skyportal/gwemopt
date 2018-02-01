@@ -42,27 +42,42 @@ def readParamsFromFile(file):
     return params
 
 def read_skymap(params,is3D=False):
-    filename = params["skymap"]
     map_struct = {}
 
-    if is3D:
-        healpix_data = hp.read_map(filename, field=(0,1,2,3), verbose=False)
+    if params["doDatabase"]:
+        models = params["models"]
+        localizations_all = models.Localization.query.all()
+        localizations = models.Localization.query.filter_by(dateobs=params["dateobs"]).all()
+        if localizations == None:
+            print("No localization with dateobs=%s"%params["dateobs"])
+            exit(0)
+        else:
+            prob_data = localizations[0].healpix
 
-        distmu_data = healpix_data[1]
-        distsigma_data = healpix_data[2]
-        prob_data = healpix_data[0]
-        norm_data = healpix_data[3]
-
-        map_struct["distmu"] = distmu_data / params["DScale"]
-        map_struct["distsigma"] = distsigma_data / params["DScale"]
-        map_struct["prob"] = prob_data
-        map_struct["distnorm"] = norm_data
-
+            prob_data = prob_data / np.sum(prob_data)
+            map_struct["prob"] = prob_data
     else:
-        prob_data = hp.read_map(filename, field=0, verbose=False)
-        prob_data = prob_data / np.sum(prob_data)
+        filename = params["skymap"]
+    
+        if is3D:
+            healpix_data = hp.read_map(filename, field=(0,1,2,3), verbose=False)
+    
+            distmu_data = healpix_data[1]
+            distsigma_data = healpix_data[2]
+            prob_data = healpix_data[0]
+            norm_data = healpix_data[3]
+    
+            map_struct["distmu"] = distmu_data / params["DScale"]
+            map_struct["distsigma"] = distsigma_data / params["DScale"]
+            map_struct["prob"] = prob_data
+            map_struct["distnorm"] = norm_data
+    
+        else:
+            prob_data = hp.read_map(filename, field=0, verbose=False)
+            prob_data = prob_data / np.sum(prob_data)
+    
+            map_struct["prob"] = prob_data
 
-        map_struct["prob"] = prob_data
     nside = hp.pixelfunc.get_nside(prob_data)
     nside = params["nside"]
     map_struct["prob"] = hp.ud_grade(map_struct["prob"],nside,power=-2)
