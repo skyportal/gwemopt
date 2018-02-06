@@ -148,7 +148,7 @@ In section~\ref{sec:conclusions}, we offer concluding remarks and suggest direct
 
 Figure~\ref{fig:flowchart} shows the flowchart for the \emph{gwemopt} pipeline, developed to optimize the efforts of electromagnetic followup of gravitational-wave events. \emph{gwemopt} is developed in python, which has the benefit of interfaces to both LIGO's gravitational-wave candidate event database (GraceDB) and HEALPIX \citep{GoHi2005}, the format in which LIGO reports skymaps.
 
-It uses events provided by gracedb in addition to information about the telescopes for creating tiles and optimize time allocations in the fields.
+\emph{gwemopt} uses events provided by gracedb in addition to information about the telescopes for creating tiles and optimize time allocations in the fields.
 It uses information about potential lightcurves from electromagnetic counterparts to schedule the available telescope time.
 In the following, we will describe the calculations that go into creating tiling, time allocations, and observing sequences from the skymaps.
 We will account for both diurnal and observational constraints and have the possibility of imaging over many nights.
@@ -203,7 +203,7 @@ python gwemopt_run --doEvent --do3D --event G268556
 GraceDB is a service that provides information on candidate gravitational-wave events and the multi-messenger followups performed on them. An API is made available that allows for access to this information.
 \emph{gwemopt} uses this API to access information pertinent for gravitational-wave followups.
 First of all, it downloads the gravitational-wave skymap for a given event; an example is shown in Figure~\ref{fig:skymap}.
-In addition, information such as the time of the event, the time delay between the time-of-arrival at the detectors, and \rednote{EM bright} information is noted.
+In addition, information such as the time of the event, the time delay between the time-of-arrival at the detectors, and EM bright information is noted.
 \subsection{Telescope configuration}
 \begin{lstlisting}
 python gwemopt_run --doEvent --do3D --telescope LSST
@@ -236,9 +236,11 @@ There are a variety of algorithms in the literature for sky-map tiling, and the 
 \begin{figure*}
     \centering
     \includegraphics[width=3in]{tiling_greedy}
-    \includegraphics[width=3in]{tiling_hierarchical}
+    \includegraphics[width=3in]{tiling_hierarchical} \\
+    Greedy \hspace{2.6in}Hierarchical\\
     \includegraphics[width=3in]{tiling_moc}
-    \includegraphics[width=3in]{tiling_ranked}
+    \includegraphics[width=3in]{tiling_ranked} \\
+    MOC \hspace{2.6in}Ranked
     \caption{Example outputs of different tiling algorithms. On the top left is the greedy version with $N_{\rm tiles}$ = 10, where $N_{\rm tiles}$ is the number of tiles employed, on the top right is the hierarchical version with the same, on the bottom left is the MOC skymap, and on the bottom right is the ranked skymap tiling.}
     \label{fig:tiling}
 \end{figure*}
@@ -248,9 +250,8 @@ They are composed of HEALPIX arrays that encode either the 2D probability, in ri
 They are reported in particular number of pixels, usually $\textrm{N}_\textrm{side} = 512$. 
 This can introduce quantization errors, especially for small field-of-view telescopes. 
 The --nside flag allows for the over- or under-sampling of the skymaps in the analysis.
-This can introduce quantization errors of \rednote{XXX} \% for the field-of-view we consider here.
 
-There are four options related to skymap tiling currently available, MOC, ranked, hierarchical and greedy.
+There are four options related to skymap tiling currently available and defined below: MOC, ranked, hierarchical and greedy.
 In the following, we will summarize the key features of each implementation, and referring the reader to the literature for further details.
 The goal is to place each algorithm in the same mathematical formalism for straightforward comparisons.
 
@@ -280,7 +281,7 @@ Then, we rank all the tiles with their $T_{ij}$ and select from the top of the r
 
 \emph{hierarchical}. A Multinest-based \citep{FeHo2009,FeGa2009,BuGe2014} optimization which optimizes tiles for a given skymap by placing them sequentially. This method starts by selecting the tile that covers the most probability. Then, it sets the probability in that tile to be zero before going to the next iteration, when it again selects the tile that covers the most probability. It stops until a user-specified number of tiles, $N_{\rm tiles}$, are selected. The tiles selected might overlap on the corners when there are higher probability distributions around that corner. 
  
-\emph{greedy}. An emcee \citep{FoHo2013} based algorithm which optimizes tiles for a given skymap by placing them simultaneously. This method selects tiles that cover the highest probability altogether from the skymap. It ranks all possible tiles and selects from the top. Thus, the tiles selected by greedy method might overlap a lot when the probability distribution is concentrated.
+\emph{greedy}. An emcee \citep{FoHo2013} based algorithm which optimizes tiles for a given skymap by placing them simultaneously. This method selects tiles that cover the highest probability altogether from the skymap. It ranks all possible tiles and selects from the top. Thus, the tiles selected by greedy method might overlap significantly when the probability distribution is concentrated.
 
 \subsection{Time allocations}
 \begin{lstlisting}
@@ -309,11 +310,11 @@ The \emph{Powerlaw} algorithm optimizes the probability of detecting the transie
 \begin{equation}\label{eqn:powerlaw}
 p_{tot}=\Sigma_{i=1}^N \frac{M_i}{M_{tot}}\frac{L_{GW}(\alpha_i, \delta_i, R_i)}{L_{GW_tot}}\frac{F_i(t_i)}{a(\alpha_i, \delta_i)},
 \end{equation}
-where $M_i$ is the mass for galaxy $i$; $M_{tot}$ is the total mass of galaxies in the field; $L_{GW}(\alpha_i, \delta_i, R_i)$ is the likelihood of the gravitational wave source in this galaxy; $F(t)$ is the luminosity as a function of allocated time; $a(\alpha_i, \delta_i)$ is the attenuation. In the following, we will simply scale the gravitational-wave likelihood and not the mass in the field, due to concerns about galaxy catalog completeness. Eq.\ref{eqn:powerlaw} is optimized with the constraint that the total observation time is limited, shown as
+where $M_i$ is the mass for galaxy $i$; $M_{tot}$ is the total mass of galaxies in the field; $L_{GW}(\alpha_i, \delta_i, R_i)$ is the likelihood of the gravitational wave source in this galaxy; $F(t)$ is the luminosity as a function of allocated time; $a(\alpha_i, \delta_i)$ is the attenuation. In the following, we will simply scale the gravitational-wave likelihood and not the mass in the field. It is possible that this approximation could be improved using galaxy catalogs, although this introduces concerns about galaxy catalog completeness. Eq.\ref{eqn:powerlaw} is optimized with the constraint that the total observation time is limited, shown as
 \begin{equation}
 \Sigma_{i=1}^N t_i=T,
 \end{equation}
-where T is the total observation time.
+where $T$ is the total observation time.
 
 \emph{WAW} \cite{SoCo2017} use counterpart lightcurve models in the optical, infrared and radio constructed from information from the gravitational-wave signals to create a time- and sky location dependent probability for detecting electromagnetic transients. The WAW approach introduces time into the model by defining a concept detectability. Detectability is the probability of detecting a light flux greater than the flux limit at position $\alpha$ and time $t$. Thus, by having detectability introduced, the algorithm can optimize "where" and "when" to schedule the observation based on $\alpha$ and $t$ with a greedy approach. The procedures of the algorithm are shown below.
 \begin{enumerate}
@@ -323,13 +324,13 @@ where T is the total observation time.
 \begin{equation}\label{eqn:detectability}
 P(F(t) > F_{lim}|\alpha, S)\approx\Sigma_{i=1}^N\omega_i H(F_i(t)-F_{lim})
 \end{equation}
-where H is the Heaviside function so if $F_i(t)$ is greater than $F_{lim}$, it is 1; otherwise it is 0. $F_i(t)$ is the light flux for position sample $i$ at time t. $F_{lim}$ is the limit flux. $\omega_i$ is the "inverse distance weight" that gives the contribution of the sample $i$ to position $\alpha$. The further away sample $i$ is from $\alpha$, the less it contributes. $\omega_i$ is normalized so that $\Sigma_{i=1}^N\omega_i=1$. 
+where $H$ is the Heaviside function so if $F_i(t)$ is greater than $F_{lim}$, it is 1; otherwise it is 0. $F_i(t)$ is the light flux for position sample $i$ at time t. $F_{lim}$ is the limit flux. $\omega_i$ is the "inverse distance weight" that gives the contribution of the sample $i$ to position $\alpha$. The further away sample $i$ is from $\alpha$, the less it contributes. $\omega_i$ is normalized so that $\Sigma_{i=1}^N\omega_i=1$. 
 \item For each tile, we find a time interval $[t_{E,\lambda},t_{L,\lambda}]$ when the detectability is greater than a threshold $\lambda$.
 \item We start from the tiles that cover the most probability and arrange their observation times $[t_{E,\lambda},t_{L,\lambda}]$ if the time is available.
 \end{enumerate}
 This method optimizes the search by introducing detectability, defined as Eq.\ref{eqn:detectability} over the the three dimensional observation volume of direction and time, with the constraint that only one location can be observed at the same time.
 
-\emph{PEM.} \cite{ChHu2017} optimize the number of fields to observe and their time allocations by adopting priors on the intrinsic luminosity of the sources and using knowledge of distance to the counterparts provided by the low-latency gravitational-wave searches through BAYESTAR \citep{SiPr2016} or high-latency parameter estimation from LALInference \citep{VeRa2015} for compact binary coalescence. More concretely, its input is the sky localization map and information about the telescope. It selects the tiles to observe with a greedy algorithm and allocate the observation time for each tile to maximizes the probability of detecting the EM counterpart of the GW event. The outputs are the tiles to be observed and the time allocated on each tile.
+\emph{PEM.} \cite{ChHu2017} optimize the number of fields to observe and their time allocations by adopting priors on the intrinsic luminosity of the sources and using knowledge of distance to the counterparts provided by the low-latency gravitational-wave searches through BAYESTAR \citep{SiPr2016} or high-latency parameter estimation from LALInference \citep{VeRa2015} for compact binary coalescence. More concretely, its input is the sky localization map and information about the telescope. It selects the tiles to observe with a greedy algorithm and allocates the observation time for each tile to maximizes the probability of detecting the EM counterpart of the GW event. The outputs are the tiles to be observed and the time allocated on each tile.
 
 The procedures are shown below.
 \begin{enumerate}
@@ -359,8 +360,10 @@ In Eq.\ref{eqn:pem_const}, $T_0$ is the time to adjust the telescope before each
 \begin{figure*}
     \centering
     \includegraphics[width=3in]{plots/coverage_pem.pdf}
-    \includegraphics[width=3in]{plots/coverage_powerlaw.pdf}
-    \includegraphics[width=3in]{plots/coverage_waw.pdf}
+    \includegraphics[width=3in]{plots/coverage_powerlaw.pdf}\\
+    PEM\hspace{2.6in}Powerlaw\\
+    \includegraphics[width=3in]{plots/coverage_waw.pdf}\\
+    WAW
     \caption{Example outputs of different time allocation algorithms. On the top left is the tiles coverage with the PEM algorithm. On the top right is the tiles coverage with the Powerlaw algorithm. On the bottom is the tiles coverage with the WAW algorithm. In generating all of the plots, MOC algorithm is used.}
     \label{fig:timealloc}
 \end{figure*}
@@ -430,7 +433,7 @@ To estimate the efficiency for the ``detection'' of the electromagnetic counterp
 \end{enumerate}
 
 The requirements for ``detection'' of the electromagnetic counterparts to gravitational-wave transients are as follows.
-We require that the transient appear in \rednote{?} images over \rednote{?} nights.
+We require that the transient appear in 2 images over 2 nights.
 In each image, the transient must exceed the limiting magnitude in that image.
 The color of the transient is estimated from the filter given in the configuration file.
 We simulate the transients at a variety of location and distances consistent with the gravitational-wave probability skymap.
@@ -448,7 +451,8 @@ We will focus on the model by \cite{Me2017} to compare the efficiency. All the e
 \caption{Example plot of efficiency for \cite{Me2017} injections, comparing the scheduling algorithms. Greedy algorithm is used for tiling and PEM algorithm is used for time allocation. Greedy and SEAR have similar performance in long distance and both are better than weighted. This difference is also reflected in Figure~\ref{fig:eff_metric}.}
 \label{fig:eff_ex}
 \end{figure}
-In order to compare the 36 efficiency as is plotted in Figure~\ref{fig:eff_ex}, we use a numeric way to reflect the overall performance of the algorithms based on the efficiency for each distance in the range of $10^{-1} Mpc$ to $10^3 Mpc$. Thus, we come to a metric that reflects what percentage of events that can be detected in a spherical volume of radius $10^3 Mpc$. The events are evenly distributed in the volume. Suppose the event density per volume is $\rho$ and the distance is $r$. Sampling a distance at $d$ corresponds to a shell with volume $4 \pi r^2 dr$. Assuming that the density is $\rho$, then the total events on that shell is $4 \pi \rho r^2 dr$. Thus, if the efficiency is $e$, the expected number of detected events on the shell will be $4 \pi \rho r^2 e dr$. From this we can see that the efficiency at $r$ is weighted by $r^2$. If we treat the efficiency at each distance as an individual sample, a weighted average on the squared radius will then be a good metric of the overall efficiency that reflects how well the algorithm detects events uniformly distributed in a volume of $10^3 Mpc$. A consequence of this metric is that the weight of $r^2$ makes the long range efficiency more important than short range efficiency. An algorithm that performs well at further distances would be better than an algorithm does better at short distances but whose performance deteriorates quickly as the distance increases.
+In order to compare the 36 efficiency as is plotted in Figure~\ref{fig:eff_ex}, we use a single statistic to reflect the overall performance of the algorithms based on the efficiency for each distance in the range of $10^{-1} Mpc$ to $10^3 Mpc$. Thus, we come to a metric that reflects what percentage of events that can be detected in a spherical volume of radius $10^3 Mpc$. The events are evenly distributed in the volume. Suppose the event density per volume is $\rho$ and the distance is $r$. Sampling a distance at $d$ corresponds to a shell with volume $4 \pi r^2 dr$. Assuming that the density is $\rho$, then the total events on that shell is $4 \pi \rho r^2 dr$. Thus, if the efficiency is $e$, the expected number of detected events on the shell will be $4 \pi \rho r^2 e dr$. From this we can see that the efficiency at $r$ is weighted by $r^2$. If we treat the efficiency at each distance as an individual sample, a weighted average on the squared radius will then be a good metric of the overall efficiency that reflects how well the algorithm detects events uniformly distributed in a volume of $10^3 Mpc$. A consequence of this metric is that the weight of $r^2$ makes the long range efficiency more important than short range efficiency. Under this metric, an algorithm that performs well at further distances would be better than an algorithm does better at short distances but whose performance deteriorates quickly as the distance increases. 
+
 \subsection{Performance and algorithms}
 \begin{figure}[t]
 \includegraphics[width=0.45\textwidth]{plots/efficiency.png}
@@ -456,24 +460,21 @@ In order to compare the 36 efficiency as is plotted in Figure~\ref{fig:eff_ex}, 
 \label{fig:eff_metric}
 \centering
 \end{figure}
-For each of the 36 algorithm options, we compute the efficiency metric as described above so we have 36 numerical efficiency values. The results are plotted in Figure~\ref{fig:eff_metric}. On the horizontal axis are combined options for the tiling algorithm and scheduling algorithm. There are four tiling algorithm and three scheduling algorithm so they combine to 12 columns on the horizontal axis. Abbreviations are used for the algorithms. The first capital letter stands for the tiling algorithm and the second letter stands for the scheduling algorithm. On the vertical axis are the time allocation algorithms. The color in the 36 boxes shows the efficiency as measured above. The colors are scaled to the efficiency such that higher efficiencies are more darkly colored.
-
+For each of the 36 algorithm options, we compute the efficiency metric as described above, which results in 36 numerical efficiency values. The results are plotted in Figure~\ref{fig:eff_metric}. On the horizontal axis are the combined options for the tiling algorithm and scheduling algorithm. There are four tiling algorithms and three scheduling algorithm so they combine to 12 columns on the horizontal axis. Abbreviations are used for the algorithms. The first capital letter stands for the tiling algorithm and the second letter stands for the scheduling algorithm. On the vertical axis are the time allocation algorithms. The color in the 36 boxes shows the efficiency as measured above. The colors are scaled to the efficiency such that higher efficiencies are more darkly colored.
 The highest efficiency of $0.19$ is achieved by a combination of ranked tiling, powerlaw time allocation and greedy scheduling. Compared to the lowest efficiency of $0.01$, it can detect roughly 19 times more events within a range of $10^{-1} Mpc$ and $10^3 Mpc$. That corresponds to the darkest box in the 10th column and the second row in Figure~\ref{fig:eff_metric}. 
-
-Also, from Figure~\ref{fig:eff_metric}, we can compare the efficiencies of the individual algorithms. First, among the four tiling algorithms, greedy, sear, MOC and ranked, we can see that MOC and ranked generally have higher efficiencies than greedy and hierarchical tiling algorithms. Second, among the three options for scheduling, greedy and SEAR have higher efficiency, it is more complicated. Generally, we can say that PEM is the best. It is slightly better than powerlaw, and both are better than WAW. However, if we have to use weighted scheduling, WAW might work better than the other two. Third, greedy and SEAR scheduling are more efficient than weighted scheduling.
+Also, from Figure~\ref{fig:eff_metric}, we can compare the efficiencies of the individual algorithms. First, among the four tiling algorithms, greedy, sear, MOC and ranked, we can see that MOC and ranked generally have higher efficiencies than greedy and hierarchical tiling algorithms. Second, among the three options for scheduling, greedy and SEAR have higher efficiency. Generally, we can say that PEM gives the best results. It is slightly better than powerlaw, and both are better than WAW. This is unsurprising as PEM is optimal in the presence of distance information, while WAW requires inclination information in order to be optimal. However, in case inclination and distance were available in low latency, WAW may be best. Third, greedy and SEAR scheduling are more efficient than weighted scheduling.
 \subsection{Performance and the number of tiles}
-We also study the how the number of tiles affects the performance. The number of tiles parameter is the number of tiles considered in the tiling process. It is only relevant in the hierarchical and greedy tiling algorithm. Hierarchical algorithm is used for this study, which selects tiles that covers the highest probability and mask the tiles once they are selected. It stops when a user-defined limiting number of tiles is selected. The efficiency is computed based on the simulating the detection of 1000 injections. The results are shown in Figure~\ref{fig:eff_ntiles}. 
+We also study the how the number of tiles affects the performance. The number of tiles parameter is the number of tiles considered in the tiling process. It is only relevant in the hierarchical and greedy tiling algorithm. The hierarchical algorithm is used for this study, which selects tiles that covers the highest probability and mask the tiles once they are selected. It stops when a user-defined number of tiles is selected. The efficiency is computed based on the simulation of 1000 injections.
 
-From the top plot it can be seen that considering more tiles generally results in better efficiency. However, the benefit of increasing the number of tiles decreases as more and more tiles are considered. This effect is shown in the bottom plot, where the efficiency curves are shown for different number of tiles. The three lines showing the results of 16, 28 and 40 tiles are closer to each other than the bottom one where only four tiles are selected. This means that increasing the number of tiles from 4 to 16 improves the efficiency more than from 16 to 28. This is expected since, as the number of tiles increasing, new tiles cover less and less probability and the limiting factors in the time allocation and scheduling algorithm become more important and the efficiency will not keep rising.
-
-Note that the number of tiles in our study is the direct output of the tiling algorithm. A tile still needs to go through the time allocation and scheduling algorithm to be scheduled for observation. It is independent of the CCD readout time and telescope slew. For alternative study, refer to \cite{ChHu2017}.
-\begin{figure}[b]
+From the plot on the left of Figure~\ref{fig:eff_ntiles}, it can be seen that considering more tiles generally results in better efficiency. However, the benefit of increasing the number of tiles decreases as more and more tiles are considered. This effect is shown in the left plot, where the efficiency curves are shown for different numbers of tiles. The three lines showing the results of 16, 28 and 40 tiles are closer to each other than the bottom one where only four tiles are selected. This means that increasing the number of tiles from 4 to 16 improves the efficiency more than from 16 to 28. This is expected since, as the number of tiles increases, new tiles cover less and less probability and the limiting factors in the time allocation and scheduling algorithm become more important and the efficiency will not keep rising.
+Note that the number of tiles in our study is the direct output of the tiling algorithm. A tile still needs to go through the time allocation and scheduling algorithm to be scheduled for observation. It is independent of the CCD readout time and telescope slew. For an alternative study that accounts for these effects, please see Chan et al. \cite{ChHu2017}.
+\begin{figure*}[t]
     \centering
-    \includegraphics[width=0.45\textwidth]{plots/eff_ntiles.png}\\
+    \includegraphics[width=0.45\textwidth]{plots/eff_ntiles.png}
     \includegraphics[width=0.45\textwidth]{plots/eff_ntiles_curves.png}
-    \caption{On the top is the plot of efficiency weighted average as a function of the number of tiles considered. On the bottom is the efficiency curves unpacked from data points corresponding to 4, 16, 28, 40 tiles of the top figure. In the simulation, hierarchical tiling algorithm, power law time allocation algorithm and greedy scheduling algorithm are used to detect 1000 random injections for number of tiles ranging from 1 to 40. The standard deviation is calculated and the 99\% confidence interval is plotted as the grey shaded region in the top figure.}
+    \caption{On the left is the plot of efficiency weighted average as a function of the number of tiles considered. On the right is the efficiency curves unpacked from data points corresponding to 4, 16, 28, 40 tiles of the top figure. In the simulation, hierarchical tiling algorithm, power law time allocation algorithm and greedy scheduling algorithm are used to detect 1000 random injections for number of tiles ranging from 1 to 40. The standard deviation is calculated and the 99\% confidence interval is plotted as the grey shaded region in the top figure.}
     \label{fig:eff_ntiles}
-\end{figure}
+\end{figure*}
 
 \section{Conclusion}
 \label{sec:conclusions}
