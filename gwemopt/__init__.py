@@ -24,3 +24,7 @@ from gwemopt import version
 
 __author__ = 'Michael Coughlin <michael.coughlin@ligo.org>'
 __version__ = version.__version__
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
