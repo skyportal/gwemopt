@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-# Copyright (C) Michael Coughlin (2017)
+# Copyright (C) Duncan Macleod (2016)
 #
-# This file is part of gwemopt
+# This file is part of gwemopt.
 #
 # gwemopt is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,55 +15,105 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with gwemopt.  If not, see <http://www.gnu.org/licenses/>
+# along with gwemopt.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Setup script for gwemopt
+"""Setup the gwemopt package
 """
 
-import glob
-import os.path
-from setuptools import (find_packages, setup)
+# ignore all invalid names (pylint isn't good at looking at executables)
+# pylint: disable=invalid-name
 
-from utils import version
+from __future__ import print_function
 
-PACKAGENAME = 'gwemopt'
+import sys
+from distutils.version import LooseVersion
 
-VERSION_PY = os.path.join(PACKAGENAME, 'version.py')
+from setuptools import (setup, find_packages,
+                        __version__ as setuptools_version)
 
-# set version information
-vcinfo = version.GitStatus()
-vcinfo(VERSION_PY)
+import versioneer
+from setup_utils import (CMDCLASS, get_setup_requires, get_scripts)
 
-DESCRIPTION = 'GW-EM Followup Optimization scripts'
-LONG_DESCRIPTION = ''
-AUTHOR = 'Michael Coughlin'
-AUTHOR_EMAIL = 'michael.coughlin@ligo.org'
-LICENSE = 'GPLv3'
+__version__ = versioneer.get_version()
 
-# VERSION should be PEP386 compatible (http://www.python.org/dev/peps/pep-0386)
-VERSION = vcinfo.version
+# -- dependencies -------------------------------------------------------------
 
-# Indicates if this version is a release version
-RELEASE = vcinfo.version != vcinfo.id and 'dev' not in VERSION
+# build dependencies
+setup_requires = get_setup_requires()
 
-# Use the find_packages tool to locate all packages and modules
-packagenames = find_packages(exclude=['utils'])
+# package dependencies
+install_requires = [
+    'numpy>=1.7.1',
+    'scipy>=0.12.1',
+    'matplotlib>=1.2.0',
+    'astropy>=1.1.1',
+    'six>=1.5',
+    'lscsoft-glue>=1.55.2',
+    'python-dateutil',
+]
 
-# find all scripts
-scripts = glob.glob('bin/*') + glob.glob('input/*') 
+# exclude matplotlib 2.1.x (see matplotlib/matplotlib#10003) if possible
+if LooseVersion(setuptools_version) >= '25':  # exclude matplotlib 2.1.x
+    install_requires[2] += ',!=2.1.*'
 
-setup(name=PACKAGENAME,
-      version=VERSION,
-      description=DESCRIPTION,
-      scripts=scripts,
-      packages=packagenames,
-      ext_modules=[],
-      requires=['numpy', 'healpy'],
-      provides=[PACKAGENAME],
-      author=AUTHOR,
-      author_email=AUTHOR_EMAIL,
-      license=LICENSE,
-      long_description=LONG_DESCRIPTION,
-      zip_safe=False,
-      use_2to3=True
-      )
+# define 'all' as the intersection of all extras
+extras_require['all'] = set(p for extra in extras_require.values()
+                            for p in extra)
+
+# test dependencies
+tests_require = [
+    'pytest>=3.1',
+    'freezegun',
+    'sqlparse',
+    'bs4',
+]
+if sys.version < '3':
+    tests_require.append('mock')
+
+# -- run setup ----------------------------------------------------------------
+
+setup(
+    # metadata
+    name='gwemopt',
+    provides=['gwemopt'],
+    version=__version__,
+    description="A python package for GW-EM Followup Optimization",
+    long_description=("gwemopt is a python package for GW-EM Followup Optimization "),
+    author='Michael Coughlin',
+    author_email='michael.coughlin@ligo.org',
+    license='GPLv3',
+    url='https://github.com/mcoughlin/gwemopt/',
+
+    # package content
+    packages=find_packages(),
+    scripts=get_scripts(),
+    include_package_data=True,
+
+    # dependencies
+    cmdclass=CMDCLASS,
+    setup_requires=setup_requires,
+    install_requires=install_requires,
+    tests_require=tests_require,
+    extras_require=extras_require,
+
+    # classifiers
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Intended Audience :: Science/Research',
+        'Intended Audience :: End Users/Desktop',
+        'Intended Audience :: Developers',
+        'Natural Language :: English',
+        'Topic :: Scientific/Engineering',
+        'Topic :: Scientific/Engineering :: Astronomy',
+        'Topic :: Scientific/Engineering :: Physics',
+        'Operating System :: POSIX',
+        'Operating System :: Unix',
+        'Operating System :: MacOS',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+    ],
+)
