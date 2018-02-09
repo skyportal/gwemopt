@@ -47,18 +47,9 @@ install_requires = [
     'scipy>=0.12.1',
     'matplotlib>=1.2.0',
     'astropy>=1.1.1',
-    'six>=1.5',
     'lscsoft-glue>=1.55.2',
     'python-dateutil',
 ]
-
-# exclude matplotlib 2.1.x (see matplotlib/matplotlib#10003) if possible
-if LooseVersion(setuptools_version) >= '25':  # exclude matplotlib 2.1.x
-    install_requires[2] += ',!=2.1.*'
-
-# define 'all' as the intersection of all extras
-extras_require['all'] = set(p for extra in extras_require.values()
-                            for p in extra)
 
 # test dependencies
 tests_require = [
@@ -94,7 +85,6 @@ setup(
     setup_requires=setup_requires,
     install_requires=install_requires,
     tests_require=tests_require,
-    extras_require=extras_require,
 
     # classifiers
     classifiers=[
