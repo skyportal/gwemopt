@@ -55,7 +55,7 @@ install_requires = [
     'scipy>=0.12.1',
     'matplotlib>=1.2.0',
     'astropy>=1.1.1',
-    'lscsoft-glue>=1.55.2',
+    'lscsoft-glue',
     'python-dateutil',
     'mocpy'
 ]
