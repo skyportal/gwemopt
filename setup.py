@@ -57,6 +57,7 @@ install_requires = [
     'astropy>=1.1.1',
     'lscsoft-glue>=1.55.2',
     'python-dateutil',
+    'mocpy'
 ]
 
 # test dependencies
