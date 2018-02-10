@@ -137,7 +137,7 @@ def waw(params, detmaps, t_detmaps, strategy_struct):
         moviedir = os.path.join(params["outputDir"],'movie')
         if not os.path.isdir(moviedir): os.mkdir(moviedir)
         
-        for ii in xrange(len(t_detmaps)):
+        for ii in range(len(t_detmaps)):
             t_detmap = t_detmaps[ii]
             detmap = detmaps[ii]
 
@@ -218,7 +218,7 @@ def coverage(params, map_struct, coverage_struct):
     hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
     add_edges()
     ax = plt.gca()
-    for ii in xrange(len(coverage_struct["ipix"])):
+    for ii in range(len(coverage_struct["ipix"])):
         data = coverage_struct["data"][ii,:]
         filt = coverage_struct["filters"][ii]
         ipix = coverage_struct["ipix"][ii]
@@ -241,7 +241,7 @@ def coverage(params, map_struct, coverage_struct):
     hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
     add_edges()
     ax = plt.gca()
-    for ii in xrange(len(coverage_struct["ipix"])):
+    for ii in range(len(coverage_struct["ipix"])):
         data = coverage_struct["data"][ii,:]
         filt = coverage_struct["filters"][ii]
         ipix = coverage_struct["ipix"][ii]
@@ -276,9 +276,9 @@ def coverage(params, map_struct, coverage_struct):
         moviedir = os.path.join(params["outputDir"],'movie')
         if not os.path.isdir(moviedir): os.mkdir(moviedir)
     
-        #for jj in xrange(len(coverage_struct["ipix"])):
+        #for jj in range(len(coverage_struct["ipix"])):
         #    mjd = coverage_struct["data"][jj,3]
-        for jj in xrange(len(mjds)):
+        for jj in range(len(mjds)):
             mjd = mjds[jj]
             plotName = os.path.join(moviedir,'coverage-%04d.png'%jj)
             title = "Coverage Map: %.2f"%mjd       
@@ -289,7 +289,7 @@ def coverage(params, map_struct, coverage_struct):
             ax = plt.gca()
     
             idx = np.where(coverage_struct["data"][:,2]<=mjd)[0]
-            #for ii in xrange(jj):
+            #for ii in range(jj):
             for ii in idx: 
                 data = coverage_struct["data"][ii,:]
                 filt = coverage_struct["filters"][ii]

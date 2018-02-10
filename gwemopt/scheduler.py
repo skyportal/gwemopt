@@ -78,7 +78,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
         tilenexps[jj] = tile_struct[key]["nexposures"]
         tileavailable_tiles[jj] = []
  
-    for ii in xrange(len(exposurelist)):
+    for ii in range(len(exposurelist)):
         exposureids_tiles[ii] = {}
         exposureids = []
         probs = []
@@ -99,7 +99,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
     exposureids = []
     probs = []
     for ii, key in enumerate(keys):
-        for jj in xrange(tile_struct[key]["nexposures"]):
+        for jj in range(tile_struct[key]["nexposures"]):
             exposureids.append(key)
             probs.append(tile_struct[key]["prob"])
 
@@ -176,7 +176,7 @@ def scheduler(params, config_struct, tile_struct):
 
             mjd_exposure_start = exposurelist[0][0]
             nkeys = len(keys)
-            for jj in xrange(nkeys):
+            for jj in range(nkeys):
                 if (keys[jj] == key) and not (nkeys == jj+1):
                     mjd_exposure_end = exposurelist[jj][1]
                 elif (keys[jj] == key) and (nkeys == jj+1):
@@ -226,7 +226,7 @@ def summary(params, map_struct, coverage_struct):
         cum_prob = 0.0
         cum_area = 0.0
 
-        for ii in xrange(len(coverage_struct["ipix"])):
+        for ii in range(len(coverage_struct["ipix"])):
             data = coverage_struct["data"][ii,:]
             filt = coverage_struct["filters"][ii]
             ipix = coverage_struct["ipix"][ii]

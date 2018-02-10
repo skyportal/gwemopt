@@ -31,7 +31,7 @@ def compute_efficiency(params, map_struct, eventinfo, lightcurve_struct, coverag
     ras = []
     decs = []
 
-    for ii in xrange(Ninj):
+    for ii in range(Ninj):
         # this returns the index of the value in cumsum of probablity closest to a random value
         ipix = np.argmin(np.abs(prob_data_cumsum-rand_values[ii])) 
         # the point corresponding to that
@@ -50,7 +50,7 @@ def compute_efficiency(params, map_struct, eventinfo, lightcurve_struct, coverag
         #idxs = np.intersect1d(idxs_ra,idxs_dec)
 
         idxs = []
-        for jj in xrange(len(coverage_struct["ipix"])):
+        for jj in range(len(coverage_struct["ipix"])):
             expPixels = coverage_struct["ipix"][jj]
             if pinpoint in expPixels:
                 idxs.append(jj)

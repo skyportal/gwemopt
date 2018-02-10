@@ -64,7 +64,7 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
 
     nside = params["nside"]
     tile_struct = {}
-    for ii in xrange(Ntiles):
+    for ii in range(Ntiles):
 
         parameters = ["ra","dec"]
         n_params = len(parameters)
@@ -209,10 +209,10 @@ class PlaceTile:
         peak_ras, peak_decs = self.localizeTC(samples=samples)
 
         tile_struct = {}
-        #for ii in xrange(self.numtiles):
+        #for ii in range(self.numtiles):
         #    ra_pointing = samples[0,ii]
         #    dec_pointing = samples[0,ii+self.numtiles]
-        for ii in xrange(len(peak_ras)):
+        for ii in range(len(peak_ras)):
             ra_pointing = peak_ras[ii]
             dec_pointing = peak_decs[ii]
 

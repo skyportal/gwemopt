@@ -33,7 +33,7 @@ def readParamsFromFile(file):
             for line in f:
                 line_without_return = line.split("\n")
                 line_split = line_without_return[0].split(" ")
-                line_split = filter(None, line_split)
+                line_split = list(filter(None, line_split))
                 if line_split:
                     try:
                         params[line_split[0]] = float(line_split[1])
@@ -93,7 +93,7 @@ def read_skymap(params,is3D=False):
 
         r = np.linspace(0, 2000)
         map_struct["distmed"] = np.zeros(distmu_down.shape)
-        for ipix in xrange(len(map_struct["distmed"])):
+        for ipix in range(len(map_struct["distmed"])):
             dp_dr = r**2 * distnorm_down[ipix] * norm(distmu_down[ipix],distsigma_down[ipix]).pdf(r)
             dp_dr_norm = np.cumsum(dp_dr / np.sum(dp_dr))
             idx = np.argmin(np.abs(dp_dr_norm-0.5))
@@ -140,7 +140,7 @@ def samples_from_skymap(map_struct, is3D = False, Nsamples = 100):
         r = np.linspace(0, 2000)
         rand_values_dist = np.random.rand(Nsamples,)
 
-    for ii in xrange(Nsamples):
+    for ii in range(Nsamples):
         ipix = np.argmin(np.abs(prob_data_cumsum-rand_values[ii]))
         ra_inj = map_struct["ra"][prob_data_indexes][ipix]
         dec_inj = map_struct["dec"][prob_data_indexes][ipix]
@@ -380,12 +380,12 @@ def get_exposures(params, config_struct, segmentlist):
     import glue.segments
     exposurelist = glue.segments.segmentlist()
 
-    for ii in xrange(len(segmentlist)):
+    for ii in range(len(segmentlist)):
         start_segment, end_segment = segmentlist[ii][0], segmentlist[ii][1]
         exposures = np.arange(start_segment, end_segment, config_struct["exposuretime"]/86400.0)
         #exposurelist = np.append(exposurelist,exposures)
 
-        for jj in xrange(len(exposures)):
+        for jj in range(len(exposures)):
             exposurelist.append(glue.segments.segment(exposures[jj],exposures[jj]+config_struct["exposuretime"]/86400.0))
 
     return exposurelist

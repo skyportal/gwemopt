@@ -79,7 +79,7 @@ def get_skybrightness(config_struct,segmentlist,observer,fxdbdy,radec):
 
     # Where is the moon?
     moon = ephem.Moon()
-    for ii in xrange(len(tt)-1):
+    for ii in range(len(tt)-1):
         observer.date = ephem.Date(Time(tt[ii], format='mjd', scale='utc').iso)
         moon.compute(observer)
         fxdbdy.compute(observer)

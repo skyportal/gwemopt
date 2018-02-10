@@ -19,7 +19,7 @@ def compute_apparent_magnitude_samples(params, lightcurve_struct, samples_struct
     lightcurve_mag = lightcurve_struct[filt]
     lightcurve_mag_interp = np.interp(t,lightcurve_t,lightcurve_mag)
 
-    for ii in xrange(len(samples_struct['dist'])):
+    for ii in range(len(samples_struct['dist'])):
         F[ii,:] = lightcurve_mag_interp + 5*(np.log10(samples_struct['dist'][ii]*1e6) - 1)
 
     return F
@@ -167,12 +167,12 @@ def xcorr_mags(mags1,mags2):
                 chisquares = scipy.stats.chisquare(mag1, f_exp=mag1)[0]
             elif nslides > 0:
                 chisquares = []
-                for kk in xrange(np.abs(nslides)):
+                for kk in range(np.abs(nslides)):
                     chisquare = scipy.stats.chisquare(mag1, f_exp=mag2[kk:len(mag1)])[0] 
                     chisquares.append(chisquare)
             elif nslides < 0:
                 chisquares = []
-                for kk in xrange(np.abs(nslides)):
+                for kk in range(np.abs(nslides)):
                     chisquare = scipy.stats.chisquare(mag2, f_exp=mag1[kk:len(mag2)])[0] 
                     chisquares.append(chisquare)
 

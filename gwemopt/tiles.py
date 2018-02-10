@@ -224,7 +224,7 @@ def compute_tiles_map(tile_struct, skymap, func=None):
     keys = tile_struct.keys()
     ntiles = len(keys)
     vals = np.nan*np.ones((ntiles,))
-    for ii,key in enumerate(tile_struct.iterkeys()):
+    for ii,key in enumerate(tile_struct.keys()):
         vals[ii] = f(skymap[tile_struct[key]["ipix"]])
 
     return vals
@@ -251,7 +251,7 @@ def tesselation_spiral(config_struct):
 
     ra, dec = hp.pixelfunc.vec2ang(points, lonlat=True)
     fid = open(config_struct["tesselationFile"],'w')
-    for ii in xrange(len(ra)):
+    for ii in range(len(ra)):
         fid.write('%d %.5f %.5f\n'%(ii,ra[ii],dec[ii]))
     fid.close()   
 
@@ -282,7 +282,7 @@ def tesselation_packing(config_struct):
     ra = np.array(np.rad2deg(thetas))
 
     fid = open(config_struct["tesselationFile"],'w')
-    for ii in xrange(len(ra)):
+    for ii in range(len(ra)):
         fid.write('%d %.5f %.5f\n'%(ii,ra[ii],dec[ii]))
     fid.close()
 
