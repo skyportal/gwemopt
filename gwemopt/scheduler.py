@@ -7,8 +7,6 @@ import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u
 
-import ephem
-
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
 

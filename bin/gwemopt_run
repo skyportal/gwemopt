@@ -33,6 +33,7 @@ np.random.seed(0)
 
 import healpy as hp
 import ephem
+#import astropy, astroplan
 
 import gwemopt.utils, gwemopt.gracedb
 import gwemopt.rankedTilesGenerator, gwemopt.waw
@@ -162,6 +163,10 @@ def params_struct(opts):
                 elif params["config"][telescope]["FOV_type"] == "square":
                     gwemopt.tiles.tesselation_packing(params["config"][telescope])
             params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2))
+
+        #location = astropy.coordinates.EarthLocation(params["config"][telescope]["longitude"],params["config"][telescope]["latitude"],params["config"][telescope]["elevation"])
+        #observer = astroplan.Observer(location=location)
+        #params["config"][telescope]["observer"] = observer
 
         observer = ephem.Observer()
         observer.lat = str(params["config"][telescope]["latitude"])
