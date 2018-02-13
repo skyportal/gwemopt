@@ -49,6 +49,7 @@ from copy import copy as _shallowcopy
 import six
 from six.moves import range
 
+import numpy as np
 
 __author__ = "Kipp Cannon <kipp.cannon@ligo.org>"
 
@@ -207,9 +208,11 @@ class infinity(object):
 		return float("-inf")
 
 
-PosInfinity = object.__new__(infinity)
-NegInfinity = object.__new__(infinity)
+#PosInfinity = object.__new__(infinity)
+#NegInfinity = object.__new__(infinity)
 
+PosInfinity = np.inf
+NegInfinity = -np.inf
 
 #
 # =============================================================================
