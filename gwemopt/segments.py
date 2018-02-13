@@ -10,11 +10,7 @@ import astropy.units as u
 
 import ephem
 
-try:
-    import glue.segments
-except:
-    print("glue import failed... segment manipulation will be limited.")
-
+import gwemopt.glue as segments
 import gwemopt.utils
 
 def get_telescope_segments(params):
@@ -33,7 +29,7 @@ def get_telescope_segments(params):
 
 def get_skybrightness(config_struct,segmentlist,observer,fxdbdy,radec):
 
-    moonsegmentlist = glue.segments.segmentlist()
+    moonsegmentlist = segments.segmentlist()
     if config_struct["filt"] == "c":
         passband = "g"
     else:
@@ -135,13 +131,13 @@ def get_skybrightness(config_struct,segmentlist,observer,fxdbdy,radec):
             total_mag_error = np.sqrt(delta_mag_error**2 + flux_mag_error**2)
             #print(tt[ii], angle, alt_target, alt_moon, total_mag, total_mag_error)
         if total_mag > 0.0:
-            segment = glue.segments.segment(tt[ii],tt[ii+1])
-            moonsegmentlist = moonsegmentlist + glue.segments.segmentlist([segment])
+            segment = segments.segment(tt[ii],tt[ii+1])
+            moonsegmentlist = moonsegmentlist + segments.segmentlist([segment])
             moonsegmentlist.coalesce()
         #else:
         #    print(tt[ii], angle, alt_target, alt_moon, total_mag, total_mag_error)
 
-    moonsegmentlistdic = glue.segments.segmentlistdict()
+    moonsegmentlistdic = segments.segmentlistdict()
     moonsegmentlistdic["observations"] = segmentlist
     moonsegmentlistdic["moon"] = moonsegmentlist
     moonsegmentlist = moonsegmentlistdic.intersection(["observations","moon"])
@@ -156,12 +152,12 @@ def get_segments(params, config_struct):
     gpstime = params["gpstime"]
     event_mjd = Time(gpstime, format='gps', scale='utc').mjd
 
-    segmentlist = glue.segments.segmentlist()
+    segmentlist = segments.segmentlist()
     n_windows = len(params["Tobs"]) // 2
     start_segments = event_mjd + params["Tobs"][::2]
     end_segments = event_mjd + params["Tobs"][1::2]
     for start_segment, end_segment in zip(start_segments,end_segments):
-        segmentlist.append(glue.segments.segment(start_segment,end_segment))
+        segmentlist.append(segments.segment(start_segment,end_segment))
 
     observer = ephem.Observer()
     observer.lat = str(config_struct["latitude"])
@@ -174,7 +170,7 @@ def get_segments(params, config_struct):
     observer.date = ephem.Date(Time(segmentlist[0][0], format='mjd', scale='utc').iso)
 
     sun = ephem.Sun()
-    nightsegmentlist = glue.segments.segmentlist()
+    nightsegmentlist = segments.segmentlist()
     while date_start < date_end:
         date_rise = observer.next_rising(sun, start = date_start)
         date_set = observer.next_setting(sun, start = date_start)
@@ -184,14 +180,14 @@ def get_segments(params, config_struct):
         astropy_rise = Time(date_rise.datetime(), scale='utc').mjd
         astropy_set  = Time(date_set.datetime(), scale='utc').mjd
 
-        segment = glue.segments.segment(astropy_set,astropy_rise)
-        nightsegmentlist = nightsegmentlist + glue.segments.segmentlist([segment])
+        segment = segments.segment(astropy_set,astropy_rise)
+        nightsegmentlist = nightsegmentlist + segments.segmentlist([segment])
         nightsegmentlist.coalesce()
 
         date_start = date_rise
         observer.date = date_rise
 
-    segmentlistdic = glue.segments.segmentlistdict()
+    segmentlistdic = segments.segmentlistdict()
     segmentlistdic["observations"] = segmentlist
     segmentlistdic["night"] = nightsegmentlist
     segmentlist = segmentlistdic.intersection(["observations","night"])
@@ -216,7 +212,7 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
 
     date_start = ephem.Date(Time(segmentlist[0][0], format='mjd', scale='utc').iso)
     date_end = ephem.Date(Time(segmentlist[-1][1], format='mjd', scale='utc').iso)
-    tilesegmentlist = glue.segments.segmentlist()
+    tilesegmentlist = segments.segmentlist()
     while date_start < date_end:
         try:
             date_rise = observer.next_rising(fxdbdy, start=observer.date)
@@ -243,8 +239,8 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
         #altaz_rise = radec.transform_to(frame_rise)
         #altaz_set = radec.transform_to(frame_set)        
 
-        segment = glue.segments.segment(astropy_rise_mjd,astropy_set_mjd)
-        tilesegmentlist = tilesegmentlist + glue.segments.segmentlist([segment])
+        segment = segments.segment(astropy_rise_mjd,astropy_set_mjd)
+        tilesegmentlist = tilesegmentlist + segments.segmentlist([segment])
         tilesegmentlist.coalesce()
 
         date_start = date_set
@@ -253,7 +249,7 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
     moonsegmentlist = get_skybrightness(\
         config_struct,segmentlist,observer,fxdbdy,radec)
 
-    tilesegmentlistdic = glue.segments.segmentlistdict()
+    tilesegmentlistdic = segments.segmentlistdict()
     tilesegmentlistdic["observations"] = segmentlist
     tilesegmentlistdic["tile"] = tilesegmentlist
     tilesegmentlistdic["moon"] = moonsegmentlist

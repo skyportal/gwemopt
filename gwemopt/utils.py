@@ -20,6 +20,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches
 import matplotlib.path
 
+import gwemopt.glue as segments
+
 def readParamsFromFile(file):
     """@read gwemopt params file
 
@@ -377,8 +379,7 @@ def observability(params, map_struct):
 
 def get_exposures(params, config_struct, segmentlist):
 
-    import glue.segments
-    exposurelist = glue.segments.segmentlist()
+    exposurelist = segments.segmentlist()
 
     for ii in range(len(segmentlist)):
         start_segment, end_segment = segmentlist[ii][0], segmentlist[ii][1]
@@ -386,7 +387,7 @@ def get_exposures(params, config_struct, segmentlist):
         #exposurelist = np.append(exposurelist,exposures)
 
         for jj in range(len(exposures)):
-            exposurelist.append(glue.segments.segment(exposures[jj],exposures[jj]+config_struct["exposuretime"]/86400.0))
+            exposurelist.append(segments.segment(exposures[jj],exposures[jj]+config_struct["exposuretime"]/86400.0))
 
     return exposurelist
 
