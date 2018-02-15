@@ -88,6 +88,9 @@ def parse_commandline():
     parser.add_option("--tilesType", help="tiling type",default="moc")
 
     parser.add_option("--doCatalog",  action="store_true", default=False)
+    parser.add_option("--catalogDir", help="catalog directory",default="../catalogs")
+    parser.add_option("--galaxy_catalog", help="Source catalog",default="GLADE")
+ 
     parser.add_option("--doObservability",  action="store_true", default=False)
     parser.add_option("--doSkybrightness",  action="store_true", default=False)
 
@@ -179,6 +182,7 @@ def params_struct(opts):
     params["gpstime"] = opts.gpstime
     params["outputDir"] = opts.outputDir
     params["tilingDir"] = opts.tilingDir
+    params["catalogDir"] = opts.catalogDir
     params["event"] = opts.event
     params["coverageFiles"] = opts.coverageFiles.split(",")
     params["telescopes"] = opts.telescopes.split(",")
@@ -210,6 +214,8 @@ def params_struct(opts):
     params["doTransients"] = opts.doTransients
     params["transientsFile"] = opts.transientsFile
     params["dt"] = opts.dt
+
+    params["galaxy_catalog"] = opts.galaxy_catalog
 
     return params
 
@@ -247,6 +253,10 @@ if opts.do3D:
     map_struct = gwemopt.utils.read_skymap(params, is3D=True)
 else:
     map_struct = gwemopt.utils.read_skymap(params, is3D=False)
+
+if opts.doCatalog:
+    print("Generating catalog...")
+    map_struct = gwemopt.catalog.get_catalog(params, map_struct)
 
 if opts.doPlots:
     print("Plotting skymap...")
@@ -288,10 +298,6 @@ if opts.doTiles:
     if opts.doPlots:
         print("Plotting tiles struct...")
         gwemopt.plotting.tiles(params, map_struct, tile_structs)
-
-if opts.doCatalog:
-    print("Generating catalog...")
-    catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
 
 if opts.doSchedule:
     if opts.doTiles:
