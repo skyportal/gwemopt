@@ -1,4 +1,4 @@
-\documentclass[twocolumn]{aastex61}
+\documentclass[twocolumn]{aastex62}
 %\documentclass[preprint]{aastex}
 %\documentclass[aps,prd,preprint,showpacs,superscriptaddress,amsmath]{revtex4}
 %\documentclass[prd,showpacs,superscriptaddress,twocolumn,
@@ -121,21 +121,21 @@ For this reason, for future surveys searching for electromagnetic counterparts, 
 \section{Introduction}
 \label{sec:Intro}
 
-Gravitational-wave astronomy has arrived with the detection of GW170817 \citep{AbEA2017b} by Advanced LIGO \citep{aLIGO} and Advanced Virgo \citep{adVirgo} coincident with the detection of both a short gamma-ray burst (SGRB) \citep{AbEA2017c,AbEA2017d,AbEA2017e} and kilonova detected in coincidence \citep{AbEA2017f,AbEA2017g}. 
+The era of multi-messenger gravitational-wave astronomy has arrived with the detection of GW170817 \citep{AbEA2017b} by Advanced LIGO \citep{aLIGO} and Advanced Virgo \citep{adVirgo} coincident with the detection of both a short gamma-ray burst (SGRB) \citep{AbEA2017c,AbEA2017d,AbEA2017e} and kilonova detected in coincidence \citep{AbEA2017f,AbEA2017g}. 
 This work is the culmination of significant effort expended in the search for the electromagnetic counterpart of the gravitational waves found by compact binary black hole systems \citep{AbEA2016a,AbEA2016g,AbEA2017}.
 
 There has been significant optimism for the potential electromagnetic counterparts for emission from binary neutron star and black hole - neutron star systems across timescales and wavelengths \citep{Nakar2007,MeBe2012}. 
 A  kilonova, arising from sub-relativistic ejecta, in particular has bolometric luminosities of $\approx 10^{40}-10^{42}$\,ergs/s \citep{MeBa2015,BaKa2013} (GW170817 peaked at $\approx 10^{42}$\,ergs/s \citep{SmCh2017})
 and color and durations dependent on the physical conditions of the merger \citep{MeMa2010,KaBa2013,BaKa2013,TaHo2013,KaFe2015,BaKa2016,Me2017}.
 
-The scientific output from a joint gravitational-wave and electromagnetic observation is significant, as the detection of a kilonova coincident with a gravitational wave allows for the exploration of the neutron star equation of state \citep{BaBa2013} and r-process nucleosynthesis in the unbound ejecta from a merger involving a neutron star \citep{MeBa2015,JuBa2015,RoLi2017,WuFe2016}.
+The scientific output from a joint gravitational-wave and electromagnetic observation is significant, as the detection of a kilonova coincident with a gravitational wave allows for the exploration of the neutron star equation of state \citep{BaBa2013} and r-process nucleosynthesis in the unbound ejecta from a merger involving a neutron star \citep{MeBa2015,JuBa2015,RoLi2017,WuFe2016}. It also allows for a distance-ladder independent measurement of the Hubble Constant \cite{AbEA2017h}.
 In addition, the joint observation with a short gamma-ray burst confirms these phenomena are driven by compact binary mergers, but also allow for the study of their beaming, energetics, and galactic environment \citep{MeBe2012}.
 
 To facilitate the detection of gravitational-wave counterparts, probability skymaps as a function of sky direction and distance are released for gravitational wave triggers produced by the detectors \citep{SiPr2014,BeMa2015}. 
 Due to the significant sky coverage required to observe the gravitational-wave sky localization regions, usually spanning $\approx 100\,\textrm{deg}^2$, techniques to optimize the followup efforts are of significant utility \citep{Fair2009,Fair2011,Grover:2013,WeCh2010,SiAy2014,SiPr2014,BeMa2015,EsVi2015,CoLi2015,KlVe2016}.
 Given the large sky localization regions involved, wide-field survey telescopes have the best opportunities to make a detection. 
 The Panoramic Survey Telescope and Rapid Response System (Pan-STARRS) \citep{MoKa2012}, Asteroid Terrestrial-impact Last Alert System (ATLAS) \citep{Ton2011}, the intermediate Palomar Transient Factory (PTF) \citep{RaSh2009} and (what will become) the Zwicky Transient Facility (ZTF), BlackGEM \citep{BlGr2015} and the Large Synoptic Survey Telescope (LSST) \citep{Ivezic2014} are all examples of such systems.
-For example, Pan-STARRS has a 7$^\circ$ field of view (FOV), achieving a 5 $\sigma$ limit of 21.5 (AB mag) in the i band in a 45 second exposure. ATLAS has a 29.2$^\circ$ field of view, achieving a 5 $\sigma$ limit of 18.7 in the cyan band in a 30 second exposure. For comparison, LSST will have a $9.6\textrm{deg}^2$ FOV and will require a 21\,s r-band exposure length to reach 22 mag.
+For example, Pan-STARRS has a 7$\textrm{deg}^2$ field of view (FOV), achieving a 5 $\sigma$ limit of 21.5 (AB mag) in the i band in a 45 second exposure. ATLAS has a 29.2$\textrm{deg}^2$ field of view, achieving a 5 $\sigma$ limit of 18.7 in the cyan band in a 30 second exposure. For comparison, LSST will have a $9.6\textrm{deg}^2$ FOV and will require a 21\,s r-band exposure length to reach 22 mag.
 
 Due to the significant difference in telescope configurations, including FOV, filter, typical exposure times, and limiting magnitudes, in addition to placement on the earth and therefore different seeing and sky conditions, optimizing gravitational wave followups for generic telescopes is difficult. Therefore, in the following, we will take the telescopes mentioned above as examples. 
 
@@ -148,6 +148,7 @@ In section~\ref{sec:conclusions}, we offer concluding remarks and suggest direct
 \label{sec:algorithm}
 
 Figure~\ref{fig:flowchart} shows the flowchart for the \emph{gwemopt} pipeline, developed to optimize the efforts of electromagnetic followup of gravitational-wave events. \emph{gwemopt} is developed in python, which has the benefit of interfaces to both LIGO's gravitational-wave candidate event database (GraceDB) and HEALPIX \citep{GoHi2005}, the format in which LIGO reports skymaps.
+In the following, we will show the command line syntaxes required to reproduce the results at the beginning of each section.
 
 \emph{gwemopt} uses events provided by gracedb in addition to information about the telescopes for creating tiles and optimize time allocations in the fields.
 It uses information about potential lightcurves from electromagnetic counterparts to schedule the available telescope time.
@@ -216,10 +217,10 @@ python gwemopt_run --doEvent --do3D --telescope LSST
 \hline
 Telescope & Latitude {[}deg{]} & Longitude {[}deg{]} & Elevation {[}m{]} & FOV {[}deg{]} & FOV shape & Filter & Exp. time {[}s{]} & Lim. Mag. \\ \hline
 ATLAS          & 20.7204            & -156.1552           & 3055.0            & 5.46                                      & Square              & c      & 30.0                  & 18.7               \\ \hline
-Pan-STARRS     & 20.7204            & -156.1552           & 3055.0            & 2.8                                       & Circle              & i      & 45.0                  & 21.5               \\ \hline
-BlackGEM       & -29.2612           & -70.7313            & 2400.0            & 2.85                                      & Square              & g      & 300.0                 & 23.0               \\ \hline
+Pan-STARRS     & 20.7204            & -156.1552           & 3055.0            & 1.4                                      & Circle              & i      & 45.0                  & 21.5               \\ \hline
+BlackGEM       & -29.2612           & -70.7313            & 2400.0            & 2.85 & Square              & g      & 300.0                 & 23.0               \\ \hline
 LSST           & -30.1716           & -70.8009            & 2207.0            & 1.75                                      & Circle              & r      & 30.0                  & 24.4               \\ \hline
-ZTF            & 33.3563            & -116.8648           & 1742.0            & 6.86                                      & Square              & r      & 30.0                  & 20.4               \\ \hline
+ZTF            & 33.3563            & -116.8648           & 1742.0            & 6.86  & Square              & r      & 30.0                  & 20.4               \\ \hline
 \end{tabular}
 \caption{Configuration of telescopes.}
 \label{table:config}
@@ -247,7 +248,7 @@ There are a variety of algorithms in the literature for sky-map tiling, and the 
 \end{figure*}
 
 Gravitational-wave skymaps in general contain metrics that report the spatial probability of a gravitational-wave source lying within a certain location.
-They are composed of HEALPIX arrays that encode either the 2D probability, in right ascension and declination, or 3D probability, which includes fits to the distance uncertainties.
+They are composed of HEALPIX arrays that encode either the 2D probability, in right ascension and declination, or 3D probability, which includes probability distributions for the distance.
 They are reported in particular number of pixels, usually $\textrm{N}_\textrm{side} = 512$. 
 This can introduce quantization errors, especially for small field-of-view telescopes. 
 The --nside flag allows for the over- or under-sampling of the skymaps in the analysis.
@@ -263,7 +264,8 @@ The division stops according to the resolution necessary for a particular usage.
 Here are two relevant implementation details about MOC.
 \begin{itemize}
 \item MOC uses an equatorial coordinate system. 
-\item MOC numbers each tile as such: the initial tile is numbered 0 on level 0. Then if we divided it, we get tile 0, 1, 2, 3 on level 1. if we start from a tile numbered M, its children will be numbered $M\times 4$, $M\times 4 + 1$, $M\times 4 + 2$,$M\times 4 + 3$ on the next level.
+\item MOC divides the sphere recursively into four diamonds. 
+\item MOC indexes each tile as follows: the initial tile is numbered 0 on level 0. Then, when divided, we get tile indices of 0, 1, 2, 3 on level 1. More generally, if we start from a tile numbered M, its children will be numbered $M\times 4$, $M\times 4 + 1$, $M\times 4 + 2$,$M\times 4 + 3$ on the next level.
 \end{itemize}
 %\begin{figure}[t]
 %\hspace*{-0.5cm}
@@ -317,7 +319,7 @@ where $M_i$ is the mass for galaxy $i$; $M_{tot}$ is the total mass of galaxies 
 \end{equation}
 where $T$ is the total observation time.
 
-\emph{WAW} \cite{SoCo2017} use counterpart lightcurve models in the optical, infrared and radio constructed from information from the gravitational-wave signals to create a time- and sky location dependent probability for detecting electromagnetic transients. The WAW approach introduces time into the model by defining a concept detectability. Detectability is the probability of detecting a light flux greater than the flux limit at position $\alpha$ and time $t$. Thus, by having detectability introduced, the algorithm can optimize "where" and "when" to schedule the observation based on $\alpha$ and $t$ with a greedy approach. The procedures of the algorithm are shown below.
+\emph{WAW} \cite{SoCo2017} use counterpart lightcurve models in the optical, infrared and radio constructed from information from the gravitational-wave signals to create a time- and sky location dependent probability for detecting electromagnetic transients. The WAW approach introduces time into the model by defining a concept of detectability. Detectability is the probability of detecting a light flux greater than the flux limit at position $\alpha$ and time $t$. Thus, by having detectability introduced, the algorithm can optimize "where" and "when" to schedule the observation based on $\alpha$ and $t$ with a greedy approach. The procedures of the algorithm are shown below.
 \begin{enumerate}
 \item The tiles are generated covering the confidence region based on the probability distribution, which comes from the gravitational wave signal.
 \item The algorithm takes in the information encoded in the gravitational waves and computes the lightcurve $F_i(t)$ for each tile. 
@@ -375,7 +377,7 @@ In Eq.\ref{eqn:pem_const}, $T_0$ is the time to adjust the telescope before each
 python gwemopt_run --doEvent --doPlots --doTiles --doSchedule --scheduleType weighted
 \end{lstlisting}
 Once the time allocated to each tile has been set, the next task is to schedule the observations that both best represent the time requested and optimize the times that are chosen in some way, for example, such that tiles are re-imaged at an approximately fixed cadence so as to measure possible lightcurve evolution or to go as deep as possible in one set.
-Other optimizations might employ ordering based on airmass, as sources imaged through higher airmass will have lower signal-to-noise ratios due to scattering.
+Other optimizations might employ ordering based on airmass, as sources imaged through higher airmass will have lower signal-to-noise ratios.
 
 There are three options related to scheduling observations, greedy, sear, and weighted.
 The time that each tile is available for observation above the altitude limit is computed.
@@ -449,15 +451,15 @@ We will focus on the model by \cite{Me2017} to compare the efficiency. All the e
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.5\textwidth]{plots/eff_ex.png}
-\caption{Example plot of efficiency for \cite{Me2017} injections, comparing the scheduling algorithms. Greedy algorithm is used for tiling and PEM algorithm is used for time allocation. Greedy and SEAR have similar performance in long distance and both are better than weighted. This difference is also reflected in Figure~\ref{fig:eff_metric}.}
+\caption{Example plot of efficiency for \cite{Me2017} injections, comparing the scheduling algorithms. Greedy algorithm is used for tiling and PEM algorithm is used for time allocation. Greedy and SEAR have similar performance in long distance and both are better than weighted. This difference is also reflected in Figure~\ref{fig:eff_metric}. As the algorithm accounts for observability from a site, including both whether tiles are visible from the site of interest as well as diurnal effects, efficiencies are expected to peak at around 25\% for an event which fades quickly and has a probability region with peaks in both the north and south.}
 \label{fig:eff_ex}
 \end{figure}
-In order to compare the 36 efficiency as is plotted in Figure~\ref{fig:eff_ex}, we use a single statistic to reflect the overall performance of the algorithms based on the efficiency for each distance in the range of $10^{-1} Mpc$ to $10^3 Mpc$. Thus, we come to a metric that reflects what percentage of events that can be detected in a spherical volume of radius $10^3 Mpc$. The events are evenly distributed in the volume. Suppose the event density per volume is $\rho$ and the distance is $r$. Sampling a distance at $d$ corresponds to a shell with volume $4 \pi r^2 dr$. Assuming that the density is $\rho$, then the total events on that shell is $4 \pi \rho r^2 dr$. Thus, if the efficiency is $e$, the expected number of detected events on the shell will be $4 \pi \rho r^2 e dr$. From this we can see that the efficiency at $r$ is weighted by $r^2$. If we treat the efficiency at each distance as an individual sample, a weighted average on the squared radius will then be a good metric of the overall efficiency that reflects how well the algorithm detects events uniformly distributed in a volume of $10^3 Mpc$. A consequence of this metric is that the weight of $r^2$ makes the long range efficiency more important than short range efficiency. Under this metric, an algorithm that performs well at further distances would be better than an algorithm does better at short distances but whose performance deteriorates quickly as the distance increases. 
+In order to compare the 36 efficiencies as plotted in Figure~\ref{fig:eff_ex}, we use a single statistic to reflect the overall performance of the algorithms based on the efficiency for each distance in the range of $10^{-1} Mpc$ to $10^3 Mpc$. Thus, we come to a metric that reflects what percentage of events that can be detected in a spherical volume of radius $10^3 Mpc$. The events are evenly distributed in the volume. Suppose the event density per volume is $\rho$ and the distance is $r$. Sampling a distance at $d$ corresponds to a shell with volume $4 \pi r^2 dr$. Assuming that the density is $\rho$, then the total events on that shell is $4 \pi \rho r^2 dr$. Thus, if the efficiency is $e$, the expected number of detected events on the shell will be $4 \pi \rho r^2 e dr$. From this we can see that the efficiency at $r$ is weighted by $r^2$. If we treat the efficiency at each distance as an individual sample, a weighted average on the squared radius will then be a good metric of the overall efficiency that reflects how well the algorithm detects events uniformly distributed in a volume of $10^3 Mpc$. A consequence of this metric is that the weight of $r^2$ makes the long range efficiency more important than short range efficiency. Under this metric, an algorithm that performs well at further distances would be better than an algorithm does better at short distances but whose performance deteriorates quickly as the distance increases. 
 
 \subsection{Performance and algorithms}
 \begin{figure}[t]
 \includegraphics[width=0.45\textwidth]{plots/efficiency.png}
-\caption{Plot of the efficiency metric for each of the 36 options. On the horizontal axis are tiling algorithms and scheduling algorithms and on the vertical axis are the time allocation algorithms. Abbreviations are used for the algorithms. The first capital letter stands for the tiling algorithm and the second letter stands for the scheduling algorithm. The abbreviations are the first letters of the algorithms: G - greedy. H - hierarchical. M - MOC. R - ranked. S - SEAR. W - weighted. The grids are colors such that highest efficiency combinations are darker and lower efficiency ones are lighter, with the highest being completely blue and the lowest one being completely white.}
+\caption{Plot of the efficiency metric for each of the 36 options. On the horizontal axis are tiling algorithms and scheduling algorithms and on the vertical axis are the time allocation algorithms. Abbreviations are used for the algorithms. The first capital letter stands for the tiling algorithm and the second letter stands for the scheduling algorithm. The abbreviations are the first letters of the algorithms: G - greedy. H - hierarchical. M - MOC. R - ranked. S - SEAR. W - weighted. The grids are colors such that highest efficiency combinations are darker and lower efficiency ones are lighter, with the highest being completely blue and the lowest one being completely white. \rednote{Need colorbar or numbers}}
 \label{fig:eff_metric}
 \centering
 \end{figure}
@@ -465,7 +467,7 @@ For each of the 36 algorithm options, we compute the efficiency metric as descri
 The highest efficiency of $0.19$ is achieved by a combination of ranked tiling, powerlaw time allocation and greedy scheduling. Compared to the lowest efficiency of $0.01$, it can detect roughly 19 times more events within a range of $10^{-1} Mpc$ and $10^3 Mpc$. That corresponds to the darkest box in the 10th column and the second row in Figure~\ref{fig:eff_metric}. 
 Also, from Figure~\ref{fig:eff_metric}, we can compare the efficiencies of the individual algorithms. First, among the four tiling algorithms, greedy, sear, MOC and ranked, we can see that MOC and ranked generally have higher efficiencies than greedy and hierarchical tiling algorithms. Second, among the three options for scheduling, greedy and SEAR have higher efficiency. Generally, we can say that PEM gives the best results. It is slightly better than powerlaw, and both are better than WAW. This is unsurprising as PEM is optimal in the presence of distance information, while WAW requires inclination information in order to be optimal. However, in case inclination and distance were available in low latency, WAW may be best. Third, greedy and SEAR scheduling are more efficient than weighted scheduling.
 \subsection{Performance and the number of tiles}
-We also study the how the number of tiles affects the performance. The number of tiles parameter is the number of tiles considered in the tiling process. It is only relevant in the hierarchical and greedy tiling algorithm. The hierarchical algorithm is used for this study, which selects tiles that covers the highest probability and mask the tiles once they are selected. It stops when a user-defined number of tiles is selected. The efficiency is computed based on the simulation of 1000 injections.
+We also study the how the number of tiles affects the performance. It is only relevant in the hierarchical and greedy tiling algorithm. The hierarchical algorithm is used for this study, which selects tiles that covers the highest probability and mask the tiles once they are selected. It stops when a user-defined number of tiles is selected. The efficiency is computed based on the simulation of 1000 injections.
 
 From the plot on the left of Figure~\ref{fig:eff_ntiles}, it can be seen that considering more tiles generally results in better efficiency. However, the benefit of increasing the number of tiles decreases as more and more tiles are considered. This effect is shown in the left plot, where the efficiency curves are shown for different numbers of tiles. The three lines showing the results of 16, 28 and 40 tiles are closer to each other than the bottom one where only four tiles are selected. This means that increasing the number of tiles from 4 to 16 improves the efficiency more than from 16 to 28. This is expected since, as the number of tiles increases, new tiles cover less and less probability and the limiting factors in the time allocation and scheduling algorithm become more important and the efficiency will not keep rising.
 Note that the number of tiles in our study is the direct output of the tiling algorithm. A tile still needs to go through the time allocation and scheduling algorithm to be scheduled for observation. It is independent of the CCD readout time and telescope slew. For an alternative study that accounts for these effects, please see Chan et al. \cite{ChHu2017}.
@@ -482,7 +484,7 @@ Note that the number of tiles in our study is the direct output of the tiling al
 
 The detection of GW170817 \citep{AbEA2017b} has invigorated the search for improved strategies for associating gravitational waves with electromagnetic
 counterparts.
-Due to the large sky localization of the events, which can range from 100-1000 square degrees, efficiently scanning sky areas  of this size in search of an electromagnetic counterpart is challenging.
+Due to the large uncertainty footprint, which can range from 100-1000 square degrees, efficiently scanning sky areas  of this size in search of an electromagnetic counterpart is challenging.
 However, we have described in this paper a number of algorithms in the literature available for significantly improving upon the most naive approach.
 We have shown comparisons between the algorithms, describing the limits in which they are the most effective.
 
@@ -497,6 +499,7 @@ A code to produce the results in this paper is available at
 MC is supported by the David and Ellen Lee Prize Postdoctoral Fellowship at the California Institute of Technology. 
 DT and NC are supported by the National Science Foundation, under NSF grant number PHY 1505373.
 YH is supported by the National Natural Science Foundation of China, under NSFC 11703098.
+CWS is grateful to the DOE Office of Science for their support under award DESC 0007881.
 
 \bibliographystyle{aasjournal}
 \bibliography{references}
