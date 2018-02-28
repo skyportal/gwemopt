@@ -110,7 +110,7 @@ def skymap(params,map_struct):
     lats = np.zeros(lons.shape)
 
     plotName = os.path.join(params["outputDir"],'prob.pdf')
-    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
+    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,min=np.percentile(map_struct["prob"],1),max=np.percentile(map_struct["prob"],99))
     add_edges()
     plt.show()
     plt.savefig(plotName,dpi=200)
@@ -202,7 +202,7 @@ def coverage(params, map_struct, coverage_struct):
 
     plotName = os.path.join(params["outputDir"],'mollview_coverage.pdf')
     plt.figure()
-    hp.mollview(map_struct["prob"],unit='Gravitational-wave Probability')
+    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
     hp.projplot(coverage_struct["data"][:,0], coverage_struct["data"][:,1], 'wx', lonlat=True, coord='G')
     add_edges()
     plt.show()
