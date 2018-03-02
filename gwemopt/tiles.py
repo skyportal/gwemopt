@@ -58,8 +58,8 @@ def rankedTiles_struct(params,config_struct,telescope,map_struct):
     ranked_tile_times = config_struct["exposuretime"]*np.round(ranked_tile_times/config_struct["exposuretime"])
 
     tile_struct = {}
-    ii = 0
     for index, prob, ipix, exposureTime in zip(ranked_tile_index, ranked_tile_probs, ipixs, ranked_tile_times):
+        ii = config_struct["tesselation"][index,0].astype(int)
         tile_struct[ii] = {}
         tile_struct[ii]["index"] = index
         tile_struct[ii]["prob"] = prob
@@ -78,7 +78,6 @@ def rankedTiles_struct(params,config_struct,telescope,map_struct):
         tile_struct[ii]["corners"] = radecs
         tile_struct[ii]["patch"] = patch  
         tile_struct[ii]["area"] = area      
-        ii = ii + 1
 
     return tile_struct
 

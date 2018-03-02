@@ -17,7 +17,8 @@ def create_moc(params):
         moc_struct = {}
         for ii, tess in enumerate(tesselation):
             index, ra, dec = tess[0], tess[1], tess[2]
-            moc_struct[ii] = Fov2Moc(config_struct, ra, dec, nside)
+            index = index.astype(int)
+            moc_struct[index] = Fov2Moc(config_struct, ra, dec, nside)
  
         moc_structs[telescope] = moc_struct
 
