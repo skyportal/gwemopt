@@ -210,6 +210,7 @@ def coverage(params, map_struct, coverage_struct):
     plt.close('all')
 
     idx = np.isfinite(coverage_struct["data"][:,4])
+    if not idx.size: return
     min_time = np.min(coverage_struct["data"][idx,4])
     max_time = np.max(coverage_struct["data"][idx,4])
 
