@@ -142,8 +142,8 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
 
 def scheduler(params, config_struct, tile_struct):
 
-    import gwemopt.segments
-
+    #import gwemopt.segments
+    import gwemopt.segments_astroplan
     coverage_struct = {}
     coverage_struct["data"] = np.empty((0,5))
     coverage_struct["filters"] = []
@@ -156,7 +156,7 @@ def scheduler(params, config_struct, tile_struct):
 
     segmentlist = config_struct["segmentlist"]
     exposurelist = config_struct["exposurelist"]
-    tilesegmentlists = gwemopt.segments.get_segments_tiles(config_struct, tile_struct, observatory, segmentlist)
+    tilesegmentlists = gwemopt.segments_astroplan.get_segments_tiles(config_struct, tile_struct, observatory, segmentlist)
 
     print("Generating schedule order...")
     keys = get_order(params,tile_struct,tilesegmentlists,exposurelist)

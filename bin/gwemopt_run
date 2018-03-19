@@ -32,15 +32,17 @@ import numpy as np
 np.random.seed(0)
 
 import healpy as hp
-import ephem
-#import astropy, astroplan
+#import ephem
+import astropy, astroplan
 
 import gwemopt.utils, gwemopt.gracedb
 import gwemopt.rankedTilesGenerator, gwemopt.waw
 import gwemopt.lightcurve, gwemopt.coverage
 import gwemopt.efficiency, gwemopt.plotting
 import gwemopt.moc, gwemopt.catalog
-import gwemopt.tiles, gwemopt.segments
+#import gwemopt.tiles, gwemopt.segments
+import gwemopt.tiles, gwemopt.segments_astroplan
+
 import gwemopt.footprint, gwemopt.transients
 
 if not os.getenv("DISPLAY", None):
@@ -167,16 +169,16 @@ def params_struct(opts):
                     gwemopt.tiles.tesselation_packing(params["config"][telescope])
             params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2))
 
-        #location = astropy.coordinates.EarthLocation(params["config"][telescope]["longitude"],params["config"][telescope]["latitude"],params["config"][telescope]["elevation"])
-        #observer = astroplan.Observer(location=location)
-        #params["config"][telescope]["observer"] = observer
-
-        observer = ephem.Observer()
-        observer.lat = str(params["config"][telescope]["latitude"])
-        observer.lon = str(params["config"][telescope]["longitude"])
-        observer.horizon = str(-12.0)
-        observer.elevation = params["config"][telescope]["elevation"]
+        location = astropy.coordinates.EarthLocation(params["config"][telescope]["longitude"],params["config"][telescope]["latitude"],params["config"][telescope]["elevation"])
+        observer = astroplan.Observer(location=location)
         params["config"][telescope]["observer"] = observer
+
+        # observer = ephem.Observer()
+        # observer.lat = str(params["config"][telescope]["latitude"])
+        # observer.lon = str(params["config"][telescope]["longitude"])
+        # observer.horizon = str(-12.0)
+        # observer.elevation = params["config"][telescope]["elevation"]
+        # params["config"][telescope]["observer"] = observer
 
     params["skymap"] = opts.skymap
     params["gpstime"] = opts.gpstime
@@ -245,7 +247,8 @@ else:
     print("Need to enable --doEvent, --doFootprint or --doSkymap")
     exit(0)
 
-params = gwemopt.segments.get_telescope_segments(params)
+params = gwemopt.segments_astroplan.get_telescope_segments(params)
+#params = gwemopt.segments.get_telescope_segments(params)
 
 print("Loading skymap...")
 # Function to read maps
