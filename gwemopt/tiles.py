@@ -11,7 +11,7 @@ from astropy.time import Time
 
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
-import gwemopt.samplers
+import gwemopt.samplers, gwemopt.segments
 
 def greedy(params, map_struct):
 
@@ -20,6 +20,8 @@ def greedy(params, map_struct):
         config_struct = params["config"][telescope]
 
         tile_struct = gwemopt.samplers.greedy_tiles_struct(params, config_struct, telescope, map_struct)
+        tile_struct = gwemopt.segments.get_segments_tiles(config_struct, tile_struct)
+
         tile_structs[telescope] = tile_struct
 
     return tile_structs
@@ -31,6 +33,8 @@ def hierarchical(params, map_struct):
         config_struct = params["config"][telescope]
 
         tile_struct = gwemopt.samplers.hierarchical_tiles_struct(params, config_struct, telescope, map_struct)
+        tile_struct = gwemopt.segments.get_segments_tiles(config_struct, tile_struct)
+
         tile_structs[telescope] = tile_struct
 
     return tile_structs
@@ -78,6 +82,8 @@ def rankedTiles_struct(params,config_struct,telescope,map_struct):
         tile_struct[ii]["corners"] = radecs
         tile_struct[ii]["patch"] = patch  
         tile_struct[ii]["area"] = area      
+
+    tile_struct = gwemopt.segments.get_segments_tiles(config_struct, tile_struct)
 
     return tile_struct
 
@@ -150,6 +156,8 @@ def moc(params, map_struct, moc_structs):
         moc_struct = moc_structs[telescope]
  
         tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+
+        tile_struct = gwemopt.segments.get_segments_tiles(config_struct, tile_struct)
         tile_structs[telescope] = tile_struct
 
     return tile_structs

@@ -301,7 +301,7 @@ if opts.doTiles:
     if opts.doPlots:
         print("Plotting tiles struct...")
         gwemopt.plotting.tiles(params, map_struct, tile_structs)
-
+    
 if opts.doSchedule:
     if opts.doTiles:
         print("Generating coverage...")

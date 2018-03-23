@@ -140,9 +140,9 @@ Given the large sky localization regions involved, wide-field survey telescopes 
 The Panoramic Survey Telescope and Rapid Response System (Pan-STARRS) \citep{MoKa2012}, Asteroid Terrestrial-impact Last Alert System (ATLAS) \citep{Ton2011}, the intermediate Palomar Transient Factory (PTF) \citep{RaSh2009} and (what will become) the Zwicky Transient Facility (ZTF), BlackGEM \citep{BlGr2015} and the Large Synoptic Survey Telescope (LSST) \citep{Ivezic2014} are all examples of such systems.
 For example, Pan-STARRS has a 7$\textrm{deg}^2$ field of view (FOV), achieving a 5 $\sigma$ limit of 21.5 (AB mag) in the i band in a 45 second exposure. ATLAS has a 29.2$\textrm{deg}^2$ field of view, achieving a 5 $\sigma$ limit of 18.7 in the cyan band in a 30 second exposure. For comparison, LSST will have a $9.6\textrm{deg}^2$ FOV and will require a 21\,s r-band exposure length to reach 22 mag.
 
-Due to the significant difference in telescope configurations, including FOV, filter, typical exposure times, and limiting magnitudes, in addition to placement on the earth and therefore different seeing and sky conditions, optimizing gravitational wave followups for generic telescopes is difficult. Therefore, in the following, we will take the telescopes mentioned above as examples. 
-
+Due to the significant difference in telescope configurations, including FOV, filter, typical exposure times, and limiting magnitudes, in addition to placement on the earth and therefore different seeing and sky conditions, optimizing gravitational wave followups for generic telescopes is difficult. Therefore, in the following, we will take the telescopes mentioned above as examples.
 For this reason, we have created a codebase named \emph{gwemopt} (Gravitational Wave - Electromagnetic OPTimization) that utilizes methods from a variety of recent papers geared towards optimizing efforts of followup. We employ methods to read gravitational-wave skymaps and the associated information made available from GraceDB \footnote{https://gracedb.ligo.org} \citep{AbEA2016b}, in addition to information about the telescopes to tile the sky, allocate available telescope time to the chosen fields, and schedule that time in a way that optimizes based on expected lightcurves.
+We will describe algorithms that use the gravitational-wave probability skymaps (some of them 2D only, some of them 3D as well), to perform optimizations.
 In section~\ref{sec:algorithm}, we describe the algorithm.
 In section~\ref{sec:performance}, we describe the performance of the algorithms.
 In section~\ref{sec:conclusions}, we offer concluding remarks and suggest directions for future research.
@@ -150,13 +150,23 @@ In section~\ref{sec:conclusions}, we offer concluding remarks and suggest direct
 \section{Algorithm}
 \label{sec:algorithm}
 
-Figure~\ref{fig:flowchart} shows the flowchart for the \emph{gwemopt} pipeline, developed to optimize the efforts of electromagnetic followup of gravitational-wave events. \emph{gwemopt} is developed in python, which has the benefit of interfaces to both LIGO's gravitational-wave candidate event database (GraceDB) and HEALPIX \citep{GoHi2005}, the format in which LIGO reports skymaps.
+Figure~\ref{fig:flowchart} shows the flowchart for the \emph{gwemopt} pipeline, developed to optimize the efforts of electromagnetic followup of gravitational-wave events.  \emph{gwemopt} is developed in python, which has the benefit of interfaces to both LIGO's gravitational-wave candidate event database (GraceDB) and HEALPix \citep{GoHi2005}, the format in which LIGO reports skymaps. The general sequence of the pipeline is as follows. Skymaps are ingested from 
 In the following, we will show the command line syntaxes required to reproduce the results at the beginning of each section.
 
 \emph{gwemopt} uses events provided by gracedb in addition to information about the telescopes for creating tiles and optimize time allocations in the fields.
 It uses information about potential lightcurves from electromagnetic counterparts to schedule the available telescope time.
 In the following, we will describe the calculations that go into creating tiling, time allocations, and observing sequences from the skymaps.
 We will account for both diurnal and observational constraints and have the possibility of imaging over many nights.
+
+By way of an outline of the the algorithm to be discussed, the subsections in this section are:
+\begin{enumerate}
+\item GraceDB (Subsection~\ref{subsection:gracedb}): Loading HEALPix maps from the gravitational-wave server.
+\item Telescope Configurations (Subsection~\ref{subsection:config}): Configuration files giving required information about the telescopes for optimization purposes.
+\item Tiling (Subsection~\ref{subsection:tiling}): Algorithms for determining what the fields to be considered in the time allocation analysis should be.
+\item Time Allocation (Subsection~\ref{subsection:timeallocation}): Algorithms for determining how time is allocated to each of the fields.
+\item Scheduling (Subsection~\ref{subsection:scheduling}): Algorithms for scheduling the time allocated to each of the fields.
+\item Efficiency (Subsection~\ref{subsection:efficiency}): Efficiency of the detection of transients given the specific characteristics of the skymap, the telescope, and the tiling, time allocation, and scheduling choices.
+\end{enumerate}
 
 % Define block styles
 \tikzstyle{decision} = [diamond, draw, fill=blue!20,
@@ -192,6 +202,7 @@ We will account for both diurnal and observational constraints and have the poss
 \end{figure}
 
 \subsection{GraceDB}
+\label{subsection:gracedb}
 
 \begin{figure}[t]
 \hspace*{-0.5cm}
@@ -209,7 +220,9 @@ GraceDB is a service that provides information on candidate gravitational-wave e
 \emph{gwemopt} uses this API to access information pertinent for gravitational-wave followups.
 First of all, it downloads the gravitational-wave skymap for a given event; an example is shown in Figure~\ref{fig:skymap}.
 In addition, information such as the time of the even and the time delay between the time-of-arrival at the detectors is noted.
+
 \subsection{Telescope configuration}
+\label{subsection:config}
 \begin{lstlisting}
 python gwemopt_run --doEvent --do3D --telescope LSST
 \end{lstlisting}
@@ -228,13 +241,16 @@ ZTF            & 33.3563            & -116.8648           & 1742.0            & 
 \caption{Configuration of telescopes.}
 \label{table:config}
 \end{table*}
-\emph{gwemopt} relies on standardized configuration files for the telescopes to be analyzed (please see \footnote{https://github.com/mcoughlin/gwemopt/tree/master/config} for examples for the telescopes in Figure~\ref{table:config}). 
+
+\emph{gwemopt} relies on standardized configuration files for the telescopes to be analyzed (please see \footnote{https://github.com/mcoughlin/gwemopt/tree/master/config} for examples for the telescopes in Table~\ref{table:config}). 
 The information in these files includes the filter being used, the limiting magnitude of the instrument, the exposure time required to achieve that magnitude, site location information, and information about the field of view shape and size. 
 Different telescopes have different FOV shapes.
 For this, two options, square and circle are available, with the FOV being specified by the length of the square side and the radius of the circle. In addition, a tesselationFile is requested. This is especially useful for telescopes such as ZTF which use fixed telescope pointings which ensures the availability of reference images. In case a tesselation file is not available, one is automatically generated, and this output is described in the next section.
 Configuration files for ATLAS, BlackGEM, LSST, PS1, and ZTF are available.
 Table~\ref{table:config} provides the information assumed for these telescopes.\\
+
 \subsection{Skymap tiling}
+\label{subsection:tiling}
 \begin{lstlisting}
 python gwemopt_run --doEvent --do3D --doTiles --doPlots --tilesType ranked
 \end{lstlisting}
@@ -254,7 +270,7 @@ There are a variety of algorithms in the literature for sky-map tiling, and the 
 \end{figure*}
 
 Gravitational-wave skymaps in general contain metrics that report the spatial probability of a gravitational-wave source lying within a certain location.
-They are composed of HEALPIX arrays that encode either the 2D probability, in right ascension and declination, or 3D probability, which includes probability distributions for the distance.
+They are composed of HEALPix arrays that encode either the 2D probability, in right ascension and declination, or 3D probability, which includes probability distributions for the distance.
 They are reported in maps with a particular number of pixels, usually $\textrm{N}_\textrm{side} = 512$. 
 This can introduce quantization errors, especially for small field-of-view telescopes. 
 The --nside flag allows for the over- or under-sampling of the skymaps in the analysis by up-sampling and down-sampling.
@@ -263,7 +279,7 @@ There are four options related to skymap tiling currently available and defined 
 In the following, we will summarize the key features of each implementation, and referring the reader to the literature for further details.
 The goal is to place each algorithm in the same mathematical formalism for straightforward comparisons.
 
-\emph{MOC}. The ``MOC'' tiling scheme, based on the  multi-order coverage of healpix maps, hierarchically predefines cells in order to specify arbitrary sky regions \citep{FeBo2014}. 
+\emph{MOC}. The ``MOC'' tiling scheme, based on the  multi-order coverage of HEALPix maps, hierarchically predefines cells in order to specify arbitrary sky regions \citep{FeBo2014}. 
 MOC is proposed in order to provide fast set operations between regions on the sky. In MOC, the spherical sky is recursively divided into 4 regions and each region is a diamond. 
 The sphere is divided recursively into four diamonds. 
 The division stops according to the resolution necessary for a particular usage.
@@ -289,6 +305,7 @@ In the following, we will take 95\% as our target integrated probability, which 
 \emph{greedy}. The greedy tiling scheme, an emcee \citep{FoHo2013} based algorithm, optimizes tiles for a given skymap by placing them simultaneously. Similar to the Multinest case, any high-dimensional sampler would be reasonable to use here. The algorithm works by taking the user-specified number of tiles, $N_{\rm tiles}$ and allowing their location to vary, with a likelihood that maximizes the integrated probability. It prevents double counting by setting the probability of a given tile to zero when integrating the probability. This method selects tiles that cover the highest probability altogether from the skymap. It ranks all possible tiles and selects from the top. Thus, the tiles selected by greedy method might overlap significantly when the probability distribution is concentrated. 
 
 \subsection{Time allocations}
+\label{subsection:timeallocation}
 \begin{lstlisting}
 python gwemopt_run --doEvent --doPlots --doTiles --doSchedule --timeallocationType coverage
 \end{lstlisting}
@@ -310,13 +327,13 @@ There are four options related to time allocations as a function of sky location
 \emph{Coverage.} The ``coverage'' option is one whereby coverage from existing surveys, including the right ascension and declination of the pointing and the limiting magnitude, are used. The benefit of this mode is to establish efficiencies of detection of kilonovae in existing surveys. For example, this code will be used to determine the efficiencies of the Pan-STARRS and ATLAS surveys to both gravitational-wave and gamma-ray burst triggers.
 
 \emph{Powerlaw.} The ``powerlaw'' option is one where scaling relations are applied to the probability map to determine the time allocation.
-Many searches have used a variation on simply scaling the time allocation proportional to the probability skymaps, a technique employed in the Powerlaw method below. \cite{CoSt2016a} derived scaling relations for the time allocated to any given field, $t_i$, given the graviational-wave likelihood. We showed that under certain assumptions, $t_i \propto \left(\frac{L_\textrm{GW}(\alpha_i,\delta_i)}{a(\alpha_i,\delta_i)}\right)^{2/3}$, where $L_\textrm{GW}(\alpha_i,\delta_i)$ is the gravitational-wave likelihood and $a(\alpha_i,\delta_i)$ is Galactic extinction.  While the powerlaw based analysis is straightforward, it does not account for the fact that the telescope must be sensitive enough to detect the counterpart. In this sense, this algorithm is the least model dependent. Although the detectability is model-dependent, both in the distances returned by the gravitational-wave detectors and the absolute magnitude of the sources, the following algorithms account for this in multiple ways.
+Many searches have used a variation on simply scaling the time allocation proportional to the probability skymaps, a technique employed in the Powerlaw method below. \cite{CoSt2016a} derived scaling relations for the time allocated to any given field, $t_i$, given the graviational-wave likelihood. We showed that under certain assumptions, $t_i \propto \left(\frac{L_\textrm{GW}(\alpha_i,\delta_i)}{a(\alpha_i,\delta_i)}\right)^{2/3}$, where $\alpha_i$ is the right ascension, $\delta_i$ is the declination, $L_\textrm{GW}(\alpha_i,\delta_i)$ is the gravitational-wave likelihood and $a(\alpha_i,\delta_i)$ is Galactic extinction.  While the powerlaw based analysis is straightforward, it does not account for the fact that the telescope must be sensitive enough to detect the counterpart. In this sense, this algorithm is the least model dependent. Although the detectability is model-dependent, both in the distances returned by the gravitational-wave detectors and the absolute magnitude of the sources, the following algorithms account for this in multiple ways.
 
 The \emph{Powerlaw} algorithm optimizes the probability of detecting the transient with N observations, which is simply the sum of the probability of each observation. The expression is shown in Eq.\ref{eqn:powerlaw}:
 \begin{equation}\label{eqn:powerlaw}
 p_{tot}=\Sigma_{i=1}^N \frac{M_i}{M_{tot}}\frac{L_{GW}(\alpha_i, \delta_i, R_i)}{L_{GW_tot}}\frac{F_i(t_i)}{a(\alpha_i, \delta_i)},
 \end{equation}
-where $M_i$ is the mass for galaxy $i$; $M_{tot}$ is the total mass of galaxies in the field; $L_{GW}(\alpha_i, \delta_i, R_i)$ is the likelihood of the gravitational wave source in this galaxy; $F(t)$ is the luminosity as a function of allocated time; $a(\alpha_i, \delta_i)$ is the attenuation. In the following, we will simply scale the gravitational-wave likelihood and not the mass in the field. It is possible that this approximation could be improved using galaxy catalogs, although this introduces concerns about galaxy catalog completeness. Eq.~\ref{eqn:powerlaw} is optimized with the constraint that the total observation time is limited, shown as
+where $R_i$ is the distance to the galaxy, $M_i$ is the mass for galaxy $i$, $M_{tot}$ is the total mass of galaxies in the field, $L_{GW}(\alpha_i, \delta_i, R_i)$ is the likelihood of the gravitational wave source in this galaxy, $F(t)$ is the luminosity as a function of allocated time, and $a(\alpha_i, \delta_i)$ is the attenuation. In the following, we will simply scale the gravitational-wave likelihood and not the mass in the field. It is possible that this approximation could be improved using galaxy catalogs, although this introduces concerns about galaxy catalog completeness. Eq.~\ref{eqn:powerlaw} is optimized with the constraint that the total observation time is limited, shown as
 \begin{equation}
 \Sigma_{i=1}^N t_i=T,
 \end{equation}
@@ -373,6 +390,7 @@ where $\omega_i$ is the probability density; $\tau_i$ is the time allocated and 
 
 
 \subsection{Scheduling}
+\label{subsection:scheduling}
 \begin{lstlisting}
 python gwemopt_run --doEvent --doPlots --doTiles --doSchedule --scheduleType weighted
 \end{lstlisting}
@@ -421,6 +439,7 @@ w_i = L_\textrm{GW}(\alpha_i,\delta_i) \times \frac{N_\textrm{R}}{N_\textrm{A}}
 \end{equation}
 Therefore, for each exposure segment, we calculate the weight for each possible tile and select the tile with the highest weight to fill that slot.
 \subsection{Efficiency}
+\label{subsection:efficiency}
 \begin{lstlisting}
 python gwemopt_run --doEvent --doPlots --doTiles --doSchedule --doEfficiency
 \end{lstlisting}

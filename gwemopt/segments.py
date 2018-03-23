@@ -258,7 +258,12 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
 
     return tilesegmentlist
 
-def get_segments_tiles(config_struct, tile_struct, observatory, segmentlist):
+def get_segments_tiles(config_struct, tile_struct):
+
+    observatory = astropy.coordinates.EarthLocation(
+        lat=config_struct["latitude"]*u.deg, lon=config_struct["longitude"]*u.deg, height=config_struct["elevation"]*u.m)
+
+    segmentlist = config_struct["segmentlist"]
 
     print("Generating segments for tiles...")
 
@@ -273,10 +278,12 @@ def get_segments_tiles(config_struct, tile_struct, observatory, segmentlist):
     radecs = astropy.coordinates.SkyCoord(
             ra=np.array(ras)*u.degree, dec=np.array(decs)*u.degree, frame='icrs')
     tilesegmentlists = []
-    for ii,radec in enumerate(radecs):
+    for ii,key in enumerate(keys):
         #if np.mod(ii,100) == 0: 
         #    print("Generating segments for tile %d/%d"%(ii+1,len(radecs)))
+        radec = radecs[ii]
         tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
         tilesegmentlists.append(tilesegmentlist)
+        tile_struct[key]["segmentlist"] = tilesegmentlist
 
-    return tilesegmentlists
+    return tile_struct

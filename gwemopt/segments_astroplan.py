@@ -199,8 +199,15 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
         date_rise = observer.target_rise_time(date_start,fxdbdy)
         date_set = observer.target_set_time(date_start,fxdbdy)
 
+        print(date_rise.mjd,date_set.mjd)
+        if (date_rise.mjd<0) and (date_set.mjd<0): break
+
+        print(date_rise.mjd,date_set.mjd)
+
         if date_rise > date_set:
             date_rise = observer.target_rise_time(date_start-TimeDelta(24*u.hour),fxdbdy)
+        print(date_rise.mjd,date_set.mjd)
+
         segment = segments.segment(date_rise.mjd,date_set.mjd)
         tilesegmentlist = tilesegmentlist + segments.segmentlist([segment])
         tilesegmentlist.coalesce()
@@ -219,9 +226,14 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
 
     return tilesegmentlist
 
-def get_segments_tiles(config_struct, tile_struct, observatory, segmentlist):
+def get_segments_tiles(config_struct, tile_struct):
 
     print("Generating segments for tiles...")
+
+    observatory = astropy.coordinates.EarthLocation(
+        lat=config_struct["latitude"]*u.deg, lon=config_struct["longitude"]*u.deg, height=config_struct["elevation"]*u.m)
+
+    segmentlist = config_struct["segmentlist"]
 
     ras = []
     decs = []
@@ -234,10 +246,14 @@ def get_segments_tiles(config_struct, tile_struct, observatory, segmentlist):
     radecs = astropy.coordinates.SkyCoord(
             ra=np.array(ras)*u.degree, dec=np.array(decs)*u.degree, frame='icrs')
     tilesegmentlists = []
-    for ii,radec in enumerate(radecs):
+    for ii,key in enumerate(keys):
+        print(ii,radecs[ii])
         #if np.mod(ii,100) == 0: 
         #    print("Generating segments for tile %d/%d"%(ii+1,len(radecs)))
+        radec = radecs[ii]
         tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
         tilesegmentlists.append(tilesegmentlist)
+        tile_struct[key]["segmentlist"] = tilesegmentlist
+        print(tile_struct[key]["segmentlist"])
 
     return tilesegmentlists
