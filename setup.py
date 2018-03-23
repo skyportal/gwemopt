@@ -58,7 +58,8 @@ install_requires = [
     'lscsoft-glue',
     'python-dateutil',
     'mocpy',
-    'astroquery'
+    'astroquery',
+    'astroplan'
 ]
 
 # test dependencies
