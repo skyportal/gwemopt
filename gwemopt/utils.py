@@ -20,7 +20,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches
 import matplotlib.path
 
-import gwemopt.glue as segments
+#import gwemopt.glue as segments
+import glue.segments as segments
 
 def readParamsFromFile(file):
     """@read gwemopt params file

@@ -9,7 +9,8 @@ from astropy.time import Time, TimeDelta
 import astropy.units as u
 import astroplan
 
-import gwemopt.glue as segments
+#import gwemopt.glue as segments
+import glue.segments as segments
 import gwemopt.utils
 
 def get_telescope_segments(params):
