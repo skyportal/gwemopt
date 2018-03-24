@@ -134,8 +134,40 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
                 tilenexps[idx2] = tilenexps[idx2] - 1
                 idxs[ii] = idx2
             tileavailable[jj] = tileavailable[jj] - 1
+    elif params["scheduleType"] == "greedy_slew":
+        for ii in np.arange(len(exposurelist)): 
+            idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs)
+            tilenexps[idx2] = tilenexps[idx2] - 1
+            idxs[ii] = idx2
+
+    elif params["scheduleType"] == "sear_slew":
+        #for ii in np.arange(len(exposurelist)):
+        iis = np.arange(len(exposurelist)).tolist()
+        while len(iis) > 0: 
+            ii = iis[0]
+            mask = np.where((ii == last_exposure) & (tilenexps > 0))[0]
+            if len(mask) > 0:
+                idxsort = mask[np.argsort(tileprobs[mask])]
+                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,idxs=idxsort) 
+                last_exposure[mask] = last_exposure[mask] + 1
+            else:
+                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs)
+            tilenexps[idx2] = tilenexps[idx2] - 1
+            idxs[ii] = idx2 
+            iis.pop(0)
+    elif params["scheduleType"] == "weighted_slew":
+        for ii in np.arange(len(exposurelist)):
+            jj = exposureids_tiles[ii]["exposureids"]
+            weights = tileprobs[jj] * tilenexps[jj] / tileavailable[jj]
+            weights[~np.isfinite(weights)] = 0.0
+            if np.any(weights >= 0):
+                idxmax = np.argmax(weights)
+                idx2 = jj[idxmax]
+                tilenexps[idx2] = tilenexps[idx2] - 1
+                idxs[ii] = idx2
+            tileavailable[jj] = tileavailable[jj] - 1
     else:
-        print("Scheduling options are greedy/sear/weighted.")
+        print("Scheduling options are greedy/sear/weighted, or with _slew.")
         exit(0)
 
     return idxs
