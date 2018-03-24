@@ -10,7 +10,7 @@ We have no information yet.
 ## LSST
 6.3 deg/sec is used.
 
-This comes from the [specifications (section 2.2)](./LSST.pdf) and not yet tested. Minimum slew rate is used. The telescope moves differently in different directions. The speed is 7 deg/sec in azimuth direction and 3.5 deg/sec in elevation direction. Since the range in azimuth direction is 360 degrees and 90 in elevation direction, we use a 4:1 weighted average to represent a typical slew rate.
+This comes from the LSST specification file (Telescope Mount Assembly Specifications Document LTS-103) and not yet tested. Minimum slew rate is used. The telescope moves differently in different directions. The speed is 7 deg/sec in azimuth direction and 3.5 deg/sec in elevation direction. Since the range in azimuth direction is 360 degrees and 90 in elevation direction, we use a 4:1 weighted average to represent a typical slew rate.
 ## PS1
 0.6 deg/sec is used.
 [source](https://rcuh.com/wp-content/uploads/2010/11/PSDC-350-004.pdf).
