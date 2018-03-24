@@ -49,7 +49,7 @@ def read_skymap(params,is3D=False):
     if params["doDatabase"]:
         models = params["models"]
         localizations_all = models.Localization.query.all()
-        localizations = models.Localization.query.filter_by(dateobs=params["dateobs"]).all()
+        localizations = models.Localization.query.filter_by(dateobs=params["dateobs"],localization_name=params["localization_name"]).all()
         if localizations == None:
             print("No localization with dateobs=%s"%params["dateobs"])
             exit(0)
