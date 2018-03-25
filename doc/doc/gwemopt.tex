@@ -121,14 +121,15 @@ For this reason, for future surveys searching for electromagnetic counterparts, 
 \section{Introduction}
 \label{sec:Intro}
 
-The era of multi-messenger gravitational-wave astronomy has arrived with the detection of GW170817 \citep{AbEA2017b} by Advanced LIGO \citep{aLIGO} and Advanced Virgo \citep{adVirgo} coincident with the detection of both a short gamma-ray burst (SGRB) \citep{AbEA2017c,AbEA2017d,AbEA2017e} and kilonova detected in coincidence \citep{CoFo2017,SmCh2017,AbEA2017f,AbEA2017g}. 
-This work is the culmination of significant effort expended in the search for the electromagnetic counterpart of the gravitational waves found by compact binary black hole systems \citep{AbEA2016a,AbEA2016g,AbEA2017}.
+The era of multi-messenger gravitational-wave astronomy has arrived with the detection of GW170817 \citep{AbEA2017b} by Advanced LIGO \citep{aLIGO} and Advanced Virgo \citep{adVirgo} coincident with the detection of both a short gamma-ray burst (SGRB) \citep{AbEA2017c,AbEA2017d,AbEA2017e} and kilonova detected in coincidence \citep{CoFo2017,SmCh2017,AbEA2017f}. 
+This work is the culmination of significant effort expended in the search for the electromagnetic counterpart of the gravitational waves found by compact binary black hole systems \citep{AbEA2016a,AbEA2016g,AbEA2017} (please see \cite{AbEA2016b} for an overview of the search for an electromagnetic counterpart to GW150914).
 
 There has been significant optimism for the potential electromagnetic counterparts for emission from binary neutron star and black hole - neutron star systems across timescales and wavelengths \citep{Nakar2007,MeBe2012}. 
 A  kilonova, arising from sub-relativistic ejecta, in particular has bolometric luminosities of $\approx 10^{40}-10^{42}$\,ergs/s \citep{MeBa2015,BaKa2013} (GW170817 peaked at $\approx 10^{42}$\,ergs/s \citep{SmCh2017})
 and color and durations dependent on the physical conditions of the merger \citep{MeMa2010,KaBa2013,BaKa2013,TaHo2013,KaFe2015,BaKa2016,Me2017}.
 
 The scientific output from a joint gravitational-wave and electromagnetic observation is significant, as the detection of a kilonova coincident with a gravitational wave allows for the exploration of the neutron star equation of state \citep{BaBa2013} and r-process nucleosynthesis in the unbound ejecta from a merger involving a neutron star \citep{MeBa2015,JuBa2015,RoLi2017,WuFe2016}.
+The gravitational-wave posteriors alone allow for estimates of the contribution of dynamical ejecta to the optical counterpart \cite{AbEA2017g}.
 Among others, \cite{SmCh2017} use photometry of GW170817 to place constraints on the ejecta mass, velocity, and effective opacity.
 \cite{RaPe2018} use photometry of GW170817 in conjunction with kilonova models and numerical-relativity results to place a lower bound on the tidal deformability parameter. 
 The identification of the host galaxy allows for a distance-ladder independent measurement of the Hubble Constant \citep{AbEA2017h}.
@@ -153,7 +154,7 @@ In section~\ref{sec:conclusions}, we offer concluding remarks and suggest direct
 Figure~\ref{fig:flowchart} shows the flowchart for the \emph{gwemopt} pipeline, developed to optimize the efforts of electromagnetic followup of gravitational-wave events.  \emph{gwemopt} is developed in python, which has the benefit of interfaces to both LIGO's gravitational-wave candidate event database (GraceDB) and HEALPix \citep{GoHi2005}, the format in which LIGO reports skymaps. The general sequence of the pipeline is as follows. Skymaps are ingested from 
 In the following, we will show the command line syntaxes required to reproduce the results at the beginning of each section.
 
-\emph{gwemopt} uses events provided by gracedb in addition to information about the telescopes for creating tiles and optimize time allocations in the fields.
+\emph{gwemopt} uses events provided by GraceDB in addition to information about the telescopes for creating tiles and optimize time allocations in the fields.
 It uses information about potential lightcurves from electromagnetic counterparts to schedule the available telescope time.
 In the following, we will describe the calculations that go into creating tiling, time allocations, and observing sequences from the skymaps.
 We will account for both diurnal and observational constraints and have the possibility of imaging over many nights.
@@ -255,7 +256,7 @@ Table~\ref{table:config} provides the information assumed for these telescopes.\
 python gwemopt_run --doEvent --do3D --doTiles --doPlots --tilesType ranked
 \end{lstlisting}
 Once a telescope configuration has been determined, the next step of the analysis is to generate the sky-map tiling.
-There are a variety of algorithms in the literature for sky-map tiling, and the ones implemented in \emph{gwemopt} will be detailed below. The idea is to cover the sky with tiles the size of the telescope's field-of-view with minimal overlap. In some cases, these tiles are pre-determined by survey constraints in order to simplify difference imaging. In other cases, it is possible to optimize the tile locations based on the gravitational-wave skymaps, such that the tiles maximize the probability contained. In the following, we will check the difference between these tile locations to determine their effect. Due to the fields-of-view for these telescopes being in general much smaller than the probability region, the effect is expected to be relatively minimal.
+There are a variety of algorithms in the literature for sky-map tiling, and the ones implemented in \emph{gwemopt} will be detailed below. The idea is to cover the sky with tiles the size of the telescope's field-of-view with minimal overlap. In some cases, these tiles are pre-determined by survey constraints in order to simplify difference imaging. In other cases, it is possible to optimize the tile locations based on the gravitational-wave skymaps, such that the tiles maximize the probability contained. In the following, we will check the difference between these tile locations to determine their effect. Due to the fields-of-view for these telescopes being in general much smaller than the probability region, the effect is expected to be relatively minimal (i.e. the number of tiles chosen to allocate time to will be dominated by choices such as whether there is utility in filling in chip gaps and thereby having overlapping tiles, as opposed to simply maximizing the probability contained).
 
 \begin{figure*}
     \centering
@@ -273,19 +274,19 @@ Gravitational-wave skymaps in general contain metrics that report the spatial pr
 They are composed of HEALPix arrays that encode either the 2D probability, in right ascension and declination, or 3D probability, which includes probability distributions for the distance.
 They are reported in maps with a particular number of pixels, usually $\textrm{N}_\textrm{side} = 512$. 
 This can introduce quantization errors, especially for small field-of-view telescopes. 
-The --nside flag allows for the over- or under-sampling of the skymaps in the analysis by up-sampling and down-sampling.
+The --nside flag allows for the up-sampling and down-sampling of the skymaps in the analysis.
 
-There are four options related to skymap tiling currently available and defined below: MOC, ranked, hierarchical and greedy.
+There are four options related to skymap tiling currently available and defined below: MOC (multi-order coverage), ranked, hierarchical and greedy.
 In the following, we will summarize the key features of each implementation, and referring the reader to the literature for further details.
 The goal is to place each algorithm in the same mathematical formalism for straightforward comparisons.
 
-\emph{MOC}. The ``MOC'' tiling scheme, based on the  multi-order coverage of HEALPix maps, hierarchically predefines cells in order to specify arbitrary sky regions \citep{FeBo2014}. 
-MOC is proposed in order to provide fast set operations between regions on the sky. In MOC, the spherical sky is recursively divided into 4 regions and each region is a diamond. 
+\emph{MOC}. The ``MOC'' tiling scheme, based on the multi-order coverage of HEALPix maps, hierarchically predefines cells in order to specify arbitrary sky regions \citep{FeBo2014}. 
+MOC is proposed in order to provide ``fast set operations'' between regions on the sky, which are designed to minimize computational time for standard set operations (unions, intersections, etc.). In MOC, the spherical sky is recursively divided into 4 regions and each region is a diamond. 
 The sphere is divided recursively into four diamonds. 
 The division stops according to the resolution necessary for a particular usage.
 MOC is particularly useful in the case that most information is contained in just a handful of pixels, and therefore it is desired to save that information at high resolution for those pixels, and the remainder of the map at low resolution.
 
-Here are two relevant implementation details about MOC.
+Here are three relevant implementation details about MOC.
 \begin{itemize}
 \item MOC uses an equatorial coordinate system. 
 \item MOC divides the sphere recursively into four diamonds. 
@@ -296,9 +297,9 @@ Here are two relevant implementation details about MOC.
 \begin{equation}\label{eqn:tile_ranked}
 T_{ij} = \int_{\alpha_i}^{\alpha_i+\Delta \alpha}\int_{\delta_i}^{\delta_i+\Delta \delta}L_\textrm{GW}(\alpha,\delta)d\Omega
 \end{equation}
-where $L_\textrm{GW}(\alpha,\delta)$ is the gravitational-wave likelihood.
+where $L_\textrm{GW}(\alpha,\delta)$ is the likelihood for the sky location of the event from the analysis of gravitational-wave data.
 Then, we rank all the tiles with their $T_{ij}$ and select from the top of the rankings until we reach the target integrated probability desired.
-In the following, we will take 95\% as our target integrated probability, which is a reasonable trade-off between capturing as many potential counterparts as possible while also limiting the sky coverage required.
+In the following, we will take 95\% as our target integrated probability, which is a reasonable trade-off between capturing as many potential counterparts as possible while also limiting the sky coverage required. Other integrated probabilities could also be considered, and the ideal choice will depend on a trade-off between ensuring taking at least one image of a potential counterpart, and taking enough images of the same fields to determine the candidates that are appropriately fading and reddening.
 
 \emph{hierarchical}. The hierarchical tiling scheme, which is a Multinest-based \citep{FeHo2009,FeGa2009,BuGe2014} optimization, chooses tiles for a given skymap by placing them sequentially on the skymap and maximizing the probability at each step. Multinest was chosen because with many nested samples available, the likelihood of the sampler suffering from the natural bi-modality of gravitational-wave skymap was lower, as multiple samples could simultaneously explore multiple portions of the skymap at once. We note that any algorithm designed for high-dimensional sampling is possible here. This method starts by selecting the tile that covers the most probability. Then, it sets the probability in that tile to be zero before going to the next iteration, when it again selects the tile that covers the most probability. It stops when a user-specified number of tiles, $N_{\rm tiles}$, are selected. The tiles selected might overlap on the corners when there are higher probability distributions around that corner. 
  
@@ -324,22 +325,24 @@ This assumes implicitly that the electromagnetic counterpart has not faded beyon
 
 There are four options related to time allocations as a function of sky location available, powerlaw, WAW (Where and when), PEM (Probability of electomagnetic counterpart), and coverage. Figure~\ref{fig:timealloc} shows examples of the powerlaw, WAW, and PEM types.
 
-\emph{Coverage.} The ``coverage'' option is one whereby coverage from existing surveys, including the right ascension and declination of the pointing and the limiting magnitude, are used. The benefit of this mode is to establish efficiencies of detection of kilonovae in existing surveys. For example, this code will be used to determine the efficiencies of the Pan-STARRS and ATLAS surveys to both gravitational-wave and gamma-ray burst triggers.
+\emph{Coverage.} The ``coverage'' option is one whereby coverage from existing surveys, including the right ascension and declination of the pointing and the limiting magnitude, are used. The benefit of this mode is to establish efficiencies of detection of kilonovae in existing surveys. For example, this code will be used to determine the efficiencies of the Pan-STARRS and ATLAS surveys to both gravitational-wave and gamma-ray burst triggers. It can be used as a way to prioritize examination of survey data for serendipitous observations of these transients, where both reference images and the time of the transients are known.
 
 \emph{Powerlaw.} The ``powerlaw'' option is one where scaling relations are applied to the probability map to determine the time allocation.
-Many searches have used a variation on simply scaling the time allocation proportional to the probability skymaps, a technique employed in the Powerlaw method below. \cite{CoSt2016a} derived scaling relations for the time allocated to any given field, $t_i$, given the graviational-wave likelihood. We showed that under certain assumptions, $t_i \propto \left(\frac{L_\textrm{GW}(\alpha_i,\delta_i)}{a(\alpha_i,\delta_i)}\right)^{2/3}$, where $\alpha_i$ is the right ascension, $\delta_i$ is the declination, $L_\textrm{GW}(\alpha_i,\delta_i)$ is the gravitational-wave likelihood and $a(\alpha_i,\delta_i)$ is Galactic extinction.  While the powerlaw based analysis is straightforward, it does not account for the fact that the telescope must be sensitive enough to detect the counterpart. In this sense, this algorithm is the least model dependent. Although the detectability is model-dependent, both in the distances returned by the gravitational-wave detectors and the absolute magnitude of the sources, the following algorithms account for this in multiple ways.
+Many authors \citep{GhBl2016,CoSt2016a,ChHu2017} have proposed a variation on simply scaling the time allocation proportional to the probability skymaps, a technique employed in the Powerlaw method below.
+Pan-STARRS and ATLAS based searches have employed this technique \citep{SmCh2016,SmCh2016b,StTo2017}.
+\cite{CoSt2016a} derived scaling relations for the time allocated to any given field, $t_i$, given the graviational-wave likelihood. We showed that under certain assumptions, $t_i \propto \left(\frac{L_\textrm{GW}(\alpha_i,\delta_i)}{a(\alpha_i,\delta_i)}\right)^{2/3}$, where $\alpha_i$ is the right ascension, $\delta_i$ is the declination, $L_\textrm{GW}(\alpha_i,\delta_i)$ is the gravitational-wave likelihood and $a(\alpha_i,\delta_i)$ is Galactic extinction.  While the powerlaw based analysis is straightforward, it does not account for the fact that the telescope must be sensitive enough to detect the counterpart. In this sense, this algorithm is the least model dependent. Although the detectability is model-dependent, both in the distances returned by the gravitational-wave detectors and the absolute magnitude of the sources, the following algorithms account for this in multiple ways.
 
 The \emph{Powerlaw} algorithm optimizes the probability of detecting the transient with N observations, which is simply the sum of the probability of each observation. The expression is shown in Eq.\ref{eqn:powerlaw}:
 \begin{equation}\label{eqn:powerlaw}
 p_{tot}=\Sigma_{i=1}^N \frac{M_i}{M_{tot}}\frac{L_{GW}(\alpha_i, \delta_i, R_i)}{L_{GW_tot}}\frac{F_i(t_i)}{a(\alpha_i, \delta_i)},
 \end{equation}
-where $R_i$ is the distance to the galaxy, $M_i$ is the mass for galaxy $i$, $M_{tot}$ is the total mass of galaxies in the field, $L_{GW}(\alpha_i, \delta_i, R_i)$ is the likelihood of the gravitational wave source in this galaxy, $F(t)$ is the luminosity as a function of allocated time, and $a(\alpha_i, \delta_i)$ is the attenuation. In the following, we will simply scale the gravitational-wave likelihood and not the mass in the field. It is possible that this approximation could be improved using galaxy catalogs, although this introduces concerns about galaxy catalog completeness. Eq.~\ref{eqn:powerlaw} is optimized with the constraint that the total observation time is limited, shown as
+where $R_i$ is the distance to the galaxy, $M_i$ is the mass for galaxy $i$, $M_{tot}$ is the total mass of galaxies in the field, $L_{GW}(\alpha_i, \delta_i, R_i)$ is the likelihood of the gravitational wave source in this galaxy, $F(t)$ is the luminosity as a function of allocated time, and $a(\alpha_i, \delta_i)$ is the attenuation. In the following, we will simply scale the gravitational-wave likelihood as $L_\textrm{GW}(\alpha_i,\delta_i)^{2/3}$ and not the mass in the field. Within this formalism, independent scaling of the distance is also possible (such as with $R^4$ to maintain a constant SNR for a particular target absolute magnitude) , but this dependence has been integrated out in calculated the sky map probability's associated powerlaw. It is possible that this approximation could be improved using galaxy catalogs, although this introduces concerns about galaxy catalog completeness. Eq.~\ref{eqn:powerlaw} is optimized with the constraint that the total observation time is limited, shown as
 \begin{equation}
 \Sigma_{i=1}^N t_i=T,
 \end{equation}
 where $T$ is the total observation time.
 
-\emph{WAW.} The ``When and Where'' algorithm, defined in \cite{SoCo2017}, uses counterpart lightcurve models in the optical, infrared and radio constructed from information from the gravitational-wave signals to create a time- and sky location dependent probability for detecting electromagnetic transients. The WAW approach introduces time into the model by defining a concept of detectability. Detectability is the probability of detecting a light flux greater than the flux limit at position $\alpha$ and time $t$. Thus, by having detectability introduced, the algorithm can optimize "where" and "when" to schedule the observation based on $\alpha$ and $t$ with a greedy approach. The procedures of the algorithm are shown below.
+\emph{WAW.} The ``When and Where'' algorithm, defined in \cite{SoCo2017}, uses counterpart lightcurve models in the optical, infrared and radio constructed from information from the gravitational-wave signals to create a time- and sky location dependent probability for detecting electromagnetic transients. The WAW approach introduces time into the model by defining a concept of detectability. Detectability is the probability of detecting a light flux greater than the flux limit at position $\alpha$ and time $t$. These flux limits are computed using a combination of lightcurve models and knowledge of distance to the counterparts for compact binary coalescences. Thus, by having detectability introduced, the algorithm can optimize "where" and "when" to schedule the observation based on $\alpha$ and $t$ with a greedy approach. The procedures of the algorithm are shown below.
 \begin{enumerate}
 \item The tiles are generated covering the confidence region based on the probability distribution, which comes from the gravitational wave signal.
 \item The algorithm takes in the information encoded in the gravitational waves and computes the lightcurve $F_i(t)$ for each tile. 
@@ -353,14 +356,14 @@ where $H$ is the Heaviside function so if $F_i(t)$ is greater than $F_{lim}$, it
 \end{enumerate}
 This method optimizes the search by introducing detectability, defined as Eq.\ref{eqn:detectability} over the the three dimensional observation volume of direction and time, with the constraint that only one location can be observed at the same time.
 
-\emph{PEM.} The ``Probability of electomagnetic counterpart'' algorithm, defined in \cite{ChHu2017}, optimizes the number of fields to observe and their time allocations by adopting priors on the intrinsic luminosity of the sources and using knowledge of distance to the counterparts provided by the low-latency gravitational-wave searches through BAYESTAR \citep{SiPr2016} or high-latency parameter estimation from LALInference \citep{VeRa2015} for compact binary coalescence. More concretely, its input is the sky localization map and information about the telescope. It selects the tiles to observe with a greedy algorithm and allocates the observation time for each tile to maximizes the probability of detecting the EM counterpart of the GW event. 
+\emph{PEM.} The ``Probability of electomagnetic counterpart'' algorithm, defined in \cite{ChHu2017}, optimizes the number of fields to observe and their time allocations by adopting priors on the intrinsic luminosity of the sources and using knowledge of distance to the counterparts for compact binary coalescences. More concretely, its input is the sky localization map and information about the telescope. It selects the tiles to observe with a greedy algorithm and allocates the observation time for each tile to maximizes the probability of detecting the EM counterpart of the GW event. 
 
 The procedures of the algorithm are shown below, and further details can be found in \cite{ChHu2017}.
 \begin{enumerate}
 \item Based on the sky localization map, locate the tiles that cover the region enclosed by the contour of the target confidence level.
 \item These N tiles are ranked based on the total probability covered.
 \item We optimize the number of tiles selected and then the time allocation for each selected tile. For all k from 1 to n, we do the following:
-\begin{enumerate}
+\begin{itemize}
 \item the top k tiles from the rankings are selected. 
 
 \item Eq.~\ref{eqn:pem_obj} is the total detection probability of all the tiles and optimized with Lagrange multiplier with the constraint of Eq.~\ref{eqn:pem_const}, which encodes the limited observational time on the telescope: 
@@ -372,7 +375,7 @@ kT_0+\Sigma_{i=1}^k\tau_i^{(i)}=T
 \end{equation}
 where $\omega_i$ is the probability density; $\tau_i$ is the time allocated and $I$ is the parameters of the telescope, $T_0$ is the time to adjust the telescope before each observation, $\tau_i$ is the time allocated to each tile, and $T$ is the total observation time.
 \item We keep track of the best k, the tiles and the time allocation.
-\end{enumerate}
+\end{itemize}
 
 \item The optimal tiles $\{\omega_i\}$ and their allocated times $\{\tau_i\}$ for $i=1...k$ are the output.
 \end{enumerate}
@@ -415,7 +418,7 @@ There are three options related to scheduling observations, greedy, sear, and we
 \end{enumerate}
 
 \emph{sear (Setting Array).} The ``Setting Array'' algorithm, overcomes the shortcoming of the greedy algorithm to include site visibility. This motivates re-ordering the sequence such that as many tiles can be imaged as possible.
-\cite{RaSi2017} also implemented a version whereby the rising and setting of tiles were accounted for. It uses the idea that observes high probability tiles first, subject to the condition that each tile from the observing sequence must be observed before it sets. The concept of imaging windows are used in this algorithm. We call a tile belongs to a window when the end of its observation time is in the window and denote the $i$th window with $W_i$. The algorithm uses the recursive relation between the optimal observation arrangement between the first $k$ windows $S_k$ and the first $k + 1$ windows $S_{k+1}$. The details are shown below. 
+\cite{RaSi2017} also implemented a version whereby the rising and setting of tiles were accounted for. It uses the idea that observes high probability tiles first, subject to the condition that each tile from the observing sequence must be observed before it sets. The concept of imaging windows are used in this algorithm. We say that a tile belongs to a window when the end of its observation time is in the window and denote the $i$th window with $W_i$. We denote the tile that will be imaged in window $W_i$ as the tile $S_i$. The algorithm uses the recursive relation between the optimal observation arrangement between the first $k$ windows $S_k$ and the $k + 1$ window $S_{k+1}$. The details are shown below. 
 \begin{enumerate}
 \item Consider the first window $W_1$ and initialize $S_1$ to be the tile that has the highest probability for $W_1$.
 \item Move on to $W_2$ and find the two tiles $c_1$ and $c_2$ that have the greatest probability density.
@@ -437,6 +440,8 @@ Therefore we define the weights $w_i$ as
 \begin{equation}
 w_i = L_\textrm{GW}(\alpha_i,\delta_i) \times \frac{N_\textrm{R}}{N_\textrm{A}} 
 \end{equation}
+where $N_\textrm{R}$ is the number of remaining exposures to be performed for a given tile and $N_\textrm{A}$ is the number of allocated exposures for that tile.
+In this way, $\frac{N_\textrm{R}}{N_\textrm{A}}$ prioritizes the tiles with the most remaining exposures.
 Therefore, for each exposure segment, we calculate the weight for each possible tile and select the tile with the highest weight to fill that slot.
 \subsection{Efficiency}
 \label{subsection:efficiency}
@@ -451,6 +456,7 @@ We do not point away from the moon or account for sky brightness.
 
 The simplest metric of success is the ``efficiency,'' which is defined as the number of transients detected over the number of transients injected.
 To estimate the efficiency for the ``detection'' of the electromagnetic counterparts to gravitational-wave transients, we perform simulated injections of supplied lightcurves. 
+The transients are injected proportional to the values in the sky localization probability map to account for the selection effects of the gravitational-wave detector network.
 We provide example lightcurves for a variety of lightcurve models, including:
 
 \begin{enumerate}
@@ -475,6 +481,8 @@ In this section, we compare the efficiency of the algorithms based on simulated 
 We take as an example the ATLAS instrument in the following. 
 As all of the instruments are large aperture, wide-field instruments, the results will not strongly depend on the instrument chosen and the way the efficiencies scale will be the same for the level of detail considered here.
 Including information such as slew and readout time of the individual telescopes will change the results in case of lengthy readout times or characteristically slow slews times.
+For telescopes with either readout times or slews on the order of the typical length of exposures, the efficiencies could be impacted by up to a factor of 2.
+For the survey telescopes we consider in this analysis, they are designed to have short readout and slew times so as to minimize this overhead, and so the loss in efficiency will be much smaller.
 \subsection{Method}
 We will focus on the model by \cite{Me2017} to compare the efficiency. All the efficiency values in the distance range between $10^{-1} Mpc$ to $10^3 Mpc$ (logarithmically spaced) are calculated and plotted. Thus we will have a plot of efficiency against distance for each of the 36 algorithm combinations. An example efficiency plot of efficiency is shown in Figure~\ref{fig:eff_ex}, where difference time allocation algorithms are compared. Greedy algorithm is used for tiling and PEM algorithm is used for time allocation. It can be seen that greedy and sear scheduling does better than weighted at long distance. 
 
@@ -524,7 +532,7 @@ Due to the large uncertainty footprint, which can range from 100-1000 square deg
 However, we have described in this paper a number of algorithms in the literature available for significantly improving upon the most naive approach.
 We have shown comparisons between the algorithms, describing the limits in which they are the most effective.
 
-One potential improvement to the analysis considered here is using the locations of known galaxies in the gravitational-wave sensitivity volume, which was $\approx 100$\,Mpc for GW170817 \citep{AbEA2017b} and will extend to $\approx 300$\,Mpc at design sensitivity \citep{aLIGO}. 
+One potential improvement to the analysis considered here is using the locations of known galaxies in the gravitational-wave sensitivity volume, which was $\approx 100$\,Mpc for GW170817 \citep{AbEA2017b} and will extend to $\approx 300$\,Mpc at design sensitivity \citep{AbEA2016h}. 
 Recent improvements in galaxy catalog completeness have made this effort possible. For example, the Galaxy List for the Advanced Detector Era (GLADE) galaxy catalog is complete (with respect to a Schechter function) out to $\approx 300$\,Mpc for galaxies brighter than the median Schechter function galaxy luminosity \footnote{http://aquarius.elte.hu/glade/}. The Census of the Local Universe (CLU) catalog \citep{CoKa2017} is complete to 85\% in star-formation and 70\% in stellar mass at 200\,Mpc.
 Within these local volumes, the sky area coverage of galaxies is $\approx 1$\,\% \cite{CoKa2017}, bringing the sky areas searched down by a factor of 100, which makes the possibility of targeted galaxy pointing tractable, especially for small field of view telescopes (see \cite{ArMc2017} for an example). 
 
