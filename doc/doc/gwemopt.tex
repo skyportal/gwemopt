@@ -261,8 +261,7 @@ python gwemopt_run --doEvent --do3D --doTiles --doPlots --tilesType ranked
 Once a telescope configuration has been determined, the next step of the analysis is to generate the sky-map tiling.
 There are a variety of algorithms in the literature for sky-map tiling, and the ones implemented in \emph{gwemopt} will be detailed below. The idea is to cover the sky with tiles the size of the telescope's field-of-view with minimal overlap. In some cases, these tiles are pre-determined by survey constraints in order to simplify difference imaging, where a reference image is subtracted from a science image to facilitate transient identification. In other cases, it is possible to optimize the tile locations based on the gravitational-wave skymaps, such that the tiles maximize the probability contained. Due to the FOV for these telescopes being in general much smaller than the probability region, the effect is expected to be relatively minimal.
 For example, the number of tiles chosen to allocate time to will be dominated by choices such as whether there is utility in filling in chip gaps (gaps in the CCD arrays that compose the entire camera) and thereby having overlapping tiles, as opposed to simply maximizing the probability contained.
-
-\begin{figure*}
+\begin{figure*}[t]
     \centering
     \includegraphics[width=3in]{tiling_greedy}
     \includegraphics[width=3in]{tiling_hierarchical} \\
@@ -273,7 +272,6 @@ For example, the number of tiles chosen to allocate time to will be dominated by
     \caption{Example outputs of different tiling algorithms. On the top left is the greedy version with $N_{\rm tiles}$ = 10, where $N_{\rm tiles}$ is the number of tiles employed, on the top right is the hierarchical version with the same, on the bottom left is the MOC skymap, and on the bottom right is the ranked skymap tiling. The top row of skymaps are similar, given that 10 tiles are used for both algorithms. The differences between the two schemes, one of which places the tiles all at once and the other places them sequentially, when integrating the probabilities, leads to minor differences in tile placement. The bottom row, with two schemes that cover the entire grid, are identical up to small numerical differences. This is expected as MOC is an on-the-fly scheme, and ranked pre-computes the tile locations.}
     \label{fig:tiling}
 \end{figure*}
-
 Gravitational-wave skymaps in general contain metrics that report the spatial probability of a gravitational-wave source lying within a certain location.
 They are composed of HEALPix arrays that encode either the 2D probability, in right ascension and declination, or 3D probability, which includes probability distributions for the luminosity distance of the transient.
 These are reported in maps with a particular number of pixels, usually $\textrm{N}_\textrm{side} = 512$. 
@@ -519,16 +517,17 @@ We concentrate on the SEAR scheduling algorithm in the following, as that was ge
 The lower efficiencies in the case of overlapping tiles of the greedy and hierarchical tiling algorithms are due to the upperlimit of the number of tiles posed (to be returned to in the next section), while performing similarly to one another. This is unsurprising, as both algorithms differ only in the order in which tiles are determined (greedy optimizes the location all at once, while hierarchical places one tile after the other).
 
 \subsection{Performance and the number of tiles}
+
 We also study how the number of tiles affects the performance. It is only relevant in the hierarchical and greedy tiling algorithm. The hierarchical algorithm is used for this study, which selects tiles that cover the highest probability and masks the tiles once they are selected. It stops when a user-defined number of tiles is selected. The efficiency is computed based on the simulation of 5000 injections.
 
-From the plot on the left of Figure~\ref{fig:eff_ntiles}, it can be seen that considering more tiles generally results in better efficiency. However, the benefit of increasing the number of tiles decreases as more and more tiles are considered. This effect is shown in the left plot, where the efficiency curves are shown for different numbers of tiles. The three lines showing the results of 16, 28 and 40 tiles are closer to each other than the bottom one where only four tiles are selected. This means that increasing the number of tiles from 4 to 16 improves the efficiency more than from 16 to 28. This is expected since, as the number of tiles increases, new tiles cover less and less probability and the limiting factors in the time allocation and scheduling algorithm become more important and the efficiency will not keep rising.
+From the plot on the left of Figure~\ref{fig:eff_ntiles}, it can be seen that efficiency increases at first when we increase the number of tiles but after a peak is seen around 35 tiles, the efficiency starts decreasing. The right plot shows the efficiency curves for different number of tiles. Red indicates high efficiency; blue indicates low efficiency. It can be seen from the plot that low efficiency keeps getting better as we increase the number of tiles. However, in the meantime, high efficiency gets better and then gets worse. It is the best around 35 tiles and this corresponds to the peak we see in the left figure.
 It is important to note that just because a tile is selected by the tiling algorithm, it is not assured that time will be allocated to that tile or it will be scheduled.
 It is also important to note that the algorithms presented here do not account for readout or slew times, which will have some effect on these results. For an alternative study that accounts for these effects, please see \cite{ChHu2017}.
 \begin{figure*}[t]
     \centering
     \includegraphics[width=0.45\textwidth]{plots/eff_ntiles.png}
-    \includegraphics[width=0.45\textwidth]{plots/eff_ntiles_curves.png}
-    \caption{On the left is the plot of efficiency weighted average as a function of the number of tiles considered. On the right is the efficiency curves unpacked from data points corresponding to 4, 16, 28, 40 tiles of the top figure. In the simulation, hierarchical tiling algorithm, powerlaw time allocation algorithm and greedy scheduling algorithm are used to detect 5000 random injections for number of tiles ranging from 1 to 100. The standard deviation is calculated and the 99\% confidence interval is plotted as the grey shaded region in the top figure.}
+    \includegraphics[width=0.45\textwidth]{plots/eff_pcolor.png}
+    \caption{On the left is the plot of efficiency weighted average as a function of the number of tiles considered. On the right is efficiency as a function of distance for different number of tiles. In the simulation, hierarchical tiling algorithm, powerlaw time allocation algorithm and greedy scheduling algorithm are used to detect 5000 random injections for number of tiles ranging from 1 to 100. The standard deviation is calculated and the 99\% confidence interval is plotted as the grey shaded region in the top figure. Blue indicates lower efficiency and red indicates higher efficiency. We can see that as the number of tiles increases, low distance gets better but high distance gets worse. We see the least blue at high distance around 35 tiles, which corresponds to the peak in the left plot.}
     \label{fig:eff_ntiles}
 \end{figure*}
 
