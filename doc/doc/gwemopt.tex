@@ -128,7 +128,7 @@ It has been known for some time that there are potential electromagnetic counter
 and optical and near-infrared colors and durations that depend on the physical conditions of the merger \citep{MeMa2010,KaBa2013,BaKa2013,TaHo2013,KaFe2015,BaKa2016,Me2017}.
 
 The scientific output from a joint gravitational-wave and electromagnetic observation is significant, as the detection of a kilonova coincident with a gravitational-wave observation allows for the exploration of the neutron star equation of state \citep{BaBa2013} and r-process nucleosynthesis in the unbound ejecta from a merger involving a neutron star \citep{MeBa2015,JuBa2015,RoLi2017,WuFe2016}.
-The gravitational-wave posteriors alone allow for estimates of the contribution of dynamical ejecta to the optical counterpart \cite{AbEA2017g}.
+The gravitational-wave posteriors alone, including mass and tidal parameter information, allow for estimates of the contribution of dynamical ejecta to the optical counterpart \cite{AbEA2017g}.
 Among others, \cite{SmCh2017} use photometry of GW170817 to place constraints on the ejecta mass, velocity, and effective opacity.
 \cite{RaPe2018} use photometry of GW170817 in conjunction with kilonova models and numerical-relativity results to place a lower bound on the tidal deformability parameter. 
 The identification of the host galaxy allows for a distance-ladder independent measurement of the Hubble Constant \citep{AbEA2017h}.
@@ -142,7 +142,7 @@ For example, Pan-STARRS has a 7$\textrm{deg}^2$ field of view (FOV), achieving a
 
 Due to the significant difference in telescope configurations, including FOV, filter, typical exposure times, and limiting magnitudes, in addition to placement on the earth and therefore different seeing and sky conditions, optimizing gravitational wave followups for an arbitrary telescope is difficult.
 In the following, we will take the telescopes mentioned above as examples.
-For this reason, we have created a codebase named \emph{gwemopt} (Gravitational Wave - Electromagnetic OPTimization) that utilizes methods from a variety of recent papers geared towards optimizing efforts of followup. We employ methods to read gravitational-wave skymaps and the associated information made available from GraceDB \footnote{https://gracedb.ligo.org}, which is the gravitational-wave database from which one can access information about gravitational-wave trigger candidates \citep{AbEA2016b}.
+For this reason, we have created a codebase named \emph{gwemopt} (Gravitational Wave - ElectroMagnetic OPTimization) that utilizes methods from a variety of recent papers geared towards optimizing efforts of followup. We employ methods to read gravitational-wave skymaps and the associated information made available from GraceDB \footnote{https://gracedb.ligo.org}, which is the gravitational-wave database from which one can access information about gravitational-wave trigger candidates \citep{AbEA2016b}.
 We also use information about the telescopes to tile the sky, allocate available telescope time to the chosen tiles, and schedule the telescope time. 
 This is done in a way that is optimized based on the telescope configurations and the lightcurves, i.e. the time evolution of luminosity, of the transients they are expected to detect.
 We will describe algorithms that use the gravitational-wave probability skymaps, some of them with right ascension and declination information only, some of them with distance information as well), to perform optimizations.
@@ -153,7 +153,7 @@ In section~\ref{sec:conclusions}, we offer concluding remarks and suggest direct
 \section{Algorithm}
 \label{sec:algorithm}
 
-Figure~\ref{fig:flowchart} shows the flowchart for the \emph{gwemopt} pipeline, developed to optimize the efforts of electromagnetic followup of gravitational-wave events.  \emph{gwemopt} is developed in \texttt{python}, which has the benefit of an interface to LIGO's gravitational-wave candidate event database (GraceDB). It internally uses HEALPix (Hierarchical Equal Area isoLatitude Pixelization) \citep{GoHi2005}, the format in which LIGO reports skymaps, when performing optimization calculations. 
+Figure~\ref{fig:flowchart} shows the flowchart for the \emph{gwemopt} pipeline, developed to optimize the efforts of electromagnetic followup of gravitational-wave events.  \emph{gwemopt} is developed in \texttt{python}, which has the benefit of an interface to LIGO and Virgo's gravitational-wave candidate event database (GraceDB). It internally uses HEALPix (Hierarchical Equal Area isoLatitude Pixelization) \citep{GoHi2005}, the format in which LIGO and Virgo reports skymaps, when performing optimization calculations. 
 
 The general sequence of the pipeline is as follows.
 \emph{gwemopt} uses events provided by GraceDB in addition to information about the telescopes for creating tiles and optimizing time allocations in the fields.
@@ -169,7 +169,7 @@ By way of an outline of the the algorithm to be discussed, the subsections in th
 \item Tiling (Subsection~\ref{subsection:tiling}): Algorithms for determining what the best fields to observe are.
 \item Time Allocation (Subsection~\ref{subsection:timeallocation}): Algorithms for determining how long the exposure times are and the number of exposures for each of the fields.
 \item Scheduling (Subsection~\ref{subsection:scheduling}): Algorithms for determining the order in which each of the fields is observed.
-\item Efficiency (Subsection~\ref{subsection:efficiency}): Likelihood of detecting transients given the specific characteristics of the skymap, the telescope, and the tiling, time allocation, and scheduling choices.
+\item Efficiency (Subsection~\ref{subsection:efficiency}): Probability of detecting transients given the specific characteristics of the skymap, the telescope, and the tiling, time allocation, and scheduling choices.
 \end{enumerate}
 
 % Define block styles
@@ -212,7 +212,7 @@ By way of an outline of the the algorithm to be discussed, the subsections in th
 \hspace*{-0.5cm}
 \centering
 \includegraphics[width=3in]{prob.pdf}
-\caption{The gravitational-wave likelihood $L_\textrm{GW}(\alpha,\delta,R)$ for GW170104.}
+\caption{The gravitational-wave posterior probability distribution $L_\textrm{GW}(\alpha,\delta,R)$ for GW170104.}
  \label{fig:skymap}
  \end{figure}
 
@@ -307,7 +307,7 @@ The scheme for integrating probability in tiles is the same as in ``ranked'' abo
 
 \emph{hierarchical}. The hierarchical tiling scheme, which is a MultiNest-based \citep{FeHo2009,FeGa2009,BuGe2014} optimization, chooses tiles for a given skymap by placing them sequentially on the skymap and maximizing the probability at each step. 
 This is distinctive from the ranked scheme in that it does not use pre-defined sky cells.
-MultiNest was chosen because with many nested samples available, multiple samples could simultaneously explore multiple portions of the skymap at once. 
+MultiNest was chosen because with many live points available, multiple live points could simultaneously explore multiple portions of the skymap at once. 
 This helps to overcome any potential issues that arise from natural bi-modality of gravitational-wave skymaps, where a single chain could be caught on a single island.
 We note that any algorithm designed for high-dimensional sampling is possible here. This method starts by selecting the tile that covers the most probability. Then, it sets the probability in that tile to be zero before going to the next iteration, when it again selects the tile that covers the most probability. The algorithm stops when a user-specified number of tiles, $N_{\rm tiles}$, are selected. The tiles selected might overlap on the corners when there are higher probability distributions around that corner. 
  
@@ -337,13 +337,13 @@ There are four options related to time allocations as a function of sky location
 \emph{Powerlaw.} The ``powerlaw'' option is one where scaling relations are applied to the probability map to determine the time allocation.
 Many authors \citep{GhBl2016,CoSt2016a,ChHu2017} have proposed a variation on simply scaling the time allocation proportional to the probability skymaps, a technique employed in the powerlaw method below.
 Pan-STARRS and ATLAS based searches have employed this technique \citep{SmCh2016,SmCh2016b,StTo2017}.
-\cite{CoSt2016a} derived scaling relations for the time allocated to any given field, $t_i$, given the gravitational-wave likelihood.  While the powerlaw based analysis is straightforward, it does not account for the fact that the telescope must be sensitive enough to detect the counterpart. In this sense, this algorithm is the least model dependent. The detectability of a given transient is model-dependent, depending both on the distances predicted by the gravitational-wave data analysis and the absolute magnitude of the sources; the following algorithms account for this dependnce in multiple ways.
+\cite{CoSt2016a} derived scaling relations for the time allocated to any given field, $t_i$, given the gravitational-wave posterior probability distribution. While the powerlaw based analysis is straightforward, it does not account for the fact that the telescope must be sensitive enough to detect the counterpart. In this sense, this algorithm is the least model dependent. The detectability of a given transient is model-dependent, depending both on the distances predicted by the gravitational-wave data analysis and the absolute magnitude of the sources; the following algorithms account for this dependnce in multiple ways.
 
 The \emph{Powerlaw} algorithm optimizes the probability of detecting the transient with N observations, which is simply the sum of the probability of each observation. The expression is shown in Eq.\ref{eqn:powerlaw}:
 \begin{equation}\label{eqn:powerlaw}
 p_{tot}=\Sigma_{i=1}^N \frac{M_i}{M_{tot}}\frac{L_{GW}(\alpha_i, \delta_i, R_i)}{L_{GW_tot}}\frac{F_i(t_i)}{a(\alpha_i, \delta_i)},
 \end{equation}
-where $R_i$ is the distance to the galaxy, $M_i$ is the mass for galaxy $i$, $M_{tot}$ is the total mass of galaxies in the field, $L_{GW}(\alpha_i, \delta_i, R_i)$ is the likelihood of the gravitational wave source in this galaxy, $F(t)$ is the luminosity as a function of allocated time, and $a(\alpha_i, \delta_i)$ is the Galactic extinction. In the following, we will simply scale the gravitational-wave likelihood as $L_\textrm{GW}(\alpha_i,\delta_i)^{2/3}$ (as shown by the analysis of \cite{CoSt2016a} to be optimal given their assumptions). Within this formalism, independent scaling of the distance is also possible (such as with $R^4$ to maintain a constant electromagnetic signal-to-noise ratio for a particular target absolute magnitude) , but this dependence has been accounted for in calculating the sky map probability's associated powerlaw. It is possible that this approximation could be improved using galaxy catalogs, although this introduces concerns about galaxy catalog completeness. Eq.~\ref{eqn:powerlaw} is optimized with the constraint that the total observation time is limited, shown as
+where $R_i$ is the distance to the galaxy, $M_i$ is the mass for galaxy $i$, $M_{tot}$ is the total mass of galaxies in the field, $L_{GW}(\alpha_i, \delta_i, R_i)$ is the posterior probability distribution of the gravitational wave source in this galaxy, $F(t)$ is the luminosity as a function of allocated time, and $a(\alpha_i, \delta_i)$ is the Galactic extinction. In the following, we will simply scale the gravitational-wave posterior probability distribution as $L_\textrm{GW}(\alpha_i,\delta_i)^{2/3}$ (as shown by the analysis of \cite{CoSt2016a} to be optimal given their assumptions). Within this formalism, independent scaling of the distance is also possible (such as with $R^4$ to maintain a constant electromagnetic signal-to-noise ratio for a particular target absolute magnitude) , but this dependence has been accounted for in calculating the sky map probability's associated powerlaw. It is possible that this approximation could be improved using galaxy catalogs, although this introduces concerns about galaxy catalog completeness. Eq.~\ref{eqn:powerlaw} is optimized with the constraint that the total observation time is limited, shown as
 \begin{equation}
 \Sigma_{i=1}^N t_i=T,
 \end{equation}
@@ -381,7 +381,7 @@ P(D_{EM}|k)=\Sigma_{i=1}^{k\leq n}P(D_{EM}|\omega_i^{(k)}, \tau_i^{(i)},I)
 k T_0+\Sigma_{i=1}^k\tau_i^{(i)}=T
 \end{equation}
 where $\omega_i$ is the probability density; $\tau_i$ is the time allocated and $I$ are the parameters of the telescope, $T_0$ is the time to adjust the telescope before each observation, $\tau_i$ is the time allocated to each tile, and $T$ is the total observation time.
-\item We keep track of the best $k$, the tiles and the time allocation.
+\item Eq.~\ref{eqn:pem_obj} is maximized with the constraint of Eq.~\ref{eqn:pem_const} to determine the best $k$, the tiles and the time allocation.
 \end{itemize}
 
 \item The optimal tiles $\{\omega_i\}$ and their allocated times $\{\tau_i\}$ for $i=1...k$ are the output.
@@ -420,7 +420,7 @@ There are three options related to scheduling observations: greedy, sear, and we
 
 \begin{enumerate}
 \item Construct a list of the tiles and number of exposures for each tile based on the time allocation algorithm utilized.
-\item For each window, find the sky tiles that are in the current window: $T_0 + (j-1) T_{exp}$ and $T_0 + j T_{exp}$
+\item For each window, find the sky tiles that are in the current window: $T_0 + (j-1) T_{exp}$ and $T_0 + j T_{exp}$, where $T_0$ is the start time for the observation, $T_{exp}$ is the exposure time, and $j$ is the index of the window.
 \item Allocate the window to the sky tile with the greatest probability, and increment the number of exposures for that tile down by 1.
 \end{enumerate}
 
@@ -431,15 +431,15 @@ There are three options related to scheduling observations: greedy, sear, and we
 \item Move on to $W_2$ and find the two tiles $c_1$ and $c_2$ that have the greatest probability density.
 \item Compare $c_1$ and $c_2$ with $S_1$ and act depending on the following conditions:
 \begin{itemize}
-\item If both $c_1$ and $c_2$ contain greater probability than $S_1$, set $S_2$ to be \{$c_1$, $c_2$\}.
+\item If both $c_1$ and $c_2$ contain greater probability than $S_1$, set $S_1$ = {$c_1$} and $S_2$ = {$c_2$}.
 \item Otherwise, put the tile with higher probability coverage between $c_1$ and $c_2$ into $S_2$, which becomes $S_3$.
 \end{itemize}
-We can see that either way, $S_2$ will have two elements.
+We can see that either way, $S_1$ and $S_2$ will have the two highest probability tiles observable.
 \item Move on to the next observation window until the last one is reached. The only difference for the coming iterations from the description above is that $S_k$ will have k elements.
 \item Return the last set $S_w$ where $w$ is the total number of observation windows.
 \end{enumerate}
 
-\emph{weighted.} A different scheme, known as ``weighted,'' is an algorithm where each tile is weighted based on both gravitational-wave likelihood enclosed, the number of exposures required for that tile, and the number of available slots for it to be imaged. This is an alternative to greedy and sear, as it is impossible to observe all of the tiles as they rise and set given the requirement of using multiple exposures per tile. 
+\emph{weighted.} A different scheme, known as ``weighted,'' is an algorithm where each tile is weighted based on both gravitational-wave posterior probability distribution enclosed, the number of exposures required for that tile, and the number of available slots for it to be imaged. This is an alternative to greedy and sear, as it is impossible to observe all of the tiles as they rise and set given the requirement of using multiple exposures per tile. 
 
 The idea is that all of the tiles are given a weight that depends on the requested number of exposures. 
 Therefore we define the weights $w_i$ as
@@ -500,7 +500,7 @@ We will focus on the model by \cite{Me2017} to compare the efficiency. All the e
 \end{figure}
 In Figure~\ref{fig:eff_ex}, we show an example where we hold the tiling and time allocation algorithms fixed (to disentangle their effects from the scheduling algorithm), and show the efficiency as a function of distance for the scheduling algorithms discussed in this paper. We find that both Greedy and SEAR perform better than weighted at larger distances. Weighted performs best at the lowest distances considered because it targets the highest probability tiles, ensuring that they will be scheduled for multiple exposures so as to meet the detection criteria. Greedy and SEAR, both of which schedule tiles to maximize the number of fields imaged, with SEAR accounting for the rising and setting of the tiles, perform significantly better at greater distances. This is because they sacrifice some efficiency for nearby sources by effectively exploring more fields, but have a more constant detection efficiency with distance.
 
-In order to compare the 36 efficiencies as plotted in Figure~\ref{fig:eff_ex}, we use a single statistic to reflect the overall performance of the algorithms based on the efficiency for each distance in the range of $10^{-1} Mpc$ to $10^3 Mpc$. Thus, we come to a metric that reflects what percentage of events that can be detected in a spherical volume of radius $10^3 Mpc$. The events are evenly distributed in the volume. Suppose the event density per volume is $\rho$ and the distance is $r$. Sampling a distance at $d$ corresponds to a shell with volume $4 \pi r^2 dr$. Assuming that the density is $\rho$, then the total events on that shell are $4 \pi \rho r^2 dr$. Thus, if the efficiency is $e$, the expected number of detected events on the shell will be $4 \pi \rho r^2 e dr$. From this we can see that the efficiency at $r$ is weighted by $r^2$. If we treat the efficiency at each distance as an individual sample, a weighted average on the squared radius will then be a good metric of the overall efficiency; it reflects how well the algorithm detects events uniformly distributed in a spherical volume of radius $10^3 Mpc$. A consequence of this metric is that the weight of $r^2$ makes the long range efficiency more important than the short range efficiency. Under this metric, an algorithm that performs well at further distances would be better than an algorithm that does better at short distances but whose performance deteriorates quickly as the distance increases. 
+In order to compare the 36 efficiencies as plotted in Figure~\ref{fig:eff_ex}, we use a single statistic to reflect the overall performance of the algorithms based on the efficiency for each distance in the range of $10^{-1} Mpc$ to $10^3 Mpc$. Thus, we come to a metric that reflects what percentage of events that can be detected in a spherical volume of radius $10^3 Mpc$. The events are evenly distributed in the volume. Suppose the event density per volume is $\rho$ and the distance is $r$. Sampling a distance at $r$ corresponds to a shell with volume $4 \pi r^2 dr$. Assuming that the density is $\rho$, then the total events on that shell are $4 \pi \rho r^2 dr$. Thus, if the efficiency is $e$, the expected number of detected events on the shell will be $4 \pi \rho r^2 e dr$. From this we can see that the efficiency at $r$ is weighted by $r^2$. If we treat the efficiency at each distance as an individual sample, a weighted average on the squared radius will then be a good metric of the overall efficiency; it reflects how well the algorithm detects events uniformly distributed in a spherical volume of radius $10^3 Mpc$. A consequence of this metric is that the weight of $r^2$ makes the long range efficiency more important than the short range efficiency. Under this metric, an algorithm that performs well at further distances would be better than an algorithm that does better at short distances but whose performance deteriorates quickly as the distance increases. 
 
 \subsection{Performance and algorithms}
 \begin{figure}[t]
@@ -513,12 +513,12 @@ For each of the 36 algorithm options, we compute the efficiency metric as descri
 The highest efficiency of $0.19$ is achieved by a combination of ranked tiling, powerlaw time allocation and greedy scheduling. Compared to the lowest efficiency of $0.01$, it can detect approximately 19 times more events within a range of $10^{-1} Mpc$ and $10^3 Mpc$. That corresponds to the darkest box in the 10th column and the second row in Figure~\ref{fig:eff_metric}. 
 
 Also, from Figure~\ref{fig:eff_metric}, we can compare the efficiencies of the individual algorithms.
-We concentrate on the SEAR scheduling algorithm in the following, as that was generally seen to be the most efficient from Figure~\ref{fig:eff_ex}. For example, in the case of the use of the MOC tiling algorithm, where all (non-overlapping) tiles are available for allocation, we can look at the ``MS'' column. The performance of PEM and power-law are very similar, and this fact holds true for all of the configurations. This similarity may be surprising, given that the powerlaw algorithm does not use the distance posteriors like PEM does. Instead, the powerlaw algorithm encodes the way the likelihood should be allocated with distance in its powerlaw term, and when considering distances where the ``shot-noise'' of galaxies disappears, they become equivalent. WAW suffers somewhat from the lack of the asset that makes it most valuable: inclusion of the dependence of lightcurves on the inclination angle of the original binary. Therefore, it is not surprising that PEM outperforms WAW in this instance, as PEM is optimal in the presence of distance information, while WAW requires inclination information in order to be optimal. However, in case inclination and distance were available in low latency, WAW may be best.
+We concentrate on the SEAR scheduling algorithm in the following. For example, in the case of the use of the MOC tiling algorithm, where all (non-overlapping) tiles are available for allocation, we can look at the ``MS'' column. The performance of PEM and power-law are very similar, and this fact holds true for all of the configurations. This similarity may be surprising, given that the powerlaw algorithm does not use the distance posteriors like PEM does. Instead, the powerlaw algorithm encodes the way the probability should be allocated with distance in its powerlaw term, and when considering distances where the ``shot-noise'' of galaxies disappears, they become equivalent. WAW suffers somewhat from the lack of the asset that makes it most valuable: inclusion of the dependence of lightcurves on the inclination angle of the original binary. Therefore, it is not surprising that PEM outperforms WAW in this instance, as PEM is optimal in the presence of distance information, while WAW requires inclination information in order to be optimal. However, in case inclination and distance were available in low latency, WAW may be best.
 The lower efficiencies in the case of overlapping tiles of the greedy and hierarchical tiling algorithms are due to the upperlimit of the number of tiles posed (to be returned to in the next section), while performing similarly to one another. This is unsurprising, as both algorithms differ only in the order in which tiles are determined (greedy optimizes the location all at once, while hierarchical places one tile after the other).
 
 \subsection{Performance and the number of tiles}
 
-We also study how the number of tiles affects the performance. It is only relevant in the hierarchical and greedy tiling algorithm. The hierarchical algorithm is used for this study, which selects tiles that cover the highest probability and masks the tiles once they are selected. It stops when a user-defined number of tiles is selected. The efficiency is computed based on the simulation of 5000 injections.
+We also study how the number of tiles affects the performance. This study in particular will depend on the FOV of the instrument in question. It is only relevant in the hierarchical and greedy tiling algorithm. The hierarchical algorithm is used for this study, which selects tiles that cover the highest probability and masks the tiles once they are selected. It stops when a user-defined number of tiles is selected. The efficiency is computed based on the simulation of 5000 injections.
 
 From the plot on the left of Figure~\ref{fig:eff_ntiles}, it can be seen that efficiency increases at first when we increase the number of tiles but after a peak is seen around 35 tiles, the efficiency starts decreasing. The right plot shows the efficiency curves for different number of tiles. Red indicates high efficiency; blue indicates low efficiency. It can be seen from the plot that efficiency at the smallest distances continues to improve as the number of tiles is increased. However, as the number of tiles increase, the efficiency for distant sources first rises and then falls (starting around 35 tiles). This occurs because as more tiles are chosen, less overall time can be allocated to the sources which would otherwise require longer exposure times. The most distant sources are found when using approximately 35 tiles and this corresponds to the peak we see in the left figure.
 It is important to note that just because a tile is selected by the tiling algorithm, it is not assured that time will be allocated to that tile or it will be scheduled.
@@ -544,7 +544,7 @@ One potential improvement to the analysis considered here is using the locations
 Recent improvements in galaxy catalog completeness have made this effort possible. For example, the Galaxy List for the Advanced Detector Era (GLADE) galaxy catalog is complete (with respect to a Schechter function) out to $\approx 300$\,Mpc for galaxies brighter than the median Schechter function galaxy luminosity \footnote{http://aquarius.elte.hu/glade/}. The Census of the Local Universe (CLU) catalog \citep{CoKa2017} is complete to 85\% in star-formation and 70\% in stellar mass at 200\,Mpc.
 Within these local volumes, the sky area coverage of galaxies is $\approx 1$\,\% \cite{CoKa2017}, bringing the sky areas searched down by a factor of 100, which makes the possibility of targeted galaxy pointing tractable, especially for small field of view telescopes (see \cite{ArMc2017} for an example). 
 
-Unfortunately, it is not immediately clear how to naturally compare the algorithms presented  here to the schemes which use galaxy catalogs.
+Unfortunately, it is not immediately clear how the algorithms presented here will perform relative to the schemes which use galaxy catalogs.
 One expects that there will be two regimes where one technique will be optimized over the other.
 For galaxy targeted searches, nearby sources with small localization volumes are most optimal, as these dedicated searches will be more sensitive to intrinsically fainter sources than the wide-field surveys.
 On the other hand, wide-field surveys will be more successful across large localization regions where the distance is not necessarily well constrained.
