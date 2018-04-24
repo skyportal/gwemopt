@@ -212,7 +212,7 @@ By way of an outline of the the algorithm to be discussed, the subsections in th
 \hspace*{-0.5cm}
 \centering
 \includegraphics[width=3in]{prob.pdf}
-\caption{The gravitational-wave posterior probability distribution $L_\textrm{GW}(\alpha,\delta,R)$ for GW170104.}
+\caption{The gravitational-wave posterior probability distribution $L_\textrm{GW}(\alpha,\delta)$ (marginalized over distance) for GW170104.}
  \label{fig:skymap}
  \end{figure}
 
@@ -363,7 +363,7 @@ where $H$ is the Heaviside function where if $F_i(t)$ is greater than $F_{lim}$,
 \end{enumerate}
 This method optimizes the search by introducing detectability, defined as Eq.~\ref{eqn:detectability} over the three dimensional observation volume of direction and time, with the constraint that only one location can be observed at the same time.
 
-\emph{PEM.} The ``Probability of electomagnetic counterpart'' algorithm, defined in \cite{ChHu2017}, optimizes the number of fields to observe and their time allocations by adopting priors on the intrinsic luminosities of the sources and using knowledge of distance to the counterparts for compact binary coalescences. More concretely, its input is the sky localization map and information about the telescope. It selects the tiles to observe with a greedy algorithm and allocates the observation time for each tile to maximize the probability of detecting the EM counterpart of the GW event. 
+\emph{PEM.} The ``Probability of electromagnetic counterpart'' algorithm, defined in \cite{ChHu2017}, optimizes the number of fields to observe and their time allocations by adopting priors on the intrinsic luminosities of the sources and using knowledge of distance to the counterparts for compact binary coalescences. More concretely, its input is the sky localization map and information about the telescope. It selects the tiles to observe with a greedy algorithm and allocates the observation time for each tile to maximize the probability of detecting the EM counterpart of the GW event. 
 
 The procedures of the algorithm are shown below, and further details can be found in \cite{ChHu2017}.
 \begin{enumerate}
@@ -432,10 +432,10 @@ There are three options related to scheduling observations: greedy, sear, and we
 \item Compare $c_1$ and $c_2$ with $S_1$ and act depending on the following conditions:
 \begin{itemize}
 \item If both $c_1$ and $c_2$ contain greater probability than $S_1$, set $S_1$ = {$c_1$} and $S_2$ = {$c_2$}.
-\item Otherwise, put the tile with higher probability coverage between $c_1$ and $c_2$ into $S_2$, which becomes $S_3$.
+\item Otherwise, put the tile with higher probability coverage between $c_1$ and $c_2$ into $S_2$; $c_2$ is then assigned to $S_3$.
 \end{itemize}
 We can see that either way, $S_1$ and $S_2$ will have the two highest probability tiles observable.
-\item Move on to the next observation window until the last one is reached. The only difference for the coming iterations from the description above is that $S_k$ will have k elements.
+\item Move on to the next observation window and repeat until the last one is reached.
 \item Return the last set $S_w$ where $w$ is the total number of observation windows.
 \end{enumerate}
 
@@ -536,7 +536,7 @@ It is also important to note that the algorithms presented here do not account f
 
 The detection of GW170817 \citep{AbEA2017b} has invigorated the search for improved strategies for associating gravitational waves with electromagnetic
 counterparts.
-Due to the large uncertainty footprint, which can range from 10-1000 square degrees, efficiently scanning sky areas  of this size in search of an electromagnetic counterpart is challenging.
+Due to the large uncertainty footprint, which can range from 10-1000 square degrees \citep{AbEA2016h}, efficiently scanning sky areas  of this size in search of an electromagnetic counterpart is challenging.
 However, in this paper, we have described and compared a number of algorithms in the literature available for significantly improving upon the most naive approaches.
 We have shown comparisons between the algorithms, describing the limits in which they are the most effective.
 
