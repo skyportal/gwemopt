@@ -11,6 +11,7 @@ import astropy.units as u
 import ephem
 
 #import gwemopt.glue as segments
+import glue
 import glue.segments as segments
 import gwemopt.utils
 

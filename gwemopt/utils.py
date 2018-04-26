@@ -21,6 +21,7 @@ import matplotlib.patches
 import matplotlib.path
 
 #import gwemopt.glue as segments
+import glue
 import glue.segments as segments
 
 def readParamsFromFile(file):
