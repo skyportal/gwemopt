@@ -247,8 +247,8 @@ else:
     print("Need to enable --doEvent, --doFootprint or --doSkymap")
     exit(0)
 
-params = gwemopt.segments_astroplan.get_telescope_segments(params)
-#params = gwemopt.segments.get_telescope_segments(params)
+#params = gwemopt.segments_astroplan.get_telescope_segments(params)
+params = gwemopt.segments.get_telescope_segments(params)
 
 print("Loading skymap...")
 # Function to read maps
