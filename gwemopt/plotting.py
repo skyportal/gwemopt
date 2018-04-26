@@ -333,6 +333,8 @@ def scheduler(params,exposurelist,keys):
 
     plotName = os.path.join(params["outputDir"],'scheduler.pdf')
     plt.figure()
+    plt.xlabel("Exposure Number")
+    plt.ylabel("Tile Number")
     plt.plot(xs,ys,'kx')
     plt.show()
     plt.savefig(plotName,dpi=200)

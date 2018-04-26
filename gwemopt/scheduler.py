@@ -25,7 +25,8 @@ def get_altaz_tiles(ras, decs, observatory, obstime):
     return altaz
 
 def find_tile(exposureids_tile,exposureids,probs, idxs = None):
-
+    # exposureids_tile: {expo id}-> list of the tiles available for observation
+    # exposureids: list of tile ids for every exposure it is allocated to observe
     if idxs is not None:
         for idx in idxs:
             if len(exposureids_tile["exposureids"])-1 < idx: continue
@@ -59,8 +60,16 @@ def find_tile(exposureids_tile,exposureids,probs, idxs = None):
 
     return idx2, exposureids, probs
 
-def get_order(params, tile_struct, tilesegmentlists, exposurelist):    
- 
+def get_order(params, tile_struct, tilesegmentlists, exposurelist, config_struct = None):    
+    '''
+    tile_struct: dictionary. key -> struct info. 
+    tilesegmentlists: list of lists. Segments for each tile in tile_struct 
+        that are available for observation.
+    exposurelist: list of segments that the telescope is supposed to be working.
+        consecutive segments from the start to the end, with each segment size
+        being the exposure time.
+    Returns a list of tile indices in the order of observation.
+    '''
     keys = tile_struct.keys()
 
     exposureids_tiles = {}
@@ -90,20 +99,23 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
                 last_exposure[jj] = np.max([last_exposure[jj],ii])
                 tileavailable_tiles[jj].append(ii)
                 tileavailable[jj] = tileavailable[jj] + 1
-
-        exposureids_tiles[ii]["exposureids"] = exposureids
-        exposureids_tiles[ii]["probs"] = probs
+        # in every exposure, the tiles available for observation
+        exposureids_tiles[ii]["exposureids"] = exposureids # list of tile ids
+        exposureids_tiles[ii]["probs"] = probs # the corresponding probs
 
     exposureids = []
     probs = []
     for ii, key in enumerate(keys):
-        for jj in range(tile_struct[key]["nexposures"]):
-            exposureids.append(key)
+        # tile_struct[key]["nexposures"]: the number of exposures assigned to this tile
+        for jj in range(tile_struct[key]["nexposures"]): 
+            exposureids.append(key) # list of tile ids for every exposure it is allocated to observe
             probs.append(tile_struct[key]["prob"])
 
     idxs = -1*np.ones((len(exposureids_tiles.keys()),))
     if params["scheduleType"] == "greedy":
         for ii in np.arange(len(exposurelist)): 
+            # find_tile finds the tile that covers the largest probablity, restricted by 
+            # availability of tile and timeallocation
             idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs)
             tilenexps[idx2] = tilenexps[idx2] - 1
             idxs[ii] = idx2
@@ -135,6 +147,10 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
                 idxs[ii] = idx2
             tileavailable[jj] = tileavailable[jj] - 1
     elif params["scheduleType"] == "greedy_slew":
+        # start the telescope at the zenith
+        cur_ra = config_struct["latitude"]
+        cur_dec = config_struct["longitude"]
+        tot_obs_time = config_struct["tot_obs_time"]
         for ii in np.arange(len(exposurelist)): 
             idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs)
             tilenexps[idx2] = tilenexps[idx2] - 1
@@ -173,7 +189,10 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
     return idxs
 
 def scheduler(params, config_struct, tile_struct):
-
+    '''
+    config_struct: the telescope configurations
+    tile_struct: the tiles, contains time allocation information
+    '''
     import gwemopt.segments
     #import gwemopt.segments_astroplan
     coverage_struct = {}
@@ -192,10 +211,11 @@ def scheduler(params, config_struct, tile_struct):
     tilesegmentlists = []
     keys = tile_struct.keys()
     for key in keys:
-        tilesegmentlists.append(tile_struct[key]["segmentlist"])
+        # segments.py: tile_struct[key]["segmentlist"] is a list of segments when the tile is available for observation
+        tilesegmentlists.append(tile_struct[key]["segmentlist"]) 
 
     print("Generating schedule order...")
-    keys = get_order(params,tile_struct,tilesegmentlists,exposurelist)
+    keys = get_order(params,tile_struct,tilesegmentlists,exposurelist, config_struct)
 
     if params["doPlots"]:
         gwemopt.plotting.scheduler(params,exposurelist,keys)

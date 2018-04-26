@@ -379,7 +379,10 @@ def observability(params, map_struct):
     return observatory_struct
 
 def get_exposures(params, config_struct, segmentlist):
-
+    '''
+    Convert the availability times to a list segments with the length of telescope exposures.
+    segmentlist: the segments that the telescope can do the follow-up.
+    '''
     exposurelist = segments.segmentlist()
 
     for ii in range(len(segmentlist)):

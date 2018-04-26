@@ -14,7 +14,10 @@ import glue.segments as segments
 import gwemopt.utils
 
 def get_telescope_segments(params):
-
+    # Calculate the observation availabilities and save them into params
+    # segmentlist: list of times that the observation is available
+    # exposurelist: segmentlist broken down into chunks with the length of telescope exposures
+    # tot_obs_time: total time covered by the exposurelist
     for telescope in params["telescopes"]:
 
         params["config"][telescope]["segmentlist"] = get_segments(params, params["config"][telescope])
