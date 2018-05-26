@@ -229,7 +229,7 @@ class PlaceTile:
         tile_struct[ii]["corners"] = radecs
         tile_struct[ii]["patch"] = patch
         tile_struct[ii]["area"] = area
-    
+
         return tile_struct
         
         

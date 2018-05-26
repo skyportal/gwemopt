@@ -131,6 +131,7 @@ def powerlaw(params, map_struct, tile_structs):
         config_struct = params["config"][telescope]
         tile_struct = tile_structs[telescope]
         tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)      
+
         coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
         coverage_structs.append(coverage_struct)
 

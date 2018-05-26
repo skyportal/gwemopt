@@ -109,18 +109,19 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
 
     n, cl, dist_exp = params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"]
 
-    prob_sorted = np.sort(prob)[::-1]
-    prob_indexes = np.argsort(prob)[::-1]
+    prob_scaled = copy.deepcopy(prob)
+    prob_sorted = np.sort(prob_scaled)[::-1]
+    prob_indexes = np.argsort(prob_scaled)[::-1]
     prob_cumsum = np.cumsum(prob_sorted)
     index = np.argmin(np.abs(prob_cumsum - cl)) + 1
-
-    prob_scaled = copy.deepcopy(prob)
     prob_scaled[prob_indexes[index:]] = 0.0
     prob_scaled = prob_scaled**n
-    prob_scaled[np.isnan(prob_scaled)] = 0.0
     prob_scaled = prob_scaled / np.nansum(prob_scaled)
 
     ranked_tile_probs = compute_tiles_map(tile_struct, prob_scaled, func='np.sum(x)')
+    ranked_tile_probs[np.isnan(ranked_tile_probs)] = 0.0
+    ranked_tile_probs_thresh = np.max(ranked_tile_probs)*0.01
+    ranked_tile_probs[ranked_tile_probs<=ranked_tile_probs_thresh] = 0.0
     ranked_tile_probs = ranked_tile_probs / np.nansum(ranked_tile_probs)
 
     if "distmed" in map_struct:
@@ -132,18 +133,35 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
         ranked_tile_distances = compute_tiles_map(tile_struct, distmed, func='np.nanmedian(x)')        
         ranked_tile_distances_median = ranked_tile_distances / np.nanmedian(ranked_tile_distances)
         ranked_tile_distances_median = ranked_tile_distances_median**dist_exp
-        idx = np.argsort(ranked_tile_probs)[::-1]
         ranked_tile_probs = ranked_tile_probs*ranked_tile_distances_median
         ranked_tile_probs = ranked_tile_probs / np.nansum(ranked_tile_probs)
         ranked_tile_probs[np.isnan(ranked_tile_probs)] = 0.0
 
-    ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
+    if params["doSingleExposure"]:
+        keys = tile_struct.keys()
+        ranked_tile_times = np.zeros((len(ranked_tile_probs),len(params["exposuretimes"])))
+        for ii in range(len(params["exposuretimes"])):
+            ranked_tile_times[ranked_tile_probs>0,ii] = params["exposuretimes"][ii]
+        for key, prob, exposureTime in zip(keys, ranked_tile_probs, ranked_tile_times):
+            tile_struct[key]["prob"] = prob
+            if prob == 0.0:
+                tile_struct[key]["exposureTime"] = 0.0
+                tile_struct[key]["nexposures"] = 0
+                tile_struct[key]["filt"] = []
+            else:
+                tile_struct[key]["exposureTime"] = exposureTime
+                tile_struct[key]["nexposures"] = len(params["exposuretimes"])
+                tile_struct[key]["filt"] = params["filters"]
 
-    keys = tile_struct.keys()
-    for key, prob, exposureTime in zip(keys, ranked_tile_probs, ranked_tile_times):
-        tile_struct[key]["prob"] = prob
-        tile_struct[key]["exposureTime"] = exposureTime
-        tile_struct[key]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
+    else:
+        ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
+
+        keys = tile_struct.keys()
+        for key, prob, exposureTime in zip(keys, ranked_tile_probs, ranked_tile_times):
+            tile_struct[key]["prob"] = prob
+            tile_struct[key]["exposureTime"] = exposureTime
+            tile_struct[key]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
+            tile_struct[key]["filt"] = [config_struct["filt"]] * tile_struct[key]["nexposures"]
 
     return tile_struct
 
@@ -218,6 +236,7 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
         tile_struct[key]["prob"] = prob
         tile_struct[key]["exposureTime"] = exposureTime
         tile_struct[key]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
+        tile_struct[key]["filt"] = [config_struct["filt"]] * tile_struct[key]["nexposures"]
 
     return tile_struct
 

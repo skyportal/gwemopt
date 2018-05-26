@@ -12,12 +12,12 @@ import matplotlib.pyplot as plt
 
 import gwemopt.utils
 
-def compute_efficiency(params, map_struct, eventinfo, lightcurve_struct, coverage_struct):
+def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
 
     nside = params["nside"]
     Ninj = params["Ninj"]
     Ndet = params["Ndet"]
-    gpstime = eventinfo["gpstime"]
+    gpstime = params["gpstime"]
     mjd_inj = Time(gpstime, format='gps', scale='utc').mjd
     #FOV_r = np.sqrt(float(params['FOV'])/np.pi)
 

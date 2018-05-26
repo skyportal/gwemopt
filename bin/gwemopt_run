@@ -40,8 +40,8 @@ import gwemopt.rankedTilesGenerator, gwemopt.waw
 import gwemopt.lightcurve, gwemopt.coverage
 import gwemopt.efficiency, gwemopt.plotting
 import gwemopt.moc, gwemopt.catalog
-#import gwemopt.tiles, gwemopt.segments
-import gwemopt.tiles, gwemopt.segments_astroplan
+import gwemopt.tiles, gwemopt.segments
+#import gwemopt.tiles, gwemopt.segments_astroplan
 
 import gwemopt.footprint, gwemopt.transients
 
@@ -114,11 +114,11 @@ def parse_commandline():
     parser.add_option("--Ndet",default=1,type=int)
     parser.add_option("--nside",default=256,type=int)
     parser.add_option("--DScale",default=1.0,type=float)
-    parser.add_option("--Tobs",default="0.0,1.0,1.0,2.0,2.0,3.0,3.0,4.0")
-    #parser.add_option("--Tobs",default="0.0,1.0")
+    #parser.add_option("--Tobs",default="0.0,1.0,1.0,2.0,2.0,3.0,3.0,4.0")
+    parser.add_option("--Tobs",default="0.0,1.0")
 
     parser.add_option("--powerlaw_cl",default=0.9,type=float)
-    parser.add_option("--powerlaw_n",default=0.66,type=float)
+    parser.add_option("--powerlaw_n",default=1.0,type=float)
     parser.add_option("--powerlaw_dist_exp",default=0,type=float)
 
     parser.add_option("--doFootprint", action="store_true", default=False)
@@ -129,6 +129,10 @@ def parse_commandline():
     parser.add_option("--doTransients",  action="store_true", default=False)
     parser.add_option("--transientsFile",default="../transients/ps1_objects.csv")
     parser.add_option("--dt",default=14.0,type=float)
+
+    parser.add_option("--doSingleExposure",  action="store_true", default=False)
+    parser.add_option("--filters",default="r,g,r")
+    parser.add_option("--exposuretimes",default="30.0,30.0,30.0")
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -218,6 +222,10 @@ def params_struct(opts):
     params["dt"] = opts.dt
 
     params["galaxy_catalog"] = opts.galaxy_catalog
+
+    params["doSingleExposure"] = opts.doSingleExposure
+    params["filters"] = opts.filters.split(",")
+    params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
 
     return params
 
