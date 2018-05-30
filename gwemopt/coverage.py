@@ -12,7 +12,7 @@ import gwemopt.scheduler
 def combine_coverage_structs(coverage_structs):
 
     coverage_struct_combined = {}
-    coverage_struct_combined["data"] = np.empty((0,5))
+    coverage_struct_combined["data"] = np.empty((0,7))
     coverage_struct_combined["filters"] = np.empty((0,1))
     coverage_struct_combined["ipix"] = []
     coverage_struct_combined["patch"] = []

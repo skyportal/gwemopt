@@ -371,7 +371,7 @@ def observability(params, map_struct):
             # is within the area that is visible, now? Demand that sun is at
             # least 18 degrees below the horizon and that the airmass
             # (secant of zenith angle approximation) is at most 2.5.
-            idx = np.where((altaz.alt >= 30*u.deg) &  (sun_altaz.alt <= -18*u.deg) & (altaz.secz <= 2.5))[0]
+            idx = np.where((altaz.alt >= 30*u.deg) &  (sun_altaz.alt <= -18*u.deg) & (altaz.secz <= 3.0))[0]
             observatory_struct[telescope]["dts"][dt] = np.zeros((npix,))
             observatory_struct[telescope]["dts"][dt][idx] = 1
             observatory_struct[telescope]["observability"][idx] = 1
@@ -386,13 +386,15 @@ def get_exposures(params, config_struct, segmentlist):
     '''
     exposurelist = segments.segmentlist()
 
+    exposure_time = np.max(params["exposuretimes"])
+
     for ii in range(len(segmentlist)):
         start_segment, end_segment = segmentlist[ii][0], segmentlist[ii][1]
-        exposures = np.arange(start_segment, end_segment, config_struct["exposuretime"]/86400.0)
+        exposures = np.arange(start_segment, end_segment, exposure_time/86400.0)
         #exposurelist = np.append(exposurelist,exposures)
 
         for jj in range(len(exposures)):
-            exposurelist.append(segments.segment(exposures[jj],exposures[jj]+config_struct["exposuretime"]/86400.0))
+            exposurelist.append(segments.segment(exposures[jj],exposures[jj]+exposure_time/86400.0))
 
     return exposurelist
 

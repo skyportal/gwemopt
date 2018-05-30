@@ -24,14 +24,15 @@ def get_altaz_tiles(ras, decs, observatory, obstime):
 
     return altaz
 
-def find_tile(exposureids_tile,exposureids,probs, idxs = None):
+def find_tile(exposureids_tile,exposureids,probs, idxs = None,
+              exptimecheckkeys = []):
     # exposureids_tile: {expo id}-> list of the tiles available for observation
     # exposureids: list of tile ids for every exposure it is allocated to observe
     if idxs is not None:
         for idx in idxs:
             if len(exposureids_tile["exposureids"])-1 < idx: continue
             idx2 = exposureids_tile["exposureids"][idx]
-            if idx2 in exposureids:
+            if idx2 in exposureids and not idx2 in exptimecheckkeys:
                 idx = exposureids.index(idx2)
                 exposureids.pop(idx)
                 probs.pop(idx)
@@ -47,7 +48,7 @@ def find_tile(exposureids_tile,exposureids,probs, idxs = None):
         idx2 = exposureids_tile["exposureids"][idx]
 
         if exposureids:
-            if idx2 in exposureids:
+            if idx2 in exposureids and not idx2 in exptimecheckkeys:
                 idx = exposureids.index(idx2)
                 exposureids.pop(idx)
                 probs.pop(idx)
@@ -77,6 +78,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, config_struct
     last_exposure = -np.inf*np.ones((len(keys),))
     tileprobs = np.zeros((len(keys),))
     tilenexps = np.zeros((len(keys),))
+    tileexptime = np.zeros((len(keys),))
     tilefilts = {}
     tileavailable = np.zeros((len(keys),))
     tileavailable_tiles = {} 
@@ -120,12 +122,18 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, config_struct
 
     if params["scheduleType"] == "greedy":
         for ii in np.arange(len(exposurelist)): 
-            # find_tile finds the tile that covers the largest probablity, restricted by 
-            # availability of tile and timeallocation
-            idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs)
+           
+            exptimecheck = np.where(exposurelist[ii][0]-tileexptime <
+                                    params["mindiff"]/86400.0)[0]
+            exptimecheckkeys = [keynames[x] for x in exptimecheck]
+
+            # find_tile finds the tile that covers the largest probablity
+            # restricted by availability of tile and timeallocation
+            idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,exptimecheckkeys=exptimecheckkeys)
             if idx2 in keynames:
                 idx = keynames.index(idx2)
                 tilenexps[idx] = tilenexps[idx] - 1
+                tileexptime[idx] = exposurelist[ii][0] 
                 filt = tilefilts[idx2].pop(0)
                 filts[ii] = filt
             idxs[ii] = idx2
@@ -138,15 +146,21 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, config_struct
         while len(iis) > 0: 
             ii = iis[0]
             mask = np.where((ii == last_exposure) & (tilenexps > 0))[0]
+
+            exptimecheck = np.where(exposurelist[ii][0]-tileexptime <
+                                    params["mindiff"]/86400.0)[0]
+            exptimecheckkeys = [keynames[x] for x in exptimecheck]
+
             if len(mask) > 0:
                 idxsort = mask[np.argsort(tileprobs[mask])]
-                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,idxs=idxsort) 
+                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,idxs=idxsort,exptimecheckkeys=exptimecheckkeys) 
                 last_exposure[mask] = last_exposure[mask] + 1
             else:
-                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs)
+                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,exptimecheckkeys=exptimecheckkeys)
             if idx2 in keynames:
                 idx = keynames.index(idx2)
                 tilenexps[idx] = tilenexps[idx] - 1
+                tileexptime[idx] = exposurelist[ii][0]
                 filt = tilefilts[idx2].pop(0)
                 filts[ii] = filt
             idxs[ii] = idx2 
@@ -159,12 +173,18 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, config_struct
             jj = exposureids_tiles[ii]["exposureids"]
             weights = tileprobs[jj] * tilenexps[jj] / tileavailable[jj]
             weights[~np.isfinite(weights)] = 0.0
+
+            exptimecheck = np.where(exposurelist[ii][0]-tileexptime <
+                                    params["mindiff"]/86400.0)[0]
+            weights[exptimecheck] = 0.0
+
             if np.any(weights >= 0):
                 idxmax = np.argmax(weights)
                 idx2 = jj[idxmax]
                 if idx2 in keynames:
                     idx = keynames.index(idx2)
                     tilenexps[idx] = tilenexps[idx] - 1
+                    tileexptime[idx] = exposurelist[ii][0]
                     filt = tilefilts[idx2].pop(0)
                     filts[ii] = filt
                 idxs[ii] = idx2
@@ -175,10 +195,16 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, config_struct
         cur_dec = config_struct["longitude"]
         tot_obs_time = config_struct["tot_obs_time"]
         for ii in np.arange(len(exposurelist)): 
-            idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs)
+
+            exptimecheck = np.where(exposurelist[ii][0]-tileexptime <
+                                    params["mindiff"]/86400.0)[0]
+            exptimecheckkeys = [keynames[x] for x in exptimecheck]
+
+            idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,exptimecheckkeys=exptimecheckkeys)
             if idx2 in keynames:
                 idx = keynames.index(idx2)
                 tilenexps[idx] = tilenexps[idx] - 1
+                tileexptime[idx] = exposurelist[ii][0]
                 filt = tilefilts[idx2].pop(0)
                 filts[ii] = filt
             idxs[ii] = idx2
@@ -191,15 +217,21 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, config_struct
         while len(iis) > 0: 
             ii = iis[0]
             mask = np.where((ii == last_exposure) & (tilenexps > 0))[0]
+
+            exptimecheck = np.where(exposurelist[ii][0]-tileexptime <
+                                    params["mindiff"]/86400.0)[0]
+            exptimecheckkeys = [keynames[x] for x in exptimecheck]
+
             if len(mask) > 0:
                 idxsort = mask[np.argsort(tileprobs[mask])]
-                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,idxs=idxsort) 
+                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,idxs=idxsort,exptimecheckkeys=exptimecheckkeys) 
                 last_exposure[mask] = last_exposure[mask] + 1
             else:
-                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs)
+                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,exptimecheckkeys=exptimecheckkeys)
             if idx2 in keynames:
                 idx = keynames.index(idx2)
                 tilenexps[idx] = tilenexps[idx] - 1
+                tileexptime[idx] = exposurelist[ii][0]
                 filt = tilefilts[idx2].pop(0)
                 filts[ii] = filt
             idxs[ii] = idx2 
@@ -212,12 +244,18 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, config_struct
             jj = exposureids_tiles[ii]["exposureids"]
             weights = tileprobs[jj] * tilenexps[jj] / tileavailable[jj]
             weights[~np.isfinite(weights)] = 0.0
+
+            exptimecheck = np.where(exposurelist[ii][0]-tileexptime <
+                                    params["mindiff"]/86400.0)[0]
+            weights[exptimecheck] = 0.0
+
             if np.any(weights >= 0):
                 idxmax = np.argmax(weights)
                 idx2 = jj[idxmax]
                 if idx2 in keynames:
                     idx = keynames.index(idx2)
                     tilenexps[idx] = tilenexps[idx] - 1
+                    tileexptime[idx] = exposurelist[ii][0]
                     filt = tilefilts[idx2].pop(0)
                     filts[ii] = filt
                 idxs[ii] = idx2
@@ -236,7 +274,7 @@ def scheduler(params, config_struct, tile_struct):
     import gwemopt.segments
     #import gwemopt.segments_astroplan
     coverage_struct = {}
-    coverage_struct["data"] = np.empty((0,5))
+    coverage_struct["data"] = np.empty((0,7))
     coverage_struct["filters"] = []
     coverage_struct["ipix"] = []
     coverage_struct["patch"] = []
@@ -292,7 +330,7 @@ def scheduler(params, config_struct, tile_struct):
             mag = config_struct["magnitude"] + nmag
             exposureTime = (mjd_exposure_end-mjd_exposure_start)*86400.0
 
-            coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_mid,mag,exposureTime]]),axis=0)
+            coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_mid,mag,exposureTime,int(key),tile_struct_hold["prob"]]]),axis=0)
 
             coverage_struct["filters"].append(filt)
             coverage_struct["patch"].append(tile_struct_hold["patch"])
