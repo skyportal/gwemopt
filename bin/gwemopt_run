@@ -171,7 +171,7 @@ def params_struct(opts):
                     gwemopt.tiles.tesselation_spiral(params["config"][telescope])
                 elif params["config"][telescope]["FOV_type"] == "square":
                     gwemopt.tiles.tesselation_packing(params["config"][telescope])
-            params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2))
+            params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2),comments='%')
 
         location = astropy.coordinates.EarthLocation(params["config"][telescope]["longitude"],params["config"][telescope]["latitude"],params["config"][telescope]["elevation"])
         observer = astroplan.Observer(location=location)
