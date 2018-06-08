@@ -1,0 +1,116 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{shortvrb}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+  language=Matlab,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+\begin{document}
+\title{Instructions for installing gwemopt on UNIX}
+\date{\today}
+\author{Geoffrey Mo, Carleton College\\mog@carleton.edu}
+
+\maketitle
+
+These are instructions for setting up the gwemopt tool primarily written by Michael Coughlin. These instructions were written for a machine running Ubuntu 16.04, but should work for most UNIX distributions. As far as I know, these instructions are {\bf not} compatible with macOS.
+
+In these instructions, {\tt \$ ls} means to run ls.
+
+\section{Installing Anaconda}
+Any Python 2.7 distribution will work, but Anaconda comes with many of the packages required and can be installed completely locally, so it is convenient to use. If you prefer not to use Anaconda, skip this step, but you may have to install additional packages not mentioned in these instructions.
+
+\begin{enumerate}
+	\item Go to \url{https://www.anaconda.com/download/#linux} and download the Anaconda 2.7 installer. Put it in your home directory.
+	\item {\tt \$ cd $\sim$} 
+	\item {\tt \$ bash Anaconda-latest-Linux-x86\_64.sh}
+	\item Hold down the enter key to skip through all the licensing, then type ``yes" to agree to the terms. 
+	\item We want to install this locally, so the ~/anaconda2 location given by default is good.
+	\item When prompted, type ``yes" to prepending to PATH in ~/.bashrc. This is so when you type {\tt \$ python} in the command line you get this Anaconda distribution of Python.
+\end{enumerate}
+
+
+\section{Installing Python packages}
+\begin{enumerate}
+	\item {\tt \$ pip install --user lscsoft-glue healpy astroplan astropy ligo-gracedb pyephem mocpy astropy\_healpix gwemopt pymultinest}
+\end{enumerate}
+
+\section{Downloading gwemopt}
+\begin{enumerate}
+	\item {\tt \$ git clone https://github.com/mcoughlin/gwemopt}. I did this in my home directory.
+	\item To install this, {\tt \$ cd gwemopt} and then {\tt \$ python setup.py install --user}
+\end{enumerate}
+
+\section{Installing MultiNest and PyMultiNest}
+MultiNest and its Python wrapper PyMultiNest are required, but have slightly more involved installation procedures. These instructions are a more detailed version of what is written here: \url{https://johannesbuchner.github.io/PyMultiNest/install.html}. To begin, in your home directory, {\tt \$ git clone https://github.com/JohannesBuchner/MultiNest} and \\{\tt \$ git clone https://github.com/JohannesBuchner/PyMultiNest.git}.
+
+\subsection{Installing cmake}
+The MultiNest installation requires a C compiler. If you have one already, feel free to skip this subsection.
+\begin{enumerate}
+	\item Go to \url{https://cmake.org/download/} and download the Unix .tar.gz tarball (cmake-3.11.3.tar.gz is the latest release at time of writing). I put it in my home directory.
+	\item To open up the tarball, run {\tt \$ tar -zxvf cmake-3.11.3.tar.gz}
+	\item {\tt \$ cd cmake-3.11-3}
+	\item {\tt \$ ./bootstrap \&\& make \&\& sudo make install}. This will take a few minutes, so go get some coffee.
+\end{enumerate}
+
+\subsection{Installing other dependencies for MultiNest}
+\begin{enumerate}
+	\item {\tt \$ sudo apt-get update} to update the list from where apt-get pulls.
+	\item {\tt \$ sudo apt-get install libblas-dev liblapack-dev}
+\end{enumerate}
+
+\subsection{Building MultiNest and PyMultiNest}
+\begin{enumerate}
+	\item {\tt \$ cd $\sim$/MultiNest/build}
+	\item {\tt \$ cmake .. \&\& build}
+	\item To add MultiNest to your path right now and forever (by adding it to your ~/.bashrc), \\{\tt \$ export LD\_LIBRARY\_PATH=$\sim$/MultiNest/lib/:\$LD\_LIBRARY\_PATH} and \\{\tt \$ echo $'$export LD\_LIBRARY\_PATH=$\sim$/MultiNest/lib/:\$LD\_LIBRARY\_PATH$'$ $>>\sim$/.bashrc}
+	\item {\tt \$ cd $\sim$/PyMultiNest}
+	\item {\tt \$ python setup.py install --user}
+	\item Adding PyMultiNest to your path right now and forever,\\{\tt \$ export PATH=\$PATH:\$HOME/.local/bin/} and \\{\tt \$ echo $'$export PATH=\$PATH:\$HOME/.local/bin/$'$ $>>\sim$/.bashrc}
+\end{enumerate}
+
+\section{Testing the installation}
+Now you should have everything installed. To test this, we will run a command which will return skymaps.
+\begin{enumerate}
+	\item {\tt \$ cd $\sim$/gwemopt/bin/}
+	\item In the next command, the {\tt --doEvent} flag uses the LIGO GraceDb database and hence requires a LIGO login certificate. Do this with {\tt \$ ligo-proxy-init}.
+	\item Now we will run the test command.
+	\begin{lstlisting}
+		$ python gwemopt_run -l ../lightcurves/Me2017_H4M050V20.dat --doEvent --do3D --doTiles --doPlots --doSchedule 	--tilesType hierarchical --timeallocationType powerlaw --scheduleType greedy --doEfficiency -o ../hierarchical_powerlaw_greedy --powerlaw_dist_exp -2.0 --Ninj 1000	
+	\end{lstlisting}
+	\item This should return plots and skymaps in the /gwemopt/hierarchical\_powerlaw\_greedy/ directory.
+
+\end{enumerate}
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
