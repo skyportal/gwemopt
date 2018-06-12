@@ -108,6 +108,8 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
         prob = map_struct["prob"]
 
     n, cl, dist_exp = params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"]
+    tile_probs = compute_tiles_map(tile_struct, prob, func='np.sum(x)')
+    tile_probs[tile_probs<np.max(tile_probs)*0.01] = 0.0 
 
     prob_scaled = copy.deepcopy(prob)
     prob_sorted = np.sort(prob_scaled)[::-1]
@@ -142,22 +144,37 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
         ranked_tile_times = np.zeros((len(ranked_tile_probs),len(params["exposuretimes"])))
         for ii in range(len(params["exposuretimes"])):
             ranked_tile_times[ranked_tile_probs>0,ii] = params["exposuretimes"][ii]
-        for key, prob, exposureTime in zip(keys, ranked_tile_probs, ranked_tile_times):
-            tile_struct[key]["prob"] = prob
+        for key, prob, exposureTime, tileprob in zip(keys, ranked_tile_probs, ranked_tile_times, tile_probs):
+            tile_struct[key]["prob"] = tileprob
             if prob == 0.0:
                 tile_struct[key]["exposureTime"] = 0.0
                 tile_struct[key]["nexposures"] = 0
                 tile_struct[key]["filt"] = []
             else:
-                tile_struct[key]["exposureTime"] = exposureTime
-                tile_struct[key]["nexposures"] = len(params["exposuretimes"])
-                tile_struct[key]["filt"] = params["filters"]
+                if params["doReferences"]:
+                    tile_struct[key]["exposureTime"] = []
+                    tile_struct[key]["nexposures"] = []
+                    tile_struct[key]["filt"] = []
+                    if key in config_struct["reference_images"]:
+                        for ii in range(len(params["filters"])):
+                            if params["filters"][ii] in config_struct["reference_images"][key]:
+                                tile_struct[key]["exposureTime"].append(exposureTime[ii])
+                                tile_struct[key]["filt"].append(params["filters"][ii])
+                        tile_struct[key]["nexposures"] = len(tile_struct[key]["exposureTime"])
+                    else:
+                        tile_struct[key]["exposureTime"] = 0.0
+                        tile_struct[key]["nexposures"] = 0
+                        tile_struct[key]["filt"] = []
+                else:
+                    tile_struct[key]["exposureTime"] = exposureTime
+                    tile_struct[key]["nexposures"] = len(params["exposuretimes"])
+                    tile_struct[key]["filt"] = params["filters"]
 
     else:
         ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
 
         keys = tile_struct.keys()
-        for key, prob, exposureTime in zip(keys, ranked_tile_probs, ranked_tile_times):
+        for key, prob, exposureTime, tileprob in zip(keys, ranked_tile_probs, ranked_tile_times, tile_probs):
             tile_struct[key]["prob"] = prob
             tile_struct[key]["exposureTime"] = exposureTime
             tile_struct[key]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))

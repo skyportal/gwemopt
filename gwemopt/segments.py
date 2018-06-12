@@ -29,6 +29,55 @@ def get_telescope_segments(params):
 
     return params
 
+def get_moon_segments(config_struct,segmentlist,observer,fxdbdy,radec):
+
+    moonsegmentlist = segments.segmentlist()
+    dt = 1.0/24.0
+    tt = np.arange(segmentlist[0][0],segmentlist[-1][1]+dt,dt)
+
+    ra2 = radec.ra.radian
+    d2 = radec.dec.radian
+
+    # Where is the moon?
+    moon = ephem.Moon()
+    for ii in range(len(tt)-1):
+        observer.date = ephem.Date(Time(tt[ii], format='mjd', scale='utc').iso)
+        moon.compute(observer)
+        fxdbdy.compute(observer)
+
+        alt_target = float(repr(fxdbdy.alt)) * (360/(2*np.pi))
+        az_target = float(repr(fxdbdy.az)) * (360/(2*np.pi))
+        #print("Altitude / Azimuth of target: %.5f / %.5f"%(alt_target,az_target))
+
+        alt_moon = float(repr(moon.alt)) * (360/(2*np.pi))
+        az_moon = float(repr(moon.az)) * (360/(2*np.pi))
+        #print("Altitude / Azimuth of moon: %.5f / %.5f"%(alt_moon,az_moon))
+
+        ra_moon = (180/np.pi)*float(repr(moon.ra))
+        dec_moon = (180/np.pi)*float(repr(moon.dec))
+
+        # Coverting both target and moon ra and dec to radians
+        ra1 = float(repr(moon.ra))
+        d1 = float(repr(moon.dec))
+
+        # Calculate angle between target and moon
+        cosA = np.sin(d1)*np.sin(d2) + np.cos(d1)*np.cos(d2)*np.cos(ra1-ra2)
+        angle = np.arccos(cosA)*(360/(2*np.pi))
+        #print("Angle between moon and target: %.5f"%(angle))
+
+        if angle >= 50.0*moon.moon_phase**2:
+            segment = segments.segment(tt[ii],tt[ii+1])
+            moonsegmentlist = moonsegmentlist + segments.segmentlist([segment])
+            moonsegmentlist.coalesce()
+
+    moonsegmentlistdic = segments.segmentlistdict()
+    moonsegmentlistdic["observations"] = segmentlist
+    moonsegmentlistdic["moon"] = moonsegmentlist
+    moonsegmentlist = moonsegmentlistdic.intersection(["observations","moon"])
+    moonsegmentlist.coalesce()
+
+    return moonsegmentlist
+
 def get_skybrightness(config_struct,segmentlist,observer,fxdbdy,radec):
 
     moonsegmentlist = segments.segmentlist()
@@ -248,7 +297,10 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
         date_start = date_set
         observer.date = date_set
 
-    moonsegmentlist = get_skybrightness(\
+    #moonsegmentlist = get_skybrightness(\
+    #    config_struct,segmentlist,observer,fxdbdy,radec)
+
+    moonsegmentlist = get_moon_segments(\
         config_struct,segmentlist,observer,fxdbdy,radec)
 
     tilesegmentlistdic = segments.segmentlistdict()
