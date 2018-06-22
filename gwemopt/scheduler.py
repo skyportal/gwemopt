@@ -61,7 +61,8 @@ def find_tile(exposureids_tile,exposureids,probs, idxs = None,
 
     return idx2, exposureids, probs
 
-def get_order(params, tile_struct, tilesegmentlists, exposurelist, config_struct = None):    
+
+def get_order(params, tile_struct, tilesegmentlists, exposurelist):    
     '''
     tile_struct: dictionary. key -> struct info. 
     tilesegmentlists: list of lists. Segments for each tile in tile_struct 
@@ -122,7 +123,6 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, config_struct
 
     if params["scheduleType"] == "greedy":
         for ii in np.arange(len(exposurelist)): 
-           
             exptimecheck = np.where(exposurelist[ii][0]-tileexptime <
                                     params["mindiff"]/86400.0)[0]
             exptimecheckkeys = [keynames[x] for x in exptimecheck]
@@ -189,18 +189,37 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, config_struct
                     filts[ii] = filt
                 idxs[ii] = idx2
             tileavailable[jj] = tileavailable[jj] - 1
-    elif params["scheduleType"] == "greedy_slew":
-        # start the telescope at the zenith
-        cur_ra = config_struct["latitude"]
-        cur_dec = config_struct["longitude"]
-        tot_obs_time = config_struct["tot_obs_time"]
-        for ii in np.arange(len(exposurelist)): 
+    else:
+        print("Scheduling options are greedy/sear/weighted, or with _slew.")
+        exit(0)
 
-            exptimecheck = np.where(exposurelist[ii][0]-tileexptime <
+    return idxs, filts
+
+
+def get_order_slew(params, tile_struct, tilesegmentlists, config_struct):    
+    keys = tile_struct.keys()
+    idxs = -1*np.ones((len(exposureids_tiles.keys()),))
+    filts = ['n'] * len(exposureids_tiles.keys())
+    tileexptime = np.zeros((len(keys),))
+
+    if params["scheduleType"] == "greedy_slew":
+        tot_obs_time = config_struct["tot_obs_time"]
+        # start the telescope at the zenith
+        current_ra = config_struct["latitude"]
+        current_dec = config_struct["longitude"]
+        current_time = 0
+
+        while current_time < tot_obs_time: 
+            slew_readout_time = np.zeros((len(keys),))
+            for ii, key in enumerate(keys):
+                slew_readout_time[ii] = np.maximum(np.sqrt((current_ra - tile_struct[key]["ra"])**2 + (current_dec - tile_struct[key]["dec"])**2) /
+                        config_struct["slew_rate"], config_struct["readout"])
+            exptimecheck = np.where(current_time + slew_readout_time - tileexptime <
                                     params["mindiff"]/86400.0)[0]
             exptimecheckkeys = [keynames[x] for x in exptimecheck]
+            # idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,exptimecheckkeys=exptimecheckkeys)
 
-            idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,exptimecheckkeys=exptimecheckkeys)
+            probs * 
             if idx2 in keynames:
                 idx = keynames.index(idx2)
                 tilenexps[idx] = tilenexps[idx] - 1
@@ -264,7 +283,8 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, config_struct
         print("Scheduling options are greedy/sear/weighted, or with _slew.")
         exit(0)
 
-    return idxs, filts
+    return idxs, time, filts
+
 
 def scheduler(params, config_struct, tile_struct):
     '''
@@ -293,7 +313,7 @@ def scheduler(params, config_struct, tile_struct):
         tilesegmentlists.append(tile_struct[key]["segmentlist"]) 
 
     print("Generating schedule order...")
-    keys, filts = get_order(params,tile_struct,tilesegmentlists,exposurelist, config_struct)
+    keys, filts = get_order(params,tile_struct,tilesegmentlists,exposurelist)
 
     if params["doPlots"]:
         gwemopt.plotting.scheduler(params,exposurelist,keys)
