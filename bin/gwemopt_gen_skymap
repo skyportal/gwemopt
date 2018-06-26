@@ -53,10 +53,16 @@ def parse_commandline():
     parser = optparse.OptionParser(usage=__doc__,version=__version__)
 
     parser.add_option("-s", "--skymap", help="GW skymap.", default='../output/skymaps/GRB20180626.fits')
+
+    parser.add_option("--doCircle",  action="store_true", default=False)
     parser.add_option("--ra",default=248.046,type=float)
     parser.add_option("--dec",default=49.028,type=float)
     parser.add_option("--radius",default=20.317/3.0,type=float)
     parser.add_option("--nside",default=256,type=int)
+
+    parser.add_option("--doSquare",  action="store_true", default=False)
+    parser.add_option("--ras",default="290.010,290.186,265.423,264.736")
+    parser.add_option("--decs",default="48.528,48.912,43.214,42.455")
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -77,11 +83,7 @@ def parse_commandline():
 
     return opts
 
-def gen_healpix(skymap,ra,dec,error,nside):
-    """@Creates gwemopt params structure
-    @param opts
-        gwemopt command line options
-    """
+def gen_circle(ra,dec,error,nside):
 
     npix = hp.nside2npix(nside)
     p = hp.ang2pix(nside, ra, dec, lonlat=True)
@@ -90,7 +92,31 @@ def gen_healpix(skymap,ra,dec,error,nside):
     healpix = hp.smoothing(n, sigma=np.deg2rad(error), verbose=False)
     healpix = healpix / np.sum(healpix)
 
-    hp.fitsfunc.write_map(skymap,healpix,overwrite=True)
+    return healpix
+
+def gen_square(ras,decs,nside):
+
+    radecs = []
+    for r,d in zip(ras,decs):
+        radecs.append([r,d])
+    radecs = np.array(radecs)
+
+    xyz = []
+    for r, d in radecs:
+        xyz.append(hp.ang2vec(r, d, lonlat=True))
+
+    npts, junk = radecs.shape
+    if npts == 4:
+        ipix = hp.query_polygon(nside, np.array(xyz))
+    else:
+        ipix = hp.query_polygon(nside, np.array(xyz))
+
+    npix = hp.nside2npix(nside)
+    n = np.zeros(npix)
+    n[ipix] = 1.
+    healpix = n / np.sum(n)
+
+    return healpix
 
 # =============================================================================
 #
@@ -103,5 +129,15 @@ warnings.filterwarnings("ignore")
 # Parse command line
 opts = parse_commandline()
 
-gen_healpix(opts.skymap,opts.ra,opts.dec,opts.radius,opts.nside)
+if opts.doCircle:
+    healpix = gen_circle(opts.ra,opts.dec,opts.radius,opts.nside)
+elif opts.doSquare:
+    ras = [float(x) for x in opts.ras.split(",")]
+    decs = [float(x) for x in opts.decs.split(",")]
+    healpix = gen_square(ras,decs,opts.nside)
+else:
+    print("Please specify --doCircle or --doSquare")
+    exit(0)
+
+hp.fitsfunc.write_map(opts.skymap,healpix,overwrite=True)
 
