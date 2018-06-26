@@ -1,0 +1,51 @@
+
+import numpy as np
+from astropy import table
+import astropy.units as u
+from astropy.coordinates import SkyCoord
+
+fieldlist = [724,725,764,765,766]
+filters = ["g","r","g"]
+T = 240.0
+name = "GRB180626"
+
+filename = '../input/ZTF.ref'
+refs = table.unique(table.Table.read(filename,
+    format='ascii', data_start=2, data_end=-1)['field', 'fid'])
+reference_images = {group[0]['field']: group['fid'].astype(int).tolist()
+    for group in refs.group_by('field').groups}
+
+filename = '../input/ZTF.tess'
+fields = np.loadtxt(filename,usecols=range(3))
+
+cnt = 0
+for filt in filters:
+    for field_id in fieldlist:
+
+        reference_filter_ids = reference_images.get(field_id, [])
+        
+        if filt == "g":
+            filter_id = 1
+        elif filt == "r":
+            filter_id = 2
+        elif filt == "i":
+            filter_id = 3
+
+        if not filter_id in reference_filter_ids: continue
+
+        filtlong = "FILTER_ZTF_%s"%filt.upper()
+
+        idx = np.where(field_id == fields[:,0])[0][0]
+        ra, dec = fields[idx,1], fields[idx,2]
+
+        c = SkyCoord(ra=ra*u.degree, dec=dec*u.degree,
+                     frame='icrs')
+
+        ra = c.ra.to_string(unit=u.hour, sep=':')
+        dec = c.dec.to_string(unit=u.degree, sep=':')
+ 
+        expstr = "%08d,2,%06d,%s,%s,2000.0,0.0,0.0,%d,%s,Kasliwal,ToO_%s"%(cnt,field_id,ra,dec,T,filtlong,name)
+        print(expstr)
+        cnt=cnt+1
+
+
