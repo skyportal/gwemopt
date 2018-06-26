@@ -55,8 +55,8 @@ def parse_commandline():
     parser.add_option("-s", "--skymap", help="GW skymap.", default='../output/skymaps/GRB20180626.fits')
 
     parser.add_option("--doCircle",  action="store_true", default=False)
-    parser.add_option("--ra",default=248.046,type=float)
-    parser.add_option("--dec",default=49.028,type=float)
+    parser.add_option("--ra",default=248.046)
+    parser.add_option("--dec",default=49.028)
     parser.add_option("--radius",default=20.317/3.0,type=float)
     parser.add_option("--nside",default=256,type=int)
 
@@ -85,16 +85,34 @@ def parse_commandline():
 
 def gen_circle(ra,dec,error,nside):
 
+    if type(ra) == str and ',' in ra:
+        list_params = np.array([list(map(float,ra.split(","))),list(map(float,dec.split(",")))])
+    else:
+        list_params = np.array([[float(ra)],[float(dec)]])
+    if len(list_params[0]) != len(list_params[1]):
+        print "Need equal number of RAs and decs"
+        return None
+    else:
+        params = np.transpose(list_params)
+        params = params.tolist()
+
     npix = hp.nside2npix(nside)
-    p = hp.ang2pix(nside, ra, dec, lonlat=True)
     n = np.zeros(npix)
-    n[p] = 1.
+
+    for pair in params:
+        p = hp.ang2pix(nside, pair[0], pair[1], lonlat=True)
+        n[p] = 1.
+
     healpix = hp.smoothing(n, sigma=np.deg2rad(error), verbose=False)
     healpix = healpix / np.sum(healpix)
 
     return healpix
 
 def gen_square(ras,decs,nside):
+
+    if ',' in ras:
+        print "Use --doCircle for multiple locations"
+        return None
 
     radecs = []
     for r,d in zip(ras,decs):
