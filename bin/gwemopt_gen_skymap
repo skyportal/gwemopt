@@ -1,0 +1,107 @@
+#!/usr/bin/python
+
+# Copyright (C) 2017 Michael Coughlin
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 3 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+# Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+""".
+Gravitational-wave Electromagnetic Optimization
+
+This script generates an optimized list of pointings and content for
+reviewing gravitational-wave skymap likelihoods.
+
+Comments should be e-mailed to michael.coughlin@ligo.org.
+
+"""
+
+
+import os, sys, glob, optparse, shutil, warnings
+import numpy as np
+np.random.seed(0)
+
+import healpy as hp
+
+if not os.getenv("DISPLAY", None):
+    import matplotlib
+    matplotlib.use("agg", warn=False)
+
+__author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
+__version__ = 1.0
+__date__    = "6/17/2017"
+
+# =============================================================================
+#
+#                               DEFINITIONS
+#
+# =============================================================================
+
+def parse_commandline():
+    """@Parse the options given on the command-line.
+    """
+    parser = optparse.OptionParser(usage=__doc__,version=__version__)
+
+    parser.add_option("-s", "--skymap", help="GW skymap.", default='../output/skymaps/GRB20180626.fits')
+    parser.add_option("--ra",default=248.046,type=float)
+    parser.add_option("--dec",default=49.028,type=float)
+    parser.add_option("--radius",default=20.317/3.0,type=float)
+    parser.add_option("--nside",default=256,type=int)
+
+    parser.add_option("-v", "--verbose", action="store_true", default=False,
+                      help="Run verbosely. (Default: False)")
+
+    opts, args = parser.parse_args()
+
+    # show parameters
+    if opts.verbose:
+        print >> sys.stderr, ""
+        print >> sys.stderr, "running gwemopt_run..."
+        print >> sys.stderr, "version: %s"%__version__
+        print >> sys.stderr, ""
+        print >> sys.stderr, "***************** PARAMETERS ********************"
+        for o in opts.__dict__.items():
+          print >> sys.stderr, o[0]+":"
+          print >> sys.stderr, o[1]
+        print >> sys.stderr, ""
+
+    return opts
+
+def gen_healpix(skymap,ra,dec,error,nside):
+    """@Creates gwemopt params structure
+    @param opts
+        gwemopt command line options
+    """
+
+    npix = hp.nside2npix(nside)
+    p = hp.ang2pix(nside, ra, dec, lonlat=True)
+    n = np.zeros(npix)
+    n[p] = 1.
+    healpix = hp.smoothing(n, sigma=np.deg2rad(error), verbose=False)
+    healpix = healpix / np.sum(healpix)
+
+    hp.fitsfunc.write_map(skymap,healpix,overwrite=True)
+
+# =============================================================================
+#
+#                                    MAIN
+#
+# =============================================================================
+
+warnings.filterwarnings("ignore")
+
+# Parse command line
+opts = parse_commandline()
+
+gen_healpix(opts.skymap,opts.ra,opts.dec,opts.radius,opts.nside)
+
