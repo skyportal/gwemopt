@@ -338,7 +338,7 @@ if opts.doEfficiency:
         print("Computing efficiency...")
         lightcurve_structs = gwemopt.lightcurve.read_files(params["lightcurveFiles"])
         efficiency_structs = {}
-        for key in lightcurve_structs.iterkeys():
+        for key in lightcurve_structs.keys():
             lightcurve_struct = lightcurve_structs[key]
             efficiency_struct = gwemopt.efficiency.compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
             efficiency_structs[key] = efficiency_struct
