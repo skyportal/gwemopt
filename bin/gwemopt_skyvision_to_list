@@ -1,0 +1,119 @@
+#!/usr/bin/python
+
+# Copyright (C) 2017 Michael Coughlin
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 3 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+# Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+""".
+Gravitational-wave Electromagnetic Optimization
+
+This script generates an optimized list of pointings and content for
+reviewing gravitational-wave skymap likelihoods.
+
+Comments should be e-mailed to michael.coughlin@ligo.org.
+
+"""
+
+
+import os, sys, glob, optparse, shutil, warnings
+import numpy as np
+from astropy.time import Time
+np.random.seed(0)
+
+import healpy as hp
+
+if not os.getenv("DISPLAY", None):
+    import matplotlib
+    matplotlib.use("agg", warn=False)
+
+__author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
+__version__ = 1.0
+__date__    = "6/17/2017"
+
+# =============================================================================
+#
+#                               DEFINITIONS
+#
+# =============================================================================
+
+def parse_commandline():
+    """@Parse the options given on the command-line.
+    """
+    parser = optparse.OptionParser(usage=__doc__,version=__version__)
+
+    parser.add_option("-i", "--infile", help="Skyvision file.", default='../data/GRB180626/night1.tmp')
+    parser.add_option("-o", "--outfile", help="Skyvision file.", default='../data/GRB180626/night1.dat')
+
+    parser.add_option("-v", "--verbose", action="store_true", default=False,
+                      help="Run verbosely. (Default: False)")
+
+    opts, args = parser.parse_args()
+
+    # show parameters
+    if opts.verbose:
+        print >> sys.stderr, ""
+        print >> sys.stderr, "running gwemopt_run..."
+        print >> sys.stderr, "version: %s"%__version__
+        print >> sys.stderr, ""
+        print >> sys.stderr, "***************** PARAMETERS ********************"
+        for o in opts.__dict__.items():
+          print >> sys.stderr, o[0]+":"
+          print >> sys.stderr, o[1]
+        print >> sys.stderr, ""
+
+    return opts
+
+def skyvision_to_list(infile,outfile,fields):
+
+    fid = open(outfile,'w')
+    fid.write('INDEX,EXPID,RA,DEC,MJD,EXPTIME,FILTER,LIM-MAG,CUM-AREA,CUM-LIKELIHOOD\n')
+
+    limmag = 21.0
+    cnt = 0
+    lines = [line.rstrip('\n') for line in open(infile)]
+    for line in lines:
+        lineSplit = list(filter(None,line.split("\t")))
+        if len(lineSplit) == 0: continue
+        filtSplit = lineSplit[1].split("_")
+        filt = filtSplit[3][-1]
+        expid = filtSplit[1] 
+
+        obstime = Time(lineSplit[0])
+        field_id = float(lineSplit[2])
+        exptime = float(lineSplit[5])
+
+        idx = np.where(field_id == fields[:,0])[0][0]
+        ra, dec = fields[idx,1], fields[idx,2]
+
+        fid.write("%05d,%s,%.5f,%.5f,%.6f,%.1f,%s,%.2f,-1,-1\n"%(cnt,expid,ra,dec,obstime.mjd,exptime,filt,limmag))
+        cnt = cnt+1
+    fid.close()
+
+
+# =============================================================================
+#
+#                                    MAIN
+#
+# =============================================================================
+
+warnings.filterwarnings("ignore")
+
+# Parse command line
+opts = parse_commandline()
+
+filename = '../input/ZTF.tess'
+fields = np.loadtxt(filename,usecols=range(3))
+skyvision_to_list(opts.infile,opts.outfile,fields)
+
