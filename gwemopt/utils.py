@@ -85,6 +85,7 @@ def read_skymap(params,is3D=False):
     nside = hp.pixelfunc.get_nside(prob_data)
     nside = params["nside"]
     map_struct["prob"] = hp.ud_grade(map_struct["prob"],nside,power=-2)
+
     if is3D:
         map_struct["distmu"] = hp.ud_grade(map_struct["distmu"],nside,power=-2) 
         map_struct["distsigma"] = hp.ud_grade(map_struct["distsigma"],nside,power=-2) 
@@ -112,9 +113,9 @@ def read_skymap(params,is3D=False):
     map_struct["ra"] = ra
     map_struct["dec"] = dec
 
-    sort_idx = np.argsort(prob_data)[::-1]
-    csm = np.empty(len(prob_data))
-    csm[sort_idx] = np.cumsum(prob_data[sort_idx])
+    sort_idx = np.argsort(map_struct["prob"])[::-1]
+    csm = np.empty(len(map_struct["prob"]))
+    csm[sort_idx] = np.cumsum(map_struct["prob"][sort_idx])
 
     map_struct["cumprob"] = csm
 

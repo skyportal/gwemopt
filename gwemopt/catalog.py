@@ -1,5 +1,5 @@
 
-import os, sys
+import os, sys, copy
 
 import numpy as np
 import healpy as hp
@@ -73,18 +73,22 @@ def get_catalog(params, map_struct):
 
     theta = 0.5 * np.pi - cat['DEJ2000'].to('rad').value
     phi = cat['RAJ2000'].to('rad').value
-    ipix = hp.ang2pix(map_struct["nside"], theta, phi)
+    ipix = hp.ang2pix(map_struct["nside"], cat['RAJ2000'].to('deg').value, cat['DEJ2000'].to('deg').value, lonlat=True)
 
     if "distnorm" in map_struct:
         Sloc = map_struct["prob"][ipix] * (map_struct["distnorm"][ipix] * norm(map_struct["distmu"][ipix], map_struct["distsigma"][ipix]).pdf(r))**params["powerlaw_dist_exp"] / map_struct["pixarea"]
+        Sloc = copy.copy(map_struct["prob"][ipix])
     else:
-        Sloc = map_struct["prob"][ipix]
+        Sloc = copy.copy(map_struct["prob"][ipix])
 
     S = Sloc*Slum*Sdet
     prob = np.zeros(map_struct["prob"].shape)
     prob[ipix] = prob[ipix] + S
     prob = prob / np.sum(prob)
-    map_struct['prob'] = prob 
+
+    map_struct['prob_catalog'] = prob
+    if params["doUseCatalog"]:
+        map_struct['prob'] = prob 
 
     idx = np.argsort(S)[::-1]
     top50 = cat[idx][:50]

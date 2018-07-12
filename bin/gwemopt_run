@@ -90,6 +90,7 @@ def parse_commandline():
     parser.add_option("--tilesType", help="tiling type",default="moc")
 
     parser.add_option("--doCatalog",  action="store_true", default=False)
+    parser.add_option("--doUseCatalog",  action="store_true", default=False)
     parser.add_option("--catalogDir", help="catalog directory",default="../catalogs")
     parser.add_option("--galaxy_catalog", help="Source catalog",default="GLADE")
  
@@ -229,6 +230,9 @@ def params_struct(opts):
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
     params["mindiff"] = 0.0
     params["doReferences"] = opts.doReferences
+
+    params["doCatalog"] = opts.doCatalog
+    params["doUseCatalog"] = opts.doUseCatalog
 
     return params
 

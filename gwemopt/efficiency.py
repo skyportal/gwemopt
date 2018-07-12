@@ -21,8 +21,12 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
     mjd_inj = Time(gpstime, format='gps', scale='utc').mjd
     #FOV_r = np.sqrt(float(params['FOV'])/np.pi)
 
-    prob_data_sorted = np.sort(map_struct["prob"])[::-1]
-    prob_data_indexes = np.argsort(map_struct["prob"])[::-1]
+    if params["doCatalog"]:
+        prob_data_sorted = np.sort(map_struct["prob_catalog"])[::-1]
+        prob_data_sorted = np.sort(map_struct["prob_catalog"])[::-1]
+    else:
+        prob_data_sorted = np.sort(map_struct["prob"])[::-1]
+        prob_data_indexes = np.argsort(map_struct["prob"])[::-1]
     prob_data_cumsum = np.cumsum(prob_data_sorted)
     rand_values = np.random.rand(Ninj,)
     dists = np.logspace(-1,3,1000)
