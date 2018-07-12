@@ -34,4 +34,3 @@ for ii in gbm.keys():
 
     print system_command
     os.system(system_command)
-    print stop
