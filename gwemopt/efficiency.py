@@ -23,7 +23,7 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
 
     if params["doCatalog"]:
         prob_data_sorted = np.sort(map_struct["prob_catalog"])[::-1]
-        prob_data_sorted = np.sort(map_struct["prob_catalog"])[::-1]
+        prob_data_indexes = np.argsort(map_struct["prob_catalog"])[::-1]
     else:
         prob_data_sorted = np.sort(map_struct["prob"])[::-1]
         prob_data_indexes = np.argsort(map_struct["prob"])[::-1]
