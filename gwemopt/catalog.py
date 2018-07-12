@@ -76,7 +76,7 @@ def get_catalog(params, map_struct):
     ipix = hp.ang2pix(map_struct["nside"], theta, phi)
 
     if "distnorm" in map_struct:
-        Sloc = map_struct["prob"][ipix] * map_struct["distnorm"][ipix] * norm(map_struct["distmu"][ipix], map_struct["distsigma"][ipix]).pdf(r) / map_struct["pixarea"]
+        Sloc = map_struct["prob"][ipix] * (map_struct["distnorm"][ipix] * norm(map_struct["distmu"][ipix], map_struct["distsigma"][ipix]).pdf(r))**params["powerlaw_dist_exp"] / map_struct["pixarea"]
     else:
         Sloc = map_struct["prob"][ipix]
 

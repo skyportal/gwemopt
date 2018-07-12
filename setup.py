@@ -60,7 +60,9 @@ install_requires = [
     'python-dateutil',
     'mocpy',
     'astroquery',
-    'astroplan'
+    'astroplan',
+    'pyephem',
+    'pyyaml'
 ]
 
 # test dependencies
