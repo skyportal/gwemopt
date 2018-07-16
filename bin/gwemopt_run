@@ -44,6 +44,7 @@ import gwemopt.tiles, gwemopt.segments
 #import gwemopt.tiles, gwemopt.segments_astroplan
 
 import gwemopt.footprint, gwemopt.transients
+import gwemopt.quadrants
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -135,6 +136,8 @@ def parse_commandline():
     parser.add_option("--filters",default="r,g,r")
     parser.add_option("--exposuretimes",default="30.0,30.0,30.0")
     parser.add_option("--doReferences",  action="store_true", default=False)
+
+    parser.add_option("--doChipGaps",  action="store_true", default=False)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -233,6 +236,8 @@ def params_struct(opts):
 
     params["doCatalog"] = opts.doCatalog
     params["doUseCatalog"] = opts.doUseCatalog
+
+    params["doChipGaps"] = opts.doChipGaps
 
     return params
 
