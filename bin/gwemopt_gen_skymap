@@ -90,7 +90,7 @@ def gen_circle(ra,dec,error,nside):
     else:
         list_params = np.array([[float(ra)],[float(dec)]])
     if len(list_params[0]) != len(list_params[1]):
-        print "Need equal number of RAs and decs"
+        print("Need equal number of RAs and decs")
         return None
     else:
         params = np.transpose(list_params)
@@ -111,7 +111,7 @@ def gen_circle(ra,dec,error,nside):
 def gen_square(ras,decs,nside):
 
     if ',' in ras:
-        print "Use --doCircle for multiple locations"
+        print("Use --doCircle for multiple locations")
         return None
 
     radecs = []

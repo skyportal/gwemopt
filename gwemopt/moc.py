@@ -1,3 +1,5 @@
+import time
+
 from mocpy import MOC
 from astropy.table import Table
 
@@ -18,13 +20,13 @@ def create_moc(params):
         for ii, tess in enumerate(tesselation):
             index, ra, dec = tess[0], tess[1], tess[2]
             index = index.astype(int)
-            moc_struct[index] = Fov2Moc(config_struct, ra, dec, nside)
+            moc_struct[index] = Fov2Moc(params, config_struct, telescope, ra, dec, nside)
  
         moc_structs[telescope] = moc_struct
 
     return moc_structs
 
-def Fov2Moc(config_struct, ra_pointing, dec_pointing, nside):
+def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
     """Return a MOC in fits file of a fov footprint.
        The MOC fov is displayed in real time in an Aladin plan.
 
@@ -42,6 +44,19 @@ def Fov2Moc(config_struct, ra_pointing, dec_pointing, nside):
         ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside)
     elif config_struct["FOV_type"] == "circle":
         ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside)
+
+    if params["doChipGaps"]:
+        npix = hp.nside2npix(nside)
+        pixel_index = np.arange(npix)
+        RAs, Decs = hp.pix2ang(nside, pixel_index, lonlat=True, nest=False)
+
+        if telescope == "ZTF":
+            Z = gwemopt.quadrants.ZTFtile(ra_pointing, dec_pointing, config_struct)
+            #ipix = np.where(Z.inside_nogaps(RAs, Decs))[0]  # Ignore chip gaps
+            ipix = np.where(Z.inside(RAs, Decs))[0]
+        else:
+            print("Requested chip gaps with non-ZTF detector, failing.")
+            exit(0)
 
     moc_struct["ra"] = ra_pointing
     moc_struct["dec"] = dec_pointing

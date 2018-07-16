@@ -105,8 +105,8 @@ def getTileBounds(FOV, ra_cent, dec_cent):
 
 
 class RankedTileGenerator:
-	def __init__(self, skymapfile, preComputed_64=None, preComputed_128=None, preComputed_256=None, preComputed_512=None, preComputed_1024=None, preComputed_2048=None, preCompDictFiles=None):
-		self.skymap = hp.read_map(skymapfile, verbose=False)
+	def __init__(self, skymap, preComputed_64=None, preComputed_128=None, preComputed_256=None, preComputed_512=None, preComputed_1024=None, preComputed_2048=None, preCompDictFiles=None):
+		self.skymap = skymap
 		npix = len(self.skymap)
 		self.nside = hp.npix2nside(npix)
 
@@ -218,10 +218,11 @@ class RankedTileGenerator:
 
 		allTiles_ipixs = []
 		allTiles_probs = []
-		for ii in range(0, len(data)):
-			pTile = np.sum(pVal[data[ii]])
+		for ii in range(1, len(data)+1):
+			ipix, ras, decs = data[ii]
+			pTile = np.sum(pVal[ipix])
 			allTiles_probs.append(pTile)
-			allTiles_ipixs.append(data[ii])
+			allTiles_ipixs.append(ipix)
 
 		allTiles_probs = np.array(allTiles_probs)
 		allTiles_ipixs = np.array(allTiles_ipixs)

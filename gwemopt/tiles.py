@@ -12,6 +12,7 @@ from astropy.time import Time
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
 import gwemopt.samplers, gwemopt.segments
+import gwemopt.quadrants
 
 def greedy(params, map_struct):
 
@@ -53,7 +54,7 @@ def rankedTiles_struct(params,config_struct,telescope,map_struct):
     preCompDictFiles = {64:None, 128:None,256:None, 512:None, 1024:None, 2048:None}
     preCompDictFiles[nside] = preComputedFile
 
-    tileObj = gwemopt.rankedTilesGenerator.RankedTileGenerator(params["skymap"],preCompDictFiles=preCompDictFiles)
+    tileObj = gwemopt.rankedTilesGenerator.RankedTileGenerator(map_struct["prob"],preCompDictFiles=preCompDictFiles)
 
     if "observability" in map_struct:
         tileObj.skymap = map_struct["observability"][telescope]["prob"]
