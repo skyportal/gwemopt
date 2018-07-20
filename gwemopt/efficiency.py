@@ -86,7 +86,7 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
     efficiency_struct["distances"] = dists
     save_efficiency_data(params, efficiency_struct, lightcurve_struct)
     efficiency_metric = calculate_efficiency_metric(params, efficiency_struct)
-    save_efficiency_metric(params, "efficiency.txt", efficiency_metric, lightcurve_struct)
+    save_efficiency_metric(params, os.path.join(params["outputDir"],"efficiency.txt"), efficiency_metric, lightcurve_struct)
     return efficiency_struct
 
 
