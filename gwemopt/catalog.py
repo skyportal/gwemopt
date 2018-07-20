@@ -62,6 +62,7 @@ def get_catalog(params, map_struct):
         L_nu =  const * 10.**((mag + MAB0)/(-2.5))
 
     L_nu =  const * 10.**((mag + MAB0)/(-2.5))
+    L_nu = np.log10(L_nu)
     L_nu = L_nu**params["catalog_n"]
     Slum = L_nu / np.sum(L_nu)
     mlim, M_KNmin, M_KNmax = 22, -17, -12
