@@ -94,6 +94,7 @@ def parse_commandline():
     parser.add_option("--doUseCatalog",  action="store_true", default=False)
     parser.add_option("--catalogDir", help="catalog directory",default="../catalogs")
     parser.add_option("--galaxy_catalog", help="Source catalog",default="GLADE")
+    parser.add_option("--catalog_n",default=-0.5,type=float)
  
     parser.add_option("--doObservability",  action="store_true", default=False)
     parser.add_option("--doSkybrightness",  action="store_true", default=False)
@@ -235,6 +236,7 @@ def params_struct(opts):
     params["doReferences"] = opts.doReferences
 
     params["doCatalog"] = opts.doCatalog
+    params["catalog_n"] = opts.catalog_n
     params["doUseCatalog"] = opts.doUseCatalog
 
     params["doChipGaps"] = opts.doChipGaps
