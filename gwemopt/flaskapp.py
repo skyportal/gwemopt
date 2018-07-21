@@ -8,7 +8,7 @@ from werkzeug.routing import BaseConverter
 # Application object
 app = Flask(__name__, instance_relative_config=True)
 app.config['DEBUG'] = True
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///../sqlitedbs/gwemopt'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///gwemopt'
 
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 

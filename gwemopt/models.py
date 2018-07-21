@@ -5,37 +5,36 @@ Database schema.
 from flask_sqlalchemy import SQLAlchemy
 import pkg_resources
 from gwemopt.flaskapp import app
-
+import numpy as np
+import healpy as hp
 from astropy.io import ascii
 
 db = SQLAlchemy(app)
 
 def create_all(catalogFile):
+    db.drop_all()
     db.create_all()
 
+    nside = 256
+
     cat = ascii.read(catalogFile,format='ecsv')
+    ipixs = hp.ang2pix(nside, cat['RAJ2000'].to('deg').value, cat['DEJ2000'].to('deg').value, lonlat=True)
 
-    for row in cat.iterrows():
-        print(row)
-        print(stop)
+    for ii,row in enumerate(cat):
+        if np.mod(ii,10000) == 0:
+            print('%d/%d'%(ii,len(cat)))
+        ra, dec, dist = float(row["RAJ2000"]), float(row["DEJ2000"]), float(row["Dist"])
+        Bmag, Kmag = float(row["Bmag"]), float(row["Kmag2"])
+        ipix = ipixs[ii]
 
-        db.session.merge(Field(galaxy_id=int(galaxy_id),
+        db.session.merge(Galaxy(galaxy_id=int(ii),
                                ra=ra, dec=dec, dist=dist,
-                               mag=mag))
-
-    print(stop)
-
-
-
-    refs = table.unique(table.Table.read(
-        pkg_resources.resource_filename(__name__, 'input/ZTF.ref'),
-        format='ascii', data_start=2, data_end=-1)['field', 'fid'])
-    reference_images = {group[0]['field']: group['fid'].astype(int).tolist()
-                        for group in refs.group_by('field').groups}
+                               Bmag=Bmag, Kmag=Kmag,
+                               ipix=int(ipix)))
+    db.session.commit()
 
 class Galaxy(db.Model):
-    """Footprints and number of observations in each filter for standard PTF
-    tiles"""
+    """Galaxy information"""
 
     galaxy_id = db.Column(
         db.Integer,
@@ -57,9 +56,16 @@ class Galaxy(db.Model):
         nullable=False,
         comment='Distance of galaxy')
 
-    mag = db.Column(
+    Bmag = db.Column(
         db.Float,
         nullable=False,
         comment='B band mag of galaxy')
 
+    Kmag = db.Column(
+        db.Float,
+        nullable=False,
+        comment='K band mag of galaxy')
 
+    ipix = db.Column(
+        db.Integer,
+        comment='Healpix index')
