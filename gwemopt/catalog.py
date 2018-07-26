@@ -22,8 +22,6 @@ def get_catalog(params, map_struct):
     if not os.path.isdir(params["catalogDir"]): os.makedirs(params["catalogDir"])
     catalogFile = os.path.join(params["catalogDir"],"%s.csv"%params["galaxy_catalog"])
 
-    create_all(catalogFile)
-
     """AB Magnitude zero point."""
     MAB0 = -2.5 * np.log10(3631.e-23)
     pc_cm = 3.08568025e18
