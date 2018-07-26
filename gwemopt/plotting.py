@@ -335,6 +335,7 @@ def scheduler(params,exposurelist,keys):
             e.append((exposure[1] - start_time) * 24)
             k.append(key)
         plt.figure()
+        plt.grid()
         plt.xlabel("Time (h)")
         plt.ylabel("Tile Number")
         plt.plot(e, k, 'b-')
