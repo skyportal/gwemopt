@@ -72,7 +72,7 @@ def find_tile_greedy_slew(current_time, current_ra, current_dec, tilesegmentlist
     for ii in range(len(tilesegmentlists)): # for every tile
         key = keynames[ii]
         # exclude some tiles
-        if keynames[ii] in exptimecheckkeys or tileAllocatedTime[ii] == 0:
+        if keynames[ii] in exptimecheckkeys or np.absolute(tileAllocatedTime[ii]) < 1e-5:
             continue
         # calculate slew readout time
         distance = np.sqrt((tile_struct[key]['ra'] - current_ra)**2 +  (tile_struct[key]['dec'] - current_dec)**2)
