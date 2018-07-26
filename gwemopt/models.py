@@ -7,6 +7,7 @@ import pkg_resources
 from gwemopt.flaskapp import app
 import numpy as np
 import healpy as hp
+from astropy.table import Table
 from astropy.io import ascii
 
 db = SQLAlchemy(app)
@@ -32,6 +33,14 @@ def create_all(catalogFile):
                                Bmag=Bmag, Kmag=Kmag,
                                ipix=int(ipix)))
     db.session.commit()
+
+def read_catalog():
+
+    galaxies = Galaxy.query.all()
+    cat = Table(names=('RAJ2000', 'DEJ2000', 'Dist', 'Bmag', 'Kmag', 'ipix'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'i8'))
+    for galaxy in galaxies:
+        gal = [galaxy.ra, galaxy.dec, galaxy.dist, galaxy.Bmag, galaxy.Kmag, galaxy.ipix]
+        cat.add_row(gal)
 
 class Galaxy(db.Model):
     """Galaxy information"""
