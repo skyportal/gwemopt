@@ -6,7 +6,7 @@ import healpy as hp
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u
-
+import glue.segments as segments
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
 
@@ -24,8 +24,8 @@ def get_altaz_tiles(ras, decs, observatory, obstime):
 
     return altaz
 
-def find_tile(exposureids_tile,exposureids,probs, idxs = None,
-              exptimecheckkeys = []):
+
+def find_tile(exposureids_tile,exposureids,probs, idxs = None, exptimecheckkeys = []):
     # exposureids_tile: {expo id}-> list of the tiles available for observation
     # exposureids: list of tile ids for every exposure it is allocated to observe
     if idxs is not None:
@@ -62,44 +62,45 @@ def find_tile(exposureids_tile,exposureids,probs, idxs = None,
     return idx2, exposureids, probs
 
 
-def find_tile_slew(scores, idxs = None, exptimecheckkeys = []):
-    # exposureids_tile: {expo id}-> list of the tiles available for observation
-    # exposureids: list of tile ids for every exposure it is allocated to observe
-    if idxs is not None:
-        for idx in idxs:
-            if len(exposureids_tile["exposureids"]) - 1 < idx: continue
-            idx2 = exposureids_tile["exposureids"][idx]
-            if idx2 in exposureids and not idx2 in exptimecheckkeys:
-                idx = exposureids.index(idx2)
-                exposureids.pop(idx)
-                scores.pop(idx)
-                return idx2, exposureids, scores
+def find_tile_greedy_slew(current_time, current_ra, current_dec, tilesegmentlists, tileprobs, config_struct, tile_struct, 
+        keynames, tileAllocatedTime, exptimecheckkeys = [], idle = 0):
+    next_obs = -1
+    idx2 = -1
+    score_selected = -1
+    slew_readout_selected = -1
+    explength_selected = -1
+    for ii in range(len(tilesegmentlists)):
+        if keynames[ii] in exptimecheckkeys or tileAllocatedTime[ii] == 0:
+            continue
+        key = keynames[ii]
+        distance = np.sqrt((tile_struct[key]['ra'] - current_ra)**2 +  (tile_struct[key]['dec'] - current_dec)**2)
+        slew_readout = np.max([config_struct['readout'], distance / config_struct['slew_rate']])
+        slew_readout = np.max([slew_readout - idle, 0])
+        slew_readout = slew_readout / 86400
+        for jj in range(len(tilesegmentlists[ii])):
+            seg = tilesegmentlists[ii][jj]
+            if current_time + slew_readout < seg[1]:
+                if current_time + slew_readout >= seg[0]:
+                    explength = np.min([seg[1] - current_time - slew_readout, tileAllocatedTime[ii]])
+                    score = tileprobs[ii] * explength / (1 + slew_readout)
+                    if idx2 == -1 or score > score_selected:
+                        idx2 = keynames[ii]
+                        score_selected = score
+                        slew_readout_selected = slew_readout
+                        explength_selected = explength
+                elif idx2 == -1:
+                    if next_obs == -1 or next_obs > seg[0]:
+                        next_obs = seg[0]
+                break
+    exp_idle_seg = None
+    if idx2 != -1:
+        exp_idle_seg = segments.segment(current_time + slew_readout, current_time + slew_readout + explength_selected)
+    elif next_obs != -1:
+        exp_idle_seg = segments.segment(current_time, next_obs)
+    return idx2, slew_readout_selected, exp_idle_seg
 
-    findTile = True
-    while findTile:
-        if not exposureids_tile["probs"]:
-            idx2 = -1
-            findTile = False
-            break
-        idx = np.argmax(exposureids_tile["probs"])
-        idx2 = exposureids_tile["exposureids"][idx]
 
-        if exposureids:
-            if idx2 in exposureids and not idx2 in exptimecheckkeys:
-                idx = exposureids.index(idx2)
-                exposureids.pop(idx)
-                scores.pop(idx)
-                findTile = False
-            else:
-                exposureids_tile["exposureids"].pop(idx)
-                exposureids_tile["probs"].pop(idx)
-        else:
-            findTile = False
-
-    return idx2, probs
-
-
-def get_order(params, tile_struct, tilesegmentlists, exposurelist):    
+def get_order(params, tile_struct, tilesegmentlists, exposurelist):
     '''
     tile_struct: dictionary. key -> struct info. 
     tilesegmentlists: list of lists. Segments for each tile in tile_struct 
@@ -225,7 +226,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
                     filt = tilefilts[idx2].pop(0)
                     filts[ii] = filt
                 idxs[ii] = idx2
-            tileavailable[jj] = tileavailable[jj] - 1
+            tileavailable[jj] = tileavailable[jj] - 1        
     else:
         print("Scheduling options are greedy/sear/weighted, or with _slew.")
         exit(0)
@@ -233,117 +234,62 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
     return idxs, filts
 
 
-def get_order_slew(params, tile_struct, tilesegmentlists, config_struct):    
-    # contants
-    keys = tile_struct.keys()
+def get_order_slew(params, tile_struct, tilesegmentlists, config_struct):   
+    keys = tile_struct.keys() 
     keynames = []
     tilefilts = {}
-    # status vars
-    tileexptime = np.zeros((len(keys),)) # the time of last exposure
-    allocatedTime = np.zeros((len(keys), )) # the remaining allocated time for each tile
-    # return vars
-    idxs = []
-    observation_times = []
-    filts = []
-    
-    for ii, key in enumerate(keys):
-        allocatedTime[ii] = tile_struct[key]["exposureTime"]
+    tileAllocatedTime = {}
+    tileprobs = np.zeros((len(keys),))
     for jj, key in enumerate(keys):
+        tileprobs[jj] = tile_struct[key]["prob"]
         tilefilts[key] = copy.deepcopy(tile_struct[key]["filt"])
         keynames.append(key) 
+        tileAllocatedTime[key] = tile_struct[key]["exposureTime"]
+    lastObs = np.zeros((len(keys), ))
+
+    idxs = []
+    filts = []
+    exposurelist = []
 
     if params["scheduleType"] == "greedy_slew":
-        tot_obs_time = config_struct["tot_obs_time"]
-        # start the telescope at the zenith
+        current_time = Time(params['gpstime'], format='gps', scale='utc').mjd + np.min(params["Tobs"][::2])
         current_ra = config_struct["latitude"]
         current_dec = config_struct["longitude"]
-        current_time = 0
-        while current_time < tot_obs_time: 
-            # calculate the slew/readout time of every tile
-            slew_readout_time = np.zeros((len(keys),))
-            for ii, key in enumerate(keys):
-                slew_readout_time[ii] = np.maximum(np.sqrt((current_ra - tile_struct[key]["ra"])**2 + (current_dec - tile_struct[key]["dec"])**2) /
-                        config_struct["slew_rate"], config_struct["readout"])
-            # check the time difference from the last exposure
-            exptimecheck = np.where(current_time + slew_readout_time - tileexptime <
-                                    params["mindiff"]/86400.0)[0]
+        idle = 0
+        while True:
+            # check the time gap between last observation
+            exptimecheck = np.where(current_time - lastObs < params["mindiff"]/86400.0)[0]
             exptimecheckkeys = [keynames[x] for x in exptimecheck]
-            # calculate the scores for each tile
-            exposure_start = current_time + slew_readout_time
-            exposure_length = np.array([])
-            for ii, tilesegmentlist in enumerate(tilesegmentlists):
-                try:
-                    t_idx = tilesegmentlist.find(exposure_start)
-                    exposure_length = np.append(exposure_length, math.max(allocatedTime[ii], tilesegmentlist[t_idx][1] - exposure_start - slew_readout_time))
-                except:
-                    continue
-            scores = probs * exposure_length / slew_readout_time
-            # select an observable tile with the highest score
-            idx2, obseravtion_time = find_tile_slew(exposureids_tiles[ii], scores, exptimecheckkeys=exptimecheckkeys)
-            # update the status vars after observation on this tile
-            if idx2 in keynames:
-                idx = keynames.index(idx2)
-                tileexptime[idx] = current_time + slew_readout_time[idx] + exposure_length[idx]
-                filt = tilefilts[idx2].pop(0)
-                filts[idx] = filt
-                allocatedTime[idx] -= exposure_length[idx]
-                obseravtion_times.append(observation_time)
-            idxs[ii] = idx2
-
-    elif params["scheduleType"] == "sear_slew":
-        #for ii in np.arange(len(exposurelist)):
-        iis = np.arange(len(exposurelist)).tolist()
-        while len(iis) > 0: 
-            ii = iis[0]
-            mask = np.where((ii == last_exposure) & (tilenexps > 0))[0]
-
-            exptimecheck = np.where(exposurelist[ii][0]-tileexptime <
-                                    params["mindiff"]/86400.0)[0]
-            exptimecheckkeys = [keynames[x] for x in exptimecheck]
-
-            if len(mask) > 0:
-                idxsort = mask[np.argsort(tileprobs[mask])]
-                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,idxs=idxsort,exptimecheckkeys=exptimecheckkeys) 
-                last_exposure[mask] = last_exposure[mask] + 1
+            idx2, slew_readout, exp_idle_seg = find_tile_greedy_slew(current_time, current_ra, current_dec, tilesegmentlists, tileprobs, 
+                    config_struct, tile_struct, keynames, tileAllocatedTime, exptimecheckkeys=exptimecheckkeys, idle=idle)
+            if idx2 != -1:
+                exp_idle_len = exp_idle_seg[1] - exp_idle_seg[0]
+                idle = 0
+                idxs.append(idx2)
+                exposurelist.append(exp_idle_seg)
+                filts.append(tilefilts[idx2].pop(0))
+                tileAllocatedTime[idx2] = tileAllocatedTime[idx2] - exp_idle_len
+                current_time = exp_idle_seg[1]
+                current_ra = tile_struct[idx2]["ra"]
+                current_dec = tile_struct[idx2]["dec"]
+            elif exp_idle_seg is not None:
+                exp_idle_len = exp_idle_seg[1] - exp_idle_seg[0]
+                idxs.append(idx2)
+                exposurelist.append(exp_idle_seg)
+                filts.append('n')
+                idle = exp_idle_len
+                current_time += exp_idle_len
             else:
-                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,exptimecheckkeys=exptimecheckkeys)
-            if idx2 in keynames:
-                idx = keynames.index(idx2)
-                tilenexps[idx] = tilenexps[idx] - 1
-                tileexptime[idx] = exposurelist[ii][0]
-                filt = tilefilts[idx2].pop(0)
-                filts[ii] = filt
-            idxs[ii] = idx2 
-            iis.pop(0)
-
-            if not exposureids: break
-
+                break
+    elif params["scheduleType"] == "sear_slew":
+        print('sear_slew is not ready yet.')
     elif params["scheduleType"] == "weighted_slew":
-        for ii in np.arange(len(exposurelist)):
-            jj = exposureids_tiles[ii]["exposureids"]
-            weights = tileprobs[jj] * tilenexps[jj] / tileavailable[jj]
-            weights[~np.isfinite(weights)] = 0.0
-
-            exptimecheck = np.where(exposurelist[ii][0]-tileexptime <
-                                    params["mindiff"]/86400.0)[0]
-            weights[exptimecheck] = 0.0
-
-            if np.any(weights >= 0):
-                idxmax = np.argmax(weights)
-                idx2 = jj[idxmax]
-                if idx2 in keynames:
-                    idx = keynames.index(idx2)
-                    tilenexps[idx] = tilenexps[idx] - 1
-                    tileexptime[idx] = exposurelist[ii][0]
-                    filt = tilefilts[idx2].pop(0)
-                    filts[ii] = filt
-                idxs[ii] = idx2
-            tileavailable[jj] = tileavailable[jj] - 1
+        print('weighted_slew is not ready yet.')
     else:
         print("Scheduling options are greedy/sear/weighted, or with _slew.")
         exit(0)
 
-    return idxs, observation_times, filts
+    return idxs, exposurelist, filts
 
 
 def scheduler(params, config_struct, tile_struct):
@@ -371,13 +317,20 @@ def scheduler(params, config_struct, tile_struct):
     for key in keys:
         # segments.py: tile_struct[key]["segmentlist"] is a list of segments when the tile is available for observation
         tilesegmentlists.append(tile_struct[key]["segmentlist"]) 
-
     print("Generating schedule order...")
-    keys, filts = get_order(params,tile_struct,tilesegmentlists,exposurelist)
-
+    if params["scheduleType"].endswith('_slew'):
+        keys, exposurelist, filts = get_order_slew(params, tile_struct, tilesegmentlists, config_struct)
+    else:
+        keys, filts = get_order(params,tile_struct,tilesegmentlists,exposurelist)
+#########
+    for key, exposure in zip(keys, exposurelist):
+        print(str(key) + ":" + str(exposure[0]) + "," + str(exposure[1]))
+#########
     if params["doPlots"]:
-        gwemopt.plotting.scheduler(params,exposurelist,keys)
-
+        if params["scheduleType"].endswith("_slew"):
+            print("slew plotting is not ready yet.")
+        else:
+            gwemopt.plotting.scheduler(params,exposurelist,keys)
     while len(exposurelist) > 0:
         key, filt = keys[0], filts[0]
         if key == -1:
@@ -420,8 +373,12 @@ def scheduler(params, config_struct, tile_struct):
     coverage_struct["area"] = np.array(coverage_struct["area"])
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
     coverage_struct["FOV"] = config_struct["FOV"]*np.ones((len(coverage_struct["filters"]),))
+    
+
+
 
     return coverage_struct
+
 
 def summary(params, map_struct, coverage_struct):
 
@@ -432,7 +389,6 @@ def summary(params, map_struct, coverage_struct):
     fid = open(mapfile,'w')
     fid.write('%.5f %.5f\n'%(map_struct["pixarea_deg2"]*idx50,map_struct["pixarea_deg2"]*idx90))
     fid.close()
-
     filts = list(set(coverage_struct["filters"]))
     for telescope in params["telescopes"]:
 
