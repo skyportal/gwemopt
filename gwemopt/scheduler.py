@@ -69,18 +69,21 @@ def find_tile_greedy_slew(current_time, current_ra, current_dec, tilesegmentlist
     score_selected = -1
     slew_readout_selected = -1
     explength_selected = -1
-    for ii in range(len(tilesegmentlists)):
+    for ii in range(len(tilesegmentlists)): # for every tile
+        key = keynames[ii]
+        # exclude some tiles
         if keynames[ii] in exptimecheckkeys or tileAllocatedTime[ii] == 0:
             continue
-        key = keynames[ii]
+        # calculate slew readout time
         distance = np.sqrt((tile_struct[key]['ra'] - current_ra)**2 +  (tile_struct[key]['dec'] - current_dec)**2)
         slew_readout = np.max([config_struct['readout'], distance / config_struct['slew_rate']])
         slew_readout = np.max([slew_readout - idle, 0])
         slew_readout = slew_readout / 86400
-        for jj in range(len(tilesegmentlists[ii])):
+        for jj in range(len(tilesegmentlists[ii])): # for every segment
             seg = tilesegmentlists[ii][jj]
-            if current_time + slew_readout < seg[1]:
-                if current_time + slew_readout >= seg[0]:
+            if current_time + slew_readout < seg[1]: # if ends later than current + slew
+                if current_time + slew_readout >= seg[0]: # if starts earlier than current + slew
+                    # calculate the score
                     explength = np.min([seg[1] - current_time - slew_readout, tileAllocatedTime[ii]])
                     score = tileprobs[ii] * explength / (1 + slew_readout)
                     if idx2 == -1 or score > score_selected:
@@ -88,7 +91,7 @@ def find_tile_greedy_slew(current_time, current_ra, current_dec, tilesegmentlist
                         score_selected = score
                         slew_readout_selected = slew_readout
                         explength_selected = explength
-                elif idx2 == -1:
+                elif idx2 == -1: # if starts later than current + slew
                     if next_obs == -1 or next_obs > seg[0]:
                         next_obs = seg[0]
                 break
@@ -237,6 +240,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
 def get_order_slew(params, tile_struct, tilesegmentlists, config_struct):   
     keys = tile_struct.keys() 
     keynames = []
+    namekeys = {}
     tilefilts = {}
     tileAllocatedTime = {}
     tileprobs = np.zeros((len(keys),))
@@ -244,8 +248,9 @@ def get_order_slew(params, tile_struct, tilesegmentlists, config_struct):
         tileprobs[jj] = tile_struct[key]["prob"]
         tilefilts[key] = copy.deepcopy(tile_struct[key]["filt"])
         keynames.append(key) 
-        tileAllocatedTime[key] = tile_struct[key]["exposureTime"]
-    lastObs = np.zeros((len(keys), ))
+        namekeys[key] = jj
+        tileAllocatedTime[key] = tile_struct[key]["exposureTime"] / 86400
+    lastObs = np.zeros((len(keys),))
 
     idxs = []
     filts = []
@@ -257,7 +262,7 @@ def get_order_slew(params, tile_struct, tilesegmentlists, config_struct):
         current_dec = config_struct["longitude"]
         idle = 0
         while True:
-            # check the time gap between last observation
+            # check the time gap since last observation
             exptimecheck = np.where(current_time - lastObs < params["mindiff"]/86400.0)[0]
             exptimecheckkeys = [keynames[x] for x in exptimecheck]
             idx2, slew_readout, exp_idle_seg = find_tile_greedy_slew(current_time, current_ra, current_dec, tilesegmentlists, tileprobs, 
@@ -272,6 +277,8 @@ def get_order_slew(params, tile_struct, tilesegmentlists, config_struct):
                 current_time = exp_idle_seg[1]
                 current_ra = tile_struct[idx2]["ra"]
                 current_dec = tile_struct[idx2]["dec"]
+                idx = namekeys[idx2]
+                lastObs[idx] = current_time
             elif exp_idle_seg is not None:
                 exp_idle_len = exp_idle_seg[1] - exp_idle_seg[0]
                 idxs.append(idx2)
@@ -322,15 +329,8 @@ def scheduler(params, config_struct, tile_struct):
         keys, exposurelist, filts = get_order_slew(params, tile_struct, tilesegmentlists, config_struct)
     else:
         keys, filts = get_order(params,tile_struct,tilesegmentlists,exposurelist)
-#########
-    for key, exposure in zip(keys, exposurelist):
-        print(str(key) + ":" + str(exposure[0]) + "," + str(exposure[1]))
-#########
     if params["doPlots"]:
-        if params["scheduleType"].endswith("_slew"):
-            print("slew plotting is not ready yet.")
-        else:
-            gwemopt.plotting.scheduler(params,exposurelist,keys)
+        gwemopt.plotting.scheduler(params,exposurelist,keys)
     while len(exposurelist) > 0:
         key, filt = keys[0], filts[0]
         if key == -1:
