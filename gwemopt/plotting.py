@@ -324,18 +324,30 @@ def coverage(params, map_struct, coverage_struct):
         os.system(rm_command)
 
 def scheduler(params,exposurelist,keys): 
-
-    xs = []
-    ys = []
-    for ii,key in zip(np.arange(len(exposurelist)),keys):
-        xs.append(ii)
-        ys.append(key)    
-
     plotName = os.path.join(params["outputDir"],'scheduler.pdf')
-    plt.figure()
-    plt.xlabel("Exposure Number")
-    plt.ylabel("Tile Number")
-    plt.plot(xs,ys,'kx')
+    if params['scheduleType'].endswith('_slew'):
+        e = []
+        k = []
+        start_time = exposurelist[0][0]
+        for exposure, key in zip(exposurelist, keys):
+            e.append((exposure[0] - start_time) * 24)
+            k.append(key)
+            e.append((exposure[1] - start_time) * 24)
+            k.append(key)
+        plt.figure()
+        plt.xlabel("Time (h)")
+        plt.ylabel("Tile Number")
+        plt.plot(e, k, 'b-')
+    else:
+        xs = []
+        ys = []
+        for ii,key in zip(np.arange(len(exposurelist)),keys):
+            xs.append(ii)
+            ys.append(key)    
+        plt.figure()
+        plt.xlabel("Exposure Number")
+        plt.ylabel("Tile Number")
+        plt.plot(xs,ys,'kx')
     plt.show()
     plt.savefig(plotName,dpi=200)
     plt.close('all')
