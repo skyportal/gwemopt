@@ -40,65 +40,6 @@ def hierarchical(params, map_struct):
 
     return tile_structs
 
-def rankedTiles_struct(params,config_struct,telescope,map_struct):
-
-    nside = params["nside"]
-
-    tot_obs_time = config_struct["tot_obs_time"]
-
-    preComputedFile = os.path.join(params["tilingDir"],'preComputed_%s_pixel_indices_%d.dat'%(telescope,nside))
-    if not os.path.isfile(preComputedFile):
-        print("Creating tiles file...")
-        gwemopt.rankedTilesGenerator.createTileFile(params,preComputedFile,radecs=config_struct["tesselation"])
-
-    preCompDictFiles = {64:None, 128:None,256:None, 512:None, 1024:None, 2048:None}
-    preCompDictFiles[nside] = preComputedFile
-
-    tileObj = gwemopt.rankedTilesGenerator.RankedTileGenerator(map_struct["prob"],preCompDictFiles=preCompDictFiles)
-
-    if "observability" in map_struct:
-        tileObj.skymap = map_struct["observability"][telescope]["prob"]
-    ranked_tile_index, ranked_tile_probs, ipixs = tileObj.getRankedTiles(resolution=params["nside"])
-    ranked_tile_times = tileObj.integrationTime(tot_obs_time, pValTiles=ranked_tile_probs, func=None)
-    ranked_tile_times = config_struct["exposuretime"]*np.round(ranked_tile_times/config_struct["exposuretime"])
-
-    tile_struct = {}
-    for index, prob, ipix, exposureTime in zip(ranked_tile_index, ranked_tile_probs, ipixs, ranked_tile_times):
-        ii = config_struct["tesselation"][index,0].astype(int)
-        tile_struct[ii] = {}
-        tile_struct[ii]["index"] = index
-        tile_struct[ii]["prob"] = prob
-        tile_struct[ii]["ipix"] = ipix
-        tile_struct[ii]["exposureTime"] = exposureTime
-        tile_struct[ii]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
-        tile_struct[ii]["ra"] = config_struct["tesselation"][index,1]
-        tile_struct[ii]["dec"] = config_struct["tesselation"][index,2]
-
-        if config_struct["FOV_type"] == "square":
-            ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(tile_struct[ii]["ra"], tile_struct[ii]["dec"], config_struct["FOV"], nside)
-        elif config_struct["FOV_type"] == "circle":
-            ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(tile_struct[ii]["ra"], tile_struct[ii]["dec"], config_struct["FOV"], nside)
-
-        tile_struct[ii]["ipix"] = ipix
-        tile_struct[ii]["corners"] = radecs
-        tile_struct[ii]["patch"] = patch  
-        tile_struct[ii]["area"] = area      
-
-    tile_struct = gwemopt.segments.get_segments_tiles(config_struct, tile_struct)
-
-    return tile_struct
-
-def rankedTiles(params, map_struct):
-
-    tile_structs = {}
-    for telescope in params["telescopes"]:
-        config_struct = params["config"][telescope]
-
-        tile_struct = rankedTiles_struct(params, config_struct, telescope, map_struct)
-        tile_structs[telescope] = tile_struct 
-
-    return tile_structs
-
 def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
     tot_obs_time = config_struct["tot_obs_time"]
@@ -111,7 +52,6 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
     n, cl, dist_exp = params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"]
     tile_probs = compute_tiles_map(tile_struct, prob, func='np.sum(x)')
     tile_probs[tile_probs<np.max(tile_probs)*0.01] = 0.0 
-
     prob_scaled = copy.deepcopy(prob)
     prob_sorted = np.sort(prob_scaled)[::-1]
     prob_indexes = np.argsort(prob_scaled)[::-1]
