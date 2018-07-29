@@ -29,7 +29,7 @@ preComputed_pixel_indices_512.dat to be in the same path.
 
 """
 
-
+import os
 import numpy as np
 import pylab as pl
 import pickle
@@ -47,6 +47,41 @@ from astropy.coordinates import get_sun
 from astropy.coordinates import get_moon
 from astropy.coordinates import get_body
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
+
+import gwemopt.moc
+
+def create_ranked(params, map_struct):
+
+    nside = params["nside"]
+
+    moc_structs = {}
+    for telescope in params["telescopes"]:
+        config_struct = params["config"][telescope]
+        tesselation = config_struct["tesselation"]
+
+        preComputedFile = os.path.join(params["tilingDir"],'preComputed_%s_pixel_indices_%d.dat'%(telescope,nside))
+        if not os.path.isfile(preComputedFile):
+            print("Creating tiles file...")
+            gwemopt.rankedTilesGenerator.createTileFile(params,preComputedFile,radecs=config_struct["tesselation"])
+
+        preCompDictFiles = {64:None, 128:None,256:None, 512:None, 1024:None, 2048:None}
+        preCompDictFiles[nside] = preComputedFile
+
+        tileObj = RankedTileGenerator(map_struct["prob"],preCompDictFiles=preCompDictFiles)
+
+        ranked_tile_index, ranked_tile_probs, ipixs = tileObj.getRankedTiles(resolution=params["nside"])
+
+        moc_struct = {}
+        for ii, tess in enumerate(tesselation):
+            index, ra, dec = tess[0], tess[1], tess[2]
+            index = index.astype(int)
+            moc_struct[index] = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
+            idx = np.where(ranked_tile_index==ii)[0][0]
+            moc_struct[index]["ipix"] = ipixs[idx]
+
+        moc_structs[telescope] = moc_struct
+
+    return moc_structs
 
 def createTileFile(params, preComputedFile, radecs=None, tileFile=None):
 
