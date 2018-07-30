@@ -331,6 +331,7 @@ def integrationTime(T_obs, pValTiles, func=None, T_int=60.0):
 
 def observability(params, map_struct):
 
+    airmass = params["airmass"]
     nside = params["nside"]
     npix = hp.nside2npix(nside)
     gpstime = params["gpstime"]
@@ -372,7 +373,7 @@ def observability(params, map_struct):
             # is within the area that is visible, now? Demand that sun is at
             # least 18 degrees below the horizon and that the airmass
             # (secant of zenith angle approximation) is at most 2.5.
-            idx = np.where((altaz.alt >= 30*u.deg) &  (sun_altaz.alt <= -18*u.deg) & (altaz.secz <= 3.0))[0]
+            idx = np.where((altaz.alt >= 30*u.deg) &  (sun_altaz.alt <= -18*u.deg) & (altaz.secz <= airmass))[0]
             observatory_struct[telescope]["dts"][dt] = np.zeros((npix,))
             observatory_struct[telescope]["dts"][dt][idx] = 1
             observatory_struct[telescope]["observability"][idx] = 1
