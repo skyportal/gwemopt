@@ -1,0 +1,18 @@
+
+import os, sys
+import glob
+import numpy as np
+
+from astropy.time import Time
+
+gpstime = 1215712057.09
+skymap = "../data/GRB180715/glg_healpix_all_bn180715741.fit"
+cls = [0.5,0.9]
+exposuretimes = [180, 60]
+
+for cl, exposuretime in zip(cls,exposuretimes):
+    outputDir = "../output/GRB180715/%.3f"%cl
+    exposuretime = "%d,%d,%d"%(exposuretime,exposuretime,exposuretime)
+    system_command = "python gwemopt_run --telescope ZTF --doReferences --doEfficiency --doSchedule --doSkymap --doPlots --skymap %s --gpstime %d -o %s --doTiles --doSingleExposure --exposuretimes %s --powerlaw_cl %.3f"%(skymap,gpstime,outputDir,exposuretime,cl)
+    os.system(system_command)
+

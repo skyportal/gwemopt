@@ -30,6 +30,7 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
     prob_data_cumsum = np.cumsum(prob_data_sorted)
     rand_values = np.random.rand(Ninj,)
     dists = np.logspace(-1,3,1000)
+    #dists = np.logspace(-1,np.log10(300),100)
     ndetections = np.zeros((len(dists),))
 
     ras = []

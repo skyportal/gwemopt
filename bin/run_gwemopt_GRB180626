@@ -1,0 +1,22 @@
+
+import os, sys
+import glob
+import numpy as np
+
+from astropy.time import Time
+
+gpstime = 1214040248.65
+skymap = "../data/GRB180626/glg_healpix_all_bn180626392.fit"
+outputDir = "../output/GRB180626/night1"
+coverageFile = "../data/GRB180626/night1.dat"
+
+system_command = "python gwemopt_run --telescope ZTF --doCoverage --doSkymap --doPlots --skymap %s --gpstime %d -o %s --coverageFile %s"%(skymap,gpstime,outputDir,coverageFile)
+os.system(system_command)
+
+skymap = "../data/GRB180626/GRB20180626_IPN.fits"
+outputDir = "../output/GRB180626/night2"
+coverageFile = "../data/GRB180626/night2.dat"
+
+system_command = "python gwemopt_run --telescope ZTF --doCoverage --doSkymap --doPlots --skymap %s --gpstime %d -o %s --coverageFile %s"%(skymap,gpstime,outputDir,coverageFile)
+os.system(system_command)
+

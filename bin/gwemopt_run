@@ -34,6 +34,7 @@ np.random.seed(0)
 import healpy as hp
 #import ephem
 import astropy, astroplan
+from astropy import table
 
 import gwemopt.utils, gwemopt.gracedb
 import gwemopt.rankedTilesGenerator, gwemopt.waw
@@ -112,7 +113,7 @@ def parse_commandline():
     parser.add_option("-d", "--coverageFiles", help="Telescope coverage files.",
                       default ="../data/ATLAS_GW170104.dat")
     parser.add_option("-l", "--lightcurveFiles", help="Lightcurve files.",
-                      default ="../lightcurves/neutron_precursor3.dat,../lightcurves/rpft_m005_v2.dat,../lightcurves/APR4-1215_k1.dat")
+                      default ="../lightcurves/Me2017_H4M050V20.dat")
     parser.add_option("--Ninj",default=1000,type=int)
     parser.add_option("--Ntiles",default=10,type=int)
     parser.add_option("--Ndet",default=1,type=int)
@@ -174,6 +175,12 @@ def params_struct(opts):
     for configFile in configFiles:
         telescope = configFile.split("/")[-1].replace(".config","")
         params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
+        if opts.doSingleExposure:
+            exposuretime = np.array(opts.exposuretimes.split(","),dtype=np.float)[0]
+
+            nmag = np.log(exposuretime/params["config"][telescope]["exposuretime"]) / np.log(2.5)
+            params["config"][telescope]["magnitude"] = params["config"][telescope]["magnitude"] + nmag
+            params["config"][telescope]["exposuretime"] = exposuretime            
         if "tesselationFile" in params["config"][telescope]:
             if not os.path.isfile(params["config"][telescope]["tesselationFile"]):
                 if params["config"][telescope]["FOV_type"] == "circle": 
@@ -181,6 +188,19 @@ def params_struct(opts):
                 elif params["config"][telescope]["FOV_type"] == "square":
                     gwemopt.tiles.tesselation_packing(params["config"][telescope])
             params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2),comments='%')
+
+        if "referenceFile" in params["config"][telescope]:
+            refs = table.unique(table.Table.read(
+                params["config"][telescope]["referenceFile"],
+                format='ascii', data_start=2, data_end=-1)['field', 'fid'])
+            reference_images =\
+                {group[0]['field']: group['fid'].astype(int).tolist()
+                 for group in refs.group_by('field').groups}
+            reference_images_map = {1: 'g', 2: 'r', 3: 'i'}
+            for key in reference_images:
+                reference_images[key] = [reference_images_map.get(n, n)
+                                         for n in reference_images[key]]
+            params["config"][telescope]["reference_images"] = reference_images
 
         location = astropy.coordinates.EarthLocation(params["config"][telescope]["longitude"],params["config"][telescope]["latitude"],params["config"][telescope]["elevation"])
         observer = astroplan.Observer(location=location)
@@ -315,7 +335,10 @@ if opts.doTiles:
         tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
     elif params["tilesType"] == "ranked":
         print("Generating ranked struct...")
-        tile_structs = gwemopt.tiles.rankedTiles(params, map_struct)
+        #tile_structs = gwemopt.tiles.rankedTiles(params, map_struct)
+        moc_structs = gwemopt.rankedTilesGenerator.create_ranked(params,
+                                                                 map_struct)
+        tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
     elif params["tilesType"] == "hierarchical":
         print("Generating hierarchical struct...")
         tile_structs = gwemopt.tiles.hierarchical(params, map_struct)
