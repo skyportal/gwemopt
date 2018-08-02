@@ -1,0 +1,51 @@
+
+import subprocess
+import shlex
+from subprocess import PIPE
+import numpy as np
+from astropy import table
+
+user = 'XXXXXXXXXXX'
+pw =   'YYYYYYYYYYY'
+outtable = 'out.tbl'
+
+cmd = 'curl -c cookies.txt "https://irsa.ipac.caltech.edu/account/signon/login.do?josso_cmd=login&josso_username=%s&josso_password=%s"'%(user, pw)
+args = shlex.split(cmd)
+p = subprocess.Popen(args, stdout=PIPE)
+p.communicate()
+
+cmd = """
+curl -b cookies.txt -o %s "https://irsa.ipac.caltech.edu/ibe/search/ztf/products/ref?WHERE=nframes>=15+AND+startobsdate>='2018-02-05T00:00:00Z'"
+"""%(outtable)
+args = shlex.split(cmd)
+p = subprocess.Popen(args, stdout=PIPE)
+p.communicate()
+
+lines = [line.rstrip('\n') for line in open(outtable)]
+refs = {}
+for line in lines:
+    lineSplit = line.split(" ")
+    lineSplit = list(filter(None,lineSplit))
+
+    if not len(lineSplit) == 35: continue
+
+    fieldID, filt = int(lineSplit[1]), int(lineSplit[5])
+    if not fieldID in refs:
+        refs[fieldID] = []
+    refs[fieldID].append(filt)
+for fieldID in refs.keys():
+    refs[fieldID] = np.unique(refs[fieldID])
+
+fid = open('refs.dat','w')
+fid.write('field fid\n')
+for fieldID in refs.keys():
+    for filtid in refs[fieldID]:
+        fid.write('%d %d\n'%(fieldID,filtid))
+fid.close()
+
+refs = table.unique(table.Table.read('refs.dat',
+        format='ascii', data_start=2, data_end=-1)['field', 'fid'])
+reference_images = {group[0]['field']: group['fid'].astype(int).tolist()
+                        for group in refs.group_by('field').groups}
+
+
