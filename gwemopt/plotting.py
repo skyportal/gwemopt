@@ -88,6 +88,35 @@ def tiles(params,map_struct,tiles_structs):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
+    if params["doReferences"]:
+
+        rot=(90,0,0)
+        plotName = os.path.join(params["outputDir"],'tiles_ref.pdf')
+        plt.figure()
+        hp.mollview(np.zeros(map_struct["prob"].shape),title='',unit=unit,cbar=cbar,cmap=plt.get_cmap('Greens'))
+        ax = plt.gca()
+        for telescope in tiles_structs:
+            config_struct = params["config"][telescope]
+            tiles_struct = tiles_structs[telescope]
+            for index in tiles_struct.keys():
+                if not index in config_struct["reference_images"]: continue
+                if len(params["filters"]) == 1:
+                    if not params["filters"][0] in config_struct["reference_images"][index]:
+                        continue
+                ipix, corners, patch = tiles_struct[index]["ipix"], tiles_struct[index]["corners"], tiles_struct[index]["patch"]
+                #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
+                if not patch: continue
+                patch_cpy = copy.copy(patch)
+                patch_cpy.axes = None
+                patch_cpy.figure = None
+                patch_cpy.set_transform(ax.transData)
+                hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
+                #tiles.plot()
+        add_edges()
+        plt.show()
+        plt.savefig(plotName,dpi=200)
+        plt.close('all')
+
 def add_edges():
 
     hp.graticule(verbose=False)
