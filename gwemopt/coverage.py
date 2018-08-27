@@ -127,7 +127,21 @@ def waw(params, map_struct, tile_structs):
 def powerlaw(params, map_struct, tile_structs):
 
     coverage_structs = []
+    n_scope = 0
+    full_prob_map = map_struct["prob"]
+
     for telescope in params["telescopes"]:
+
+        if params["doSplit"]:
+            if "observability" in map_struct:
+                map_struct["observability"][telescope]["prob"] = map_struct["groups"][n_scope]
+            else:
+                map_struct["prob"] = map_struct["groups"][n_scope]
+            if n_scope < len(map_struct["groups"]) - 1:
+                n_scope += 1
+            else:
+                n_scope = 0
+
         config_struct = params["config"][telescope]
         tile_struct = tile_structs[telescope]
         tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)      
@@ -135,6 +149,7 @@ def powerlaw(params, map_struct, tile_structs):
         coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
         coverage_structs.append(coverage_struct)
 
+    map_struct["prob"] = full_prob_map
     return combine_coverage_structs(coverage_structs)
 
 def pem(params, map_struct, tile_structs):

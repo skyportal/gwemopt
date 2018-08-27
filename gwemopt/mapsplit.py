@@ -20,7 +20,7 @@ def similar_range(params, map_struct):
     
     nested_map = hp.pixelfunc.reorder(prob, r2n = True)
     regions = params['Nregions']
-    region_nsides = int((regions / 12) ** .5))
+    region_nsides = int((regions / 12) ** .5)
     res = hp.get_map_size(prob)
     region_size = res / regions
     sliced_array = np.zeros([regions, region_size])
@@ -36,7 +36,7 @@ def similar_range(params, map_struct):
     # Theres def a way to do this with numpy but i'm on a train, can't see docs
     sum_hp = lambda arr: np.array([np.sum(row) for row in arr])
 
-    sums = sums_hp(sliced_array)
+    sums = sum_hp(sliced_array)
     region_order = np.argsort(sums)[::-1]
     
     significant_regions = np.array([])
@@ -46,20 +46,19 @@ def similar_range(params, map_struct):
     significant_regions = significant_regions.astype(int)
 
     groups = []
-    n_groups = 0
 
     def group_neighbours(group):
-        neighbors = np.array([])
+        neighbours = np.array([])
         for i in group:
-            neighbors = np.append(neighbors, hp.get_all_neighbors(region_nsides, int(i), nest = True)
-        return neighbors
+            neighbours = np.append(neighbours, hp.get_all_neighbours(region_nsides, int(i), nest = True))
+        return neighbours
 
     for idx in significant_regions:
         if len(groups) == 0:
             groups.append([idx])
             continue
         for group in groups:
-            if idx in group_neighbors(group):
+            if idx in group_neighbours(group):
                 group.append(idx)
                 break
         else:
@@ -70,8 +69,8 @@ def similar_range(params, map_struct):
         combined_map = np.array([])
         for i in range(len(sliced_array)):
             if i in group:
-                combined_map = np.append(combined_map, sliced[i])
-            else: combined_map = np.append(combined_map, np.zeros(len(sliced[0])))
+                combined_map = np.append(combined_map, sliced_array[i])
+            else: combined_map = np.append(combined_map, np.zeros(len(sliced_array[0])))
         group_maps.append(combined_map)
 
     group_maps = [hp.reorder(hp_map, n2r = True) for hp_map in group_maps]

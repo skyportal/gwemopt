@@ -45,7 +45,7 @@ import gwemopt.tiles, gwemopt.segments
 #import gwemopt.tiles, gwemopt.segments_astroplan
 
 import gwemopt.footprint, gwemopt.transients
-import gwemopt.quadrants
+import gwemopt.quadrants, gwemopt.mapsplit
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -143,6 +143,10 @@ def parse_commandline():
     parser.add_option("--doReferences",  action="store_true", default=False)
 
     parser.add_option("--doChipGaps",  action="store_true", default=False)
+
+    parser.add_option("--doSplit",action="store_true",default=False)
+    parser.add_option("--splitType",default="regional")
+    parser.add_option("--Nregions",default=192,type=int)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -266,6 +270,10 @@ def params_struct(opts):
     params["doCatalogDatabase"] = opts.doCatalogDatabase
 
     params["doChipGaps"] = opts.doChipGaps
+    
+    params["doSplit"] = opts.doSplit
+    params["splitType"] = opts.splitType
+    params["Nregions"] = opts.Nregions
 
     return params
 
@@ -327,6 +335,10 @@ if opts.doSamples:
         samples_struct = gwemopt.utils.samples_from_skymap(map_struct,is3D=True)
     else:
         samples_struct = gwemopt.utils.samples_from_skymap(map_struct,is3D=False)
+
+if opts.doSplit:
+    print("Splitting skymap...")
+    map_struct["groups"] = gwemopt.mapsplit.similar_range(params, map_struct)
 
 if opts.doTiles:
     if params["tilesType"] == "moc":
