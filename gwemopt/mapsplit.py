@@ -37,11 +37,13 @@ def similar_range(params, map_struct):
     sum_hp = lambda arr: np.array([np.sum(row) for row in arr])
 
     sums = sum_hp(sliced_array)
-    region_order = np.argsort(sums)[::-1]
+    sum_neighbours = lambda n: np.sum([sums[p] for p in hp.get_all_neighbours(region_nsides, n, nest=True)])
+    nb_sums = np.array([sums[i] + sum_neighbours(i) for i in range(len(sums))])
+    region_order = np.argsort(nb_sums)[::-1]
     
     significant_regions = np.array([])
     for idx in region_order:
-        if sums[idx] > 0:
+        if sums[idx] > max(sums) * 0.0001:
             significant_regions = np.append(significant_regions, idx)
     significant_regions = significant_regions.astype(int)
 

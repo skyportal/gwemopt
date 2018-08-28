@@ -146,7 +146,7 @@ def parse_commandline():
 
     parser.add_option("--doSplit",action="store_true",default=False)
     parser.add_option("--splitType",default="regional")
-    parser.add_option("--Nregions",default=192,type=int)
+    parser.add_option("--Nregions",default=768,type=int)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
