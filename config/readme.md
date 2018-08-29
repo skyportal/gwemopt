@@ -17,3 +17,6 @@ This comes from the LSST specification file (Telescope Mount Assembly Specificat
 ## ZTF
 2.6 deg/sec is used.
 > John Henning says 3 deg/sec top speed, and we’ve measured 2.9 deg/s in Dec, about 2.6 deg/s in HA so far (just saw some statistics on this.)  The acceleration time is not insignificant, however, and it takes about a 20 deg of slew to reach top speed, I believe.  An optimal controller could help minimize integrated slew time, but this might be a 20% kind of effect.
+## IRIS
+The limiting magnitude is estimated based on the aperture size. It could be larger. The exposure time is not found.
+[Source](http://iris.lam.fr/le-telescope-2/les-caracteristiques-techniques-en-detail/)
