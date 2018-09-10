@@ -401,10 +401,11 @@ def summary(params, map_struct, coverage_struct):
     filts = list(set(coverage_struct["filters"]))
     for telescope in params["telescopes"]:
 
-        coveragefile = os.path.join(params["outputDir"],'coverage_%s.dat'%telescope)
+        schedulefile = os.path.join(params["outputDir"],'schedule_%s.dat'%telescope)
         config_struct = params["config"][telescope]
         fields = np.zeros((len(config_struct["tesselation"]),len(filts)+2))
 
+        fid = open(schedulefile,'w')
         for ii in range(len(coverage_struct["ipix"])):
             data = coverage_struct["data"][ii,:]
             filt = coverage_struct["filters"][ii]
@@ -415,11 +416,16 @@ def summary(params, map_struct, coverage_struct):
 
             prob = np.sum(map_struct["prob"][ipix])
 
+            ra, dec = data[0], data[1]
+            exposure_time, field_id, prob = data[4], data[5], data[6]
+            fid.write('%d %.5f %.5f %d %s\n'%(field_id,ra,dec,exposure_time,filt))
+
             idx1 = np.argmin(np.sqrt((config_struct["tesselation"][:,1]-data[0])**2 + (config_struct["tesselation"][:,2]-data[1])**2))
             idx2 = filts.index(filt)
             fields[idx1,0] = config_struct["tesselation"][idx1,0]
             fields[idx1,1] = prob
             fields[idx1,idx2+2] = fields[idx1,idx2+2]+1
+        fid.close()
 
         idx = np.where(fields[:,1]>0)[0]
         fields = fields[idx,:]
@@ -434,6 +440,8 @@ def summary(params, map_struct, coverage_struct):
 
         slew_readout_time = computeSlewReadoutTime(config_struct, coverage_struct)
         print('Expected time spent on slewing and readout ' + str(slew_readout_time) + ' s.')
+
+        coveragefile = os.path.join(params["outputDir"],'coverage_%s.dat'%telescope)
         fid = open(coveragefile,'w')
         for field in fields:
             fid.write('%d %.10f '%(field[0],field[1]))
