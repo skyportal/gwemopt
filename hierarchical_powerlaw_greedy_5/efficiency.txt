@@ -1,0 +1,3 @@
+tilesType	timeallocationType	scheduleType	Ntiles	efficiencyMetric	efficiencyMetric_err	injection
+hierarchical	powerlaw	greedy_slew	5	0.00187618151557	0.00136845221272	Me2017_H4M050V20
+hierarchical	powerlaw	greedy	5	0.0800279968616	0.00858041470909	Me2017_H4M050V20

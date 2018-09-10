@@ -339,7 +339,6 @@ def scheduler(params, config_struct, tile_struct):
             exposurelist = exposurelist[1:]
         else:
             tile_struct_hold = tile_struct[key]
-
             mjd_exposure_start = exposurelist[0][0]
             nkeys = len(keys)
             for jj in range(nkeys):
@@ -373,11 +372,21 @@ def scheduler(params, config_struct, tile_struct):
     coverage_struct["area"] = np.array(coverage_struct["area"])
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
     coverage_struct["FOV"] = config_struct["FOV"]*np.ones((len(coverage_struct["filters"]),))
-    
-
-
-
     return coverage_struct
+
+
+def computeSlewReadoutTime(config_struct, coverage_struct):
+    slew_rate = config_struct['slew_rate']
+    readout = config_struct['readout']
+    prev_ra = config_struct["latitude"]
+    prev_dec = config_struct["longitude"]
+    acc_time = 0
+    for dat in coverage_struct['data']:
+        slew_readout_time = np.maximum(np.sqrt((prev_ra - dat[0])**2 + (prev_dec - dat[1])**2) / slew_rate, readout)
+        acc_time += slew_readout_time
+        prev_dec = dat[0]
+        prev_ra = dat[1]
+    return acc_time
 
 
 def summary(params, map_struct, coverage_struct):
@@ -423,6 +432,8 @@ def summary(params, map_struct, coverage_struct):
 
         print('Integrated probability, All: %.5f, 2+: %.5f'%(np.sum(fields[:,1]),np.sum(fields[idx,1])))
 
+        slew_readout_time = computeSlewReadoutTime(config_struct, coverage_struct)
+        print('Expected time spent on slewing and readout ' + str(slew_readout_time) + ' s.')
         fid = open(coveragefile,'w')
         for field in fields:
             fid.write('%d %.10f '%(field[0],field[1]))
