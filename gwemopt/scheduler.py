@@ -418,7 +418,7 @@ def summary(params, map_struct, coverage_struct):
 
             ra, dec = data[0], data[1]
             exposure_time, field_id, prob = data[4], data[5], data[6]
-            fid.write('%d %.5f %.5f %d %s\n'%(field_id,ra,dec,exposure_time,filt))
+            fid.write('%d %.5f %.5f %d %.5f %s\n'%(field_id,ra,dec,exposure_time,prob,filt))
 
             idx1 = np.argmin(np.sqrt((config_struct["tesselation"][:,1]-data[0])**2 + (config_struct["tesselation"][:,2]-data[1])**2))
             idx2 = filts.index(filt)
