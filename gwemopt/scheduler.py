@@ -403,7 +403,11 @@ def summary(params, map_struct, coverage_struct):
 
         schedulefile = os.path.join(params["outputDir"],'schedule_%s.dat'%telescope)
         config_struct = params["config"][telescope]
-        fields = np.zeros((len(config_struct["tesselation"]),len(filts)+2))
+
+        if (params["tilesType"] == "hierarchical") or (params["tilesType"] == "greedy"):
+            fields = np.zeros((params["Ntiles"],len(filts)+2))
+        else:
+            fields = np.zeros((len(config_struct["tesselation"]),len(filts)+2))
 
         fid = open(schedulefile,'w')
         for ii in range(len(coverage_struct["ipix"])):
