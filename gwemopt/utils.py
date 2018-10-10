@@ -267,6 +267,10 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, col
     if (len(idx1)>0 and len(idx2)>0) and not (len(idx3)>0 and len(idx4)>0):
         alpha = 0.0
 
+    idx1 = np.where(np.abs(radecs[:,1])>=87.0)[0] 
+    if len(idx1) == 4:
+        return [], [], [], []
+
     idx1 = np.where((radecs[:,1]>=87.0) | (radecs[:,1]<=-87.0))[0]
     if len(idx1)>0:
         radecs = np.delete(radecs, idx1[0], 0)
@@ -279,7 +283,7 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, col
     if npts == 4:
         xyz = [xyz[0], xyz[1],xyz[3], xyz[2]]
         ipix = hp.query_polygon(nside, np.array(xyz))
-    else:    
+    else:
         ipix = hp.query_polygon(nside, np.array(xyz))
 
     #idx1 = np.where((radecs[:,1]>=70.0) | (radecs[:,1]<=-70.0))[0]
