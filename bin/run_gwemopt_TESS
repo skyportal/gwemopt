@@ -1,0 +1,14 @@
+
+import os, sys
+import glob
+import numpy as np
+
+from astropy.time import Time
+
+gpstime = 1222644064
+skymap = "../output/skymaps/TESS.fits" 
+
+outputDir = "../output/TESS/"
+system_command = "python gwemopt_run --telescope ZTF --doSchedule --doSkymap --doPlots --skymap %s --gpstime %d -o %s --doTiles --doSingleExposure --filters g --exposuretimes 30.0 --powerlaw_cl %.3f"%(skymap,gpstime,outputDir,1.00)
+os.system(system_command)
+
