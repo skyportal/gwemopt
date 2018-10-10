@@ -77,8 +77,8 @@ def parse_commandline():
     parser.add_option("--doTESS",  action="store_true", default=False)
     #parser.add_option("--ras",default="324.5670,338.5766,19.4927,90.0042")
     #parser.add_option("--decs",default="-33.1730,-55.0789,-71.9781,-66.5647")
-    parser.add_option("--lon",default="315.8,315.8,315.8,315.8")
-    parser.add_option("--lat",default="-18.0,-42.0,-66.0,-81.0")
+    parser.add_option("--lon",default="10.94,10.94,10.94,10.94")
+    parser.add_option("--lat",default="-18.0,-42.0,-66.0,-89.0")
 
     parser.add_option("--doIntersect",  action="store_true", default=False)
     parser.add_option("-o", "--original_skymap", help="GW skymap.", default='../data/GRB180913/glg_healpix_all_bn180913783.fit')
@@ -204,8 +204,6 @@ def gen_TESS(lats,lons,nside):
     healpix = n / np.sum(n)
 
     r = hp.rotator.Rotator(coord=['E','C'])
-    print(dir(r))
-    print(stop)
     healpix = r.rotate_map(healpix)
 
     return healpix   
