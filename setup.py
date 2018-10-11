@@ -62,7 +62,8 @@ install_requires = [
     'astroquery',
     'astroplan',
     'pyephem',
-    'pyyaml'
+    'pyyaml',
+    'VOEventLib'
 ]
 
 # test dependencies
