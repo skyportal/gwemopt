@@ -3,6 +3,9 @@ import os, sys, copy
 import numpy as np
 import healpy as hp
 
+from VOEventLib.VOEvent import Table, Field, What
+from VOEventLib.Vutil import utilityTable, stringVOEvent
+
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u
@@ -388,6 +391,77 @@ def computeSlewReadoutTime(config_struct, coverage_struct):
         prev_ra = dat[1]
     return acc_time
 
+def write_xml(xmlfile,map_struct,coverage_struct,config_struct):
+
+    what = What()
+
+    table = Table(name="data", Description=["The datas of GWAlert"])
+    table.add_Field(Field(name="grid_id", ucd="", unit="", dataType="int", \
+                    Description=["ID of the grid of fov"]))
+    table.add_Field(Field(name="field_id", ucd="", unit="", dataType="int",\
+                    Description=["ID of the filed"]))
+    table.add_Field(
+        Field(
+            name="ra", ucd="pos.eq.ra ", unit="deg", dataType="float",
+            Description=["The right ascension at center of fov in equatorial coordinates"]
+            )
+        )
+    table.add_Field(
+        Field(
+            name="dec", ucd="pos.eq.dec ", unit="deg", dataType="float",
+            Description=["The declination at center of fov in equatorial coordinates"]
+            )
+        )
+    table.add_Field(
+        Field(
+            name="ra_width", ucd=" ", unit="deg", dataType="float",
+            Description=["Width in RA of the fov"]
+            )
+        )
+    table.add_Field(
+        Field(
+            name="dec_width", ucd="", unit="deg", dataType="float",
+            Description=["Width in Dec of the fov"]
+            )
+        )
+    table.add_Field(
+        Field(
+            name="prob_sum", ucd="", unit="None", dataType="float",
+            Description=["The sum of all pixels in the fov"]
+            )
+        )
+    table.add_Field(Field(name="priority", ucd="", unit="", dataType="int", Description=[""]))
+    table_field = utilityTable(table)
+    table_field.blankTable(len(coverage_struct))
+
+    for ii in range(len(coverage_struct["ipix"])):
+        data = coverage_struct["data"][ii,:]
+        filt = coverage_struct["filters"][ii]
+        ipix = coverage_struct["ipix"][ii]
+        patch = coverage_struct["patch"][ii]
+        FOV = coverage_struct["FOV"][ii]
+        area = coverage_struct["area"][ii]
+
+        prob = np.sum(map_struct["prob"][ipix])
+
+        ra, dec = data[0], data[1]
+        exposure_time, field_id, prob = data[4], data[5], data[6]
+
+        table_field.setValue("grid_id", ii, 0)
+        table_field.setValue("field_id", ii, field_id)
+        table_field.setValue("ra", ii, ra)
+        table_field.setValue("dec", ii, dec)
+        table_field.setValue("ra_width", ii, config_struct["FOV"])
+        table_field.setValue("dec_width", ii, config_struct["FOV"])
+        table_field.setValue("prob_sum", ii, prob)
+        table_field.setValue("priority", ii, ii)
+    table = table_field.getTable()
+    what.add_Table(table)
+    xml = stringVOEvent(what)
+
+    fid = open(xmlfile, "w")
+    fid.write(xml)
+    fid.close()
 
 def summary(params, map_struct, coverage_struct):
 
@@ -402,7 +476,10 @@ def summary(params, map_struct, coverage_struct):
     for telescope in params["telescopes"]:
 
         schedulefile = os.path.join(params["outputDir"],'schedule_%s.dat'%telescope)
+        schedulexmlfile = os.path.join(params["outputDir"],'schedule_%s.xml'%telescope)
         config_struct = params["config"][telescope]
+
+        write_xml(schedulexmlfile,map_struct,coverage_struct,config_struct)
 
         if (params["tilesType"] == "hierarchical") or (params["tilesType"] == "greedy"):
             fields = np.zeros((params["Ntiles"],len(filts)+2))
