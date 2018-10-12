@@ -93,12 +93,12 @@ def createTileFile(params, preComputedFile, radecs=None, tileFile=None):
     dec = np.rad2deg(0.5*np.pi - theta) # Construct dec array
     pixelIndex = np.arange(npix)
 
-    if not tileFile == None:
+    if not tileFile is None:
         data = np.recfromtxt(tileFile, names=True)
         RA_tile = data['ra_center'] ### RA value of the telescope fields
         Dec_tile = data['dec_center'] ### Dec values of the telescope fields
         tile_index = data['ID']-1 ### Indexing the tiles
-    elif not radecs == None:
+    elif not radecs is None:
         RA_tile = radecs[:,1]
         Dec_tile = radecs[:,2]
         tile_index = np.arange(len(RA_tile)) + 1.0
