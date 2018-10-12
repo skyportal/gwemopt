@@ -4,7 +4,12 @@ import numpy as np
 import healpy as hp
 
 from VOEventLib.VOEvent import Table, Field, What
-from VOEventLib.Vutil import utilityTable, stringVOEvent
+from VOEventLib.Vutil import utilityTable, stringVOEvent, VOEventExportClass
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
@@ -396,13 +401,13 @@ def write_xml(xmlfile,map_struct,coverage_struct,config_struct):
     what = What()
 
     table = Table(name="data", Description=["The datas of GWAlert"])
-    table.add_Field(Field(name="grid_id", ucd="", unit="", dataType="int", \
+    table.add_Field(Field(name=r"grid_id", ucd="", unit="", dataType="int", \
                     Description=["ID of the grid of fov"]))
     table.add_Field(Field(name="field_id", ucd="", unit="", dataType="int",\
                     Description=["ID of the filed"]))
     table.add_Field(
         Field(
-            name="ra", ucd="pos.eq.ra ", unit="deg", dataType="float",
+            name=r"ra", ucd=r"pos.eq.ra ", unit="deg", dataType="float",
             Description=["The right ascension at center of fov in equatorial coordinates"]
             )
         )
@@ -458,9 +463,14 @@ def write_xml(xmlfile,map_struct,coverage_struct,config_struct):
     table = table_field.getTable()
     what.add_Table(table)
     xml = stringVOEvent(what)
-
+    lines = xml.splitlines()
+    linesrep = []
+    for line in lines:
+        linenew = line.replace(">b'",">").replace("'</","</").replace("=b'","=").replace("'>",">")
+        linesrep.append(linenew)
+    xmlnew = "\n".join(linesrep)
     fid = open(xmlfile, "w")
-    fid.write(xml)
+    fid.write(xmlnew)
     fid.close()
 
 def summary(params, map_struct, coverage_struct):
