@@ -12,7 +12,7 @@ exposuretimes = [180, 60]
 
 for cl, exposuretime in zip(cls,exposuretimes):
     outputDir = "../output/GRB180523/%.3f"%cl
-    exposuretime = "%d,%d,%d"%(exposuretime,exposuretime,exposuretime)
-    system_command = "python gwemopt_run --tilesType ranked --telescope ZTF --doReferences --doEfficiency --doSchedule --doSkymap --doPlots --skymap %s --gpstime %d -o %s --doTiles --doSingleExposure --exposuretimes %s --powerlaw_cl %.3f"%(skymap,gpstime,outputDir,exposuretime,cl)
+    exposuretime = "%d"%(exposuretime)
+    system_command = "python gwemopt_run --filters r --tilesType ranked --telescope ZTF --doReferences --doEfficiency --doSchedule --doSkymap --doPlots --skymap %s --gpstime %d -o %s --doTiles --doSingleExposure --exposuretimes %s --powerlaw_cl %.3f"%(skymap,gpstime,outputDir,exposuretime,cl)
     os.system(system_command)
 

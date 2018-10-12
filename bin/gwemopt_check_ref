@@ -21,5 +21,5 @@ for field_id, ra, dec in fields:
 
 idx = np.where((fields[:,2] >= -30) & (fields[:,2] <=80))[0]
 print(100*refs_slice/len(idx))
-
+print(100*refs_all/len(fields))
 
