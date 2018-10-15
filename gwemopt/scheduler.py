@@ -6,11 +6,6 @@ import healpy as hp
 from VOEventLib.VOEvent import Table, Field, What
 from VOEventLib.Vutil import utilityTable, stringVOEvent, VOEventExportClass
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import StringIO
-
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u

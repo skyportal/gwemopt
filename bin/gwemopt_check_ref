@@ -4,22 +4,26 @@ from astropy import table
 
 filename = '../input/ZTF.ref'
 refs = table.unique(table.Table.read(filename,
-    format='ascii', data_start=2, data_end=-1)['field', 'fid'])
+    format='ascii', data_start=2, data_end=-1)['field', 'fid', 'rcid'])
 reference_images = {group[0]['field']: group['fid'].astype(int).tolist()
     for group in refs.group_by('field').groups}
 
 filename = '../input/ZTF.tess'
+#filename = '../input/ZTF.tess.all'
 fields = np.loadtxt(filename,usecols=range(3))
 refs_slice = np.array([0,0,0])
 refs_all = np.array([0,0,0])
 for field_id, ra, dec in fields:
     reference_filter_ids = reference_images.get(field_id, [])
+    print(reference_filter_ids)
     for reference_filter_id in reference_filter_ids:
         refs_all[reference_filter_id-1] = refs_all[reference_filter_id-1] + 1
-        if (dec >= -30) and (dec <=80):
+        if (dec >= -28) and (dec <=80):
             refs_slice[reference_filter_id-1] = refs_slice[reference_filter_id-1] + 1
 
-idx = np.where((fields[:,2] >= -30) & (fields[:,2] <=80))[0]
-print(100*refs_slice/len(idx))
-print(100*refs_all/len(fields))
+idx = np.where((fields[:,2] >= -28) & (fields[:,2] <=80))[0]
+print(len(fields[:,2])*64,len(idx)*64)
+print(refs_slice)
+print(100*refs_slice/(len(idx)*64))
+print(100*refs_all/(len(fields)*64))
 
