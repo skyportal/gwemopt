@@ -20,3 +20,7 @@ This comes from the LSST specification file (Telescope Mount Assembly Specificat
 ## IRIS
 The limiting magnitude is estimated based on the aperture size. It could be larger. The exposure time is not found.
 [Source](http://iris.lam.fr/le-telescope-2/les-caracteristiques-techniques-en-detail/)
+
+## SVOM-MXT and SVOM-VT
+Preliminary config files for both, as thoses config files are not usable yet with the code we keep the units (and infos) on each
+parameters not to lose informations.
