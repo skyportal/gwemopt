@@ -242,7 +242,8 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, col
     area = tileSide*tileSide
 
     decCorners = (dec_pointing - tileSide / 2.0, dec_pointing + tileSide / 2.0)
- 
+
+    #security for the periodic limit conditions 
     radecs = []
     for d in decCorners:
         if d > 90.:
@@ -252,9 +253,10 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, col
 
         raCorners = (ra_pointing - (tileSide / 2.0) / np.cos(np.deg2rad(d)) , ra_pointing + (tileSide / 2.0) / np.cos(np.deg2rad(d)))
 
+        #security for the periodic limit conditions 
         for r in raCorners:
             if r > 360.:
-                r = 720. - r
+                r = r - 360.
             elif r < 0.:
                 r = 360. + r
             radecs.append([r,d])
