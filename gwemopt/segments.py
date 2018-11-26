@@ -65,7 +65,8 @@ def get_moon_segments(config_struct,segmentlist,observer,fxdbdy,radec):
         angle = np.arccos(cosA)*(360/(2*np.pi))
         #print("Angle between moon and target: %.5f"%(angle))
 
-        if angle >= 50.0*moon.moon_phase**2:
+        #if angle >= 50.0*moon.moon_phase**2:
+        if angle >= 20.0:
             segment = segments.segment(tt[ii],tt[ii+1])
             moonsegmentlist = moonsegmentlist + segments.segmentlist([segment])
             moonsegmentlist.coalesce()
@@ -308,6 +309,7 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
     tilesegmentlistdic["tile"] = tilesegmentlist
     tilesegmentlistdic["moon"] = moonsegmentlist
     tilesegmentlist = tilesegmentlistdic.intersection(["observations","tile","moon"])
+    #tilesegmentlist = tilesegmentlistdic.intersection(["observations","tile"])
     tilesegmentlist.coalesce()
 
     return tilesegmentlist
