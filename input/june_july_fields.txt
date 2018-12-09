@@ -1,0 +1,51 @@
+# date    FieldID   RA   Dec   Gal Lat   Gal Long  moonphase (%dark) comments   UT (above airmass 2) epochs 
+June16  284 279.8366 -24.2500  -8.9125   10.2331   77   inner Galactic Plane   8:00 - 9:30      23 
+June17  284 279.8366 -24.2500  -8.9125   10.2331   66   inner Galactic Plane   8:00 - 9:30      113   
+June18  284 279.8366 -24.2500  -8.9125   10.2331   55   inner Galactic Plane   8:00 - 9:30      107 
+June19  330 255.5263 -17.0500  14.2859    4.7848   45   inner Galactic Plane   6:30 - 8:00      0
+June20  330 255.5263 -17.0500  14.2859    4.7848   35   inner Galactic Plane   6:30 - 8:00      116
+June21  330 255.5263 -17.0500  14.2859    4.7848   26   inner Galactic Plane   6:30 - 8:00      115
+June22  385 287.6598  -9.8500  -9.2762   26.6514   18   inner Galactic Plane   8:30 - 10:00     116  
+June23  385 287.6598  -9.8500  -9.2762   26.6514   8    inner Galactic Plane   8:30 - 10:00     115
+June24  385 287.6598  -9.8500  -9.2762   26.6514   0    inner Galactic Plane   8:30 - 10:00     115
+June25  766 292.6968  47.7500  13.4390   80.1691   0    partly Kepler          9:15 - 10:45     116
+June26  766 292.6968  47.7500  13.4390   80.1691   0    partly Kepler          9:15 - 10:45     116  
+June27  766 292.6968  47.7500  13.4390   80.1691   0    partly Kepler          9:15 - 10:45     115  
+June28  727 287.0350  40.5500  14.0583   71.6873   0    partly Kepler          8:30 - 10:00     115  
+June29  727 287.0350  40.5500  14.0583   71.6873   0    partly Kepler          8:30 - 10:00     137  
+June30  684 282.5628  33.3500  14.4152   63.4051   2    dense field            5:30 - 7:00      137  
+July1   684 282.5628  33.3500  14.4152   63.4051   13   dense field            5:30 - 7:00      133
+July2   280 257.8188 -24.2500   8.3828    0.0438   21   inner Galactic Plane   5:15 - 6:45      0   
+July3   280 257.8188 -24.2500   8.3828    0.0438   30   inner Galactic Plane   5:15 - 6:45      133 
+July4   280 257.8188 -24.2500   8.3828    0.0438   38   inner Galactic Plane   5:15 - 6:45      132
+July5   331 262.5569 -17.0500   8.6904    8.5864   48   inner Galactic Plane   5:30 - 7:00      135  
+July6   331 262.5569 -17.0500   8.6904    8.5864   57   inner Galactic Plane   5:30 - 7:00      133
+July7   331 262.5569 -17.0500   8.6904    8.5864   66   inner Galactic Plane   5:30 - 7:00      133
+July8   282 272.4435 -24.2500  -2.9315    7.1078   75   inner Galactic Plane   6:00 - 7:30      133
+July9   282 272.4435 -24.2500  -2.9315    7.1078   87   inner Galactic Plane   6:00 - 7:30      135  
+July10  282 272.4435 -24.2500  -2.9315    7.1078   100  inner Galactic Plane   6:00 - 7:30      0
+July11  283 279.8366 -24.2500  -8.9125   10.2331   100  inner Galactic Plane   6:15 - 7:45      116
+July12  283 279.8366 -24.2500  -8.9125   10.2331   100  inner Galactic Plane   6:15 - 7:45      132
+July13  283 279.8366 -24.2500  -8.9125   10.2331   100  inner Galactic Plane   6:15 - 7:45      133
+July14  333 276.6440 -17.0500  -2.9817   15.3198   98   inner Galactic Plane   6:00 - 7:30      133
+July15  333 276.6440 -17.0500  -2.9817   15.3198   88   inner Galactic Plane   6:00 - 7:30      133
+July16  333 276.6440 -17.0500  -2.9817   15.3198   77   inner Galactic Plane   6:00 - 7:30      136
+July17  384 280.6106  -9.8500  -3.0783   23.4976   68   inner Galactic Plane   6:30 - 8:00      134
+July18  384 280.6106  -9.8500  -3.0783   23.4976   59   inner Galactic Plane   6:30 - 8:00      125
+July19  384 280.6106  -9.8500  -3.0783   23.4976   49   inner Galactic Plane   6:30 - 8:00      136
+July20  334 283.7259 -17.0500  -9.0209   18.3982   42   inner Galactic Plane   6:45 - 8:15      135
+July21  334 283.7259 -17.0500  -9.0209   18.3982   33   inner Galactic Plane   6:45 - 8:15      136
+July22  334 283.7259 -17.0500  -9.0209   18.3982   22   inner Galactic Plane   6:45 - 8:15      136
+July23  683 274.7095  33.3500  20.5066   60.8553   12   dense field            7:00 - 8:30      137
+July24  683 274.7095  33.3500  20.5066   60.8553   1    dense field            7:00 - 8:30      134
+July25  726 278.4181  40.5500  20.1368   69.1476   0    partly Kepler          7:30 - 9:00      133
+July26  726 278.4181  40.5500  20.1368   69.1476   0    partly Kepler          7:30 - 9:00      133
+July27  765 282.9221  47.7500  19.4902   77.5052   0    partly Kepler          5:00 - 6:30      133
+July28  765 282.9221  47.7500  19.4902   77.5052   0    partly Kepler          5:00 - 6:30      133
+July29  330 255.5263 -17.0500  14.2859    4.7848   0    inner Galactic Plane   4:30 - 6:00      69
+July30  331 262.5569 -17.0500   8.6904    8.5864   4    inner Galactic Plane   4:30 - 6:00      119 (g-band)   
+July31  282 272.4435 -24.2500  -2.9315    7.1078   11   inner Galactic Plane   5:00 - 6:30      100
+
+
+changes:
+field 330 removed 

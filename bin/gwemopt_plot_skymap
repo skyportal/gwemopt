@@ -1,0 +1,205 @@
+#!/usr/bin/python
+
+# Copyright (C) 2017 Michael Coughlin
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 3 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+# Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+""".
+Gravitational-wave Electromagnetic Optimization
+
+This script generates an optimized list of pointings and content for
+reviewing gravitational-wave skymap likelihoods.
+
+Comments should be e-mailed to michael.coughlin@ligo.org.
+
+"""
+
+
+import os, sys, glob, optparse, shutil, warnings
+import copy
+import numpy as np
+np.random.seed(0)
+
+import healpy as hp
+from astropy import table
+
+import matplotlib
+#matplotlib.rc('text', usetex=True)
+matplotlib.use('Agg')
+matplotlib.rcParams.update({'font.size': 16})
+matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
+import matplotlib.pyplot as plt
+
+import gwemopt.utils, gwemopt.plotting
+import gwemopt.moc, gwemopt.tiles 
+
+__author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
+__version__ = 1.0
+__date__    = "6/17/2017"
+
+# =============================================================================
+#
+#                               DEFINITIONS
+#
+# =============================================================================
+
+def parse_commandline():
+    """@Parse the options given on the command-line.
+    """
+    parser = optparse.OptionParser(usage=__doc__,version=__version__)
+
+    parser.add_option("-s", "--skymap", help="GW skymap.", default='../input/../input/NICER_AJ_M1_FWHM12.0.fits')
+
+    parser.add_option("-c", "--configDirectory", help="GW-EM config file directory.", default ="../config/")
+    parser.add_option("-o", "--outputDir", help="output directory",default="../output_field")
+
+    parser.add_option("-t", "--telescope", help="Telescope.", default ="ZTF")
+    parser.add_option("--nside",default=256,type=int)
+    parser.add_option("-f","--filter",default=1,type=int)
+
+    parser.add_option("-v", "--verbose", action="store_true", default=False,
+                      help="Run verbosely. (Default: False)")
+
+    opts, args = parser.parse_args()
+
+    # show parameters
+    if opts.verbose:
+        print >> sys.stderr, ""
+        print >> sys.stderr, "running gwemopt_run..."
+        print >> sys.stderr, "version: %s"%__version__
+        print >> sys.stderr, ""
+        print >> sys.stderr, "***************** PARAMETERS ********************"
+        for o in opts.__dict__.items():
+          print >> sys.stderr, o[0]+":"
+          print >> sys.stderr, o[1]
+        print >> sys.stderr, ""
+
+    return opts
+
+# =============================================================================
+#
+#                                    MAIN
+#
+# =============================================================================
+
+warnings.filterwarnings("ignore")
+
+# Parse command line
+opts = parse_commandline()
+
+params = {}
+params["config"] = {}
+configFiles = glob.glob("%s/*.config"%opts.configDirectory)
+for configFile in configFiles:
+    telescope = configFile.split("/")[-1].replace(".config","")
+    if not opts.telescope == telescope: continue
+    params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
+    params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2),comments='%')
+    params["config"][telescope]["tot_obs_time"] = 1.0
+
+filename = '../input/ZTF.observed'
+obs = table.unique(table.Table.read(filename,
+    format='ascii', data_start=2, data_end=-1)['field', 'fId', 'count'])
+
+fieldIDs = []
+filename = '../input/june_july_fields.txt'
+lines = [line.rstrip('\n') for line in open(filename)]
+lines = lines[1:]
+for line in lines:
+    lineSplit = list(filter(None,line.split(" ")))
+    if len(lineSplit) < 8: continue
+    fieldIDs.append(lineSplit[1])
+filename = '../input/august_fields.txt'
+lines = [line.rstrip('\n') for line in open(filename)]
+lines = lines[1:]
+for line in lines:
+    lineSplit = list(filter(None,line.split(" ")))
+    if len(lineSplit) < 8: continue
+    fieldIDs.append(lineSplit[2])
+fieldIDs = np.unique(fieldIDs)
+
+params["outputDir"] = opts.outputDir
+
+if not os.path.isdir(params["outputDir"]):
+    os.makedirs(params["outputDir"])
+
+params["telescopes"] = [opts.telescope]
+params["nside"] = opts.nside
+params["doChipGaps"] = False
+params["doSingleExposure"] = False
+params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"] = 0.0, 0.9, 0.0
+params["gpstime"] = 1000000000
+params["Tobs"] = np.array([0.0,1.0])
+params["exposuretimes"] = [30.0]
+params = gwemopt.segments.get_telescope_segments(params)
+
+moc_structs = gwemopt.moc.create_moc(params)
+
+map_struct = {}
+npix = hp.nside2npix(opts.nside)
+healpix = np.zeros(npix)
+
+original_data = hp.read_map(opts.skymap)
+healpix = hp.ud_grade(original_data,opts.nside,power=-2)
+healpix = healpix / np.sum(healpix)
+r = hp.rotator.Rotator(coord=['G','C'])
+healpix = r.rotate_map(healpix)
+healpix = healpix / np.sum(healpix)
+map_struct["prob"] = healpix
+
+tiles_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
+
+unit='Gravitational-wave probability'
+cbar=False
+
+plotName = os.path.join(params["outputDir"],'tiles.pdf')
+plt.figure()
+hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
+ax = plt.gca()
+for telescope in tiles_structs:
+    tiles_struct = tiles_structs[telescope]
+    for index in tiles_struct.keys():
+        idx = np.where((obs["field"]==index) & (obs["fId"]==opts.filter))[0]
+        if len(idx) == 0:
+            count = 0
+        else:
+            count = np.array(obs["count"][idx])[0]
+
+        ipix, corners, patch = tiles_struct[index]["ipix"], tiles_struct[index]["corners"], tiles_struct[index]["patch"]
+        #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
+        if not patch: continue
+
+        patch_cpy = copy.copy(patch)
+        patch_cpy.axes = None
+        patch_cpy.figure = None
+        patch_cpy.set_transform(ax.transData)
+        current_alpha = patch_cpy.get_alpha()
+
+        if current_alpha > 0.0:
+            alpha = count/250.0
+            if alpha > 1:
+                alpha = 1.0
+            patch_cpy.set_alpha(alpha)
+        if np.isin(index,fieldIDs):
+            patch_cpy.set_color('black')
+        hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
+
+        #tiles.plot()
+gwemopt.plotting.add_edges()
+plt.show()
+plt.savefig(plotName,dpi=200)
+plt.close('all')
+
+
