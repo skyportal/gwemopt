@@ -22,8 +22,6 @@ for field_id, ra, dec in fields:
             refs_slice[reference_filter_id-1] = refs_slice[reference_filter_id-1] + 1
 
 idx = np.where((fields[:,2] >= -28) & (fields[:,2] <=80))[0]
-print(len(fields[:,2])*64,len(idx)*64)
-print(refs_slice)
 print(100*refs_slice/(len(idx)*64))
 print(100*refs_all/(len(fields)*64))
 
