@@ -1,0 +1,54 @@
+<?xml version="1.0" ?>
+<voe:VOEvent xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:voe="http://www.ivoa.net/xml/VOEvent/v2.0"
+xsi:schemaLocation="http://www.ivoa.net/xml/VOEvent/v2.0 http://www.ivoa.net/xml/VOEvent/VOEvent-v2.0.xsd"
+ version="2.0" role="test" ivorn="ivo://gwnet/gcn_sender#MS181101ab-4-Preliminary-Retraction">
+    <Who>
+        <Date>2018-11-01T23:36:23</Date>
+        <Author>
+            <contactName>LIGO Scientific Collaboration and Virgo Collaboration</contactName>
+        </Author>
+    </Who>
+    <What>
+        <Param name="internal" dataType="int" value="0">
+            <Description>Indicates whether this event should be distributed to LSC/Virgo members only</Description>
+        </Param>
+        <Param name="Packet_Type" dataType="int" value="150">
+            <Description>The Notice Type number is assigned/used within GCN, eg type=150 is an LVC_PRELIMINARY notice</Description>
+        </Param>
+        <Param name="Pkt_Ser_Num" dataType="string" value="4"/>
+        <Param name="GraceID" dataType="string" value="MS181101ab" ucd="meta.id">
+            <Description>Identifier in GraceDB</Description>
+        </Param>
+        <Param name="AlertType" dataType="string" value="Preliminary" ucd="meta.version">
+            <Description>VOEvent alert type</Description>
+        </Param>
+        <Param name="Retraction" dataType="int" value="1">
+            <Description>Set to 1 if the event is retracted.</Description>
+        </Param>
+        <Param name="HardwareInj" dataType="int" value="0" ucd="meta.number">
+            <Description>Indicates that this event is a hardware injection if 1, no if 0</Description>
+        </Param>
+        <Param name="OpenAlert" dataType="int" value="1" ucd="meta.number">
+            <Description>Indicates that this event is an open alert if 1, no if 0</Description>
+        </Param>
+        <Param name="EventPage" dataType="string" value="https://example.org/superevents/MS181101abc/view/" ucd="meta.ref.url">
+            <Description>Web page for evolving status of this GW candidate</Description>
+        </Param>
+    </What>
+    <WhereWhen>
+        <ObsDataLocation>
+            <ObservatoryLocation id="LIGO Virgo"/>
+            <ObservationLocation>
+                <AstroCoordSystem id="UTC-FK5-GEO"/>
+                <AstroCoords coord_system_id="UTC-FK5-GEO">
+                    <Time>
+                        <TimeInstant>
+                            <ISOTime>2018-11-01T22:22:46.654437</ISOTime>
+                        </TimeInstant>
+                    </Time>
+                </AstroCoords>
+            </ObservationLocation>
+        </ObsDataLocation>
+    </WhereWhen>
+</voe:VOEvent>
