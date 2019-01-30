@@ -1,0 +1,1 @@
+ivo://gwnet/gcn_sender#MS181101ab-1-Preliminary./EXAMPLE/event_123gw.xml
