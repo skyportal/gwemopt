@@ -43,6 +43,27 @@ sys.path.append("./VOEventLib/")
 from VOEventLib.VOEvent import * 
 from VOEventLib.Vutil  import *
 
+def Tel_dicf():
+  Tel_dic = {
+
+    "Name":"",
+    "FOV":"",
+    "magnitude":"",
+    "exposuretime":"",
+    "latitude":"",
+    "longitude":"",
+    "elevation":"",
+    "FOV_coverage":"",
+    "FOV_coverage_type":"",
+    "FOV_type":"",
+    "slew_rate":0.0,
+    "readout":"",
+    "filt":"",
+    "OS":"",
+	 }
+  return Tel_dic
+
+
 def GW_dicf():
   GW_dic = {
 
@@ -102,7 +123,7 @@ def VO_dicf():
 		  "streamid" : "",
     "voivorn" : "ivo://svom.bao.ac.cn/LV#SFC_GW_",
 		  "authorivorn" : "GRANDMA_Alert",
-		  "shortName" : "GRANDMA (via VO-GCN)",
+		  "shortName" : "GRANDMA",
 		  "contactName": "Nicolas  Leroy",
     "contactPhone": "+33-1-64-46-83-73",
     "contactEmail": "leroy@lal.in2p3.fr",
@@ -126,7 +147,6 @@ def VO_dicf():
     "evenstatus" : "",
     "voimportance":"",
     "iter_statut":0,
-    "obs_stra":"",
 	 }
 
   return Contentvo_dic
@@ -185,7 +205,7 @@ def search_ba():
     return fa_duty
 
 
-def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix):
+def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
 
     tobs = None
     filt = ["r"]
@@ -210,6 +230,7 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix):
     config_files = glob.glob("%s/*.config" % config_directory)
     for config_file in config_files:
         telescope = config_file.split("/")[-1].replace(".config", "")
+        #print(telescope)
         params["config"][telescope] =\
             gwemopt.utils.readParamsFromFile(config_file)
         if "tesselationFile" in params["config"][telescope]:
@@ -367,42 +388,29 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix):
 
     what = What()
 
-    thistable = Table(name="data", Description=["The datas of "+str(obsinstru)])
-    thistable.add_Field(Field(name=r"grid_id", ucd="", unit="", dataType="int", \
+    thistable = Table(name="Observation strategy", Description=["The list of tiles for "+str(obsinstru)])
+    thistable.add_Field(Field(name=r"Grid_id", ucd="", unit="", dataType="int", \
                     Description=["ID of the grid of fov"]))
     thistable.add_Field(Field(name="field_id", ucd="", unit="", dataType="int",\
                     Description=["ID of the filed"]))
     thistable.add_Field(
         Field(
-            name=r"ra", ucd=r"pos.eq.ra ", unit="deg", dataType="float",
+            name=r"Ra", ucd=r"pos.eq.ra ", unit="deg", dataType="float",
             Description=["The right ascension at center of fov in equatorial coordinates"]
             )
         )
     thistable.add_Field(
         Field(
-            name="dec", ucd="pos.eq.dec ", unit="deg", dataType="float",
+            name="Dec", ucd="pos.eq.dec ", unit="deg", dataType="float",
             Description=["The declination at center of fov in equatorial coordinates"]
             )
         )
     thistable.add_Field(
         Field(
-            name="ra_width", ucd=" ", unit="deg", dataType="float",
-            Description=["Width in RA of the fov"]
+            name="Os_grade", ucd="meta.number", unit="None", dataType="float",
+            Description=["Gives the importance of the tile/galaxy to observe"]
             )
         )
-    thistable.add_Field(
-        Field(
-            name="dec_width", ucd="", unit="deg", dataType="float",
-            Description=["Width in Dec of the fov"]
-            )
-        )
-    thistable.add_Field(
-        Field(
-            name="prob_sum", ucd="", unit="None", dataType="float",
-            Description=["The sum of all pixels in the fov"]
-            )
-        )
-    thistable.add_Field(Field(name="priority", ucd="", unit="", dataType="int", Description=[""]))
     table_field = utilityTable(thistable)
     table_field.blankTable(len(coverage_struct))
 
@@ -419,16 +427,16 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix):
         ra, dec = data[0], data[1]
         exposure_time, field_id, prob = data[4], data[5], data[6]
 
-        table_field.setValue("grid_id", ii, 0)
-        table_field.setValue("field_id", ii, field_id)
-        table_field.setValue("ra", ii, ra)
-        table_field.setValue("dec", ii, dec)
-        table_field.setValue("ra_width", ii, config_struct["FOV"])
-        table_field.setValue("dec_width", ii, config_struct["FOV"])
-        table_field.setValue("prob_sum", ii, prob)
-        table_field.setValue("priority", ii, ii)
+        table_field.setValue("Grid_id", ii, 0)
+        #table_field.setValue("field_id", ii, field_id)
+        table_field.setValue("Ra", ii, ra)
+        table_field.setValue("Dec", ii, dec)
+        table_field.setValue("Os_grade", ii, prob)
+        #table_field.setValue("priority", ii, ii)
 
     thistable = table_field.getTable()
+
+   
     #what.add_Table(thistable)
     #xml = stringVOEvent(what)
 
@@ -510,7 +518,7 @@ def swift_trigger(v, collab, text_mes,file_log_s,role):
                 dic_grb[name_dic]=Swift_dic
                 dic_vo[name_dic]=Swift_vo
 
-                create_GRANDMAvoevent(lalid,Swift_dic,Swift_vo)
+                create_GRANDMAvoevent(lalid,Swift_dic,Swift_vo,"")
                 file_log_s.write(lalid +" "+str(trigger_id)+"\n")
         text_mes = str("---------- \n")+str("BAT alert \n")+str("---------- \n")+\
             str("Trigger ID: ")\
@@ -595,21 +603,26 @@ def GW_trigger_found(v, collab,role,file_log_s):
      GW_vo["evenstatus"]="initial"
      Observation_plan_tel=[]        
      for telescope in LISTE_TELESCOPE:
+         Tel_dic=Tel_dicf()
+         Tel_dic["Name"]=telescope
+         print(telescope)
          #Observation_plan_tel.append(Observation_plan(telescope,GW_vo["inst"],GW_vo["trigtime"],GW_vo["locpix"]))
-         Observation_plan(telescope,GW_vo["inst"],GW_vo["trigtime"],GW_vo["locpix"])
-     GW_vo["obs_stra"]=Observation_plan_tel
+         Tel_dic["OS"]=Observation_plan(telescope,GW_vo["inst"],GW_vo["trigtime"],GW_vo["locpix"],Tel_dic)
+         if ((role=="test")):
+             name_dic="GW"+trigger_id
+             lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_"+Tel_dic["Name"])
+             create_GRANDMAvoevent(lalid,GW_dic, GW_vo,Tel_dic)      
 
-  
+    else:
 
-    if ((role=="test")):
-        name_dic="GW"+trigger_id
-        lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"")
-        create_GRANDMAvoevent(lalid,GW_dic, GW_vo)
-        #dic_gw[name_dic]=GW_dic
-        #dic_vo[name_dic]=GW_vo
+     if ((role=="test")):
+         name_dic="GW"+trigger_id
+         lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"")
+         create_GRANDMAvoevent(lalid,GW_dic, GW_vo,"")
 
 
-        file_log_s.write(lalid +" "+str(trigger_id)+"\n")
+
+    file_log_s.write(lalid +" "+str(trigger_id)+"\n")
 
     text = str("---------- \n")+str("GW alert \n")+str("---------- \n")+str("GW NAME : ")\
         +str(GW_vo["trigid"])+(" ")+str("Trigger Time: ")+isotime+"\n"+\
@@ -692,7 +705,7 @@ def fermi_trigger_found(v, collab,role,file_log_s):
     if ((role!="test")):
         name_dic="GBM"+trigger_id
         lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"")
-        create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo)
+        create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo,"")
         dic_grb[name_dic]=Fermi_dic
         dic_vo[name_dic]=Fermi_vo
 
@@ -822,7 +835,7 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
 
     if  ((role!="test")):
      lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"")
-     create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo)
+     create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo,"")
 
      
 
@@ -838,7 +851,7 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
 
 #A unique name per event
 def name_lalid(v,file_log_s,name_dic,letter,tel):
-    name_dic=name_dic#+"_"+tel
+    name_dic=name_dic+tel
     lalid="" 
     toplevel_params = vp.get_toplevel_params(v)
     time_now=datetime.datetime.utcnow()
@@ -1008,7 +1021,7 @@ def add_GRBvoeventcontent(GRB_dic,v):
 
    
 
-def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic):
+def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic,Tel_dic):
     """
     Create the VOEvent
     """
@@ -1075,6 +1088,37 @@ def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic):
     if VO_dic["eventype"]=="GW":
       add_GWvoeventcontent(Trigger_dic,v)
 
+    if Tel_dic!="":
+      Name_tel = vp.Param(name="Name_tel", value=str(Tel_dic["Name"]),ucd="meta.id",dataType="string")
+      Name_tel.Description="Name of the telescope used for the observation strategy"
+      FOV_tel = vp.Param(name="FOV", value=str(Tel_dic["FOV"]),ucd="meta.number",dataType="float",unit="deg")
+      FOV_tel.Description = "FOV of the telescope used for the observation strategy"
+      FOV_coverage = vp.Param(name="FOV_coverage", value=str(Tel_dic["FOV_coverage"]),ucd="meta.number",dataType="string")
+      FOV_coverage.Description = "Shape of the FOV for the telescope used for the observation strategy"   
+      magnitude = vp.Param(name="Magnitude", value=str(Tel_dic["magnitude"]),ucd="meta.number",dataType="float",unit="mag")
+      magnitude.Description = "Magnitude limit of the telescope used for the observation strategy"
+      exposuretime = vp.Param(name="exposuretime", value=str(Tel_dic["exposuretime"]),ucd="time.interval",dataType="float",unit="s")
+      exposuretime.Description = "Exposure time of the telescope used for the observation strategy"
+      slewrate = vp.Param(name="Slew_rate", value=str(Tel_dic["slew_rate"]),ucd="time.interval",dataType="float",unit="s")
+      slewrate.Description = "Slew rate of the telescope for the observation strategy"
+      readout = vp.Param(name="Readout", value=str(Tel_dic["readout"]),ucd="time.interval",dataType="float",unit="s")
+      readout.Description = "Read out of the telescope used for the observation strategy"
+      filt = vp.Param(name="Filters", value=str(Tel_dic["filt"]),ucd="meta.ref",dataType="string")
+      filt.Description = "Filters of the telescope used for the observation strategy"
+      latitude = vp.Param(name="Latitude", value=str(Tel_dic["latitude"]),ucd="meta.number",dataType="float",unit="deg")
+      latitude.Description = "Latitude of the observatory"      
+      longitude = vp.Param(name="Latitude", value=str(Tel_dic["longitude"]),ucd="meta.number",dataType="float",unit="deg")
+      longitude.Description = "Longitude of the observatory"  
+      elevation = vp.Param(name="Elevation", value=str(Tel_dic["elevation"]),ucd="meta.number",dataType="float",unit="m")
+      elevation.Description = "Elevation of the observatory"  
+      config_obs=vp.Group(params=[Name_tel, FOV_tel,FOV_coverage,magnitude, exposuretime, slewrate, readout, filt, latitude, longitude, elevation],name="Set_up_OS")
+      config_obs.Description="Set-up parameters for producing the observation strategy"
+      v.What.append(config_obs)
+
+      #OS_plan=vp.Param(name="Observation strategy",type="Table",value=Tel_dic["OS"])
+      OS_plan=vp.Param(name="Observation strategy")
+      OS_plan.Table=Tel_dic["OS"]
+      v.What.append(OS_plan)
 
     
     vp.add_where_when(v,coords=vp.Position2D(ra=VO_dic["ra"], dec=VO_dic["dec"], err=VO_dic["error"], units='deg',system=vp.definitions.sky_coord_system.utc_fk5_geo),obs_time=VO_dic["trigtime"],observatory_location=VO_dic["location"])
@@ -1253,7 +1297,7 @@ LOGFILE_receivedalerts="LOG_ALERTS_RECEIVED.txt"
 LOGFILE_sendingalerts="LOG_ALERTS_SENT.txt"
 file_LOG = open(LOGFILE_receivedalerts, "a+") 
 #LISTE_TELESCOPE=["Zadko","TAROT-Calern","TAROT-Chili","TAROT-Reunion","2.16m","GWACs","F60","TNT","F30","2.4m GMG","CGFT","CFHT","KAIT"]
-LISTE_TELESCOPE=["GWAC","TAROT-Reunion","Zadko"]
+LISTE_TELESCOPE=["GWAC","IRIS"]
 dic_grb={}
 dic_vo={}
 
