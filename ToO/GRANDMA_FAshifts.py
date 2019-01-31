@@ -30,20 +30,20 @@ def Calendar():
  for k in np.arange(52/(len_west/2)+1):
   if k!=52/(len_west/2):
    for h in np.arange(len_west/2):
-     Shift_west.append([West_list[h*2],West_list[((h+k)*2+1)]])
+     Shift_west.append([West_list[int(h*2)],West_list[int((h+k)*2+1)]])
   if k==52/(len_west/2):
    for h in np.arange(52%(len_west/2)):
-     Shift_west.append([West_list[h*2],West_list[((h+k)*2+1)]])
+     Shift_west.append([West_list[int(h*2)],West_list[int((h+k)*2+1)]])
  #print(len(Shift_west))
 
  Shift_east=[]
  for k in np.arange(52/(len_east/2)+1):
   if k!=52/(len_east/2):
    for h in np.arange(len_east/2):
-     Shift_east.append([East_list[h*2],East_list[((h+k)*2+1)]])
+     Shift_east.append([East_list[int(h*2)],East_list[int((h+k)*2+1)]])
   if k==52/(len_east/2):
    for h in np.arange(52%(len_east/2)):
-     Shift_east.append([East_list[h*2],East_list[((h+k)*2+1)]])
+     Shift_east.append([East_list[int(h*2)],East_list[int((h+k)*2+1)]])
 
 
  Shift_east=np.array(Shift_east)
@@ -65,7 +65,6 @@ def On_duty():
   hours = int(str(timenow.split()[1]).split(":")[0])
   minutes = str(timenow.split()[1]).split(":")[1]
   indice=0
-  print((hours > 12) and (hours < 18))
   if ((hours > 6) and (hours < 12)):
    indice=1
   if ((hours >= 12) and (hours < 18)):

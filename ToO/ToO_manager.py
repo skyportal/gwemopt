@@ -1253,7 +1253,7 @@ LOGFILE_receivedalerts="LOG_ALERTS_RECEIVED.txt"
 LOGFILE_sendingalerts="LOG_ALERTS_SENT.txt"
 file_LOG = open(LOGFILE_receivedalerts, "a+") 
 #LISTE_TELESCOPE=["Zadko","TAROT-Calern","TAROT-Chili","TAROT-Reunion","2.16m","GWACs","F60","TNT","F30","2.4m GMG","CGFT","CFHT","KAIT"]
-LISTE_TELESCOPE=["GWACs","TAROT-Reunion","Zadko"]
+LISTE_TELESCOPE=["GWAC","TAROT-Reunion","Zadko"]
 dic_grb={}
 dic_vo={}
 
