@@ -415,7 +415,7 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
         field_id_vec.append(field_id)
         ra_vec.append(ra)
         dec_vec.append(dec)
-        grade_vec.append(1)
+        grade_vec.append(prob)
 
 
 
@@ -1095,10 +1095,11 @@ def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic,Tel_dic):
       v.What.append(config_obs)
 
       #OS_plan=vp.Param(name="Observation strategy",type="Table",value=Tel_dic["OS"])
-      OS_plan=vp.Param(name="Observation strategy")
-      OS_plan.Description="The list of tiles for "+str(Tel_dic["Name"])
+      #OS_plan=vp.Param(name="Observation strategy")
+      #OS_plan.Description="The list of tiles for "+str(Tel_dic["Name"])
       #OS_plan.Table=vp.Param(name="Table")
-      Fields = objectify.Element("Table")
+      Fields = objectify.Element("Table",name="Obs_plan")
+      Fields.Description="Tiles for the observation plan"
       grid_id = objectify.SubElement(Fields, "Field", name="Grid_id",ucd="", unit="", dataType="int")
       grid_id.Description="ID of the grid of FOV"
       ra = objectify.SubElement(Fields, "Field", name="Ra", ucd="pos.eq.ra ", unit="deg", dataType="float") 
@@ -1116,8 +1117,8 @@ def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic,Tel_dic):
             TR.TD[-1]=str(Tel_dic["OS"][i][j])
           
 
-      OS_plan.Table=Fields
-      v.What.append(OS_plan)
+      #v.What.Table=Fields
+      v.What.append(Fields)
 
     
     vp.add_where_when(v,coords=vp.Position2D(ra=VO_dic["ra"], dec=VO_dic["dec"], err=VO_dic["error"], units='deg',system=vp.definitions.sky_coord_system.utc_fk5_geo),obs_time=VO_dic["trigtime"],observatory_location=VO_dic["location"])
@@ -1129,7 +1130,11 @@ def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic,Tel_dic):
     # Check everything is schema compliant:
     #vp.assert_valid_as_v2_0(v) 
     file_voevent="./VOEVENTS/"+vo_name
-    vp.valid_as_v2_0(v)
+    try:
+       vp.assert_valid_as_v2_0(v)
+    except Exception as e:
+       print(e)
+
 
 
     with open(file_voevent, 'wb') as f:
