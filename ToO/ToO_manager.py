@@ -25,6 +25,10 @@ import ephem
 from astropy import table
 from astropy import time
 
+import lxml.objectify as objectify
+from lxml import etree
+import pandas as pd
+
 
 
 import gwemopt.utils
@@ -230,7 +234,6 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
     config_files = glob.glob("%s/*.config" % config_directory)
     for config_file in config_files:
         telescope = config_file.split("/")[-1].replace(".config", "")
-        #print(telescope)
         params["config"][telescope] =\
             gwemopt.utils.readParamsFromFile(config_file)
         if "tesselationFile" in params["config"][telescope]:
@@ -386,33 +389,15 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
 
     config_struct = params["config"][teles_target]
 
-    what = What()
 
-    thistable = Table(name="Observation strategy", Description=["The list of tiles for "+str(obsinstru)])
-    thistable.add_Field(Field(name=r"Grid_id", ucd="", unit="", dataType="int", \
-                    Description=["ID of the grid of fov"]))
-    thistable.add_Field(Field(name="field_id", ucd="", unit="", dataType="int",\
-                    Description=["ID of the filed"]))
-    thistable.add_Field(
-        Field(
-            name=r"Ra", ucd=r"pos.eq.ra ", unit="deg", dataType="float",
-            Description=["The right ascension at center of fov in equatorial coordinates"]
-            )
-        )
-    thistable.add_Field(
-        Field(
-            name="Dec", ucd="pos.eq.dec ", unit="deg", dataType="float",
-            Description=["The declination at center of fov in equatorial coordinates"]
-            )
-        )
-    thistable.add_Field(
-        Field(
-            name="Os_grade", ucd="meta.number", unit="None", dataType="float",
-            Description=["Gives the importance of the tile/galaxy to observe"]
-            )
-        )
-    table_field = utilityTable(thistable)
-    table_field.blankTable(len(coverage_struct))
+
+    #table_field = utilityTable(thistable)
+    #table_field.blankTable(len(coverage_struct))
+
+    field_id_vec=[]
+    ra_vec=[]
+    dec_vec=[]
+    grade_vec=[]
 
     for ii in range(len(coverage_struct["ipix"])):
         data = coverage_struct["data"][ii,:]
@@ -426,21 +411,15 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
 
         ra, dec = data[0], data[1]
         exposure_time, field_id, prob = data[4], data[5], data[6]
+ 
+        field_id_vec.append(field_id)
+        ra_vec.append(ra)
+        dec_vec.append(dec)
+        grade_vec.append(1)
 
-        table_field.setValue("Grid_id", ii, 0)
-        #table_field.setValue("field_id", ii, field_id)
-        table_field.setValue("Ra", ii, ra)
-        table_field.setValue("Dec", ii, dec)
-        table_field.setValue("Os_grade", ii, prob)
-        #table_field.setValue("priority", ii, ii)
 
-    thistable = table_field.getTable()
 
-   
-    #what.add_Table(thistable)
-    #xml = stringVOEvent(what)
-
-    return thistable
+    return np.transpose(np.array([np.array(field_id_vec),np.array(ra_vec),np.array(dec_vec),np.array(grade_vec)]))
 
 def swift_trigger(v, collab, text_mes,file_log_s,role):
     """
@@ -1117,7 +1096,27 @@ def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic,Tel_dic):
 
       #OS_plan=vp.Param(name="Observation strategy",type="Table",value=Tel_dic["OS"])
       OS_plan=vp.Param(name="Observation strategy")
-      OS_plan.Table=Tel_dic["OS"]
+      OS_plan.Description="The list of tiles for "+str(Tel_dic["Name"])
+      #OS_plan.Table=vp.Param(name="Table")
+      Fields = objectify.Element("Table")
+      grid_id = objectify.SubElement(Fields, "Field", name="Grid_id",ucd="", unit="", dataType="int")
+      grid_id.Description="ID of the grid of FOV"
+      ra = objectify.SubElement(Fields, "Field", name="Ra", ucd="pos.eq.ra ", unit="deg", dataType="float") 
+      ra.Description="The right ascension at center of fov in equatorial coordinates"
+      dec = objectify.SubElement(Fields, "Field", name="Dec", ucd="pos.eq.ra ", unit="deg", dataType="float")      
+      dec.Description="The declination at center of fov in equatorial coordinates"
+      Os_grade = objectify.SubElement(Fields, "Field", name="Os_grade", ucd="meta.number", unit="None", dataType="float")      
+      Os_grade.Description="Gives the importance of the tile/galaxy to observe"
+      Data = objectify.SubElement(Fields, "Data") 
+      for i in np.arange(len(Tel_dic["OS"])):
+         TR = objectify.SubElement(Data, "TR")
+         for j in np.arange(len(Tel_dic["OS"][i])):
+           #objectify.SubElement(TR, "TD",value=str(Tel_dic["OS"][i][j]))
+            objectify.SubElement(TR, 'TD')
+            TR.TD[-1]=str(Tel_dic["OS"][i][j])
+          
+
+      OS_plan.Table=Fields
       v.What.append(OS_plan)
 
     
@@ -1297,11 +1296,10 @@ LOGFILE_receivedalerts="LOG_ALERTS_RECEIVED.txt"
 LOGFILE_sendingalerts="LOG_ALERTS_SENT.txt"
 file_LOG = open(LOGFILE_receivedalerts, "a+") 
 #LISTE_TELESCOPE=["Zadko","TAROT-Calern","TAROT-Chili","TAROT-Reunion","2.16m","GWACs","F60","TNT","F30","2.4m GMG","CGFT","CFHT","KAIT"]
-LISTE_TELESCOPE=["GWAC","IRIS"]
+LISTE_TELESCOPE=["GWAC"]
 dic_grb={}
 dic_vo={}
 
-#path="/home/leroy/temp/"
 path="./EXAMPLE/"
 fo = open(path+"READ_xml.txt","r")
 lines = fo.readlines()
