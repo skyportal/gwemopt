@@ -1248,7 +1248,6 @@ def GW_trigger(v, collab, text_mes,file_log_s,role):
    Retractation=int(toplevel_params['Retraction']['value'])
    text_mes=""
 
-   print(Retractation)
    if (AlertType=="Preliminary") and (Retractation==0):
        text_mes= GW_treatment_alert(v, collab,role,file_log_s)
            
