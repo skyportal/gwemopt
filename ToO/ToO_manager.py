@@ -668,7 +668,8 @@ def GW_treatment_alert(v, collab,role,file_log_s):
      if ((role=="test")):
          name_dic="GW"+trigger_id
          lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_DB")
-         create_GRANDMAvoevent(lalid,GW_dic, GW_vo,"")      
+         create_GRANDMAvoevent(lalid,GW_dic, GW_vo,"")   
+         file_log_s.write(lalid +" "+str(trigger_id)+"\n")   
   
      for telescope in LISTE_TELESCOPE:
          Tel_dic=Tel_dicf()
@@ -680,7 +681,8 @@ def GW_treatment_alert(v, collab,role,file_log_s):
          if ((role=="test")):
              name_dic="GW"+trigger_id
              lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_"+Tel_dic["Name"])
-             create_GRANDMAvoevent(lalid,GW_dic, GW_vo,Tel_dic)      
+             create_GRANDMAvoevent(lalid,GW_dic, GW_vo,Tel_dic)  
+             file_log_s.write(lalid +" "+str(trigger_id)+"\n")    
 
     else:
 
@@ -688,10 +690,11 @@ def GW_treatment_alert(v, collab,role,file_log_s):
          name_dic="GW"+trigger_id
          lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_DB")
          create_GRANDMAvoevent(lalid,GW_dic, GW_vo,"")
+         file_log_s.write(lalid +" "+str(trigger_id)+"\n")
 
 
 
-    file_log_s.write(lalid +" "+str(trigger_id)+"\n")
+    
 
 
     text = str("---------- \n")+str("GW alert \n")+str("---------- \n")+str("GW NAME : ")\
@@ -717,13 +720,13 @@ def fermi_trigger_found(v, collab,role,file_log_s):
     Fermi_dic["inst"]=instru
 
 
-    Fermi_vo["fa"]=fa.FA_shift()
+    Fermi_vo["ba"]=fa.FA_shift()
 
-    Fermi_vo["evenstatus"]="preliminary"
+    Fermi_vo["evenstatus"]="Preliminary"
     Fermi_vo["eventype"]="GRB"
     Fermi_vo["inst"]="Fermi-GBM"
     Fermi_vo["location"]="Sky"
-
+    message_obs="NO SKYMAP AVAILABLE"
 
     toplevel_params = vp.get_toplevel_params(v)
     trigger_id = toplevel_params['TrigID']['value']
@@ -774,7 +777,7 @@ def fermi_trigger_found(v, collab,role,file_log_s):
 
     if ((role!="test")):
         name_dic="GBM"+trigger_id
-        lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"")
+        lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"_DB")
         create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo,"")
         dic_grb[name_dic]=Fermi_dic
         dic_vo[name_dic]=Fermi_vo
@@ -789,7 +792,7 @@ def fermi_trigger_found(v, collab,role,file_log_s):
         str("\n")+str("---SPACE TRIGGER---\n")+str("Trigger Rate SNR ")+str(rate__signif)+" "+str\
         ("Trigger dur ")+rate__dur+("\n")+str("\n")+str("---GRB CARAC---\n")+str("LC path: ")+str\
         (grb_lc)+str("\n")+str("Selected Energy band (keV): ")+str(energy_bandmin)+"-"+\
-        str(energy_bandmax)+("\n")+str("\n")
+        str(energy_bandmax)+("\n")+message_obs+("\n")+str("\n")
     return text
 
 
@@ -807,6 +810,7 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
     name_dic="GBM"+trigger_id
     Fermi_dic=dic_grb.get(name_dic)
     Fermi_vo=dic_vo.get(name_dic)
+    message_obs="No healpix skymap available"
  
     pletter=Fermi_vo["letup"]
     indice_pletter=np.where(letters==pletter)[0]
@@ -820,70 +824,17 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
     #hard_ratio=0.0
     #not_grb="unknown"
  
+    Fermi_vo["ba"]=fa.FA_shift()
     
     Fermi_vo["eventype"]="GRB"
     Fermi_vo["inst"]="Fermi-GBM"
-
-
-    if message_type == "FINAL FERMI/GBM POSITION MESSAGE":
-        Fermi_dic["locref"]="GBM final update"
-        long_short = str(v.What.Group.Param[4].attrib['value'])
-        Fermi_dic["longshort"]=long_short
-        not_grb = def_not_grb =  v.find(".//Param[@name='Def_NOT_a_GRB']").attrib['value']
-        Fermi_dic["defGRB"]=not_grb
-        loc_png=toplevel_params['LocationMap_URL']['value']
-        png_name=(loc_png.split("/")[-1]).split("_")
-        healpix_name=png_name[0]+"_"+"healpix"+"_"+png_name[2]+"_"+png_name[3].split(".")[0]+".fit"
-        path_helpcolec=loc_png.split("/")
-        path_healpix=path_helpcolec[0]
-        Fermi_vo["evenstatus"]="initial"
-        for h in np.arange(len(path_helpcolec)-1):
-         if h!=0:
-            path_healpix=path_healpix+"/"+path_helpcolec[h]
-        link_healpix=path_healpix+"/"+healpix_name
-        Fermi_dic["locpix"]=link_healpix
-        Fermi_vo["iter_statut"]=0
-       
-        Observation_plan_tel=[]        
-        for telescope in LISTE_TELESCOPE:
-            #Observation_plan_tel.append(Observation_plan(telescope,Fermi_vo["inst"],Fermi_vo["trigtime"],Fermi_vo["locpix"])
-            a_revoir=1
-        Fermi_vo["obs_stra"]=Observation_plan_tel
 
     grb_lc = toplevel_params['LightCurve_URL']['value']
     
     
     name_grb = gbm_lc_name(grb_lc)
     Fermi_dic["lc"]=grb_lc 
-    Fermi_vo["grbid"]=name_grb 
-  
-    if message_type == "FLIGHT UPDATE FERMI/GBM POSITION MESSAGE":
-        Fermi_dic["locref"]="GBM flight update"
-        rate__signif = toplevel_params['Data_Signif']['value']
-        Fermi_dic["locsnr"]=rate__signif
-        rate__dur = toplevel_params['Data_Timescale']['value']
-        Fermi_dic["locdur"]=rate__dur
-        prob_GRB= toplevel_params['Most_Likely_Prob']['value']
-        Fermi_dic["probGRB"]=prob_GRB
-        hard_ratio=toplevel_params['Hardness_Ratio']['value']
-        Fermi_dic["hratio"]=hard_ratio
-        not_grb = def_not_grb =  v.find(".//Param[@name='Def_NOT_a_GRB']").attrib['value']
-        Fermi_dic["defGRB"]=not_grb 
-        Fermi_vo["evenstatus"]="preliminary"
-        Fermi_vo["iter_statut"]=Fermi_vo["iter_statut"]+1
-
-    if message_type == "GROUND UPDATE FERMI/GBM POSITION MESSAGE":
-        Fermi_dic["locref"]="GBM ground update"
-        rate__signif = toplevel_params['Burst_Signif']['value']
-        Fermi_dic["locsnr"]=rate__signif
-        rate__dur = toplevel_params['Data_Integ']['value']
-        Fermi_dic["locdur"]=rate__dur
-        not_grb = def_not_grb =  v.find(".//Param[@name='Def_NOT_a_GRB']").attrib['value']
-        Fermi_dic["defGRB"]=not_grb
-        loc_fit=toplevel_params['LocationMap_URL']['value']
-        Fermi_vo["locpix"]=loc_fit
-        Fermi_vo["evenstatus"]="preliminary"
-        Fermi_vo["iter_statut"]=Fermi_vo["iter_statut"]+1
+    Fermi_vo["grbid"]=name_grb
 
     isotime = v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.Time.TimeInstant.\
         ISOTime.text
@@ -903,18 +854,99 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
     Fermi_vo["dec"]=dec
     Fermi_vo["error"]=error2_radius
 
-    if  ((role!="test")):
-     lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"")
-     create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo,"")
+
+   
+
+    if message_type == "FINAL FERMI/GBM POSITION MESSAGE":
+        Fermi_dic["locref"]="GBM final update"
+        long_short = str(v.What.Group.Param[4].attrib['value'])
+        Fermi_dic["longshort"]=long_short
+        not_grb = def_not_grb =  v.find(".//Param[@name='Def_NOT_a_GRB']").attrib['value']
+        Fermi_dic["defGRB"]=not_grb
+        loc_png=toplevel_params['LocationMap_URL']['value']
+        png_name=(loc_png.split("/")[-1]).split("_")
+        healpix_name=png_name[0]+"_"+"healpix"+"_"+png_name[2]+"_"+png_name[3].split(".")[0]+".fit"
+        path_helpcolec=loc_png.split("/")
+        path_healpix=path_helpcolec[0]
+        Fermi_vo["evenstatus"]="Initial"
+        for h in np.arange(len(path_helpcolec)-1):
+         if h!=0:
+            path_healpix=path_healpix+"/"+path_helpcolec[h]
+        link_healpix=path_healpix+"/"+healpix_name
+        Fermi_vo["locpix"]=link_healpix
+        Fermi_vo["iter_statut"]=0
+       
+ 
+        Observation_plan_tel=[] 
+        message_obs="Observation plan sent to "   
+        if ((role!="test")):
+            name_dic="GW"+trigger_id
+            lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"_DB")
+            create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo,"") 
+            file_log_s.write(lalid +" "+str(trigger_id)+"\n")     
+     
+            for telescope in LISTE_TELESCOPE:
+                Tel_dic=Tel_dicf()
+                Tel_dic["Name"]=telescope 
+                message_obs=message_obs+" "+telescope
+                Tel_dic["OS"]=Observation_plan(telescope,Fermi_vo["inst"],Fermi_vo["trigtime"],Fermi_vo["locpix"],Tel_dic)
+                if ((role=="test")):
+                    name_dic="GW"+trigger_id
+                    lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"_"+Tel_dic["Name"])
+                    create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo,Tel_dic) 
+                    file_log_s.write(lalid +" "+str(trigger_id)+"\n")   
+         
+
+  
+    if message_type == "FLIGHT UPDATE FERMI/GBM POSITION MESSAGE":
+        Fermi_dic["locref"]="GBM flight update"
+        rate__signif = toplevel_params['Data_Signif']['value']
+        Fermi_dic["locsnr"]=rate__signif
+        rate__dur = toplevel_params['Data_Timescale']['value']
+        Fermi_dic["locdur"]=rate__dur
+        prob_GRB= toplevel_params['Most_Likely_Prob']['value']
+        Fermi_dic["probGRB"]=prob_GRB
+        hard_ratio=toplevel_params['Hardness_Ratio']['value']
+        Fermi_dic["hratio"]=hard_ratio
+        not_grb = def_not_grb =  v.find(".//Param[@name='Def_NOT_a_GRB']").attrib['value']
+        Fermi_dic["defGRB"]=not_grb 
+        Fermi_vo["evenstatus"]="preliminary"
+        Fermi_vo["iter_statut"]=Fermi_vo["iter_statut"]+1
+        if  ((role!="test")):
+            lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"_DB")
+            create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo,"")
+            file_log_s.write(lalid +" "+str(trigger_id)+"\n")
+
+    if message_type == "GROUND UPDATE FERMI/GBM POSITION MESSAGE":
+        Fermi_dic["locref"]="GBM ground update"
+        rate__signif = toplevel_params['Burst_Signif']['value']
+        Fermi_dic["locsnr"]=rate__signif
+        rate__dur = toplevel_params['Data_Integ']['value']
+        Fermi_dic["locdur"]=rate__dur
+        not_grb = def_not_grb =  v.find(".//Param[@name='Def_NOT_a_GRB']").attrib['value']
+        Fermi_dic["defGRB"]=not_grb
+        loc_fit=toplevel_params['LocationMap_URL']['value']
+        Fermi_vo["locpix"]=loc_fit
+        Fermi_vo["evenstatus"]="preliminary"
+        Fermi_vo["iter_statut"]=Fermi_vo["iter_statut"]+1
+        if  ((role!="test")):
+            lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"_DB")
+            create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo,"")
+            file_log_s.write(lalid +" "+str(trigger_id)+"\n")
+
+
 
      
-
+    #print(grb_identified)
     if grb_identified == "false":
-        text = "\n"+message_type+str(" \n")+str("---------- \n")+str("ID : ")+str(name_grb)
+        text = "\n"+message_type+str(" \n")+ ("---------- \n")+str("ID : ")+str(name_grb)+(" ")+trigger_id+(" ")+isotime+("\n")+str\
+            ("Delay since alert: ")+str(delay)+("\n")+str("---Follow-up Advocate--\n")+str\
+        ("FA on duty: ")+str(fa.FA_shift())+("\n")+message_obs+("\n")+("\n")
     else:
         text = "\n"+str("UPDATE FERMI/GBM POSITION MESSAGE NO LONGER CLASSIFIED AS GRB\n")+str\
             ("---------- \n")+str("ID : ")+str(name_grb)+(" ")+trigger_id+(" ")+isotime+("\n")+str\
-            ("Delay since alert: ")+str(delay)+("\n")+str("\n")
+            ("Delay since alert: ")+str(delay)+("\n")+str("---Follow-up Advocate--\n")+str\
+        ("FA on duty: ")+str(fa.FA_shift())+("\n")+str("\n")+("\n")
     return text
 
 
@@ -1000,7 +1032,7 @@ def add_GRBvoeventcontent(GRB_dic,v):
     #trigonlinerate_snr.set_Description(['Significance from the GRB rate onboard trigger algorithm of '+GRB_dic["inst"]])
     #what.add_Param(trigonlinerate_snr)
 
-    trigonlinerate_snr = vp.Param(name="Rate_snr",value=GRB_dic["ratesnr"], unit="sigma", ucd="stat.snr",dataType="floay")
+    trigonlinerate_snr = vp.Param(name="Rate_snr",value=GRB_dic["ratesnr"], unit="sigma", ucd="stat.snr",dataType="float")
     trigonlinerate_snr.Description="Significance from the GRB rate onboard trigger algorithm of "+GRB_dic["inst"]
     v.What.append(trigonlinerate_snr)
 
@@ -1026,7 +1058,7 @@ def add_GRBvoeventcontent(GRB_dic,v):
     #lc.Description(['The GRB LC_URL file will not be created/available until ~15 min after the trigger. Instrument:'+GRB_dic["inst"]])
     #what.add_Param(lc)
   
-    lc = vp.Param(name="LightCurve_URL",value=GRB_dic["lc"],ucd="meta.ref.url",dataType="string")
+    lc = vp.Param(name="LightCurve_rRL",value=GRB_dic["lc"],ucd="meta.ref.url",dataType="string")
     lc.Description="The GRB LC_URL file will not be created/available until ~15 min after the trigger. Instrument:"+GRB_dic["inst"]
     v.What.append(lc)
 
@@ -1035,12 +1067,12 @@ def add_GRBvoeventcontent(GRB_dic,v):
     #trigonlinerate_hardratio.set_Description(['GRB flight Spectral characteristics of '+GRB_dic["locref"]])
     #what.add_Param(trigonlinerate_hardratio)
 
-    trigonlinerate_hardratio = vp.Param(name="Hardness_Ratio",value=str(GRB_dic["hratio"]), ucd="arith.ratio",dataType="float")
+    trigonlinerate_hardratio = vp.Param(name="Hardness_ratio",value=str(GRB_dic["hratio"]), ucd="arith.ratio",dataType="float")
     trigonlinerate_hardratio.Description="GRB flight Spectral characteristics of "+GRB_dic["locref"]
     v.What.append(trigonlinerate_hardratio)
 
 
-    longshort = vp.Param(name="Long_short",value=str(GRB_dic["longshort"]),dataType="bool")
+    longshort = vp.Param(name="Long_short",value=str(GRB_dic["longshort"]),dataType="string")
     longshort.Description="GRB long-short of "+GRB_dic["locref"]
     v.What.append(longshort)
    
@@ -1057,7 +1089,7 @@ def add_GRBvoeventcontent(GRB_dic,v):
     #defGRB.set_Description(['Not a GRB '+GRB_dic["locref"]])
     #what.add_Param(defGRB)
  
-    defGRB=vp.Param(name="Def_NOT_a_GRB",value=str(GRB_dic["defGRB"]),dataType="bool")
+    defGRB=vp.Param(name="Def_not_a_GRB",value=str(GRB_dic["defGRB"]),dataType="string")
     defGRB.Description="Not a GRB "+GRB_dic["locref"]
     v.What.append(defGRB)
 
@@ -1318,7 +1350,7 @@ def fermi_trigger(v, collab, text_mes,file_log_s,role):
                 message_type = "FINAL FERMI/GBM POSITION MESSAGE"
             # IDFOLLOWUP_message
             text_mes = fermi_trigger_follow(v, collab, message_type,file_log_s,role)
-
+            
     return text_mes
 
 
@@ -1410,9 +1442,9 @@ letters=np.array(["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p
 LOGFILE_receivedalerts="LOG_ALERTS_RECEIVED.txt"
 LOGFILE_sendingalerts="LOG_ALERTS_SENT.txt"
 file_LOG = open(LOGFILE_receivedalerts, "a+") 
-LISTE_TELESCOPE=["Zadko","TAROT-Calern","TAROT-Chili","TAROT-Reunion","2.16m","GWACs","F60","TNT","F30","2.4m GMG","CGFT","CFHT","KAIT"]
-#LISTE_TELESCOPE=["GWAC"]
-LISTE_TELESCOPE=["Zadko","TCA","TCH","TRE","GWAC","F60"]
+#LISTE_TELESCOPE=["Zadko","TAROT-Calern","TAROT-Chili","TAROT-Reunion","2.16m","GWACs","F60","TNT","F30","2.4m GMG","CGFT","CFHT","KAIT"]
+LISTE_TELESCOPE=["GWAC"]
+#LISTE_TELESCOPE=["Zadko","TCA","TCH","TRE","GWAC","F60"]
 dic_grb={}
 dic_vo={}
 
