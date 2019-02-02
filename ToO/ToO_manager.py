@@ -508,16 +508,32 @@ def swift_trigger(v, collab, text_mes,file_log_s,role):
         Swift_vo["dec"]=declination
         Swift_vo["error"]=error2_radius
         Swift_dic["locref"]="BAT onboard"
+        message_obs=""
         
         name_dic="Swift"+trigger_id
         if ((role!="test")):
-                lalid=name_lalid(v,file_log_s,name_dic,Swift_vo["letup"],"")
+                lalid=name_lalid(v,file_log_s,name_dic,Swift_vo["letup"],"_DB")
                 name_dic="Swift"+trigger_id
                 dic_grb[name_dic]=Swift_dic
                 dic_vo[name_dic]=Swift_vo
 
                 create_GRANDMAvoevent(lalid,Swift_dic,Swift_vo,"")
-                file_log_s.write(lalid +" "+str(trigger_id)+"\n")
+                file_log_s.write(lalid +" "+str(trigger_id)+"\n")    
+     
+                for telescope in LISTE_TELESCOPE:
+                     Tel_dic=Tel_dicf()
+                     Tel_dic["Name"]=telescope 
+                     message_obs=message_obs+" "+telescope
+                     Tel_dic["OS"]=""
+                     if ((role!="test")):
+                         name_dic="Swift"+trigger_id
+                         lalid=name_lalid(v,file_log_s,name_dic,Swift_vo["letup"],"_"+Tel_dic["Name"])
+                         print("lalid, ............")
+                         create_GRANDMAvoevent(lalid,Swift_dic,Swift_vo,Tel_dic) 
+                         file_log_s.write(lalid +" "+str(trigger_id)+"\n")   
+
+
+
         text_mes = str("---------- \n")+str("BAT alert \n")+str("---------- \n")+\
             str("Trigger ID: ")\
             +trigger_id+("\n")+str("Trigger Time: ")+isotime+("\n")+str("Delay since alert: ")+\
@@ -525,7 +541,7 @@ def swift_trigger(v, collab, text_mes,file_log_s,role):
             str("---SPACE TRIGGER---\n")+str("Trigger Rate SNR: ")+str(rate_signif)+" "+\
             str("Image_Signif: ")+image_signif+("\n")+str("\n")+str("---Position---\n")+\
             "RA: "+str(round(float(right_ascension),1))+" "+"DEC: "+str(round(float(declination),1))+" "+str("Error2Radius: ")+\
-            str(round(float(error2_radius),1))+"\n"+str("\n")+str("---------- \n")#+("---SVOM FOLLOWUP---\n")+\
+            str(round(float(error2_radius),1))+"\n"+message_obs+"\n"+str("\n")+str("---------- \n")#+("---SVOM FOLLOWUP---\n")+\
             #str(observability__xinglong)+" "+str(follow)+"\n"
          
     return text_mes
@@ -880,7 +896,7 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
         Observation_plan_tel=[] 
         message_obs="Observation plan sent to "   
         if ((role!="test")):
-            name_dic="GW"+trigger_id
+            name_dic="GBM"+trigger_id
             lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"_DB")
             create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo,"") 
             file_log_s.write(lalid +" "+str(trigger_id)+"\n")     
@@ -891,7 +907,7 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
                 message_obs=message_obs+" "+telescope
                 Tel_dic["OS"]=Observation_plan(telescope,Fermi_vo["inst"],Fermi_vo["trigtime"],Fermi_vo["locpix"],Tel_dic)
                 if ((role=="test")):
-                    name_dic="GW"+trigger_id
+                    name_dic="GBM"+trigger_id
                     lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"_"+Tel_dic["Name"])
                     create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo,Tel_dic) 
                     file_log_s.write(lalid +" "+str(trigger_id)+"\n")   
@@ -1032,7 +1048,7 @@ def add_GRBvoeventcontent(GRB_dic,v):
     #trigonlinerate_snr.set_Description(['Significance from the GRB rate onboard trigger algorithm of '+GRB_dic["inst"]])
     #what.add_Param(trigonlinerate_snr)
 
-    trigonlinerate_snr = vp.Param(name="Rate_snr",value=GRB_dic["ratesnr"], unit="sigma", ucd="stat.snr",dataType="float")
+    trigonlinerate_snr = vp.Param(name="Rate_snr",value=str(GRB_dic["ratesnr"]), unit="sigma", ucd="stat.snr",dataType="float")
     trigonlinerate_snr.Description="Significance from the GRB rate onboard trigger algorithm of "+GRB_dic["inst"]
     v.What.append(trigonlinerate_snr)
 
@@ -1041,7 +1057,7 @@ def add_GRBvoeventcontent(GRB_dic,v):
     #trigonlinerate_ts.set_Description = 'Timescale used in the GRB onboard pipeline of '+GRB_dic["inst"]
     #what.add_Param(trigonlinerate_ts)
 
-    trigonlinerate_ts = vp.Param(name="Rate_ts",value=GRB_dic["ratets"], unit="s", ucd="time.interval",dataType="float")
+    trigonlinerate_ts = vp.Param(name="Rate_ts",value=str(GRB_dic["ratets"]), unit="s", ucd="time.interval",dataType="float")
     trigonlinerate_ts.Description = "Timescale used in the GRB onboard pipeline of "+GRB_dic["inst"]
     v.What.append(trigonlinerate_ts)
     
