@@ -124,7 +124,7 @@ def VO_dicf():
   Contentvo_dic = {
 		  "name" : "",
     "role" : "",
-		  "stream" : "",
+		  "stream" : "grandma.lal.in2p3.fr/GRANDMA_Alert",
 		  "streamid" : "",
     "voivorn" : "ivo://svom.bao.ac.cn/LV#SFC_GW_",
 		  "authorivorn" : "GRANDMA_Alert",
@@ -434,7 +434,7 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
         field_id_vec.append(field_id)
         ra_vec.append(ra)
         dec_vec.append(dec)
-        grade_vec.append(1)
+        grade_vec.append(prob)
 
 
 
@@ -530,7 +530,65 @@ def swift_trigger(v, collab, text_mes,file_log_s,role):
          
     return text_mes
 
-def GW_trigger_found(v, collab,role,file_log_s):
+
+def GW_trigger_retracted(v, collab,role,file_log_s):
+
+    GW_dic=GW_dicf()
+    GW_vo=VO_dicf()
+
+    
+    
+    GW_vo["ba"]=fa.FA_shift()
+
+
+    GW_vo["eventype"]="GW"
+
+
+    toplevel_params = vp.get_toplevel_params(v)
+    Pktser=toplevel_params['Pkt_Ser_Num']['value']
+    GW_vo["iter_statut"]=str(int(Pktser)-1)
+    GW_vo["evenstatus"]=toplevel_params['AlertType']['value']
+    trigger_id = toplevel_params['GraceID']['value']
+ 
+    GW_vo["letup"]=letters[int(Pktser)-1]
+    
+
+    GW_dic["Retraction"]=toplevel_params['Retraction']['value']
+
+    isotime = v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.Time.TimeInstant.ISOTime.text
+    isotime_format=trigtime(isotime)
+    GW_vo["trigtime"]=isotime_format    
+    GW_vo["trigid"]=trigger_id
+    GW_vo["location"]="LIGO Virgo"
+    GW_vo["eventype"]="GW"
+    GW_vo["voimportance"]=1
+ 
+    if ((role=="test")):
+         name_dic="GW"+trigger_id
+         lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_DB")
+         create_GRANDMAvoevent(lalid,GW_dic, GW_vo,"")      
+  
+    for telescope in LISTE_TELESCOPE:
+         Tel_dic=Tel_dicf()
+         Tel_dic["Name"]=telescope 
+         
+         #Tel_dic["OS"]=Observation_plan(telescope,GW_vo["inst"],GW_vo["trigtime"],GW_vo["locpix"],Tel_dic)
+         if ((role=="test")):
+             name_dic="GW"+trigger_id
+             lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_"+Tel_dic["Name"])
+             create_GRANDMAvoevent(lalid,GW_dic, GW_vo,Tel_dic)      
+
+
+    file_log_s.write(lalid +" "+str(trigger_id)+"\n")
+
+
+    text = str("---------- \n")+str("GW alert \n")+str("---------- \n")+str("GW NAME : ")\
+        +str(GW_vo["trigid"])+(" ")+str("Trigger Time: ")+isotime+"\n"+\
+        str("WARNING RETRACTATION")+str("\n")+str("---Follow-up Advocate--\n")+str("Follow-up advocate on duty: ")+str(fa.FA_shift())+"\n"
+    return text
+   
+
+def GW_treatment_alert(v, collab,role,file_log_s):
 
 
 
@@ -543,13 +601,17 @@ def GW_trigger_found(v, collab,role,file_log_s):
     GW_vo["ba"]=fa.FA_shift()
 
 
-    GW_vo["evenstatus"]="preliminary"
     GW_vo["eventype"]="GW"
 
 
     toplevel_params = vp.get_toplevel_params(v)
+    Pktser=toplevel_params['Pkt_Ser_Num']['value']
+    GW_vo["iter_statut"]=str(int(Pktser)-1)
     GW_vo["inst"]=toplevel_params['Instruments']['value']
+    GW_vo["evenstatus"]=toplevel_params['AlertType']['value']
     trigger_id = toplevel_params['GraceID']['value']
+ 
+    GW_vo["letup"]=letters[int(Pktser)-1]
     
 
     GW_dic["Retraction"]=toplevel_params['Retraction']['value']
@@ -597,14 +659,23 @@ def GW_trigger_found(v, collab,role,file_log_s):
     GW_vo["locpix"]=str(v.find(".//Param[@name='skymap_fits']").attrib['value'])
     GW_vo["location"]="LIGO Virgo"
 
-    if GW_vo["locpix"]!="":
-     GW_vo["evenstatus"]="initial"
-     Observation_plan_tel=[]        
+    message_obs="NO SKYMAP AVAILABLE"
+    if (GW_vo["locpix"]!="") and (GW_vo["evenstatus"]=="Preliminary"):
+     GW_vo["evenstatus"]="Initial"
+    if (GW_vo["evenstatus"]!="Preliminary"):
+     Observation_plan_tel=[] 
+     message_obs="Observation plan sent to "   
+     if ((role=="test")):
+         name_dic="GW"+trigger_id
+         lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_DB")
+         create_GRANDMAvoevent(lalid,GW_dic, GW_vo,"")      
+  
      for telescope in LISTE_TELESCOPE:
          Tel_dic=Tel_dicf()
-         Tel_dic["Name"]=telescope
-         print(telescope)
-         #Observation_plan_tel.append(Observation_plan(telescope,GW_vo["inst"],GW_vo["trigtime"],GW_vo["locpix"]))
+         Tel_dic["Name"]=telescope 
+         message_obs=message_obs+" "+telescope
+         #print(telescope)
+         
          Tel_dic["OS"]=Observation_plan(telescope,GW_vo["inst"],GW_vo["trigtime"],GW_vo["locpix"],Tel_dic)
          if ((role=="test")):
              name_dic="GW"+trigger_id
@@ -615,18 +686,19 @@ def GW_trigger_found(v, collab,role,file_log_s):
 
      if ((role=="test")):
          name_dic="GW"+trigger_id
-         lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"")
+         lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_DB")
          create_GRANDMAvoevent(lalid,GW_dic, GW_vo,"")
 
 
 
     file_log_s.write(lalid +" "+str(trigger_id)+"\n")
 
+
     text = str("---------- \n")+str("GW alert \n")+str("---------- \n")+str("GW NAME : ")\
         +str(GW_vo["trigid"])+(" ")+str("Trigger Time: ")+isotime+"\n"+\
         str("Instruments: ")+str(str(GW_vo["inst"]))+str("\n")\
         +str("EventPage: ")+str(str(GW_dic["EventPage"]))+str("\n")+str("Search: ")+str(str(GW_dic["Group"]))+str("\n")+str("HasRemnant: ")+str(HasRemnant)+str("\n")\
-        +str("Delay since alert: ")+str(delay)+("\n")+str("\n")+str("---Follow-up Advocate--\n")+str("Follow-up advocate on duty: ")+str(fa.FA_shift())+"\n"
+        +str("Delay since alert: ")+str(delay)+("\n")+str("\n")+str("---Follow-up Advocate--\n")+str("Follow-up advocate on duty: ")+str(fa.FA_shift())+"\n"+message_obs+"\n"
     return text
 
 
@@ -662,7 +734,7 @@ def fermi_trigger_found(v, collab,role,file_log_s):
     Fermi_dic["ratesnr"]=rate__signif
     Fermi_dic["ratets"]=rate__dur
 
-    print("rate__signif",rate__signif)
+    #print("rate__signif",rate__signif)
     if float(rate__signif) < 4.0:
      Fermi_vo["voimportance"]=3
     if ((float(rate__signif)>=6.0) &  (float(rate__signif)<7.0)):
@@ -1028,6 +1100,11 @@ def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic,Tel_dic):
 
     role=vp.definitions.roles.test
 
+    lalid_bis=lalid.split("_")
+    VO_dic["streamid"]=""
+    for h in np.arange(len(lalid_bis)):
+     VO_dic["streamid"]=VO_dic["streamid"]+lalid_bis[h]
+
  
     v = vp.Voevent(stream=VO_dic["stream"],stream_id=VO_dic["streamid"], role=vp.definitions.roles.test)
 
@@ -1114,29 +1191,35 @@ def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic,Tel_dic):
       v.What.append(config_obs)
 
       #OS_plan=vp.Param(name="Observation strategy",type="Table",value=Tel_dic["OS"])
-      OS_plan=vp.Param(name="Observation strategy")
-      OS_plan.Description="The list of tiles for "+str(Tel_dic["Name"])
+      #OS_plan=vp.Param(name="Observation strategy")
+      #OS_plan.Description="The list of tiles for "+str(Tel_dic["Name"])
       #OS_plan.Table=vp.Param(name="Table")
-      Fields = objectify.Element("Table")
-      grid_id = objectify.SubElement(Fields, "Field", name="Grid_id",ucd="", unit="", dataType="int")
-      grid_id.Description="ID of the grid of FOV"
-      ra = objectify.SubElement(Fields, "Field", name="Ra", ucd="pos.eq.ra ", unit="deg", dataType="float") 
-      ra.Description="The right ascension at center of fov in equatorial coordinates"
-      dec = objectify.SubElement(Fields, "Field", name="Dec", ucd="pos.eq.ra ", unit="deg", dataType="float")      
-      dec.Description="The declination at center of fov in equatorial coordinates"
-      Os_grade = objectify.SubElement(Fields, "Field", name="Os_grade", ucd="meta.number", unit="None", dataType="float")      
-      Os_grade.Description="Gives the importance of the tile/galaxy to observe"
-      Data = objectify.SubElement(Fields, "Data") 
-      for i in np.arange(len(Tel_dic["OS"])):
-         TR = objectify.SubElement(Data, "TR")
-         for j in np.arange(len(Tel_dic["OS"][i])):
-           #objectify.SubElement(TR, "TD",value=str(Tel_dic["OS"][i][j]))
-            objectify.SubElement(TR, 'TD')
-            TR.TD[-1]=str(Tel_dic["OS"][i][j])
-          
-
-      OS_plan.Table=Fields
-      v.What.append(OS_plan)
+      if Tel_dic["OS"]!="":
+       obs_req=vp.Param(name="Obs_req", value="1",ucd="meta.number",dataType="int")
+       obs_req.Description="Set to 1 if observation are required, 0 to stop the observations"
+       v.What.append(obs_req)
+       Fields = objectify.Element("Table",name="Obs_plan")
+       Fields.Description="Tiles for the observation plan"
+       grid_id = objectify.SubElement(Fields, "Field", name="Grid_id",ucd="", unit="", dataType="int")
+       grid_id.Description="ID of the grid of FOV"
+       ra = objectify.SubElement(Fields, "Field", name="Ra", ucd="pos.eq.ra ", unit="deg", dataType="float") 
+       ra.Description="The right ascension at center of fov in equatorial coordinates"
+       dec = objectify.SubElement(Fields, "Field", name="Dec", ucd="pos.eq.ra ", unit="deg", dataType="float")      
+       dec.Description="The declination at center of fov in equatorial coordinates"
+       Os_grade = objectify.SubElement(Fields, "Field", name="Os_grade", ucd="meta.number", unit="None", dataType="float")      
+       Os_grade.Description="Gives the importance of the tile/galaxy to observe"
+       Data = objectify.SubElement(Fields, "Data") 
+       for i in np.arange(len(Tel_dic["OS"])):
+          TR = objectify.SubElement(Data, "TR")
+          for j in np.arange(len(Tel_dic["OS"][i])):
+            #objectify.SubElement(TR, "TD",value=str(Tel_dic["OS"][i][j]))
+             objectify.SubElement(TR, 'TD')
+             TR.TD[-1]=str(Tel_dic["OS"][i][j])
+       v.What.append(Fields)
+      else:
+        obs_req=vp.Param(name="Obs_req", value="0",ucd="meta.number",dataType="int")
+        obs_req.Description="Set to 1 if observation are required, 0 to stop the observations"
+        v.What.append(obs_req)
 
     
     vp.add_where_when(v,coords=vp.Position2D(ra=VO_dic["ra"], dec=VO_dic["dec"], err=VO_dic["error"], units='deg',system=vp.definitions.sky_coord_system.utc_fk5_geo),obs_time=VO_dic["trigtime"],observatory_location=VO_dic["location"])
@@ -1148,7 +1231,11 @@ def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic,Tel_dic):
     # Check everything is schema compliant:
     #vp.assert_valid_as_v2_0(v) 
     file_voevent="./VOEVENTS/"+vo_name
-    vp.valid_as_v2_0(v)
+    try:
+       vp.assert_valid_as_v2_0(v)
+    except Exception as e:
+       print(e)
+
 
 
     with open(file_voevent, 'wb') as f:
@@ -1177,20 +1264,21 @@ def GW_trigger(v, collab, text_mes,file_log_s,role):
    # READ MESSAGE
    trigger_id = toplevel_params['GraceID']['value']
    AlertType=toplevel_params['AlertType']['value']
-   Retractation=toplevel_params['Retraction']['value']
+   Retractation=int(toplevel_params['Retraction']['value'])
    text_mes=""
 
- 
-   if AlertType=="Preliminary":
-       text_mes= GW_trigger_found(v, collab,role,file_log_s)
+   if (AlertType=="Preliminary") and (Retractation==0):
+       text_mes= GW_treatment_alert(v, collab,role,file_log_s)
            
-   if (AlertType=="Initial" or AlertType=="Update") and (Retractation==0):
-       message_type = "GW UPDATE POSITION MESSAGE"
-       text_mes= GW_trigger_follow(v, collab, message_type,file_log_s,role)
+   if (AlertType=="Initial" or AlertType=="Update"):
+       if (Retractation==0):
+          message_type = "GW UPDATE POSITION MESSAGE"
+          text_mes= GW_treatment_alert(v, collab,role,file_log_s)
  
    if (Retractation==1):
        message_type = "GW RETRACTION POSITION MESSAGE"
-       text_mes= GW_trigger_retracted(v, collab, message_type,file_log_s,role)
+       text_mes= GW_trigger_retracted(v, collab,role,file_log_s)
+       print(text_mes)
 
    return text_mes
  
@@ -1285,8 +1373,16 @@ def treatment_alert(filename):
         #else we will treat the alert
         file_log_r.write(rnew_alertid +""+str(filename)+ "\n")
         role = v.attrib['role']
-        collab = str(v.How['Description'])
+        collab=""
+        try:
+         collab = str(v.How['Description'])
+        except AttributeError:
+         contact=str(v.Who.Author.contactName)
+         if "LIGO" in contact.split():
+           collab="gravitational"
 
+          
+           
 
         #which instrument comes from the alert Swift or Fermi ?
 
