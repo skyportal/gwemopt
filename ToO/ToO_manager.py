@@ -42,6 +42,7 @@ import gwemopt.efficiency
 import gwemopt.plotting
 import gwemopt.tiles
 import gwemopt.segments
+import gwemopt.catalog
 
 sys.path.append("./VOEventLib/")
 from VOEventLib.VOEvent import * 
@@ -279,13 +280,21 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
 
     params["skymap"] = skymappath
     params["gpstime"] = event_time.gps
-    params["outputDir"] = "output/%s" % event_time
+    params["outputDir"] = "output/%.5f" % event_time.mjd
     params["tilingDir"] = tiling_directory
     params["event"] = ""
     params["telescopes"] = [teles_target]
-    params["tilesType"] = "moc"
-    params["scheduleType"] = "greedy"
-    params["timeallocationType"] = "powerlaw"
+
+    if teles_target in ["GWAC"]:
+        params["tilesType"] = "moc"
+        params["scheduleType"] = "greedy"
+        params["timeallocationType"] = "powerlaw"
+    else:
+        params["tilesType"] = "hierarchical"
+        params["scheduleType"] = "greedy"
+        params["timeallocationType"] = "powerlaw"
+        params["Ntiles"] = 50
+
     params["nside"] = 256
     params["powerlaw_cl"] = 0.9
     params["powerlaw_n"] = 1.0
@@ -313,6 +322,12 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
     params["doReferences"] = False
     params["doChipGaps"] = False
     params["doSplit"] = False
+
+    params["doCatalog"] = True
+    params["catalog_n"] = 1.0
+    params["doUseCatalog"] = True
+    params["catalogDir"] = "../catalogs"
+    params["galaxy_catalog"] = "GLADE"
 
     if params["doEvent"]:
         params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)
@@ -351,13 +366,17 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
 
     params = gwemopt.segments.get_telescope_segments(params)
 
-    if params["doPlots"]:
+    if params["doPlots"] or params["doCatalog"]:
         if not os.path.isdir(params["outputDir"]):
             os.makedirs(params["outputDir"])
 
     print("Loading skymap...")
     # Function to read maps
     map_struct = gwemopt.utils.read_skymap(params, is3D=params["do3D"])
+
+    if params["doCatalog"]:
+        print("Generating catalog...")
+        map_struct = gwemopt.catalog.get_catalog(params, map_struct)
 
     if params["tilesType"] == "moc":
         print("Generating MOC struct...")
@@ -1295,8 +1314,9 @@ letters=np.array(["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p
 LOGFILE_receivedalerts="LOG_ALERTS_RECEIVED.txt"
 LOGFILE_sendingalerts="LOG_ALERTS_SENT.txt"
 file_LOG = open(LOGFILE_receivedalerts, "a+") 
-#LISTE_TELESCOPE=["Zadko","TAROT-Calern","TAROT-Chili","TAROT-Reunion","2.16m","GWACs","F60","TNT","F30","2.4m GMG","CGFT","CFHT","KAIT"]
-LISTE_TELESCOPE=["GWAC"]
+LISTE_TELESCOPE=["Zadko","TAROT-Calern","TAROT-Chili","TAROT-Reunion","2.16m","GWACs","F60","TNT","F30","2.4m GMG","CGFT","CFHT","KAIT"]
+#LISTE_TELESCOPE=["GWAC"]
+LISTE_TELESCOPE=["Zadko","TCA","TCH","TRE","GWAC","F60"]
 dic_grb={}
 dic_vo={}
 

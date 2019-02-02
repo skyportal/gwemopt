@@ -57,18 +57,18 @@ def parse_commandline():
     """
     parser = optparse.OptionParser(usage=__doc__,version=__version__)
 
-    parser.add_option("-s", "--skymap", help="GW skymap.", default='../output/skymaps/GRB181126_annulus.fit')
-    parser.add_option("-p", "--skymapplot", help="GW skymap plot.", default='../output/skymaps/GRB181126_annulus.pdf')
+    parser.add_option("-s", "--skymap", help="GW skymap.", default='../output/skymaps/GRB181222_annulus.fit')
+    parser.add_option("-p", "--skymapplot", help="GW skymap plot.", default='../output/skymaps/GRB181222_annulus.pdf')
 
     parser.add_option("--nside",default=256,type=int)
 
     parser.add_option("--doCircle",  action="store_true", default=False)
     parser.add_option("--doAnnulus",  action="store_true", default=False)
 
-    parser.add_option("--ra",default=120.935)
-    parser.add_option("--dec",default=-35.457)
-    parser.add_option("--radius",default=63.494,type=float)
-    parser.add_option("--radius_sigma",default=6.6260,type=float)
+    parser.add_option("--ra",default=294.324)
+    parser.add_option("--dec",default=-23.694)
+    parser.add_option("--radius",default=51.089,type=float)
+    parser.add_option("--radius_sigma",default=0.097,type=float)
 
     parser.add_option("--doSquare",  action="store_true", default=False)
     #parser.add_option("--ras",default="290.010,290.186,265.423,264.736")
@@ -81,7 +81,7 @@ def parse_commandline():
     parser.add_option("--lat",default="-18.0,-42.0,-66.0,-89.0")
 
     parser.add_option("--doIntersect",  action="store_true", default=False)
-    parser.add_option("-o", "--original_skymap", help="GW skymap.", default='../data/GRB181126/glg_healpix_all_bn181126162.fit')
+    parser.add_option("-o", "--original_skymap", help="GW skymap.", default='../data/GRB181222/glg_healpix_all_bn181222841.fit')
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
