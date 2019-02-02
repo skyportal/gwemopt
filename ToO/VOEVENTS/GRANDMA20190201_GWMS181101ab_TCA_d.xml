@@ -1,0 +1,146 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<voe:VOEvent xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:voe="http://www.ivoa.net/xml/VOEvent/v2.0" xsi:schemaLocation="http://www.ivoa.net/xml/VOEvent/v2.0 http://www.ivoa.net/xml/VOEvent/VOEvent-v2.0.xsd" version="2.0" role="test" ivorn="ivo://grandma.lal.in2p3.fr/GRANDMA_Alert#GRANDMA20190201GWMS181101abTCAd">
+  <Who>
+    <Description>VOEvent created with voevent-parse, version 1.0.3. See https://github.com/timstaley/voevent-parse for details.</Description>
+    <AuthorIVORN>ivo://GRANDMA_Alert</AuthorIVORN>
+    <Date>2019-02-01T22:05:32</Date>
+    <Author>
+      <contactName>Nicolas  Leroy</contactName>
+      <shortName>GRANDMA</shortName>
+      <contactPhone>+33-1-64-46-83-73</contactPhone>
+      <contactEmail>leroy@lal.in2p3.fr</contactEmail>
+    </Author>
+  </Who>
+  <What>
+    <Param dataType="string" name="Event_ID" ucd="meta.id" value="MS181101ab">
+      <Description>Trigger ID</Description>
+    </Param>
+    <Param dataType="string" name="Event_type" ucd="meta.id" value="GW">
+      <Description>Type of the alert</Description>
+    </Param>
+    <Group name="Status">
+      <Param dataType="string" name="Event_status" ucd="meta.version" value="Preliminary">
+        <Description>Event status (preliminary, initial, update, retractation)</Description>
+      </Param>
+      <Param dataType="int" name="Iteration" ucd="meta.number" value="3">
+        <Description>Iteration Number</Description>
+      </Param>
+      <Description>Preliminary is set when there is not healpix skymap, then initial and then updates</Description>
+    </Group>
+    <Param dataType="string" name="Event_inst" ucd="meta.code" value="">
+      <Description>Instrument which originated the alert</Description>
+    </Param>
+    <Param dataType="string" name="Loc_url" ucd="meta.ref.url" value="">
+      <Description>The url location of healpix skymap</Description>
+    </Param>
+    <Param dataType="string" name="FA" ucd="meta.code" value="Nicolas Leroy">
+      <Description>GRANDMA follow-up advocate on duty at the time of the VO alert</Description>
+    </Param>
+    <Param dataType="int" name="Retraction" ucd="meta.number" value="1">
+      <Description>Set to 1 if the event is retracted.</Description>
+    </Param>
+    <Param dataType="int" name="HardwareInj" ucd="meta.number" value="">
+      <Description>Indicates that this event is a hardware injection if 1, no if 0</Description>
+    </Param>
+    <Param dataType="string" name="Event_page" ucd="meta.ref.url" value="">
+      <Description>Web page for evolving status of this GW candidate</Description>
+    </Param>
+    <Param dataType="float" name="FAR" ucd="arith.rate;stat.falsealarm" unit="Hz" value="0.0">
+      <Description>Web page for evolving status of this GW candidate</Description>
+    </Param>
+    <Param dataType="string" name="Group" ucd="meta.code" value="">
+      <Description>Low-latency data analysis pipeline</Description>
+    </Param>
+    <Param dataType="string" name="Pipeline" ucd="meta.code" value=""/>
+    <Group name="Classification">
+      <Param dataType="float" name="BNS" ucd="stat.probability" value="">
+        <Description>Probability that the source is a binary neutron star merger</Description>
+      </Param>
+      <Param dataType="float" name="NSBH" ucd="stat.probability" value="">
+        <Description>Probability that the source is a neutron star - black hole merger</Description>
+      </Param>
+      <Param dataType="float" name="BBH" ucd="stat.probability" value="">
+        <Description>Probability that the source is a binary black hole merger</Description>
+      </Param>
+      <Param dataType="float" name="Terrestrial" ucd="stat.probability" value="">
+        <Description>Probability that the source is terrestrial (i.e., a background noise fluctuation or a glitch)</Description>
+      </Param>
+      <Description>Source classification: binary neutron star (BNS), neutron star-black hole (NSBH), binary black hole (BBH), or terrestrial (noise)</Description>
+    </Group>
+    <Group name="Properties">
+      <Param dataType="float" name="HasNS" ucd="stat.probability" value="">
+        <Description>Probability that at least one object in the binary has a mass that is less than 3 solar masses</Description>
+      </Param>
+      <Param dataType="float" name="HasRemnant" ucd="stat.probability" value="">
+        <Description>Probability that a nonzero mass was ejected outside the central remnant object</Description>
+      </Param>
+      <Description>Qualitative properties of the source, conditioned on the assumption that the signal is an astrophysical compact binary merger</Description>
+    </Group>
+    <Group name="Set_up_OS">
+      <Param dataType="string" name="Name_tel" ucd="meta.id" value="TCA">
+        <Description>Name of the telescope used for the observation strategy</Description>
+      </Param>
+      <Param dataType="float" name="FOV" ucd="meta.number" unit="deg" value="">
+        <Description>FOV of the telescope used for the observation strategy</Description>
+      </Param>
+      <Param dataType="string" name="FOV_coverage" ucd="meta.number" value="">
+        <Description>Shape of the FOV for the telescope used for the observation strategy</Description>
+      </Param>
+      <Param dataType="float" name="Magnitude" ucd="meta.number" unit="mag" value="">
+        <Description>Magnitude limit of the telescope used for the observation strategy</Description>
+      </Param>
+      <Param dataType="float" name="exposuretime" ucd="time.interval" unit="s" value="">
+        <Description>Exposure time of the telescope used for the observation strategy</Description>
+      </Param>
+      <Param dataType="float" name="Slew_rate" ucd="time.interval" unit="s" value="0.0">
+        <Description>Slew rate of the telescope for the observation strategy</Description>
+      </Param>
+      <Param dataType="float" name="Readout" ucd="time.interval" unit="s" value="">
+        <Description>Read out of the telescope used for the observation strategy</Description>
+      </Param>
+      <Param dataType="string" name="Filters" ucd="meta.ref" value="">
+        <Description>Filters of the telescope used for the observation strategy</Description>
+      </Param>
+      <Param dataType="float" name="Latitude" ucd="meta.number" unit="deg" value="">
+        <Description>Latitude of the observatory</Description>
+      </Param>
+      <Param dataType="float" name="Latitude" ucd="meta.number" unit="deg" value="">
+        <Description>Longitude of the observatory</Description>
+      </Param>
+      <Param dataType="float" name="Elevation" ucd="meta.number" unit="m" value="">
+        <Description>Elevation of the observatory</Description>
+      </Param>
+      <Description>Set-up parameters for producing the observation strategy</Description>
+    </Group>
+    <Param dataType="int" name="Obs_req" ucd="meta.number" value="0">
+      <Description>Set to 1 if observation are required, 0 to stop the observations</Description>
+    </Param>
+  </What>
+  <WhereWhen>
+    <ObsDataLocation>
+      <ObservatoryLocation id="LIGO Virgo"/>
+      <ObservationLocation>
+        <AstroCoordSystem id="UTC-FK5-GEO"/>
+        <AstroCoords coord_system_id="UTC-FK5-GEO">
+          <Time unit="s">
+            <TimeInstant>
+              <ISOTime>2018-11-01T22:22:46</ISOTime>
+            </TimeInstant>
+          </Time>
+          <Position2D unit="deg">
+            <Name1>RA</Name1>
+            <Name2>Dec</Name2>
+            <Value2>
+              <C1>0.0</C1>
+              <C2>0.0</C2>
+            </Value2>
+            <Error2Radius>0.0</Error2Radius>
+          </Position2D>
+        </AstroCoords>
+      </ObservationLocation>
+    </ObsDataLocation>
+  </WhereWhen>
+  <Why importance="1">
+    <Description>Internal Ranking for the event (from 1 : most interesting to 3 for least interesting)</Description>
+  </Why>
+</voe:VOEvent>
