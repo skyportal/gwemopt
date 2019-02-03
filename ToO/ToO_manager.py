@@ -27,7 +27,6 @@ from astropy import time
 
 import lxml.objectify as objectify
 from lxml import etree
-import pandas as pd
 
 
 
@@ -289,11 +288,13 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
         params["tilesType"] = "moc"
         params["scheduleType"] = "greedy"
         params["timeallocationType"] = "powerlaw"
+        #params["doCatalog"] = False
     else:
         params["tilesType"] = "hierarchical"
         params["scheduleType"] = "greedy"
         params["timeallocationType"] = "powerlaw"
         params["Ntiles"] = 50
+        #params["doCatalog"] = True
 
     params["nside"] = 256
     params["powerlaw_cl"] = 0.9
@@ -323,11 +324,12 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
     params["doChipGaps"] = False
     params["doSplit"] = False
 
-    params["doCatalog"] = True
+    
     params["catalog_n"] = 1.0
     params["doUseCatalog"] = True
     params["catalogDir"] = "../catalogs"
     params["galaxy_catalog"] = "GLADE"
+    params["doCatalog"] = True
 
     if params["doEvent"]:
         params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)
@@ -375,7 +377,6 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
     map_struct = gwemopt.utils.read_skymap(params, is3D=params["do3D"])
 
     if params["doCatalog"]:
-        print("Generating catalog...")
         map_struct = gwemopt.catalog.get_catalog(params, map_struct)
 
     if params["tilesType"] == "moc":
@@ -418,6 +419,7 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
     dec_vec=[]
     grade_vec=[]
 
+
     for ii in range(len(coverage_struct["ipix"])):
         data = coverage_struct["data"][ii,:]
         filt = coverage_struct["filters"][ii]
@@ -431,10 +433,11 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
         ra, dec = data[0], data[1]
         exposure_time, field_id, prob = data[4], data[5], data[6]
  
-        field_id_vec.append(field_id)
+        field_id_vec.append(int(field_id))
         ra_vec.append(ra)
         dec_vec.append(dec)
-        grade_vec.append(prob)
+        grade_vec.append(np.round(prob,4))
+        
 
 
 
@@ -528,7 +531,6 @@ def swift_trigger(v, collab, text_mes,file_log_s,role):
                      if ((role!="test")):
                          name_dic="Swift"+trigger_id
                          lalid=name_lalid(v,file_log_s,name_dic,Swift_vo["letup"],"_"+Tel_dic["Name"])
-                         print("lalid, ............")
                          create_GRANDMAvoevent(lalid,Swift_dic,Swift_vo,Tel_dic) 
                          file_log_s.write(lalid +" "+str(trigger_id)+"\n")   
 
@@ -1212,25 +1214,25 @@ def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic,Tel_dic):
       add_GWvoeventcontent(Trigger_dic,v)
 
     if Tel_dic!="":
-      Name_tel = vp.Param(name="Name_tel", value=str(Tel_dic["Name"]),ucd="meta.id",dataType="string")
+      Name_tel = vp.Param(name="Name_tel", value=str(Tel_dic["Name"]),ucd="instr",dataType="string")
       Name_tel.Description="Name of the telescope used for the observation strategy"
-      FOV_tel = vp.Param(name="FOV", value=str(Tel_dic["FOV"]),ucd="meta.number",dataType="float",unit="deg")
+      FOV_tel = vp.Param(name="FOV", value=str(Tel_dic["FOV"]),ucd="instr.fov",dataType="float",unit="deg")
       FOV_tel.Description = "FOV of the telescope used for the observation strategy"
-      FOV_coverage = vp.Param(name="FOV_coverage", value=str(Tel_dic["FOV_coverage"]),ucd="meta.number",dataType="string")
+      FOV_coverage = vp.Param(name="FOV_coverage", value=str(Tel_dic["FOV_coverage"]),ucd="instr.fov",dataType="string")
       FOV_coverage.Description = "Shape of the FOV for the telescope used for the observation strategy"   
-      magnitude = vp.Param(name="Magnitude", value=str(Tel_dic["magnitude"]),ucd="meta.number",dataType="float",unit="mag")
+      magnitude = vp.Param(name="Mag_limit", value=str(Tel_dic["magnitude"]),ucd="phot.magr",dataType="float",unit="mag")
       magnitude.Description = "Magnitude limit of the telescope used for the observation strategy"
-      exposuretime = vp.Param(name="exposuretime", value=str(Tel_dic["exposuretime"]),ucd="time.interval",dataType="float",unit="s")
+      exposuretime = vp.Param(name="exposure", value=str(Tel_dic["exposuretime"]),ucd="obs.exposure",dataType="float",unit="s")
       exposuretime.Description = "Exposure time of the telescope used for the observation strategy"
       slewrate = vp.Param(name="Slew_rate", value=str(Tel_dic["slew_rate"]),ucd="time.interval",dataType="float",unit="s")
       slewrate.Description = "Slew rate of the telescope for the observation strategy"
       readout = vp.Param(name="Readout", value=str(Tel_dic["readout"]),ucd="time.interval",dataType="float",unit="s")
       readout.Description = "Read out of the telescope used for the observation strategy"
-      filt = vp.Param(name="Filters", value=str(Tel_dic["filt"]),ucd="meta.ref",dataType="string")
+      filt = vp.Param(name="Filters_tel", value=str(Tel_dic["filt"]),ucd="instr.filter",dataType="string")
       filt.Description = "Filters of the telescope used for the observation strategy"
       latitude = vp.Param(name="Latitude", value=str(Tel_dic["latitude"]),ucd="meta.number",dataType="float",unit="deg")
       latitude.Description = "Latitude of the observatory"      
-      longitude = vp.Param(name="Latitude", value=str(Tel_dic["longitude"]),ucd="meta.number",dataType="float",unit="deg")
+      longitude = vp.Param(name="Longitude", value=str(Tel_dic["longitude"]),ucd="meta.number",dataType="float",unit="deg")
       longitude.Description = "Longitude of the observatory"  
       elevation = vp.Param(name="Elevation", value=str(Tel_dic["elevation"]),ucd="meta.number",dataType="float",unit="m")
       elevation.Description = "Elevation of the observatory"  
@@ -1460,7 +1462,7 @@ LOGFILE_sendingalerts="LOG_ALERTS_SENT.txt"
 file_LOG = open(LOGFILE_receivedalerts, "a+") 
 #LISTE_TELESCOPE=["Zadko","TAROT-Calern","TAROT-Chili","TAROT-Reunion","2.16m","GWACs","F60","TNT","F30","2.4m GMG","CGFT","CFHT","KAIT"]
 LISTE_TELESCOPE=["GWAC"]
-#LISTE_TELESCOPE=["Zadko","TCA","TCH","TRE","GWAC","F60"]
+#LISTE_TELESCOPE=["GWAC"]
 dic_grb={}
 dic_vo={}
 
