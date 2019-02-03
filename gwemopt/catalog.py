@@ -95,7 +95,7 @@ def get_catalog(params, map_struct):
     idx = np.argsort(S)[::-1]
     top50 = cat[idx][:50]
     catalogfile = os.path.join(params["outputDir"],'catalog.csv')
-    top50['RAJ2000', 'DEJ2000'].write(catalogfile, format='csv')
+    top50['RAJ2000', 'DEJ2000'].write(catalogfile, format='csv', overwrite=True)
 
     return map_struct
 
