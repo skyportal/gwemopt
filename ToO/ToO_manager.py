@@ -42,6 +42,7 @@ import gwemopt.plotting
 import gwemopt.tiles
 import gwemopt.segments
 import gwemopt.catalog
+import ObsStrat.Metric_tools as mt
 
 sys.path.append("./VOEventLib/")
 from VOEventLib.VOEvent import * 
@@ -209,23 +210,22 @@ def search_ba():
     return fa_duty
 
 
-def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
+def Observation_plan(teles_target,obsinstru,trigtime,urlhealpix,VO_dic, GRANDMA=True, doplot=True):
 
     tobs = None
     filt = ["r"]
     exposuretimes = [30]
     mindiff = 30.0*60.0
-
-    skymap=urlhelpix.split("/")[-1]
-    skymappath = "./HELPIX/%s"%skymap
+    
+    skymap=urlhealpix.split("/")[-1]
+    skymappath = "./HEALPIX/%s"%skymap
  
     if not os.path.isfile(skymappath):
-        command="wget "+urlhelpix+" -P ./HELPIX/"
+        command="wget "+urlhealpix+" -P ./HEALPIX/"
         os.system(command)
 
     event_time = time.Time(trigtime,scale='utc')
 
-    gwemoptpath = os.path.dirname(gwemopt.__file__)
     config_directory = "../config"
     tiling_directory = "../tiling"
 
@@ -234,6 +234,7 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
     config_files = glob.glob("%s/*.config" % config_directory)
     for config_file in config_files:
         telescope = config_file.split("/")[-1].replace(".config", "")
+        
         params["config"][telescope] =\
             gwemopt.utils.readParamsFromFile(config_file)
         if "tesselationFile" in params["config"][telescope]:
@@ -284,24 +285,25 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
     params["event"] = ""
     params["telescopes"] = [teles_target]
 
-    if teles_target in ["GWAC"]:
+    if GRANDMA:
+        params["tilesType"] = "GRANDMA"
+        params["timeallocationType"] = "powerlaw"        
+    elif teles_target in ["GWAC"]:
         params["tilesType"] = "moc"
         params["scheduleType"] = "greedy"
         params["timeallocationType"] = "powerlaw"
-        #params["doCatalog"] = False
     else:
         params["tilesType"] = "hierarchical"
         params["scheduleType"] = "greedy"
         params["timeallocationType"] = "powerlaw"
         params["Ntiles"] = 50
-        #params["doCatalog"] = True
 
     params["nside"] = 256
     params["powerlaw_cl"] = 0.9
     params["powerlaw_n"] = 1.0
     params["powerlaw_dist_exp"] = 0.0
 
-    params["doPlots"] = False
+    params["doPlots"] = True
     params["doMovie"] = False
     params["doObservability"] = True
     params["do3D"] = False
@@ -324,12 +326,11 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
     params["doChipGaps"] = False
     params["doSplit"] = False
 
-    
+    params["doCatalog"] = False
     params["catalog_n"] = 1.0
     params["doUseCatalog"] = True
     params["catalogDir"] = "../catalogs"
     params["galaxy_catalog"] = "GLADE"
-    params["doCatalog"] = True
 
     if params["doEvent"]:
         params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)
@@ -377,12 +378,14 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
     map_struct = gwemopt.utils.read_skymap(params, is3D=params["do3D"])
 
     if params["doCatalog"]:
+        print("Generating catalog...")
         map_struct = gwemopt.catalog.get_catalog(params, map_struct)
 
     if params["tilesType"] == "moc":
         print("Generating MOC struct...")
         moc_structs = gwemopt.moc.create_moc(params)
         tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
+
     elif params["tilesType"] == "ranked":
         print("Generating ranked struct...")
         moc_structs = gwemopt.rankedTilesGenerator.create_ranked(params,
@@ -394,53 +397,113 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
     elif params["tilesType"] == "greedy":
         print("Generating greedy struct...")
         tile_structs = gwemopt.tiles.greedy(params, map_struct)
+        
+    elif params["tilesType"] == "GRANDMA":
+        print("GRANDMA Grade calculation running")
+        
+        if params["do3D"]:
+            file_skymap = skymappath
+            path_tess = params["config"][teles_target]["tesselationFile"]
+            path_catalog = "./catalog/GLADE_2.3.txt"
+            path_sub_catalog = "./sub_catalog/sub_catalog.txt"
+            path_output = "./output"
+            tileSide = params["config"][teles_target]["FOV"]
+            
+            tile_structs = {}
+            tile_struct = mt.metric_with_gal(file_skymap, path_tess, path_catalog, path_sub_catalog, path_output, tileSide, plot_ranked_gal=doplot, plot_all_tess=doplot)
+            tile_structs[teles_target] = tile_struct
+            Grade_index = 2
+            
+        else:
+            file_skymap = skymappath
+            path_tess = params["config"][teles_target]["tesselationFile"]
+            path_output = "./output"
+            tileSide = params["config"][teles_target]["FOV"]
+            
+            tile_structs = {}
+            tile_struct = mt.metric_without_gal(file_skymap=file_skymap, path_tess=path_tess, path_output=path_output, tileSide=tileSide, plot_ranked_tile=doplot)
+            tile_structs[teles_target] = tile_struct
+            Grade_index = 1
+            
     else:
-        print("Need tilesType to be moc, greedy, hierarchical, or ranked")
+        print("Need tilesType to be moc, greedy, hierarchical, ranked or GRANDMA")
         exit(0)
 
-    coverage_struct = gwemopt.coverage.timeallocation(params,
-                                                      map_struct,
-                                                      tile_structs)
+    if GRANDMA:
 
-    if params["doPlots"]:
-        gwemopt.plotting.skymap(params, map_struct)
-        gwemopt.plotting.tiles(params, map_struct, tile_structs)
-        gwemopt.plotting.coverage(params, map_struct, coverage_struct)
-
-    config_struct = params["config"][teles_target]
-
-
-
-    #table_field = utilityTable(thistable)
-    #table_field.blankTable(len(coverage_struct))
-
-    field_id_vec=[]
-    ra_vec=[]
-    dec_vec=[]
-    grade_vec=[]
-
-
-    for ii in range(len(coverage_struct["ipix"])):
-        data = coverage_struct["data"][ii,:]
-        filt = coverage_struct["filters"][ii]
-        ipix = coverage_struct["ipix"][ii]
-        patch = coverage_struct["patch"][ii]
-        FOV = coverage_struct["FOV"][ii]
-        area = coverage_struct["area"][ii]
-
-        prob = np.sum(map_struct["prob"][ipix])
-
-        ra, dec = data[0], data[1]
-        exposure_time, field_id, prob = data[4], data[5], data[6]
+        field_id_vec=[]
+        ra_vec=[]
+        dec_vec=[]
+        grade_vec=[]
  
-        field_id_vec.append(int(field_id))
-        ra_vec.append(ra)
-        dec_vec.append(dec)
-        grade_vec.append(np.round(prob,4))
-        
+        for field_index in tile_structs[teles_target]:
 
+            ra_vec += [tile_structs[teles_target][field_index]['ra']]
+            dec_vec += [tile_structs[teles_target][field_index]['dec']]
+            field_id_vec += [float(field_index)]
+    #        filt = coverage_struct["filters"][ii]
+    #        ipix = coverage_struct["ipix"]
+    #        patch = coverage_struct["patch"][ii]
+    #        FOV = coverage_struct["FOV"][ii]
+    #        area = coverage_struct["area"][ii]
+    
+            grade_vec += tile_structs[teles_target][field_index]['prob']
 
+             
+#            field_id_vec.append(list_field_id)
+#            ra_vec.append(list_ra)
+#            dec_vec.append(list_dec)
+#            grade_vec.append(list_prob)
+            
+    else:
+        coverage_struct = gwemopt.coverage.timeallocation(params,
+                                                          map_struct,
+                                                          tile_structs)
 
+        if params["doPlots"]:
+            gwemopt.plotting.skymap(params, map_struct)
+            gwemopt.plotting.tiles(params, map_struct, tile_structs)
+            gwemopt.plotting.coverage(params, map_struct, coverage_struct)
+    
+        #table_field = utilityTable(thistable)
+        #table_field.blankTable(len(coverage_struct))
+    
+        field_id_vec=[]
+        ra_vec=[]
+        dec_vec=[]
+        grade_vec=[]
+    
+        for ii in range(len(coverage_struct["ipix"])):
+
+            data = coverage_struct["data"][ii,:]
+            filt = coverage_struct["filters"][ii]
+            ipix = coverage_struct["ipix"][ii]
+    #        patch = coverage_struct["patch"][ii]
+    #        FOV = coverage_struct["FOV"][ii]
+    #        area = coverage_struct["area"][ii]
+    
+            prob = np.sum(map_struct["prob"][ipix])
+    
+            ra, dec = data[0], data[1]
+            field_id = data[5]
+     
+            field_id_vec.append(field_id)
+            ra_vec.append(ra)
+            dec_vec.append(dec)
+            grade_vec.append(prob)
+
+#    print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n")
+#    print("field_id_vec =", field_id_vec)
+#    print("shape_field = ", np.shape(field_id_vec))
+#    print("ra_vec =", ra_vec)
+#    print("shape(ra_vec) = ", np.shape(ra_vec))
+#    print("dec_vec =", dec_vec)
+#    print("shape(dec_vec) =", np.shape(dec_vec))
+#    print("grade_vec =", grade_vec)
+#    print("shape(grade_vec) =", np.shape(grade_vec))    
+#    print("transpose =", np.transpose(np.array([np.array(field_id_vec),np.array(ra_vec),np.array(dec_vec),np.array(grade_vec)])))
+#    print("shape transpose =", np.shape(np.transpose(np.array([np.array(field_id_vec),np.array(ra_vec),np.array(dec_vec),np.array(grade_vec)]))))
+#    print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n")
     return np.transpose(np.array([np.array(field_id_vec),np.array(ra_vec),np.array(dec_vec),np.array(grade_vec)]))
 
 def swift_trigger(v, collab, text_mes,file_log_s,role):
