@@ -121,7 +121,7 @@ def GRB_dicf():
 
 def VO_dicf():
   Contentvo_dic = {
-		  "name" : "",
+    "name" : "",
     "role" : "",
 		  "stream" : "grandma.lal.in2p3.fr/GRANDMA_Alert",
 		  "streamid" : "",
@@ -132,7 +132,7 @@ def VO_dicf():
     "contactPhone": "+33-1-64-46-83-73",
     "contactEmail": "leroy@lal.in2p3.fr",
     "description": "Selected by ",
-    "vodescription": "VOEvent between CSC and FSC",
+    "vodescription": "VOEvent created in GRANDMA",
     "locationserver": "",
     "voschemaurl":"http://www.cacr.caltech.edu/~roy/VOEvent/VOEvent2-110220.xsd",
     "ba":"",
@@ -434,8 +434,8 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
         exposure_time, field_id, prob = data[4], data[5], data[6]
  
         field_id_vec.append(int(field_id))
-        ra_vec.append(ra)
-        dec_vec.append(dec)
+        ra_vec.append((np.round(ra,4))
+        dec_vec.append((np.round(dec,4))
         grade_vec.append(np.round(prob,4))
         
 
@@ -992,15 +992,15 @@ def name_lalid(v,file_log_s,name_dic,letter,tel):
 def add_GWvoeventcontent(GW_dic,v):
 
 
-    retractation = vp.Param(name="Retraction",value=GW_dic["Retraction"],dataType="int",ucd="meta.number")
-    retractation.Description="Set to 1 if the event is retracted."
-    v.What.append(retractation)
+    #retractation = vp.Param(name="Retraction",value=GW_dic["Retraction"],dataType="int",ucd="meta.number")
+    #retractation.Description="Set to 1 if the event is retracted."
+    #v.What.append(retractation)
 
-    hwinj = vp.Param(name="HardwareInj",value=GW_dic["HardwareInj"], ucd="meta.number",dataType="int")
-    hwinj.Description="Indicates that this event is a hardware injection if 1, no if 0"
-    v.What.append(hwinj)
+    #hwinj = vp.Param(name="HardwareInj",value=GW_dic["HardwareInj"], ucd="meta.number",dataType="int")
+    #hwinj.Description="Indicates that this event is a hardware injection if 1, no if 0"
+    #v.What.append(hwinj)
 
-    eventpage=vp.Param(name="Event_page",value=GW_dic["EventPage"], ucd="meta.ref.url",dataType="string")
+    eventpage=vp.Param(name="Url_quicklook",value=GW_dic["EventPage"], ucd="meta.ref.url",dataType="string")
     eventpage.Description="Web page for evolving status of this GW candidate"
     v.What.append(eventpage)
 
@@ -1049,6 +1049,8 @@ def add_GRBvoeventcontent(GRB_dic,v):
     #trigonlinerate_snr = Param(name="Rate_snr",value=GRB_dic["ratesnr"], unit="sigma", ucd="stat.snr")
     #trigonlinerate_snr.set_Description(['Significance from the GRB rate onboard trigger algorithm of '+GRB_dic["inst"]])
     #what.add_Param(trigonlinerate_snr)
+
+    IF 
 
     trigonlinerate_snr = vp.Param(name="Rate_snr",value=str(GRB_dic["ratesnr"]), unit="sigma", ucd="stat.snr",dataType="float")
     trigonlinerate_snr.Description="Significance from the GRB rate onboard trigger algorithm of "+GRB_dic["inst"]
@@ -1186,8 +1188,8 @@ def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic,Tel_dic):
 
     alerstatus = vp.Param(name="Event_status", value=VO_dic["evenstatus"],ucd="meta.version",dataType="string")
     alerstatus.Description="Event status (preliminary, initial, update, retractation)"
-    alerstatus_iter = vp.Param(name="Iteration", value=str(VO_dic["iter_statut"]),ucd="meta.number",dataType="int")
-    alerstatus_iter.Description = "Iteration Number"
+    alerstatus_iter = vp.Param(name="Revision", value=str(VO_dic["iter_statut"]),ucd="meta.number",dataType="int")
+    alerstatus_iter.Description = "Revision Number"
     status_alerts=vp.Group(params=[alerstatus, alerstatus_iter], name="Status")
     status_alerts.Description="Preliminary is set when there is not healpix skymap, then initial and then updates"
     v.What.append(status_alerts)
@@ -1460,8 +1462,8 @@ letters=np.array(["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p
 LOGFILE_receivedalerts="LOG_ALERTS_RECEIVED.txt"
 LOGFILE_sendingalerts="LOG_ALERTS_SENT.txt"
 file_LOG = open(LOGFILE_receivedalerts, "a+") 
-#LISTE_TELESCOPE=["Zadko","TAROT-Calern","TAROT-Chili","TAROT-Reunion","2.16m","GWACs","F60","TNT","F30","2.4m GMG","CGFT","CFHT","KAIT"]
-LISTE_TELESCOPE=["GWAC"]
+#LISTE_TELESCOPE=["Zadko","TAROT-Calern","TAROT-Chili","TAROT-Reunion","2.16m","GWACs","F60","TNT","F30","2.4m GMG","CGFT","NOWT","KAIT","ANT","PAIX","IRIS","T120"]
+LISTE_TELESCOPE=["TCA","TCH","TRE","NOWT","Zadko","IRIS"]
 #LISTE_TELESCOPE=["GWAC"]
 dic_grb={}
 dic_vo={}
