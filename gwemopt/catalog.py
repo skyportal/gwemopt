@@ -52,7 +52,7 @@ def get_catalog(params, map_struct):
  
     elif params["galaxy_catalog"] == "GLADE":
         if not os.path.isfile(catalogFile):
-            cat, = Vizier.get_catalogs('VII/275/glade1')
+            cat, = Vizier.get_catalogs('VII/281/glade2')
             ascii.write(cat,catalogFile,format='ecsv')
         else:
             cat = ascii.read(catalogFile,format='ecsv')
