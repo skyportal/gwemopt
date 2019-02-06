@@ -14,6 +14,7 @@ import voeventparse as vp
 # CHANGE IMPORT GWAC ORDER TO WAIT PATH
 #import GWAC_ToO_observable_calculator as GTOC
 import GRANDMA_FAshifts as fa
+from astropy.io import fits
 
 import numpy as np
 import pytz
@@ -90,6 +91,10 @@ def GW_dicf():
     "Terrestrial":"",
     "location":"",
 #    "Skymaplink" : :"",
+    "lum":"",
+    "errlum":"",
+    "90cr":"",
+    "50cr":"",
 	 }
   return GW_dic
 
@@ -116,6 +121,10 @@ def GRB_dicf():
     "locdur" : 0.,
     "locref" : "",
     "obs" : "",
+    "snr":"",
+    "descriptsnr":"",
+    "dur":"",
+    "descriptdur":"",
 	 }
   return GRB_dic
 
@@ -217,13 +226,12 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
     mindiff = 30.0*60.0
 
     skymap=urlhelpix.split("/")[-1]
-    skymappath = "./HELPIX/%s"%skymap
+    skymappath = "./HEALPIX/%s"%skymap
  
-    if not os.path.isfile(skymappath):
-        command="wget "+urlhelpix+" -P ./HELPIX/"
-        os.system(command)
 
+    
     event_time = time.Time(trigtime,scale='utc')
+    
 
     gwemoptpath = os.path.dirname(gwemopt.__file__)
     config_directory = "../config"
@@ -434,8 +442,8 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
         exposure_time, field_id, prob = data[4], data[5], data[6]
  
         field_id_vec.append(int(field_id))
-        ra_vec.append((np.round(ra,4))
-        dec_vec.append((np.round(dec,4))
+        ra_vec.append(np.round(ra,4))
+        dec_vec.append(np.round(dec,4))
         grade_vec.append(np.round(prob,4))
         
 
@@ -472,6 +480,8 @@ def swift_trigger(v, collab, text_mes,file_log_s,role):
 
         image_signif = top_level_params['Image_Signif']['value']
         Swift_dic["imagesnr"]=float(image_signif)
+        Swift_dic["snr"]=float(image_signif)
+        Swift_dic["descriptsnr"]="SNR calculated from the image"
 
         if float(image_signif) < 4.0:
            Swift_vo["voimportance"]=3
@@ -685,17 +695,33 @@ def GW_treatment_alert(v, collab,role,file_log_s):
      message_obs="Observation plan sent to "   
      if ((role=="test")):
          name_dic="GW"+trigger_id
+         skypath="./HEALPIX/"+str(GW_vo["locpix"].split("/")[-1])
+         if not os.path.isfile(skypath):
+            command="wget "+GW_vo["locpix"]+" -P ./HEALPIX/"
+            os.system(command)  
+         hdul = fits.open("./HEALPIX/"+str(GW_vo["locpix"].split("/")[-1]))
+         lumin=np.round(hdul[1].header['DISTMEAN'],3)
+         errorlumin=np.round(hdul[1].header['DISTSTD'],3)
+         s50cr=0.0
+         s90cr=0.0
+         GW_dic["lum"]=str(lumin)
+         GW_dic["errlum"]=str(errorlumin)
+         GW_dic["50cr"]=str(s50cr)
+         GW_dic["90cr"]=str(s90cr)
          lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_DB")
          create_GRANDMAvoevent(lalid,GW_dic, GW_vo,"")   
-         file_log_s.write(lalid +" "+str(trigger_id)+"\n")   
+         file_log_s.write(lalid +" "+str(trigger_id)+"\n") 
   
      for telescope in LISTE_TELESCOPE:
          Tel_dic=Tel_dicf()
          Tel_dic["Name"]=telescope 
          message_obs=message_obs+" "+telescope
          #print(telescope)
-         
+         print("./HEALPIX/"+str(GW_vo["locpix"].split("/")[-1]))
          Tel_dic["OS"]=Observation_plan(telescope,GW_vo["inst"],GW_vo["trigtime"],GW_vo["locpix"],Tel_dic)
+
+        
+        
          if ((role=="test")):
              name_dic="GW"+trigger_id
              lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_"+Tel_dic["Name"])
@@ -754,6 +780,10 @@ def fermi_trigger_found(v, collab,role,file_log_s):
     rate__dur = toplevel_params['Trig_Dur']['value']
     Fermi_dic["ratesnr"]=rate__signif
     Fermi_dic["ratets"]=rate__dur
+    Fermi_dic["snr"]=Fermi_dic["ratesnr"]
+    Fermi_dic["descriptsnr"]="SNR calculated from the onboard trigger"
+    Fermi_dic["dur"]=Fermi_dic["ratets"]
+    Fermi_dic["descriptdur"]="Time scale employed by the onboard algorithm"
 
     #print("rate__signif",rate__signif)
     if float(rate__signif) < 4.0:
@@ -900,6 +930,10 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
         if ((role!="test")):
             name_dic="GBM"+trigger_id
             lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"_DB")
+            skypath="./HEALPIX/"+str(Fermi_vo["locpix"].split("/")[-1])
+            if not os.path.isfile(skypath):
+                command="wget "+Fermi_vo["locpix"]+" -P ./HEALPIX/"
+                os.system(command)  
             create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo,"") 
             file_log_s.write(lalid +" "+str(trigger_id)+"\n")     
      
@@ -908,7 +942,7 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
                 Tel_dic["Name"]=telescope 
                 message_obs=message_obs+" "+telescope
                 Tel_dic["OS"]=Observation_plan(telescope,Fermi_vo["inst"],Fermi_vo["trigtime"],Fermi_vo["locpix"],Tel_dic)
-                if ((role=="test")):
+                if ((role!="test")):
                     name_dic="GBM"+trigger_id
                     lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"_"+Tel_dic["Name"])
                     create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo,Tel_dic) 
@@ -923,6 +957,10 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
         rate__dur = toplevel_params['Data_Timescale']['value']
         Fermi_dic["locdur"]=rate__dur
         prob_GRB= toplevel_params['Most_Likely_Prob']['value']
+        Fermi_dic["snr"]=Fermi_dic["locsnr"]
+        Fermi_dic["descriptsnr"]="SNR calculated from the localization flight pipeline"
+        Fermi_dic["dur"]=Fermi_dic["locdur"]
+        Fermi_dic["descriptdur"]="Time scale employed by the final localization flight algorithm"
         Fermi_dic["probGRB"]=prob_GRB
         hard_ratio=toplevel_params['Hardness_Ratio']['value']
         Fermi_dic["hratio"]=hard_ratio
@@ -941,6 +979,10 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
         Fermi_dic["locsnr"]=rate__signif
         rate__dur = toplevel_params['Data_Integ']['value']
         Fermi_dic["locdur"]=rate__dur
+        Fermi_dic["snr"]=Fermi_dic["locsnr"]
+        Fermi_dic["descriptsnr"]="SNR calculated from the localization ground pipeline"
+        Fermi_dic["dur"]=Fermi_dic["locdur"]
+        Fermi_dic["descriptdur"]="Time scale employed by the localization ground algorithm"
         not_grb = def_not_grb =  v.find(".//Param[@name='Def_NOT_a_GRB']").attrib['value']
         Fermi_dic["defGRB"]=not_grb
         loc_fit=toplevel_params['LocationMap_URL']['value']
@@ -992,17 +1034,38 @@ def name_lalid(v,file_log_s,name_dic,letter,tel):
 def add_GWvoeventcontent(GW_dic,v):
 
 
-    #retractation = vp.Param(name="Retraction",value=GW_dic["Retraction"],dataType="int",ucd="meta.number")
-    #retractation.Description="Set to 1 if the event is retracted."
-    #v.What.append(retractation)
+    if (GW_dic["Retraction"]=="O"):
+        GW_dic["Retraction"]="1"
+    if (GW_dic["Retraction"]=="1"):
+        GW_dic["Retraction"]="0"
+    retractation = vp.Param(name="Prob",value=GW_dic["Retraction"],dataType="int",ucd="meta.number")
+    retractation.Description="Probability that the event is real"
+    v.What.append(retractation)
 
     #hwinj = vp.Param(name="HardwareInj",value=GW_dic["HardwareInj"], ucd="meta.number",dataType="int")
     #hwinj.Description="Indicates that this event is a hardware injection if 1, no if 0"
     #v.What.append(hwinj)
 
-    eventpage=vp.Param(name="Url_quicklook",value=GW_dic["EventPage"], ucd="meta.ref.url",dataType="string")
+    eventpage=vp.Param(name="Quicklook_url",value=GW_dic["EventPage"], ucd="meta.ref.url",dataType="string")
     eventpage.Description="Web page for evolving status of this GW candidate"
     v.What.append(eventpage)
+
+    
+    lum=vp.Param(name="Distance",value=GW_dic["lum"], ucd="meta.number",dataType="float")
+    lum.Description="Luminosity distance (Mpc)"
+    v.What.append(lum)
+
+    errlum=vp.Param(name="Err_distance",value=GW_dic["errlum"], ucd="meta.number",dataType="float")
+    errlum.Description="Std for the luminosity distance (Mpc)"
+    v.What.append(errlum)
+
+    s50cr=vp.Param(name="50cr_skymap",value=GW_dic["50cr"], ucd="meta.number",dataType="float")
+    s50cr.Description="Sky localization area (50 pourcent confident region)"
+    v.What.append(s50cr)
+    
+    s90cr=vp.Param(name="90cr_skymap",value=GW_dic["90cr"], ucd="meta.number",dataType="float")
+    s90cr.Description="Sky localization area (90 pourcent confident region)"
+    v.What.append(s90cr)
 
     FAR=vp.Param(name="FAR",value=GW_dic["FAR"], ucd="arith.rate;stat.falsealarm",unit="Hz")
     FAR.Description="Web page for evolving status of this GW candidate"
@@ -1050,35 +1113,43 @@ def add_GRBvoeventcontent(GRB_dic,v):
     #trigonlinerate_snr.set_Description(['Significance from the GRB rate onboard trigger algorithm of '+GRB_dic["inst"]])
     #what.add_Param(trigonlinerate_snr)
 
-    IF 
+    snr_grb = vp.Param(name="Snr",value=str(GRB_dic["snr"]), unit="sigma", ucd="stat.snr",dataType="float")
+    snr_grb.Description = GRB_dic["descriptsnr"]
+    v.What.append(snr_grb)
+    
+    dur_grb =vp.Param(name="Dur",value=str(GRB_dic["dur"]), unit="s", ucd="time.interval",dataType="float")
+    dur_grb.Description = GRB_dic["descriptdur"]
+    print(str(GRB_dic["dur"]))
+    v.What.append(dur_grb)
+    
 
-    trigonlinerate_snr = vp.Param(name="Rate_snr",value=str(GRB_dic["ratesnr"]), unit="sigma", ucd="stat.snr",dataType="float")
-    trigonlinerate_snr.Description="Significance from the GRB rate onboard trigger algorithm of "+GRB_dic["inst"]
-    v.What.append(trigonlinerate_snr)
+    #trigonlinerate_snr = vp.Param(name="Rate_snr",value=str(GRB_dic["ratesnr"]), unit="sigma", ucd="stat.snr",dataType="float")
+    #trigonlinerate_snr.Description="Significance from the GRB rate onboard trigger algorithm of "+GRB_dic["inst"]
+    #v.What.append(trigonlinerate_snr)
 
    
     #trigonlinerate_ts = Param(name="Rate_ts",value=GRB_dic["ratets"], unit="s", ucd="time.interval")
     #trigonlinerate_ts.set_Description = 'Timescale used in the GRB onboard pipeline of '+GRB_dic["inst"]
     #what.add_Param(trigonlinerate_ts)
 
-    trigonlinerate_ts = vp.Param(name="Rate_ts",value=str(GRB_dic["ratets"]), unit="s", ucd="time.interval",dataType="float")
-    trigonlinerate_ts.Description = "Timescale used in the GRB onboard pipeline of "+GRB_dic["inst"]
-    v.What.append(trigonlinerate_ts)
+    #trigonlinerate_ts = vp.Param(name="Rate_ts",value=str(GRB_dic["ratets"]), unit="s", ucd="time.interval",dataType="float")
+    #trigonlinerate_ts.Description = "Timescale used in the GRB onboard pipeline of "+GRB_dic["inst"]
+    #v.What.append(trigonlinerate_ts)
     
     
     #trigonlinerate_snr = Param(name="Img_snr",value=GRB_dic["imagesnr"], unit="sigma", ucd="stat.snr")
     #trigonlinerate_snr.set_Description(['Significance from the GRB image onboard pipeline of '+GRB_dic["inst"]])
     #what.add_Param(trigonlinerate_snr)
 
-    trigonlinerate_snr = vp.Param(name="Img_snr",value=str(GRB_dic["imagesnr"]), unit="sigma", ucd="stat.snr",dataType="float")
-    trigonlinerate_snr.Description="Significance from the GRB image onboard pipeline of "+GRB_dic["inst"]
-    v.What.append(trigonlinerate_snr)
+    #trigonlinerate_snr = vp.Param(name="Img_snr",value=str(GRB_dic["imagesnr"]), unit="sigma", ucd="stat.snr",dataType="float")
+    #trigonlinerate_snr.Description="Significance from the GRB image onboard pipeline of "+GRB_dic["inst"]
+    #v.What.append(trigonlinerate_snr)
 
     #lc = Param(name="LightCurve_URL",value=GRB_dic["lc"],ucd="meta.ref.url")
     #lc.Description(['The GRB LC_URL file will not be created/available until ~15 min after the trigger. Instrument:'+GRB_dic["inst"]])
     #what.add_Param(lc)
   
-    lc = vp.Param(name="LightCurve_rRL",value=GRB_dic["lc"],ucd="meta.ref.url",dataType="string")
+    lc = vp.Param(name="Quicklook_url",value=GRB_dic["lc"],ucd="meta.ref.url",dataType="string")
     lc.Description="The GRB LC_URL file will not be created/available until ~15 min after the trigger. Instrument:"+GRB_dic["inst"]
     v.What.append(lc)
 
@@ -1100,7 +1171,7 @@ def add_GRBvoeventcontent(GRB_dic,v):
     #probGRB.set_Description(['Probability to be a GRB defined by '+GRB_dic["locref"]])
     #what.add_Param(probGRB)
 
-    probGRB=vp.Param(name="Prob_GRB",value=str(GRB_dic["probGRB"]),dataType="float",ucd="meta.number")
+    probGRB=vp.Param(name="Prob",value=str(GRB_dic["probGRB"]),dataType="float",ucd="meta.number")
     probGRB.Description="Probability to be a GRB defined by "+GRB_dic["locref"]
     v.What.append(probGRB)
 
@@ -1109,9 +1180,9 @@ def add_GRBvoeventcontent(GRB_dic,v):
     #defGRB.set_Description(['Not a GRB '+GRB_dic["locref"]])
     #what.add_Param(defGRB)
  
-    defGRB=vp.Param(name="Def_not_a_GRB",value=str(GRB_dic["defGRB"]),dataType="string")
-    defGRB.Description="Not a GRB "+GRB_dic["locref"]
-    v.What.append(defGRB)
+    #defGRB=vp.Param(name="Def_not_a_GRB",value=str(GRB_dic["defGRB"]),dataType="string")
+    #defGRB.Description="Not a GRB "+GRB_dic["locref"]
+    #v.What.append(defGRB)
 
 
     #orpos = Param(name="Loc_ref",value=GRB_dic["locref"])
@@ -1127,17 +1198,17 @@ def add_GRBvoeventcontent(GRB_dic,v):
     #what.add_Param(snrloc)   
 
 
-    snrloc = vp.Param(name="Loc_snr",value=str(GRB_dic["locsnr"]),unit="sigma", ucd="stat.snr",dataType="float")
-    snrloc.Description ="Fight/Ground position snr to calculate the position of "+GRB_dic["locref"]
-    v.What.append(snrloc) 
+    #snrloc = vp.Param(name="Loc_snr",value=str(GRB_dic["locsnr"]),unit="sigma", ucd="stat.snr",dataType="float")
+    #snrloc.Description ="Fight/Ground position snr to calculate the position of "+GRB_dic["locref"]
+    #v.What.append(snrloc) 
 
     #durloc = Param(name="Loc_dur",value=GRB_dic["locdur"])
     #durloc.set_Description(['Fight/Ground timescale to calculate the position of '+GRB_dic["locref"]])
     #what.add_Param(durloc)
 
-    durloc = vp.Param(name="Loc_dur",value=str(GRB_dic["locdur"]), unit="s", ucd="time.interval",dataType="float")
-    durloc.Description="Fight/Ground timescale to calculate the position of "+GRB_dic["locref"]
-    v.What.append(durloc)
+    #durloc = vp.Param(name="Loc_dur",value=str(GRB_dic["locdur"]), unit="s", ucd="time.interval",dataType="float")
+    #durloc.Description="Fight/Ground timescale to calculate the position of "+GRB_dic["locref"]
+    #v.What.append(durloc)
 
 
 
@@ -1462,9 +1533,8 @@ letters=np.array(["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p
 LOGFILE_receivedalerts="LOG_ALERTS_RECEIVED.txt"
 LOGFILE_sendingalerts="LOG_ALERTS_SENT.txt"
 file_LOG = open(LOGFILE_receivedalerts, "a+") 
-#LISTE_TELESCOPE=["Zadko","TAROT-Calern","TAROT-Chili","TAROT-Reunion","2.16m","GWACs","F60","TNT","F30","2.4m GMG","CGFT","NOWT","KAIT","ANT","PAIX","IRIS","T120"]
-LISTE_TELESCOPE=["TCA","TCH","TRE","NOWT","Zadko","IRIS"]
-#LISTE_TELESCOPE=["GWAC"]
+#LISTE_TELESCOPE=["TCA","TCH","TRE","NOWT","Zadko","IRIS"]
+LISTE_TELESCOPE=["GWAC"]
 dic_grb={}
 dic_vo={}
 
