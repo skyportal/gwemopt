@@ -218,7 +218,7 @@ def search_ba():
     return fa_duty
 
 
-def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
+def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic, name_dic):
 
     tobs = None
     filt = ["r"]
@@ -226,7 +226,7 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
     mindiff = 30.0*60.0
 
     skymap=urlhelpix.split("/")[-1]
-    skymappath = "./HEALPIX/%s"%skymap
+    skymappath = "./HEALPIX/"+ name_dic + "/"+skymap
  
 
     
@@ -581,7 +581,7 @@ def GW_trigger_retracted(v, collab,role,file_log_s):
     GW_vo["letup"]=letters[int(Pktser)-1]
     
 
-    GW_dic["Retraction"]=toplevel_params['Retraction']['value']
+    GW_dic["Retraction"]='1'#toplevel_params['Retraction']['value']
 
     isotime = v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.Time.TimeInstant.ISOTime.text
     isotime_format=trigtime(isotime)
@@ -642,7 +642,7 @@ def GW_treatment_alert(v, collab,role,file_log_s):
     GW_vo["letup"]=letters[int(Pktser)-1]
     
 
-    GW_dic["Retraction"]=toplevel_params['Retraction']['value']
+    GW_dic["Retraction"]='0'
     GW_dic["HardwareInj"]=toplevel_params['HardwareInj']['value']
     GW_dic["EventPage"]=toplevel_params['EventPage']['value']
     GW_dic["FAR"]=toplevel_params['FAR']['value']
@@ -686,6 +686,7 @@ def GW_treatment_alert(v, collab,role,file_log_s):
     
     GW_vo["locpix"]=str(v.find(".//Param[@name='skymap_fits']").attrib['value'])
     GW_vo["location"]="LIGO Virgo"
+    name_dic = "GW" + trigger_id
 
     message_obs="NO SKYMAP AVAILABLE"
     if (GW_vo["locpix"]!="") and (GW_vo["evenstatus"]=="Preliminary"):
@@ -694,12 +695,14 @@ def GW_treatment_alert(v, collab,role,file_log_s):
      Observation_plan_tel=[] 
      message_obs="Observation plan sent to "   
      if ((role=="test")):
-         name_dic="GW"+trigger_id
-         skypath="./HEALPIX/"+str(GW_vo["locpix"].split("/")[-1])
+#         name_dic="GW"+trigger_id
+         skypath="./HEALPIX/"+name_dic+"/"+str(GW_vo["locpix"].split("/")[-1])
          if not os.path.isfile(skypath):
-            command="wget "+GW_vo["locpix"]+" -P ./HEALPIX/"
+            command="mkdir ./HEALPIX/"+name_dic
+            os.system(command)
+            command="curl "+" -o ./HEALPIX/"+name_dic+"/"+str(GW_vo["locpix"].split("/")[-1])+ " -O "+GW_vo["locpix"]
             os.system(command)  
-         hdul = fits.open("./HEALPIX/"+str(GW_vo["locpix"].split("/")[-1]))
+         hdul = fits.open("./HEALPIX/"+name_dic+"/"+str(GW_vo["locpix"].split("/")[-1]))
          lumin=np.round(hdul[1].header['DISTMEAN'],3)
          errorlumin=np.round(hdul[1].header['DISTSTD'],3)
          s50cr=0.0
@@ -717,13 +720,13 @@ def GW_treatment_alert(v, collab,role,file_log_s):
          Tel_dic["Name"]=telescope 
          message_obs=message_obs+" "+telescope
          #print(telescope)
-         print("./HEALPIX/"+str(GW_vo["locpix"].split("/")[-1]))
-         Tel_dic["OS"]=Observation_plan(telescope,GW_vo["inst"],GW_vo["trigtime"],GW_vo["locpix"],Tel_dic)
+         print("./HEALPIX/"+name_dic+"/"+str(GW_vo["locpix"].split("/")[-1]))
+         Tel_dic["OS"]=Observation_plan(telescope,GW_vo["inst"],GW_vo["trigtime"],GW_vo["locpix"],Tel_dic,name_dic)
 
         
         
          if ((role=="test")):
-             name_dic="GW"+trigger_id
+#             name_dic="GW"+trigger_id
              lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_"+Tel_dic["Name"])
              create_GRANDMAvoevent(lalid,GW_dic, GW_vo,Tel_dic)  
              file_log_s.write(lalid +" "+str(trigger_id)+"\n")    
@@ -731,7 +734,7 @@ def GW_treatment_alert(v, collab,role,file_log_s):
     else:
 
      if ((role=="test")):
-         name_dic="GW"+trigger_id
+#         name_dic="GW"+trigger_id
          lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_DB")
          create_GRANDMAvoevent(lalid,GW_dic, GW_vo,"")
          file_log_s.write(lalid +" "+str(trigger_id)+"\n")
@@ -941,7 +944,7 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
                 Tel_dic=Tel_dicf()
                 Tel_dic["Name"]=telescope 
                 message_obs=message_obs+" "+telescope
-                Tel_dic["OS"]=Observation_plan(telescope,Fermi_vo["inst"],Fermi_vo["trigtime"],Fermi_vo["locpix"],Tel_dic)
+                Tel_dic["OS"]=Observation_plan(telescope,Fermi_vo["inst"],Fermi_vo["trigtime"],Fermi_vo["locpix"],Tel_dic,name_dic)
                 if ((role!="test")):
                     name_dic="GBM"+trigger_id
                     lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"_"+Tel_dic["Name"])
@@ -1387,8 +1390,19 @@ def GW_trigger(v, collab, text_mes,file_log_s,role):
    # READ MESSAGE
    trigger_id = toplevel_params['GraceID']['value']
    AlertType=toplevel_params['AlertType']['value']
-   Retractation=int(toplevel_params['Retraction']['value'])
+   testRetract = int(toplevel_params['Packet_Type']['value'])
+   if (testRetract == 164):
+        Retractation = 1
+   else:
+        Retractation = 0
+
    text_mes=""
+
+   if (Retractation==1):
+       message_type = "GW RETRACTION POSITION MESSAGE"
+       text_mes= GW_trigger_retracted(v, collab,role,file_log_s)
+       print(text_mes)
+       return text_mes
 
    if (AlertType=="Preliminary") and (Retractation==0):
        text_mes= GW_treatment_alert(v, collab,role,file_log_s)
@@ -1398,10 +1412,6 @@ def GW_trigger(v, collab, text_mes,file_log_s,role):
           message_type = "GW UPDATE POSITION MESSAGE"
           text_mes= GW_treatment_alert(v, collab,role,file_log_s)
  
-   if (Retractation==1):
-       message_type = "GW RETRACTION POSITION MESSAGE"
-       text_mes= GW_trigger_retracted(v, collab,role,file_log_s)
-       print(text_mes)
 
    return text_mes
  
@@ -1477,10 +1487,10 @@ def treatment_alert(filename):
     file_log_r = open(LOGFILE_receivedalerts, "a+")
 
     file_log_s=open(LOGFILE_sendingalerts, "a+")
-    
+
     #extract last alert received and sent
     rlast_alertid=""
-    logfile_lines = file_log_r.readlines() 
+    logfile_lines = file_log_r.readlines()
     if len(logfile_lines)>0:
       rlast_alertid = logfile_lines [len(logfile_lines) -1]
 
@@ -1504,8 +1514,8 @@ def treatment_alert(filename):
          if "LIGO" in contact.split():
            collab="gravitational"
 
-          
-           
+
+
 
         #which instrument comes from the alert Swift or Fermi ?
 
@@ -1529,18 +1539,58 @@ def treatment_alert(filename):
         #slack_message(slack_channel_alert, text_mes)
 
 
+def readexamples():
+    file_LOG = open(LOGFILE_receivedalerts, "a+")
+    path="./EXAMPLE/"
+    fo = open(path+"READ_xml.txt","r")
+    lines = fo.readlines()
+    for line in lines[0:100]:
+        filename=path+line.split("\n")[0]
+        treatment_alert(filename)
+
+
+def online_processing(v):
+#    v = vp.loads(playload)
+    collab = ""
+    text_mes = ""
+
+    role = v.attrib['role']
+
+    file_log_r = open(LOGFILE_receivedalerts, "a+")
+
+    file_log_s = open(LOGFILE_sendingalerts, "a+")
+
+    try:
+        collab = str(v.How['Description'])
+    except AttributeError:
+        contact = str(v.Who.Author.contactName)
+        if "LIGO" in contact.split():
+            collab = "gravitational"
+
+    # which instrument comes from the alert Swift or Fermi ?
+
+    if "Swift" in collab.split():
+        text_mes = swift_trigger(v, collab.split(), text_mes, file_log_s, role)
+    if "Fermi" in collab.split():
+        text_mes = fermi_trigger(v, collab.split(), text_mes, file_log_s, role)
+    if "gravitational" in collab.split():
+        text_mes = GW_trigger(v, collab.split(), text_mes, file_log_s, role)
+
+    # is it a test alert or a real trigger and send via slack
+    if role == "test":
+        slack_channel_alert = "#testalerts"
+    if role == "observation":
+        if ("Swift" in collab.split()) or ("Fermi" in collab.split()):
+            slack_channel_alert = "#grbalerts"
+        if "gravitational" in collab.split():
+            slack_channel_alert = "#gwalerts"
+    print(text_mes)
+
+
 letters=np.array(["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"])
 LOGFILE_receivedalerts="LOG_ALERTS_RECEIVED.txt"
 LOGFILE_sendingalerts="LOG_ALERTS_SENT.txt"
-file_LOG = open(LOGFILE_receivedalerts, "a+") 
-#LISTE_TELESCOPE=["TCA","TCH","TRE","NOWT","Zadko","IRIS"]
-LISTE_TELESCOPE=["GWAC"]
-dic_grb={}
-dic_vo={}
-
-path="./EXAMPLE/"
-fo = open(path+"READ_xml.txt","r")
-lines = fo.readlines()
-for line in lines[0:100]:
- filename=path+line.split("\n")[0]
- treatment_alert(filename)
+# LISTE_TELESCOPE=["TCA","TCH","TRE","NOWT","Zadko","IRIS"]
+LISTE_TELESCOPE = ["GWAC"]
+dic_grb = {}
+dic_vo = {}
