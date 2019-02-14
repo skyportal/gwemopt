@@ -5,32 +5,17 @@ import os
 import sys
 import io
 import datetime
-#import config_lowlatency as cf
-#from slackclient import SlackClient
-#import mma_schedule as mma
 import voeventparse as vp
-#SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/ToO_field_match_v1.1/"
-#sys.path.append(os.path.abspath(SCRIPT_PATH))
-# CHANGE IMPORT GWAC ORDER TO WAIT PATH
-#import GWAC_ToO_observable_calculator as GTOC
 import GRANDMA_FAshifts as fa
 from astropy.io import fits
-
 import numpy as np
 import pytz
-import copy
-
 import glob
 import ephem
-
 from astropy import table
 from astropy import time
-
 import lxml.objectify as objectify
 from lxml import etree
-
-
-
 import gwemopt.utils
 import gwemopt.moc
 import gwemopt.gracedb
@@ -48,58 +33,55 @@ sys.path.append("./VOEventLib/")
 from VOEventLib.VOEvent import * 
 from VOEventLib.Vutil  import *
 
-def Tel_dicf():
-  Tel_dic = {
+#Fields for the telescopes
+def create_teldic():
+	Tel_dic = {
 
-    "Name":"",
-    "FOV":"",
-    "magnitude":"",
-    "exposuretime":"",
-    "latitude":"",
-    "longitude":"",
-    "elevation":"",
-    "FOV_coverage":"",
-    "FOV_coverage_type":"",
-    "FOV_type":"",
-    "slew_rate":0.0,
-    "readout":"",
-    "filt":"",
-    "OS":"",
-	 }
-  return Tel_dic
+		"name":"",
+		"FOV":"",
+		"magnitude":"",
+		"exposuretime":"",
+		"latitude":"",
+		"longitude":"",
+		"elevation":"",
+		"FOV_coverage":"",
+		"FOV_coverage_type":"",
+		"FOV_type":"",
+		"slew_rate":0.0,
+		"readout":"",
+		"filt":"",
+		"OS":"",
+		}
+	return Tel_dic
 
+#Fields for the gw alert properties
+def create_gwdic():
+	GW_dic = {
 
-def GW_dicf():
-  GW_dic = {
+		"packet_Type":"",
+		"pkt_Ser_Num":"",
+		"retraction":"",
+		"hardwareInj" : "",
+		"eventPage":"",
+		"FAR":0.,
+		"group" : "",
+		"pipeline":"",
+		"hasNS":"",
+		"hasRemnant":"",
+		"BNS":"",
+		"NSBH":"",
+		"BBH":"",
+		"terrestrial":"",
+		"location":"",
+		"lum":"",
+		"errlum":"",
+		"90cr":"",
+		"50cr":"",
+		 }
+	return GW_dic
 
-    "Packet_Type":"",
-    "Pkt_Ser_Num":"",
-    "AlertType":"",
-    "Retraction":"",
-#    "Instruments" : "",
-    "HardwareInj" : "",
-    "EventPage":"",
-#		  "GraceID" : 0.,
-    "FAR":0.,
-    "Group" : "",
-    "Pipeline":"",
-    "HasNS":"",
-    "HasRemnant":"",
-    "BNS":"",
-    "NSBH":"",
-    "BBH":"",
-    "Terrestrial":"",
-    "location":"",
-#    "Skymaplink" : :"",
-    "lum":"",
-    "errlum":"",
-    "90cr":"",
-    "50cr":"",
-	 }
-  return GW_dic
-
-
-def GRB_dicf():
+#Fields for the grb alert properties
+def create_grbdic():
   GRB_dic = {
 
     "Packet_Type":"",
@@ -128,508 +110,491 @@ def GRB_dicf():
 	 }
   return GRB_dic
 
-def VO_dicf():
-  Contentvo_dic = {
-    "name" : "",
-    "role" : "",
-		  "stream" : "grandma.lal.in2p3.fr/GRANDMA_Alert",
-		  "streamid" : "",
-    "voivorn" : "ivo://svom.bao.ac.cn/LV#SFC_GW_",
-		  "authorivorn" : "GRANDMA_Alert",
-		  "shortName" : "GRANDMA",
-		  "contactName": "Nicolas  Leroy",
-    "contactPhone": "+33-1-64-46-83-73",
-    "contactEmail": "leroy@lal.in2p3.fr",
-    "description": "Selected by ",
-    "vodescription": "VOEvent created in GRANDMA",
-    "locationserver": "",
-    "voschemaurl":"http://www.cacr.caltech.edu/~roy/VOEvent/VOEvent2-110220.xsd",
-    "ba":"",
-    "ivorn":"",
-    "letup":"a",
-    "trigid":None,
-    "eventype":None,
-    "eventstat":None,
-    "inst" : "",
-    "trigdelay" : 0.,
-    "locpix":"",
-    "trigtime":"",
-    "ra" : 0.,
-    "dec" : 0.,
-    "error" : 0.,
-    "evenstatus" : "",
-    "voimportance":"",
-    "iter_statut":0,
-	 }
+#Fields for the general VO alert properties
+def create_vodic():
+	VO_dic = {
+		"name" : "",
+		"role" : "",
+		"stream" : "grandma.lal.in2p3.fr/GRANDMA_Alert",
+		"streamid" : "",
+		"voivorn" : "ivo://svom.bao.ac.cn/LV#SFC_GW_",
+		"authorivorn" : "GRANDMA_Alert",
+		"shortName" : "GRANDMA",
+		"contactName": "Nicolas  Leroy",
+		"contactPhone": "+33-1-64-46-83-73",
+		"contactEmail": "leroy@lal.in2p3.fr",
+		"description": "Selected by ",
+		"vodescription": "VOEvent created in GRANDMA",
+		"locationserver": "",
+		"voschemaurl":"http://www.cacr.caltech.edu/~roy/VOEvent/VOEvent2-110220.xsd",
+		"ba":"",
+		"ivorn":"",
+		"letup":"a",
+		"trigid":None,
+		"eventype":None,
+		"eventstat":None,
+		"inst" : "",
+		"trigdelay" : 0.,
+		"locpix":"",
+		"trigtime":"",
+		"ra" : 0.,
+		"dec" : 0.,
+		"error" : 0.,
+		"evenstatus" : "",
+		"voimportance":"",
+		"iter_statut":0,
+		}
 
-  return Contentvo_dic
+	return VO_dic
 
 
-
+#Pick the string isoformat and convert it into isoformat to be uploaded into the VO event
 def trigtime(isotime):
-   date_t = isotime.split("-")
-   yr_t = int(date_t[0])
-   mth_t = int(date_t[1])
-   dy_t = int(date_t[2].split("T")[0])
-   hr_t = int(date_t[2].split("T")[1].split(":")[0])
-   mn_t = int(date_t[2].split("T")[1].split(":")[1])
-   sd_t = int(float(date_t[2].split("T")[1].split(":")[2]))
-   trigger_time_format = datetime.datetime(yr_t, mth_t, dy_t, hr_t, mn_t, sd_t,tzinfo=pytz.utc)
-   return trigger_time_format
+	date_t = isotime.split("-")
+	yr_t = int(date_t[0])
+	mth_t = int(date_t[1])
+	dy_t = int(date_t[2].split("T")[0])
+	hr_t = int(date_t[2].split("T")[1].split(":")[0])
+	mn_t = int(date_t[2].split("T")[1].split(":")[1])
+	sd_t = int(float(date_t[2].split("T")[1].split(":")[2]))
+	isoformat = datetime.datetime(yr_t, mth_t, dy_t, hr_t, mn_t, sd_t,tzinfo=pytz.utc)
+	return isoformat
  
-
+#Calculate the delay between the alert received and the trigger time
 def delay_fct(isotime):
-    """
+	"""
 
-    :param isotime:
-    :return:
-    """
-    # Time_now
-    time_now = datetime.datetime.utcnow()
+	:param isotime:
+	:return:
+	"""
+	# Time_now
+	time_now = datetime.datetime.utcnow()
 
-    # Time_alert
-    date_t = isotime.split("-")
-    yr_t = int(date_t[0])
-    mth_t = int(date_t[1])
-    dy_t = int(date_t[2].split("T")[0])
-    hr_t = int(date_t[2].split("T")[1].split(":")[0])
-    mn_t = int(date_t[2].split("T")[1].split(":")[1])
-    sd_t = int(float(date_t[2].split("T")[1].split(":")[2]))
-    trigger_time_format = datetime.datetime(yr_t, mth_t, dy_t, hr_t, mn_t, sd_t)
-    return time_now - trigger_time_format
+	# Time_alert
+	date_t = isotime.split("-")
+	yr_t = int(date_t[0])
+	mth_t = int(date_t[1])
+	dy_t = int(date_t[2].split("T")[0])
+	hr_t = int(date_t[2].split("T")[1].split(":")[0])
+	mn_t = int(date_t[2].split("T")[1].split(":")[1])
+	sd_t = int(float(date_t[2].split("T")[1].split(":")[2]))
+	trigger_time_format = datetime.datetime(yr_t, mth_t, dy_t, hr_t, mn_t, sd_t)
+	return time_now - trigger_time_format
 
+#Pick the gbm name
+def gbm_lc_name(grblcurl):
+	"""
 
-def gbm_lc_name(GRB_LC):
-    """
+	:param GRB_LC:
+	:return:
+	"""
+	grb_name = str(grblcurl).split("/")[9]
+	return grb_name
 
-    :param GRB_LC:
-    :return:
-    """
-    grb_name = str(GRB_LC).split("/")
-    return grb_name[9]
-
-
-def search_ba():
-    """
-
-    :return:
-    """
-    fa_duty=fa.FA_shift()
-    return fa_duty
 
 
 def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic):
 
-    tobs = None
-    filt = ["r"]
-    exposuretimes = [30]
-    mindiff = 30.0*60.0
+	tobs = None
+	filt = ["r"]
+	exposuretimes = [30]
+	mindiff = 30.0*60.0
 
-    skymap=urlhelpix.split("/")[-1]
-    skymappath = "./HEALPIX/%s"%skymap
- 
-
-    
-    event_time = time.Time(trigtime,scale='utc')
-    
-
-    gwemoptpath = os.path.dirname(gwemopt.__file__)
-    config_directory = "../config"
-    tiling_directory = "../tiling"
-
-    params = {}
-    params["config"] = {}
-    config_files = glob.glob("%s/*.config" % config_directory)
-    for config_file in config_files:
-        telescope = config_file.split("/")[-1].replace(".config", "")
-        params["config"][telescope] =\
-            gwemopt.utils.readParamsFromFile(config_file)
-        if "tesselationFile" in params["config"][telescope]:
-            params["config"][telescope]["tesselationFile"] =\
-                os.path.join(config_directory,
-                             params["config"][telescope]["tesselationFile"])
-            tesselation_file = params["config"][telescope]["tesselationFile"]
-            if not os.path.isfile(tesselation_file):
-                if params["config"][telescope]["FOV_type"] == "circle":
-                    gwemopt.tiles.tesselation_spiral(
-                        params["config"][telescope])
-                elif params["config"][telescope]["FOV_type"] == "square":
-                    gwemopt.tiles.tesselation_packing(
-
-                        params["config"][telescope])
-
-            params["config"][telescope]["tesselation"] =\
-                np.loadtxt(params["config"][telescope]["tesselationFile"],
-                           usecols=(0, 1, 2), comments='%')
-
-        if "referenceFile" in params["config"][telescope]:
-            params["config"][telescope]["referenceFile"] =\
-                os.path.join(config_directory,
-                             params["config"][telescope]["referenceFile"])
-            refs = table.unique(table.Table.read(
-                params["config"][telescope]["referenceFile"],
-                format='ascii', data_start=2, data_end=-1)['field', 'fid'])
-            reference_images =\
-                {group[0]['field']: group['fid'].astype(int).tolist()
-                 for group in refs.group_by('field').groups}
-            reference_images_map = {1: 'g', 2: 'r', 3: 'i'}
-            for key in reference_images:
-                reference_images[key] = [reference_images_map.get(n, n)
-                                         for n in reference_images[key]]
-            params["config"][telescope]["reference_images"] = reference_images
-
-        observer = ephem.Observer()
-        observer.lat = str(params["config"][telescope]["latitude"])
-        observer.lon = str(params["config"][telescope]["longitude"])
-        observer.horizon = str(-12.0)
-        observer.elevation = params["config"][telescope]["elevation"]
-        params["config"][telescope]["observer"] = observer
-
-    params["skymap"] = skymappath
-    params["gpstime"] = event_time.gps
-    params["outputDir"] = "output/%.5f" % event_time.mjd
-    params["tilingDir"] = tiling_directory
-    params["event"] = ""
-    params["telescopes"] = [teles_target]
-
-    if teles_target in ["GWAC"]:
-        params["tilesType"] = "moc"
-        params["scheduleType"] = "greedy"
-        params["timeallocationType"] = "powerlaw"
-        #params["doCatalog"] = False
-    else:
-        params["tilesType"] = "hierarchical"
-        params["scheduleType"] = "greedy"
-        params["timeallocationType"] = "powerlaw"
-        params["Ntiles"] = 50
-        #params["doCatalog"] = True
-
-    params["nside"] = 256
-    params["powerlaw_cl"] = 0.9
-    params["powerlaw_n"] = 1.0
-    params["powerlaw_dist_exp"] = 0.0
-
-    params["doPlots"] = False
-    params["doMovie"] = False
-    params["doObservability"] = True
-    params["do3D"] = False
-
-    params["doFootprint"] = False
-    params["footprint_ra"] = 30.0
-    params["footprint_dec"] = 60.0
-    params["footprint_radius"] = 10.0
-
-    params["airmass"] = 2.5
-
-    params["doCommitDatabase"] = False
-    params["doRequestScheduler"] = False
-    params["dateobs"] = False
-    params["doEvent"] = False
-    params["doSkymap"] = True
-    params["doFootprint"] = False
-    params["doDatabase"] = False
-    params["doReferences"] = False
-    params["doChipGaps"] = False
-    params["doSplit"] = False
-
-    
-    params["catalog_n"] = 1.0
-    params["doUseCatalog"] = True
-    params["catalogDir"] = "../catalogs"
-    params["galaxy_catalog"] = "GLADE"
-    params["doCatalog"] = True
-
-    if params["doEvent"]:
-        params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)
-        params["gpstime"] = eventinfo["gpstime"]
-        event_time = time.Time(params["gpstime"], format='gps', scale='utc')
-        params["dateobs"] = event_time.iso
-    elif params["doSkymap"]:
-        event_time = time.Time(params["gpstime"], format='gps', scale='utc')
-        params["dateobs"] = event_time.iso
-    elif params["doFootprint"]:
-        params["skymap"] = gwemopt.footprint.get_skymap(params)
-        event_time = time.Time(params["gpstime"], format='gps', scale='utc')
-        params["dateobs"] = event_time.iso
-    elif params["doDatabase"]:
-        event_time = time.Time(params["dateobs"], format='datetime',
-                               scale='utc')
-        params["gpstime"] = event_time.gps
-        params["models"] = models
-    else:
-        print("""Need to enable --doEvent, --doFootprint,
-              --doSkymap, or --doDatabase""")
-        exit(0)
-
-    if tobs is None:
-        now_time = time.Time.now()
-        timediff = now_time.gps - event_time.gps
-        timediff_days = timediff / 86400.0
-        params["Tobs"] = np.array([timediff_days, timediff_days+1])
-    else:
-        params["Tobs"] = tobs
-
-    params["doSingleExposure"] = True
-    params["filters"] = filt
-    params["exposuretimes"] = exposuretimes
-    params["mindiff"] = mindiff
-
-    params = gwemopt.segments.get_telescope_segments(params)
-
-    if params["doPlots"] or params["doCatalog"]:
-        if not os.path.isdir(params["outputDir"]):
-            os.makedirs(params["outputDir"])
-
-    print("Loading skymap...")
-    # Function to read maps
-    map_struct = gwemopt.utils.read_skymap(params, is3D=params["do3D"])
-
-    if params["doCatalog"]:
-        map_struct = gwemopt.catalog.get_catalog(params, map_struct)
-
-    if params["tilesType"] == "moc":
-        print("Generating MOC struct...")
-        moc_structs = gwemopt.moc.create_moc(params)
-        tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
-    elif params["tilesType"] == "ranked":
-        print("Generating ranked struct...")
-        moc_structs = gwemopt.rankedTilesGenerator.create_ranked(params,
-                                                                 map_struct)
-        tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
-    elif params["tilesType"] == "hierarchical":
-        print("Generating hierarchical struct...")
-        tile_structs = gwemopt.tiles.hierarchical(params, map_struct)
-    elif params["tilesType"] == "greedy":
-        print("Generating greedy struct...")
-        tile_structs = gwemopt.tiles.greedy(params, map_struct)
-    else:
-        print("Need tilesType to be moc, greedy, hierarchical, or ranked")
-        exit(0)
-
-    coverage_struct = gwemopt.coverage.timeallocation(params,
-                                                      map_struct,
-                                                      tile_structs)
-
-    if params["doPlots"]:
-        gwemopt.plotting.skymap(params, map_struct)
-        gwemopt.plotting.tiles(params, map_struct, tile_structs)
-        gwemopt.plotting.coverage(params, map_struct, coverage_struct)
-
-    config_struct = params["config"][teles_target]
+	skymap=urlhelpix.split("/")[-1]
+	skymappath = "./HEALPIX/%s"%skymap
 
 
 
-    #table_field = utilityTable(thistable)
-    #table_field.blankTable(len(coverage_struct))
-
-    field_id_vec=[]
-    ra_vec=[]
-    dec_vec=[]
-    grade_vec=[]
+	event_time = time.Time(trigtime,scale='utc')
 
 
-    for ii in range(len(coverage_struct["ipix"])):
-        data = coverage_struct["data"][ii,:]
-        filt = coverage_struct["filters"][ii]
-        ipix = coverage_struct["ipix"][ii]
-        patch = coverage_struct["patch"][ii]
-        FOV = coverage_struct["FOV"][ii]
-        area = coverage_struct["area"][ii]
+	gwemoptpath = os.path.dirname(gwemopt.__file__)
+	config_directory = "../config"
+	tiling_directory = "../tiling"
 
-        prob = np.sum(map_struct["prob"][ipix])
+	params = {}
+	params["config"] = {}
+	config_files = glob.glob("%s/*.config" % config_directory)
+	for config_file in config_files:
+		telescope = config_file.split("/")[-1].replace(".config", "")
+		params["config"][telescope] =\
+			gwemopt.utils.readParamsFromFile(config_file)
+		if "tesselationFile" in params["config"][telescope]:
+			params["config"][telescope]["tesselationFile"] =\
+				os.path.join(config_directory,
+							 params["config"][telescope]["tesselationFile"])
+			tesselation_file = params["config"][telescope]["tesselationFile"]
+			if not os.path.isfile(tesselation_file):
+				if params["config"][telescope]["FOV_type"] == "circle":
+					gwemopt.tiles.tesselation_spiral(
+						params["config"][telescope])
+				elif params["config"][telescope]["FOV_type"] == "square":
+					gwemopt.tiles.tesselation_packing(
 
-        ra, dec = data[0], data[1]
-        exposure_time, field_id, prob = data[4], data[5], data[6]
- 
-        field_id_vec.append(int(field_id))
-        ra_vec.append(np.round(ra,4))
-        dec_vec.append(np.round(dec,4))
-        grade_vec.append(np.round(prob,4))
-        
+						params["config"][telescope])
+
+			params["config"][telescope]["tesselation"] =\
+				np.loadtxt(params["config"][telescope]["tesselationFile"],
+						   usecols=(0, 1, 2), comments='%')
+
+		if "referenceFile" in params["config"][telescope]:
+			params["config"][telescope]["referenceFile"] =\
+				os.path.join(config_directory,
+							 params["config"][telescope]["referenceFile"])
+			refs = table.unique(table.Table.read(
+				params["config"][telescope]["referenceFile"],
+				format='ascii', data_start=2, data_end=-1)['field', 'fid'])
+			reference_images =\
+				{group[0]['field']: group['fid'].astype(int).tolist()
+				 for group in refs.group_by('field').groups}
+			reference_images_map = {1: 'g', 2: 'r', 3: 'i'}
+			for key in reference_images:
+				reference_images[key] = [reference_images_map.get(n, n)
+										 for n in reference_images[key]]
+			params["config"][telescope]["reference_images"] = reference_images
+
+		observer = ephem.Observer()
+		observer.lat = str(params["config"][telescope]["latitude"])
+		observer.lon = str(params["config"][telescope]["longitude"])
+		observer.horizon = str(-12.0)
+		observer.elevation = params["config"][telescope]["elevation"]
+		params["config"][telescope]["observer"] = observer
+
+	params["skymap"] = skymappath
+	params["gpstime"] = event_time.gps
+	params["outputDir"] = "output/%.5f" % event_time.mjd
+	params["tilingDir"] = tiling_directory
+	params["event"] = ""
+	params["telescopes"] = [teles_target]
+
+	if teles_target in ["GWAC"]:
+		params["tilesType"] = "moc"
+		params["scheduleType"] = "greedy"
+		params["timeallocationType"] = "powerlaw"
+	else:
+		params["tilesType"] = "hierarchical"
+		params["scheduleType"] = "greedy"
+		params["timeallocationType"] = "powerlaw"
+		params["Ntiles"] = 50
+
+	params["nside"] = 256
+	params["powerlaw_cl"] = 0.9
+	params["powerlaw_n"] = 1.0
+	params["powerlaw_dist_exp"] = 0.0
+
+	params["doPlots"] = False
+	params["doMovie"] = False
+	params["doObservability"] = True
+	params["do3D"] = False
+
+	params["doFootprint"] = False
+	params["footprint_ra"] = 30.0
+	params["footprint_dec"] = 60.0
+	params["footprint_radius"] = 10.0
+
+	params["airmass"] = 2.5
+
+	params["doCommitDatabase"] = False
+	params["doRequestScheduler"] = False
+	params["dateobs"] = False
+	params["doEvent"] = False
+	params["doSkymap"] = True
+	params["doFootprint"] = False
+	params["doDatabase"] = False
+	params["doReferences"] = False
+	params["doChipGaps"] = False
+	params["doSplit"] = False
+
+
+	params["catalog_n"] = 1.0
+	params["doUseCatalog"] = True
+	params["catalogDir"] = "../catalogs"
+	params["galaxy_catalog"] = "GLADE"
+	params["doCatalog"] = True
+
+	if params["doEvent"]:
+		params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)
+		params["gpstime"] = eventinfo["gpstime"]
+		event_time = time.Time(params["gpstime"], format='gps', scale='utc')
+		params["dateobs"] = event_time.iso
+	elif params["doSkymap"]:
+		event_time = time.Time(params["gpstime"], format='gps', scale='utc')
+		params["dateobs"] = event_time.iso
+	elif params["doFootprint"]:
+		params["skymap"] = gwemopt.footprint.get_skymap(params)
+		event_time = time.Time(params["gpstime"], format='gps', scale='utc')
+		params["dateobs"] = event_time.iso
+	elif params["doDatabase"]:
+		event_time = time.Time(params["dateobs"], format='datetime',
+							   scale='utc')
+		params["gpstime"] = event_time.gps
+		params["models"] = models
+	else:
+		print("""Need to enable --doEvent, --doFootprint,
+			  --doSkymap, or --doDatabase""")
+		exit(0)
+
+	if tobs is None:
+		now_time = time.Time.now()
+		timediff = now_time.gps - event_time.gps
+		timediff_days = timediff / 86400.0
+		params["Tobs"] = np.array([timediff_days, timediff_days+1])
+	else:
+		params["Tobs"] = tobs
+
+	params["doSingleExposure"] = True
+	params["filters"] = filt
+	params["exposuretimes"] = exposuretimes
+	params["mindiff"] = mindiff
+
+	params = gwemopt.segments.get_telescope_segments(params)
+
+	if params["doPlots"] or params["doCatalog"]:
+		if not os.path.isdir(params["outputDir"]):
+			os.makedirs(params["outputDir"])
+
+	print("Loading skymap...")
+	# Function to read maps
+	map_struct = gwemopt.utils.read_skymap(params, is3D=params["do3D"])
+
+	if params["doCatalog"]:
+		map_struct = gwemopt.catalog.get_catalog(params, map_struct)
+
+	if params["tilesType"] == "moc":
+		print("Generating MOC struct...")
+		moc_structs = gwemopt.moc.create_moc(params)
+		tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
+	elif params["tilesType"] == "ranked":
+		print("Generating ranked struct...")
+		moc_structs = gwemopt.rankedTilesGenerator.create_ranked(params,
+																 map_struct)
+		tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
+	elif params["tilesType"] == "hierarchical":
+		print("Generating hierarchical struct...")
+		tile_structs = gwemopt.tiles.hierarchical(params, map_struct)
+	elif params["tilesType"] == "greedy":
+		print("Generating greedy struct...")
+		tile_structs = gwemopt.tiles.greedy(params, map_struct)
+	else:
+		print("Need tilesType to be moc, greedy, hierarchical, or ranked")
+		exit(0)
+
+	coverage_struct = gwemopt.coverage.timeallocation(params,
+													  map_struct,
+													  tile_structs)
+
+	if params["doPlots"]:
+		gwemopt.plotting.skymap(params, map_struct)
+		gwemopt.plotting.tiles(params, map_struct, tile_structs)
+		gwemopt.plotting.coverage(params, map_struct, coverage_struct)
+
+	config_struct = params["config"][teles_target]
+
+	field_id_vec=[]
+	ra_vec=[]
+	dec_vec=[]
+	grade_vec=[]
+
+
+	for ii in range(len(coverage_struct["ipix"])):
+		data = coverage_struct["data"][ii,:]
+		filt = coverage_struct["filters"][ii]
+		ipix = coverage_struct["ipix"][ii]
+		patch = coverage_struct["patch"][ii]
+		FOV = coverage_struct["FOV"][ii]
+		area = coverage_struct["area"][ii]
+
+		prob = np.sum(map_struct["prob"][ipix])
+
+		ra, dec = data[0], data[1]
+		exposure_time, field_id, prob = data[4], data[5], data[6]
+
+		field_id_vec.append(int(field_id))
+		ra_vec.append(np.round(ra,4))
+		dec_vec.append(np.round(dec,4))
+		grade_vec.append(np.round(prob,4))
+		
 
 
 
-    return np.transpose(np.array([np.array(field_id_vec),np.array(ra_vec),np.array(dec_vec),np.array(grade_vec)]))
+	return np.transpose(np.array([np.array(field_id_vec),np.array(ra_vec),np.array(dec_vec),np.array(grade_vec)]))
 
 def swift_trigger(v, collab, text_mes,file_log_s,role):
-    """
+	"""
 
-    :param v:
-    :param collab:
-    :param text_mes:
-    :return:
-    """
+	:param v:
+	:param collab:
+	:param text_mes:
+	:return:
+	"""
 
-    Swift_dic=GRB_dicf()
-    Swift_vo=VO_dicf()
+	Swift_dic=create_grbdic()
+	Swift_vo=create_vodic()
 
-    instru = str(collab[2])
-    Swift_vo["ba"]=fa.FA_shift()
-    
-
-    if instru == "BAT":
-
-        Swift_dic["inst"]=instru
-
-        top_level_params = vp.get_toplevel_params(v)
-        trigger_id = top_level_params['TrigID']['value']
-        Swift_vo["trigid"]=trigger_id
-    
-        rate_signif = top_level_params['Rate_Signif']['value']
-        Swift_dic["ratesnr"]=float(rate_signif)
-
-        image_signif = top_level_params['Image_Signif']['value']
-        Swift_dic["imagesnr"]=float(image_signif)
-        Swift_dic["snr"]=float(image_signif)
-        Swift_dic["descriptsnr"]="SNR calculated from the image"
-
-        if float(image_signif) < 4.0:
-           Swift_vo["voimportance"]=3
-        if ((float(image_signif)>=6.0) &  (float(image_signif)<7.0)):
-           Swift_vo["voimportance"]=2
-        if ((float(image_signif)>7.0)):
-           Swift_vo["voimportance"]=1
+	instru = str(collab[2])
+	Swift_vo["ba"]=fa.FA_shift()
 
 
+	if instru == "BAT":
 
-        def_not_grb =  v.find(".//Param[@name='Def_NOT_a_GRB']").attrib['value']
-        Swift_dic["defGRB"]=def_not_grb 
+		Swift_dic["inst"]=instru
 
-        Swift_vo["evenstatus"]="initial"
-        Swift_vo["eventype"]="GRB"
-        Swift_vo["inst"]="Swift-BAT"
-        Swift_vo["location"]="Sky"
+		top_level_params = vp.get_toplevel_params(v)
+		trigger_id = top_level_params['TrigID']['value']
+		Swift_vo["trigid"]=trigger_id
 
-        isotime = v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.Time.TimeInstant.\
-            ISOTime.text
-        delay = delay_fct(isotime)
-        isotime_format=trigtime(isotime)
-        delay_min=(delay.seconds)/60.0
-        Swift_vo["trigtime"]=isotime_format
-        Swift_vo["trigdelay"]=delay_min
+		rate_signif = top_level_params['Rate_Signif']['value']
+		Swift_dic["ratesnr"]=float(rate_signif)
 
+		image_signif = top_level_params['Image_Signif']['value']
+		Swift_dic["imagesnr"]=float(image_signif)
+		Swift_dic["snr"]=float(image_signif)
+		Swift_dic["descriptsnr"]="SNR calculated from the image"
 
-        right_ascension = str(v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.\
-                              Position2D.Value2.C1.text)
-        declination = str(v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.Position2D\
-                          .Value2.C2.text)
-        error2_radius = str(v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.\
-                            Position2D.Error2Radius.text)
-   
-        Swift_vo["ra"]=right_ascension
-        Swift_vo["trigdelay"]=right_ascension
-        Swift_vo["dec"]=declination
-        Swift_vo["error"]=error2_radius
-        Swift_dic["locref"]="BAT onboard"
-        message_obs=""
-        
-        name_dic="Swift"+trigger_id
-        if ((role!="test")):
-                lalid=name_lalid(v,file_log_s,name_dic,Swift_vo["letup"],"_DB")
-                name_dic="Swift"+trigger_id
-                dic_grb[name_dic]=Swift_dic
-                dic_vo[name_dic]=Swift_vo
-
-                create_GRANDMAvoevent(lalid,Swift_dic,Swift_vo,"")
-                file_log_s.write(lalid +" "+str(trigger_id)+"\n")    
-     
-                for telescope in LISTE_TELESCOPE:
-                     Tel_dic=Tel_dicf()
-                     Tel_dic["Name"]=telescope 
-                     message_obs=message_obs+" "+telescope
-                     Tel_dic["OS"]=""
-                     if ((role!="test")):
-                         name_dic="Swift"+trigger_id
-                         lalid=name_lalid(v,file_log_s,name_dic,Swift_vo["letup"],"_"+Tel_dic["Name"])
-                         create_GRANDMAvoevent(lalid,Swift_dic,Swift_vo,Tel_dic) 
-                         file_log_s.write(lalid +" "+str(trigger_id)+"\n")   
+		if float(image_signif) < 4.0:
+		   Swift_vo["voimportance"]=3
+		if ((float(image_signif)>=6.0) &  (float(image_signif)<7.0)):
+		   Swift_vo["voimportance"]=2
+		if ((float(image_signif)>7.0)):
+		   Swift_vo["voimportance"]=1
 
 
 
-        text_mes = str("---------- \n")+str("BAT alert \n")+str("---------- \n")+\
-            str("Trigger ID: ")\
-            +trigger_id+("\n")+str("Trigger Time: ")+isotime+("\n")+str("Delay since alert: ")+\
-            str(delay)+("\n")+str("\n")+str("---Follow-up Advocate---\n")+str("FA on duty: ")+str(fa.FA_shift())+str("\n")+("\n")+str("\n")+\
-            str("---SPACE TRIGGER---\n")+str("Trigger Rate SNR: ")+str(rate_signif)+" "+\
-            str("Image_Signif: ")+image_signif+("\n")+str("\n")+str("---Position---\n")+\
-            "RA: "+str(round(float(right_ascension),1))+" "+"DEC: "+str(round(float(declination),1))+" "+str("Error2Radius: ")+\
-            str(round(float(error2_radius),1))+"\n"+message_obs+"\n"+str("\n")+str("---------- \n")#+("---SVOM FOLLOWUP---\n")+\
-            #str(observability__xinglong)+" "+str(follow)+"\n"
-         
-    return text_mes
+		def_not_grb =  v.find(".//Param[@name='Def_NOT_a_GRB']").attrib['value']
+		Swift_dic["defGRB"]=def_not_grb 
+
+		Swift_vo["evenstatus"]="initial"
+		Swift_vo["eventype"]="GRB"
+		Swift_vo["inst"]="Swift-BAT"
+		Swift_vo["location"]="Sky"
+
+		isotime = v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.Time.TimeInstant.\
+			ISOTime.text
+		delay = delay_fct(isotime)
+		isotime_format=trigtime(isotime)
+		delay_min=(delay.seconds)/60.0
+		Swift_vo["trigtime"]=isotime_format
+		Swift_vo["trigdelay"]=delay_min
+
+
+		right_ascension = str(v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.\
+							  Position2D.Value2.C1.text)
+		declination = str(v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.Position2D\
+						  .Value2.C2.text)
+		error2_radius = str(v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.\
+							Position2D.Error2Radius.text)
+
+		Swift_vo["ra"]=right_ascension
+		Swift_vo["trigdelay"]=right_ascension
+		Swift_vo["dec"]=declination
+		Swift_vo["error"]=error2_radius
+		Swift_dic["locref"]="BAT onboard"
+		message_obs=""
+		
+		name_dic="Swift"+trigger_id
+		if ((role!="test")):
+				lalid=name_lalid(v,file_log_s,name_dic,Swift_vo["letup"],"_DB")
+				name_dic="Swift"+trigger_id
+				dic_grb[name_dic]=Swift_dic
+				dic_vo[name_dic]=Swift_vo
+
+				create_GRANDMAvoevent(lalid,Swift_dic,Swift_vo,"")
+				file_log_s.write(lalid +" "+str(trigger_id)+"\n")    
+	 
+				for telescope in LISTE_TELESCOPE:
+					 Tel_dic=create_teldic()
+					 Tel_dic["name"]=telescope 
+					 message_obs=message_obs+" "+telescope
+					 Tel_dic["OS"]=""
+					 if ((role!="test")):
+						 name_dic="Swift"+trigger_id
+						 lalid=name_lalid(v,file_log_s,name_dic,Swift_vo["letup"],"_"+Tel_dic["name"])
+						 create_GRANDMAvoevent(lalid,Swift_dic,Swift_vo,Tel_dic) 
+						 file_log_s.write(lalid +" "+str(trigger_id)+"\n")   
+
+
+
+		text_mes = str("---------- \n")+str("BAT alert \n")+str("---------- \n")+\
+			str("Trigger ID: ")\
+			+trigger_id+("\n")+str("Trigger Time: ")+isotime+("\n")+str("Delay since alert: ")+\
+			str(delay)+("\n")+str("\n")+str("---Follow-up Advocate---\n")+str("FA on duty: ")+str(fa.FA_shift())+str("\n")+("\n")+str("\n")+\
+			str("---SPACE TRIGGER---\n")+str("Trigger Rate SNR: ")+str(rate_signif)+" "+\
+			str("Image_Signif: ")+image_signif+("\n")+str("\n")+str("---Position---\n")+\
+			"RA: "+str(round(float(right_ascension),1))+" "+"DEC: "+str(round(float(declination),1))+" "+str("Error2Radius: ")+\
+			str(round(float(error2_radius),1))+"\n"+message_obs+"\n"+str("\n")+str("---------- \n")#+("---SVOM FOLLOWUP---\n")+\
+			#str(observability__xinglong)+" "+str(follow)+"\n"
+		 
+	return text_mes
 
 
 def GW_trigger_retracted(v, collab,role,file_log_s):
 
-    GW_dic=GW_dicf()
-    GW_vo=VO_dicf()
-
-    
-    
-    GW_vo["ba"]=fa.FA_shift()
+	GW_dic=create_gwdic()
+	GW_vo=create_vodic()
 
 
-    GW_vo["eventype"]="GW"
+
+	GW_vo["ba"]=fa.FA_shift()
 
 
-    toplevel_params = vp.get_toplevel_params(v)
-    Pktser=toplevel_params['Pkt_Ser_Num']['value']
-    GW_vo["iter_statut"]=str(int(Pktser)-1)
-    GW_vo["evenstatus"]=toplevel_params['AlertType']['value']
-    trigger_id = toplevel_params['GraceID']['value']
- 
-    GW_vo["letup"]=letters[int(Pktser)-1]
-    
-
-    GW_dic["Retraction"]=toplevel_params['Retraction']['value']
-
-    isotime = v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.Time.TimeInstant.ISOTime.text
-    isotime_format=trigtime(isotime)
-    GW_vo["trigtime"]=isotime_format    
-    GW_vo["trigid"]=trigger_id
-    GW_vo["location"]="LIGO Virgo"
-    GW_vo["eventype"]="GW"
-    GW_vo["voimportance"]=1
- 
-    if ((role=="test")):
-         name_dic="GW"+trigger_id
-         lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_DB")
-         create_GRANDMAvoevent(lalid,GW_dic, GW_vo,"")      
-  
-    for telescope in LISTE_TELESCOPE:
-         Tel_dic=Tel_dicf()
-         Tel_dic["Name"]=telescope 
-         
-         #Tel_dic["OS"]=Observation_plan(telescope,GW_vo["inst"],GW_vo["trigtime"],GW_vo["locpix"],Tel_dic)
-         if ((role=="test")):
-             name_dic="GW"+trigger_id
-             lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_"+Tel_dic["Name"])
-             create_GRANDMAvoevent(lalid,GW_dic, GW_vo,Tel_dic)      
+	GW_vo["eventype"]="GW"
 
 
-    file_log_s.write(lalid +" "+str(trigger_id)+"\n")
+	toplevel_params = vp.get_toplevel_params(v)
+	Pktser=toplevel_params['Pkt_Ser_Num']['value']
+	GW_vo["iter_statut"]=str(int(Pktser)-1)
+	GW_vo["evenstatus"]=toplevel_params['AlertType']['value']
+	trigger_id = toplevel_params['GraceID']['value']
+
+	GW_vo["letup"]=letters[int(Pktser)-1]
 
 
-    text = str("---------- \n")+str("GW alert \n")+str("---------- \n")+str("GW NAME : ")\
-        +str(GW_vo["trigid"])+(" ")+str("Trigger Time: ")+isotime+"\n"+\
-        str("WARNING RETRACTATION")+str("\n")+str("---Follow-up Advocate--\n")+str("Follow-up advocate on duty: ")+str(fa.FA_shift())+"\n"
-    return text
-   
+	GW_dic["Retraction"]=toplevel_params['Retraction']['value']
+
+	isotime = v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.Time.TimeInstant.ISOTime.text
+	isotime_format=trigtime(isotime)
+	GW_vo["trigtime"]=isotime_format    
+	GW_vo["location"]="LIGO Virgo"
+	GW_vo["eventype"]="GW"
+	GW_vo["voimportance"]=1
+
+	if ((role=="test")):
+		 name_dic="GW"+GW_vo["trigid"]
+		 lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_DB")
+		 create_GRANDMAvoevent(lalid,GW_dic, GW_vo,"")      
+
+	for telescope in LISTE_TELESCOPE:
+		 Tel_dic=create_teldic()
+		 Tel_dic["name"]=telescope 
+		 
+		 #Tel_dic["OS"]=Observation_plan(telescope,GW_vo["inst"],GW_vo["trigtime"],GW_vo["locpix"],Tel_dic)
+		 if ((role=="test")):
+			 name_dic="GW"+GW_vo["trigid"]
+			 lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_"+Tel_dic["name"])
+			 create_GRANDMAvoevent(lalid,GW_dic, GW_vo,Tel_dic)      
+
+
+	file_log_s.write(lalid +" "+GW_vo["trigid"]+"\n")
+
+
+	text = str("---------- \n")+str("GW alert \n")+str("---------- \n")+str("GW NAME : ")\
+		+str(GW_vo["trigid"])+(" ")+str("Trigger Time: ")+isotime+"\n"+\
+		str("WARNING RETRACTATION")+str("\n")+str("---Follow-up Advocate--\n")+str("Follow-up advocate on duty: ")+str(fa.FA_shift())+"\n"
+	return text
+
 
 def GW_treatment_alert(v, collab,role,file_log_s):
 
 
 
 
-    GW_dic=GW_dicf()
-    GW_vo=VO_dicf()
-
-    
-    
-    GW_vo["ba"]=fa.FA_shift()
-
+    GW_dic=create_gwdic()
+    GW_vo=create_vodic()
 
     GW_vo["eventype"]="GW"
+    
+    GW_vo["ba"]=fa.FA_shift()
+    
 
 
     toplevel_params = vp.get_toplevel_params(v)
@@ -637,35 +602,26 @@ def GW_treatment_alert(v, collab,role,file_log_s):
     GW_vo["iter_statut"]=str(int(Pktser)-1)
     GW_vo["inst"]=toplevel_params['Instruments']['value']
     GW_vo["evenstatus"]=toplevel_params['AlertType']['value']
-    trigger_id = toplevel_params['GraceID']['value']
+
  
     GW_vo["letup"]=letters[int(Pktser)-1]
-    
-
-    GW_dic["Retraction"]=toplevel_params['Retraction']['value']
-    GW_dic["HardwareInj"]=toplevel_params['HardwareInj']['value']
-    GW_dic["EventPage"]=toplevel_params['EventPage']['value']
+    GW_dic["retraction"]=toplevel_params['Retraction']['value']
+    GW_dic["hardwareInj"]=toplevel_params['HardwareInj']['value']
+    GW_dic["eventPage"]=toplevel_params['EventPage']['value']
     GW_dic["FAR"]=toplevel_params['FAR']['value']
-    GW_dic["Group"]=toplevel_params['Group']['value']
-    GW_dic["Pipeline"]=toplevel_params['Pipeline']['value']
-    GW_dic["Classification"]=vp.get_grouped_params(v)
+    GW_dic["group"]=toplevel_params['Group']['value']
+    GW_dic["pipeline"]=toplevel_params['Pipeline']['value']
+    GW_dic["classification"]=vp.get_grouped_params(v)
     GW_dic["locref"]="bayestar"
-    grouped_params=vp.get_grouped_params(v)
-    HasRemnant=float(v.find(".//Param[@name='HasRemnant']").attrib['value'])
-    BNS=str(v.find(".//Param[@name='BNS']").attrib['value'])
-    GW_dic["BNS"]=BNS
-    NSBH=str(v.find(".//Param[@name='NSBH']").attrib['value'])
-    GW_dic["NSBH"]=NSBH
-    BBH=str(v.find(".//Param[@name='BBH']").attrib['value'])
-    GW_dic["BBH"]=BBH
-    Terrestrial=str(v.find(".//Param[@name='Terrestrial']").attrib['value'])
-    GW_dic["Terrestrial"]=Terrestrial
-    HasNS=str(v.find(".//Param[@name='HasNS']").attrib['value'])
-    GW_dic["HasRemnant"]=str(HasRemnant)
-    GW_dic["HasNS"]=str(HasNS)
+    GW_dic["BNS"]=str(v.find(".//Param[@name='BNS']").attrib['value'])
+    GW_dic["NSBH"]=str(v.find(".//Param[@name='NSBH']").attrib['value'])
+    GW_dic["BBH"]=str(v.find(".//Param[@name='BBH']").attrib['value'])
+    GW_dic["Terrestrial"]=str(v.find(".//Param[@name='Terrestrial']").attrib['value'])
+    GW_dic["hasRemnant"]=str(v.find(".//Param[@name='HasRemnant']").attrib['value'])
+    GW_dic["hasNS"]=str(v.find(".//Param[@name='HasNS']").attrib['value'])
     #print(len(GW_dic["inst"].split(",")))
  
-    if HasRemnant > 0.9:
+    if float(GW_dic["hasRemnant"]) > 0.9:
       GW_vo["voimportance"]=1
       if (len(GW_vo["inst"].split(","))) > 2:
         GW_vo["voimportance"]=2
@@ -682,7 +638,7 @@ def GW_treatment_alert(v, collab,role,file_log_s):
     GW_vo["trigdelay"]=delay_min
 
     
-    GW_vo["trigid"]=trigger_id
+    GW_vo["trigid"]=str(toplevel_params['GraceID']['value'])
     
     GW_vo["locpix"]=str(v.find(".//Param[@name='skymap_fits']").attrib['value'])
     GW_vo["location"]="LIGO Virgo"
@@ -694,7 +650,7 @@ def GW_treatment_alert(v, collab,role,file_log_s):
      Observation_plan_tel=[] 
      message_obs="Observation plan sent to "   
      if ((role=="test")):
-         name_dic="GW"+trigger_id
+         name_dic="GW"+GW_vo["trigid"]
          skypath="./HEALPIX/"+str(GW_vo["locpix"].split("/")[-1])
          if not os.path.isfile(skypath):
             command="wget "+GW_vo["locpix"]+" -P ./HEALPIX/"
@@ -710,11 +666,11 @@ def GW_treatment_alert(v, collab,role,file_log_s):
          GW_dic["90cr"]=str(s90cr)
          lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_DB")
          create_GRANDMAvoevent(lalid,GW_dic, GW_vo,"")   
-         file_log_s.write(lalid +" "+str(trigger_id)+"\n") 
+         file_log_s.write(lalid +" "+GW_vo["trigid"]+"\n") 
   
      for telescope in LISTE_TELESCOPE:
-         Tel_dic=Tel_dicf()
-         Tel_dic["Name"]=telescope 
+         Tel_dic=create_teldic()
+         Tel_dic["name"]=telescope 
          message_obs=message_obs+" "+telescope
          #print(telescope)
          print("./HEALPIX/"+str(GW_vo["locpix"].split("/")[-1]))
@@ -723,10 +679,10 @@ def GW_treatment_alert(v, collab,role,file_log_s):
         
         
          if ((role=="test")):
-             name_dic="GW"+trigger_id
-             lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_"+Tel_dic["Name"])
+             name_dic="GW"+GW_vo["trigid"]
+             lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_"+Tel_dic["name"])
              create_GRANDMAvoevent(lalid,GW_dic, GW_vo,Tel_dic)  
-             file_log_s.write(lalid +" "+str(trigger_id)+"\n")    
+             file_log_s.write(lalid +" "+GW_vo["trigid"]+"\n")    
 
     else:
 
@@ -734,7 +690,7 @@ def GW_treatment_alert(v, collab,role,file_log_s):
          name_dic="GW"+trigger_id
          lalid=name_lalid(v,file_log_s,name_dic,GW_vo["letup"],"_DB")
          create_GRANDMAvoevent(lalid,GW_dic, GW_vo,"")
-         file_log_s.write(lalid +" "+str(trigger_id)+"\n")
+         file_log_s.write(lalid +" "+GW_vo["trigid"]+"\n")
 
 
 
@@ -757,8 +713,8 @@ def fermi_trigger_found(v, collab,role,file_log_s):
     :return:
     """
 
-    Fermi_dic=GRB_dicf()
-    Fermi_vo=VO_dicf()
+    Fermi_dic=create_grbdic()
+    Fermi_vo=create_vodic()
 
     instru="GBM"
     Fermi_dic["inst"]=instru
@@ -938,13 +894,13 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
             file_log_s.write(lalid +" "+str(trigger_id)+"\n")     
      
             for telescope in LISTE_TELESCOPE:
-                Tel_dic=Tel_dicf()
-                Tel_dic["Name"]=telescope 
+                Tel_dic=create_teldic()
+                Tel_dic["name"]=telescope 
                 message_obs=message_obs+" "+telescope
                 Tel_dic["OS"]=Observation_plan(telescope,Fermi_vo["inst"],Fermi_vo["trigtime"],Fermi_vo["locpix"],Tel_dic)
                 if ((role!="test")):
                     name_dic="GBM"+trigger_id
-                    lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"_"+Tel_dic["Name"])
+                    lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"_"+Tel_dic["name"])
                     create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo,Tel_dic) 
                     file_log_s.write(lalid +" "+str(trigger_id)+"\n")   
          
@@ -1034,19 +990,15 @@ def name_lalid(v,file_log_s,name_dic,letter,tel):
 def add_GWvoeventcontent(GW_dic,v):
 
 
-    if (GW_dic["Retraction"]=="O"):
-        GW_dic["Retraction"]="1"
-    if (GW_dic["Retraction"]=="1"):
-        GW_dic["Retraction"]="0"
-    retractation = vp.Param(name="Prob",value=GW_dic["Retraction"],dataType="int",ucd="meta.number")
+    if (GW_dic["retraction"]=="O"):
+        GW_dic["retraction"]="1"
+    if (GW_dic["retraction"]=="1"):
+        GW_dic["retraction"]="0"
+    retractation = vp.Param(name="Prob",value=GW_dic["retraction"],dataType="int",ucd="meta.number")
     retractation.Description="Probability that the event is real"
     v.What.append(retractation)
 
-    #hwinj = vp.Param(name="HardwareInj",value=GW_dic["HardwareInj"], ucd="meta.number",dataType="int")
-    #hwinj.Description="Indicates that this event is a hardware injection if 1, no if 0"
-    #v.What.append(hwinj)
-
-    eventpage=vp.Param(name="Quicklook_url",value=GW_dic["EventPage"], ucd="meta.ref.url",dataType="string")
+    eventpage=vp.Param(name="Quicklook_url",value=GW_dic["eventPage"], ucd="meta.ref.url",dataType="string")
     eventpage.Description="Web page for evolving status of this GW candidate"
     v.What.append(eventpage)
 
@@ -1071,11 +1023,11 @@ def add_GWvoeventcontent(GW_dic,v):
     FAR.Description="Web page for evolving status of this GW candidate"
     v.What.append(FAR)
 
-    Group=vp.Param(name="Group",value=GW_dic["Group"], ucd="meta.code",dataType="string")
+    Group=vp.Param(name="Group",value=GW_dic["group"], ucd="meta.code",dataType="string")
     Group.Description="Data analysis working group"
     v.What.append(Group)
 
-    Pipeline=vp.Param(name="Pipeline",value=GW_dic["Pipeline"], ucd="meta.code",dataType="string")
+    Pipeline=vp.Param(name="Pipeline",value=GW_dic["pipeline"], ucd="meta.code",dataType="string")
     Group.Description="Low-latency data analysis pipeline"
     v.What.append(Pipeline)
 
@@ -1085,21 +1037,20 @@ def add_GWvoeventcontent(GW_dic,v):
     NSBH.Description = "Probability that the source is a neutron star - black hole merger"
     BBH = vp.Param(name="BBH", value=GW_dic["BBH"], dataType="float", ucd="stat.probability")
     BBH.Description = "Probability that the source is a binary black hole merger"
-    Terrestrial = vp.Param(name="Terrestrial", value=GW_dic["Terrestrial"], dataType="float", ucd="stat.probability")
+    Terrestrial = vp.Param(name="Terrestrial", value=GW_dic["terrestrial"], dataType="float", ucd="stat.probability")
     Terrestrial.Description = "Probability that the source is terrestrial (i.e., a background noise fluctuation or a glitch)"  
     group_class=vp.Group(params=[BNS, NSBH, BBH, Terrestrial], name="Classification")
     group_class.Description="Source classification: binary neutron star (BNS), neutron star-black hole (NSBH), binary black hole (BBH), or terrestrial (noise)"
     v.What.append(group_class)
 
-    HasNS = vp.Param(name="HasNS", value=GW_dic["HasNS"], dataType="float", ucd="stat.probability")
+    HasNS = vp.Param(name="HasNS", value=GW_dic["hasNS"], dataType="float", ucd="stat.probability")
     HasNS.Description = "Probability that at least one object in the binary has a mass that is less than 3 solar masses"
-    HasRemnant = vp.Param(name="HasRemnant", value=GW_dic["HasRemnant"], dataType="float", ucd="stat.probability")
+    HasRemnant = vp.Param(name="HasRemnant", value=GW_dic["hasRemnant"], dataType="float", ucd="stat.probability")
     HasRemnant.Description = "Probability that a nonzero mass was ejected outside the central remnant object"   
     group_prop=vp.Group(params=[HasNS, HasRemnant], name="Properties")
     group_prop.Description="Qualitative properties of the source, conditioned on the assumption that the signal is an astrophysical compact binary merger"
     v.What.append(group_prop)
 
-    #v.What.append(GW_dic["Classification"])
 
 
 def add_GRBvoeventcontent(GRB_dic,v):
@@ -1287,7 +1238,7 @@ def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic,Tel_dic):
       add_GWvoeventcontent(Trigger_dic,v)
 
     if Tel_dic!="":
-      Name_tel = vp.Param(name="Name_tel", value=str(Tel_dic["Name"]),ucd="instr",dataType="string")
+      Name_tel = vp.Param(name="Name_tel", value=str(Tel_dic["name"]),ucd="instr",dataType="string")
       Name_tel.Description="Name of the telescope used for the observation strategy"
       FOV_tel = vp.Param(name="FOV", value=str(Tel_dic["FOV"]),ucd="instr.fov",dataType="float",unit="deg")
       FOV_tel.Description = "FOV of the telescope used for the observation strategy"
@@ -1313,10 +1264,6 @@ def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic,Tel_dic):
       config_obs.Description="Set-up parameters for producing the observation strategy"
       v.What.append(config_obs)
 
-      #OS_plan=vp.Param(name="Observation strategy",type="Table",value=Tel_dic["OS"])
-      #OS_plan=vp.Param(name="Observation strategy")
-      #OS_plan.Description="The list of tiles for "+str(Tel_dic["Name"])
-      #OS_plan.Table=vp.Param(name="Table")
       if Tel_dic["OS"]!="":
        obs_req=vp.Param(name="Obs_req", value="1",ucd="meta.number",dataType="int")
        obs_req.Description="Set to 1 if observation are required, 0 to stop the observations"
@@ -1534,7 +1481,7 @@ LOGFILE_receivedalerts="LOG_ALERTS_RECEIVED.txt"
 LOGFILE_sendingalerts="LOG_ALERTS_SENT.txt"
 file_LOG = open(LOGFILE_receivedalerts, "a+") 
 #LISTE_TELESCOPE=["TCA","TCH","TRE","NOWT","Zadko","IRIS"]
-LISTE_TELESCOPE=["GWAC"]
+LISTE_TELESCOPE=["TCA"]
 dic_grb={}
 dic_vo={}
 
