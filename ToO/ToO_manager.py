@@ -124,6 +124,8 @@ def GRB_dicf():
     "snr":"",
     "descriptsnr":"",
     "dur":"",
+    "inst":"",
+    "location":"",
     "descriptdur":"",
 	 }
   return GRB_dic
@@ -159,6 +161,7 @@ def VO_dicf():
     "error" : 0.,
     "evenstatus" : "",
     "voimportance":"",
+    "location": "",
     "iter_statut":0,
 	 }
 
@@ -459,6 +462,7 @@ def swift_trigger(v, collab, text_mes,file_log_s,role):
     :param text_mes:
     :return:
     """
+    print('Swift trigger, instrument '+ str(collab[2]))
 
     Swift_dic=GRB_dicf()
     Swift_vo=VO_dicf()
@@ -855,17 +859,18 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
     :param message_type:
     :return:
     """
-    
+
     toplevel_params = vp.get_toplevel_params(v)
     trigger_id = toplevel_params['TrigID']['value']
     name_dic="GBM"+trigger_id
-    Fermi_dic=dic_grb.get(name_dic)
-    Fermi_vo=dic_vo.get(name_dic)
+    Fermi_dic=GRB_dicf()
+    Fermi_vo=VO_dicf()
     message_obs="No healpix skymap available"
  
-    pletter=Fermi_vo["letup"]
-    indice_pletter=np.where(letters==pletter)[0]
-    Fermi_vo["letup"]=letters[indice_pletter+1][0]
+    #pletter=Fermi_vo["letup"]
+    #indice_pletter=np.where(letters==pletter)[0]
+    #remove the letters as we can use Pkt_Ser_Num
+    Fermi_vo["letup"]=toplevel_params['Pkt_Ser_Num']['value']
 
     grb_identified = str(v.What.Group.Param[0].attrib['value'])
     #long_short = "unknown"
@@ -879,6 +884,7 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
     
     Fermi_vo["eventype"]="GRB"
     Fermi_vo["inst"]="Fermi-GBM"
+    Fermi_dic["inst"] = "Fermi-GBM"
 
     grb_lc = toplevel_params['LightCurve_URL']['value']
     
@@ -932,11 +938,13 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
         message_obs="Observation plan sent to "   
         if ((role!="test")):
             name_dic="GBM"+trigger_id
-            lalid=name_lalid(v,file_log_s,name_dic,Fermi_vo["letup"],"_DB")
-            skypath="./HEALPIX/"+str(Fermi_vo["locpix"].split("/")[-1])
+            skypath="./HEALPIX/" + name_dic + "/" +str(Fermi_vo["locpix"].split("/")[-1])
             if not os.path.isfile(skypath):
-                command="wget "+Fermi_vo["locpix"]+" -P ./HEALPIX/"
-                os.system(command)  
+                command = "mkdir ./HEALPIX/" + name_dic
+                os.system(command)
+                command="wget "+Fermi_vo["locpix"]+" -P ./HEALPIX/" + name_dic + "/"
+                os.system(command)
+            lalid = name_lalid(v, file_log_s, name_dic, Fermi_vo["letup"], "_DB")
             create_GRANDMAvoevent(lalid,Fermi_dic, Fermi_vo,"") 
             file_log_s.write(lalid +" "+str(trigger_id)+"\n")     
      
@@ -1425,6 +1433,7 @@ def fermi_trigger(v, collab, text_mes,file_log_s,role):
     :return:
     """
 
+    print('Fermi trigger')
     instru = str(collab[2])
     if instru == "GBM":
         toplevel_params = vp.get_toplevel_params(v)
