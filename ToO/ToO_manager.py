@@ -586,6 +586,7 @@ def GW_trigger_retracted(v, collab,role,file_log_s):
     
 
     GW_dic["Retraction"]='1'#toplevel_params['Retraction']['value']
+    GW_vo["evenstatus"]="Retractation"
 
     isotime = v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.Time.TimeInstant.ISOTime.text
     isotime_format=trigtime(isotime)
@@ -1044,9 +1045,9 @@ def name_lalid(v,file_log_s,name_dic,letter,tel):
 
 def add_GWvoeventcontent(GW_dic,v):
 
-
-    if (GW_dic["Retraction"]=="O"):
-        GW_dic["Retraction"]="1"
+#Removed as it give not correct information, need to fill the Event_status field
+#    if (GW_dic["Retraction"]=="O"):
+#        GW_dic["Retraction"]="1"
     if (GW_dic["Retraction"]=="1"):
         GW_dic["Retraction"]="0"
     retractation = vp.Param(name="Prob",value=GW_dic["Retraction"],dataType="int",ucd="meta.number")
