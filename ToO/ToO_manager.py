@@ -619,7 +619,6 @@ def GW_treatment_alert(v, collab,role,file_log_s):
     GW_dic["Terrestrial"]=str(v.find(".//Param[@name='Terrestrial']").attrib['value'])
     GW_dic["hasRemnant"]=str(v.find(".//Param[@name='HasRemnant']").attrib['value'])
     GW_dic["hasNS"]=str(v.find(".//Param[@name='HasNS']").attrib['value'])
-    #print(len(GW_dic["inst"].split(",")))
  
     if float(GW_dic["hasRemnant"]) > 0.9:
       GW_vo["voimportance"]=1
@@ -672,8 +671,6 @@ def GW_treatment_alert(v, collab,role,file_log_s):
          Tel_dic=create_teldic()
          Tel_dic["name"]=telescope 
          message_obs=message_obs+" "+telescope
-         #print(telescope)
-         print("./HEALPIX/"+str(GW_vo["locpix"].split("/")[-1]))
          Tel_dic["OS"]=Observation_plan(telescope,GW_vo["inst"],GW_vo["trigtime"],GW_vo["locpix"],Tel_dic)
 
         
@@ -698,9 +695,9 @@ def GW_treatment_alert(v, collab,role,file_log_s):
 
 
     text = str("---------- \n")+str("GW alert \n")+str("---------- \n")+str("GW NAME : ")\
-        +str(GW_vo["trigid"])+(" ")+str("Trigger Time: ")+isotime+"\n"+\
+        +str(GW_vo["trigid"])+("\n")+str("Trigger Time: ")+isotime+"\n"+\
         str("Instruments: ")+str(str(GW_vo["inst"]))+str("\n")\
-        +str("EventPage: ")+str(str(GW_dic["EventPage"]))+str("\n")+str("Search: ")+str(str(GW_dic["Group"]))+str("\n")+str("HasRemnant: ")+str(HasRemnant)+str("\n")\
+        +str("EventPage: ")+str(str(GW_dic["eventPage"]))+str("\n")+str("Search: ")+str(str(GW_dic["group"]))+str("\n")+str("HasRemnant: ")+str(GW_dic["hasRemnant"])+str("\n")\
         +str("Delay since alert: ")+str(delay)+("\n")+str("\n")+str("---Follow-up Advocate--\n")+str("Follow-up advocate on duty: ")+str(fa.FA_shift())+"\n"+message_obs+"\n"
     return text
 
@@ -741,7 +738,6 @@ def fermi_trigger_found(v, collab,role,file_log_s):
     Fermi_dic["dur"]=Fermi_dic["ratets"]
     Fermi_dic["descriptdur"]="Time scale employed by the onboard algorithm"
 
-    #print("rate__signif",rate__signif)
     if float(rate__signif) < 4.0:
      Fermi_vo["voimportance"]=3
     if ((float(rate__signif)>=6.0) &  (float(rate__signif)<7.0)):
@@ -953,7 +949,6 @@ def fermi_trigger_follow(v, collab, message_type,file_log_s,role):
 
 
      
-    #print(grb_identified)
     if grb_identified == "false":
         text = "\n"+message_type+str(" \n")+ ("---------- \n")+str("ID : ")+str(name_grb)+(" ")+trigger_id+(" ")+isotime+("\n")+str\
             ("Delay since alert: ")+str(delay)+("\n")+str("---Follow-up Advocate--\n")+str\
@@ -1070,7 +1065,6 @@ def add_GRBvoeventcontent(GRB_dic,v):
     
     dur_grb =vp.Param(name="Dur",value=str(GRB_dic["dur"]), unit="s", ucd="time.interval",dataType="float")
     dur_grb.Description = GRB_dic["descriptdur"]
-    print(str(GRB_dic["dur"]))
     v.What.append(dur_grb)
     
 
@@ -1222,7 +1216,6 @@ def create_GRANDMAvoevent(lalid,Trigger_dic,VO_dic,Tel_dic):
     v.What.append(triginstru)
 
     pixloc = vp.Param(name="Loc_url",value=str(VO_dic["locpix"]),ucd="meta.ref.url",dataType="string")
-    #print("cc",VO_dic["locpix"])
     pixloc.Description="The url location of healpix skymap"
     v.What.append(pixloc)
 
@@ -1481,7 +1474,7 @@ LOGFILE_receivedalerts="LOG_ALERTS_RECEIVED.txt"
 LOGFILE_sendingalerts="LOG_ALERTS_SENT.txt"
 file_LOG = open(LOGFILE_receivedalerts, "a+") 
 #LISTE_TELESCOPE=["TCA","TCH","TRE","NOWT","Zadko","IRIS"]
-LISTE_TELESCOPE=["TCA"]
+LISTE_TELESCOPE=["TNT"]
 dic_grb={}
 dic_vo={}
 
