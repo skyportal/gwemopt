@@ -129,12 +129,15 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
     tileavailable_tiles = {} 
     keynames = []
 
+    nexps = 0
     for jj, key in enumerate(keys):
         tileprobs[jj] = tile_struct[key]["prob"]
         tilenexps[jj] = tile_struct[key]["nexposures"]
         tilefilts[key] = copy.deepcopy(tile_struct[key]["filt"])
         tileavailable_tiles[jj] = []
         keynames.append(key) 
+
+        nexps = nexps + tile_struct[key]["nexposures"]
 
     for ii in range(len(exposurelist)):
         exposureids_tiles[ii] = {}
@@ -164,6 +167,8 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
 
     idxs = -1*np.ones((len(exposureids_tiles.keys()),))
     filts = ['n'] * len(exposureids_tiles.keys())
+    if nexps == 0:
+        return idxs, filts    
 
     if params["scheduleType"] == "greedy":
         for ii in np.arange(len(exposurelist)): 
@@ -178,8 +183,9 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
                 idx = keynames.index(idx2)
                 tilenexps[idx] = tilenexps[idx] - 1
                 tileexptime[idx] = exposurelist[ii][0] 
-                filt = tilefilts[idx2].pop(0)
-                filts[ii] = filt
+                if len(tilefilts[idx2]) > 0:
+                    filt = tilefilts[idx2].pop(0)
+                    filts[ii] = filt
             idxs[ii] = idx2
 
             if not exposureids: break
@@ -205,8 +211,9 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
                 idx = keynames.index(idx2)
                 tilenexps[idx] = tilenexps[idx] - 1
                 tileexptime[idx] = exposurelist[ii][0]
-                filt = tilefilts[idx2].pop(0)
-                filts[ii] = filt
+                if len(tilefilts[idx2]) > 0:
+                    filt = tilefilts[idx2].pop(0)
+                    filts[ii] = filt
             idxs[ii] = idx2 
             iis.pop(0)
 
@@ -229,8 +236,9 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
                     idx = keynames.index(idx2)
                     tilenexps[idx] = tilenexps[idx] - 1
                     tileexptime[idx] = exposurelist[ii][0]
-                    filt = tilefilts[idx2].pop(0)
-                    filts[ii] = filt
+                    if len(tilefilts[idx2]) > 0:
+                        filt = tilefilts[idx2].pop(0)
+                        filts[ii] = filt
                 idxs[ii] = idx2
             tileavailable[jj] = tileavailable[jj] - 1        
     else:
