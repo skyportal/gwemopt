@@ -12,6 +12,7 @@ import astropy.units as u
 import glue.segments as segments
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
+import gwemopt.hungarian
 
 def get_altaz_tiles(ras, decs, observatory, obstime):
 
@@ -106,7 +107,7 @@ def find_tile_greedy_slew(current_time, current_ra, current_dec, tilesegmentlist
     return idx2, slew_readout_selected, exp_idle_seg
 
 
-def get_order(params, tile_struct, tilesegmentlists, exposurelist):
+def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
     '''
     tile_struct: dictionary. key -> struct info. 
     tilesegmentlists: list of lists. Segments for each tile in tile_struct 
@@ -159,16 +160,38 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
 
     exposureids = []
     probs = []
+    ras, decs = [], []
     for ii, key in enumerate(keys):
         # tile_struct[key]["nexposures"]: the number of exposures assigned to this tile
         for jj in range(tile_struct[key]["nexposures"]): 
             exposureids.append(key) # list of tile ids for every exposure it is allocated to observe
             probs.append(tile_struct[key]["prob"])
+            ras.append(tile_struct[key]["ra"])
+            decs.append(tile_struct[key]["dec"]) 
 
     idxs = -1*np.ones((len(exposureids_tiles.keys()),))
     filts = ['n'] * len(exposureids_tiles.keys())
     if nexps == 0:
         return idxs, filts    
+
+    if params["scheduleType"] == "airmass_weighted":
+        tilematrix = np.zeros((len(ras),len(exposurelist)))
+        probmatrix = np.zeros((len(ras),len(exposurelist)))
+
+        for ii in np.arange(len(exposurelist)):
+            t = Time(exposurelist[ii][0], format='mjd')
+            altaz = get_altaz_tiles(ras, decs, observatory, t)
+            alts = altaz.alt.degree
+            airmass = 1 / np.cos((90. - alts) * np.pi / 180)
+            # need observatory horizon here
+            horizon = 30.
+            horizon_mask = alts <= horizon
+            below_horizon_mask = horizon_mask * (10.**100)
+            # for tiles below the horizon, make the airmass infinite
+            # so that the airmass-weighted probability is zero
+            airmass = airmass + below_horizon_mask
+            tilematrix[:,ii] = np.array(probs) / np.array(airmass)
+            probmatrix[:,ii] = np.array(probs) * (True^horizon_mask)
 
     if params["scheduleType"] == "greedy":
         for ii in np.arange(len(exposurelist)): 
@@ -241,8 +264,30 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist):
                         filts[ii] = filt
                 idxs[ii] = idx2
             tileavailable[jj] = tileavailable[jj] - 1        
+    elif params["scheduleType"] == "airmass_weighted":
+        tilematrix_mask = tilematrix > 10**(-10)
+        if tilematrix_mask.any():
+            hungarian = gwemopt.hungarian.Hungarian(tilematrix, profit_matrix=True)
+            hungarian.calculate()
+            optimal_points = np.array(hungarian.assigned_points)
+            order = np.argsort(optimal_points[:, 0])
+            optimal_points = optimal_points[order]
+            max_no_observ = min(tilematrix.shape)
+
+            for ii in range(max_no_observ):
+                idx = optimal_points[jj][1]
+                try:
+                    idx2 = exposureids[idx.astype(int)]
+                except: 
+                    continue
+                if len(tilefilts[idx2]) > 0:
+                    filt = tilefilts[idx2].pop(0)
+                    filts[ii] = filt
+                idxs[ii] = idx2
+        else: 
+            print("The localization is not visible from the site.")
     else:
-        print("Scheduling options are greedy/sear/weighted, or with _slew.")
+        print("Scheduling options are greedy/sear/weighted/airmass_weighted, or with _slew.")
         exit(0)
 
     return idxs, filts
@@ -339,7 +384,7 @@ def scheduler(params, config_struct, tile_struct):
     if params["scheduleType"].endswith('_slew'):
         keys, exposurelist, filts = get_order_slew(params, tile_struct, tilesegmentlists, config_struct)
     else:
-        keys, filts = get_order(params,tile_struct,tilesegmentlists,exposurelist)
+        keys, filts = get_order(params,tile_struct,tilesegmentlists,exposurelist,observatory)
     if params["doPlots"]:
         gwemopt.plotting.scheduler(params,exposurelist,keys)
     while len(exposurelist) > 0:
