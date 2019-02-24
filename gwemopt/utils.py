@@ -57,9 +57,18 @@ def read_skymap(params,is3D=False):
             exit(0)
         else:
             prob_data = localizations[0].healpix
-
             prob_data = prob_data / np.sum(prob_data)
             map_struct["prob"] = prob_data
+
+            distmu = localizations[0].distmu
+            map_struct["distmu"] = distmu
+
+            distsigma = localizations[0].distsigma
+            map_struct["distsigma"] = distsigma
+
+            distnorm = localizations[0].distnorm
+            map_struct["distnorm"] = distnorm
+
     else:
         filename = params["skymap"]
     

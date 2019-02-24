@@ -92,10 +92,17 @@ def get_catalog(params, map_struct):
     if params["doUseCatalog"]:
         map_struct['prob'] = prob 
 
-    idx = np.argsort(S)[::-1]
-    top50 = cat[idx][:50]
+    cat['Sloc'] = Sloc
+    cat['S'] = S
+
+    idx = np.argsort(Sloc)[::-1]
+    cat = cat[idx]
+    #top50 = cat[idx][:50]
+    # Take all objects with greater than 1% probability
+    Sthresh = np.max(S)*0.01
+    cat = cat[cat['Sloc'] >= Sthresh]
     catalogfile = os.path.join(params["outputDir"],'catalog.csv')
-    top50['RAJ2000', 'DEJ2000'].write(catalogfile, format='csv', overwrite=True)
+    cat['RAJ2000', 'DEJ2000', 'Sloc', 'S'].write(catalogfile, format='csv', overwrite=True)
 
     return map_struct
 
