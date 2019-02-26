@@ -274,12 +274,10 @@ def Observation_plan(teles_target,obsinstru,trigtime,urlhelpix,VO_dic, name_dic)
         params["tilesType"] = "moc"
         params["scheduleType"] = "greedy"
         params["timeallocationType"] = "powerlaw"
-        #params["doCatalog"] = False
     else:
         params["tilesType"] = "galaxy"
         params["scheduleType"] = "greedy"
         params["timeallocationType"] = "powerlaw"
-        params["doCatalog"] = True
 
     params["nside"] = 256
     params["powerlaw_cl"] = 0.9
