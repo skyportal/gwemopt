@@ -370,6 +370,11 @@ if opts.doTiles:
             for index in tiles_struct.keys():
                 ra, dec = tiles_struct[index]["ra"], tiles_struct[index]["dec"]
                 params["config"][telescope]["tesselation"] = np.append(params["config"][telescope]["tesselation"],[[index,ra,dec]],axis=0)
+
+    elif params["tilesType"] == "galaxy":
+        print("Generating galaxy struct...")
+        tile_structs = gwemopt.tiles.galaxy(params, map_struct)
+
     else:
         print("Need tilesType to be moc, greedy, hierarchical, or ranked")
         exit(0)
