@@ -142,7 +142,6 @@ def get_catalog(params, map_struct):
 
     if "distnorm" in map_struct:
         Sloc = map_struct["prob"][ipix] * (map_struct["distnorm"][ipix] * norm(map_struct["distmu"][ipix], map_struct["distsigma"][ipix]).pdf(r))**params["powerlaw_dist_exp"] / map_struct["pixarea"]
-        Sloc = copy.copy(map_struct["prob"][ipix])
     else:
         Sloc = copy.copy(map_struct["prob"][ipix])
 
