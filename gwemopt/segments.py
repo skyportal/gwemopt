@@ -7,7 +7,7 @@ import copy
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u
-
+from joblib import Parallel, delayed
 import ephem
 
 #import gwemopt.glue as segments
@@ -314,7 +314,7 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
 
     return tilesegmentlist
 
-def get_segments_tiles(config_struct, tile_struct):
+def get_segments_tiles(params, config_struct, tile_struct):
 
     observatory = astropy.coordinates.EarthLocation(
         lat=config_struct["latitude"]*u.deg, lon=config_struct["longitude"]*u.deg, height=config_struct["elevation"]*u.m)
@@ -333,13 +333,17 @@ def get_segments_tiles(config_struct, tile_struct):
     # Convert to RA, Dec.
     radecs = astropy.coordinates.SkyCoord(
             ra=np.array(ras)*u.degree, dec=np.array(decs)*u.degree, frame='icrs')
-    tilesegmentlists = []
-    for ii,key in enumerate(keys):
-        #if np.mod(ii,100) == 0: 
-        #    print("Generating segments for tile %d/%d"%(ii+1,len(radecs)))
-        radec = radecs[ii]
-        tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
-        tilesegmentlists.append(tilesegmentlist)
-        tile_struct[key]["segmentlist"] = tilesegmentlist
+
+    if params["doParallel"]:
+        tilesegmentlists = Parallel(n_jobs=params["Ncores"])(delayed(get_segments_tile)(config_struct, observatory, radec, segmentlist) for radec in radecs)
+        for ii,key in enumerate(keys):
+            tile_struct[key]["segmentlist"] = tilesegmentlists[ii]
+    else:
+        for ii,key in enumerate(keys):
+            #if np.mod(ii,100) == 0: 
+            #    print("Generating segments for tile %d/%d"%(ii+1,len(radecs)))
+            radec = radecs[ii]
+            tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
+            tile_struct[key]["segmentlist"] = tilesegmentlist
 
     return tile_struct

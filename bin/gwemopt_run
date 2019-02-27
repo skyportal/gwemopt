@@ -148,6 +148,9 @@ def parse_commandline():
     parser.add_option("--splitType",default="regional")
     parser.add_option("--Nregions",default=768,type=int)
 
+    parser.add_option("--doParallel",action="store_true",default=False)
+    parser.add_option("--Ncores",default=4,type=int)
+
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
 
@@ -274,6 +277,9 @@ def params_struct(opts):
     params["doSplit"] = opts.doSplit
     params["splitType"] = opts.splitType
     params["Nregions"] = opts.Nregions
+
+    params["doParallel"] = opts.doParallel
+    params["Ncores"] = opts.Ncores
 
     return params
 

@@ -2,7 +2,7 @@ import time
 
 from mocpy import MOC
 from astropy.table import Table
-
+from joblib import Parallel, delayed
 import healpy as hp
 import numpy as np
 
@@ -17,11 +17,17 @@ def create_moc(params):
         config_struct = params["config"][telescope]
         tesselation = config_struct["tesselation"]
         moc_struct = {}
-        for ii, tess in enumerate(tesselation):
-            index, ra, dec = tess[0], tess[1], tess[2]
-            index = index.astype(int)
-            moc_struct[index] = Fov2Moc(params, config_struct, telescope, ra, dec, nside)
- 
+
+        if params["doParallel"]:
+            moclists = Parallel(n_jobs=params["Ncores"])(delayed(Fov2Moc)(params, config_struct, telescope, tess[1], tess[2], nside) for tess in tesselation)
+            for ii, tess in enumerate(tesselation):
+                index, ra, dec = tess[0], tess[1], tess[2]
+                moc_struct[index] = moclists[ii]    
+        else:
+            for ii, tess in enumerate(tesselation):
+                index, ra, dec = tess[0], tess[1], tess[2]
+                index = index.astype(int)
+                moc_struct[index] = Fov2Moc(params, config_struct, telescope, ra, dec, nside)
         moc_structs[telescope] = moc_struct
 
     return moc_structs
