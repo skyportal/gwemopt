@@ -63,7 +63,8 @@ install_requires = [
     'astroplan',
     'pyephem',
     'pyyaml',
-    'VOEventLib'
+    'VOEventLib',
+    'joblib'
 ]
 
 # test dependencies

@@ -36,7 +36,7 @@ def galaxy(params, map_struct):
             moc_struct[index] = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
 
         tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
-        tile_struct = gwemopt.segments.get_segments_tiles(config_struct, tile_struct)
+        tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
         for ii, tess in enumerate(cat):
             index, ra, dec, Sloc, S = tess[0], tess[1], tess[2], tess[3], tess[4]
             index = index.astype(int)
@@ -52,7 +52,7 @@ def greedy(params, map_struct):
         config_struct = params["config"][telescope]
 
         tile_struct = gwemopt.samplers.greedy_tiles_struct(params, config_struct, telescope, map_struct)
-        tile_struct = gwemopt.segments.get_segments_tiles(config_struct, tile_struct)
+        tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
 
         tile_structs[telescope] = tile_struct
 
@@ -65,7 +65,7 @@ def hierarchical(params, map_struct):
         config_struct = params["config"][telescope]
 
         tile_struct = gwemopt.samplers.hierarchical_tiles_struct(params, config_struct, telescope, map_struct)
-        tile_struct = gwemopt.segments.get_segments_tiles(config_struct, tile_struct)
+        tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
 
         tile_structs[telescope] = tile_struct
 
@@ -164,7 +164,7 @@ def moc(params, map_struct, moc_structs):
  
         tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
 
-        tile_struct = gwemopt.segments.get_segments_tiles(config_struct, tile_struct)
+        tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
         tile_structs[telescope] = tile_struct
 
     return tile_structs
