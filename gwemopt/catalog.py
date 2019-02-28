@@ -138,7 +138,7 @@ def get_catalog(params, map_struct):
 
     theta = 0.5 * np.pi - dec * 2 * np.pi /360.0
     phi = ra * 2 * np.pi /360.0
-    ipix = hp.ang2pix(map_struct["nside"], ra, dec, lonlat=True)
+    ipix = hp.ang2pix(map_struct["nside"], ra, dec, lonlat=True).astype(int)
 
     if "distnorm" in map_struct:
         Sloc = map_struct["prob"][ipix] * (map_struct["distnorm"][ipix] * norm(map_struct["distmu"][ipix], map_struct["distsigma"][ipix]).pdf(r))**params["powerlaw_dist_exp"] / map_struct["pixarea"]
