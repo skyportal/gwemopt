@@ -321,7 +321,7 @@ else:
 
 if opts.doCatalog:
     print("Generating catalog...")
-    map_struct = gwemopt.catalog.get_catalog(params, map_struct)
+    map_struct, catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
 
 if opts.doPlots:
     print("Plotting skymap...")
@@ -379,7 +379,7 @@ if opts.doTiles:
 
     elif params["tilesType"] == "galaxy":
         print("Generating galaxy struct...")
-        tile_structs = gwemopt.tiles.galaxy(params, map_struct)
+        tile_structs = gwemopt.tiles.galaxy(params, map_struct, catalog_struct)
 
     else:
         print("Need tilesType to be moc, greedy, hierarchical, or ranked")

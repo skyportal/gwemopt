@@ -15,32 +15,28 @@ import gwemopt.samplers, gwemopt.segments
 import gwemopt.quadrants
 import gwemopt.moc
 
-def galaxy(params, map_struct):
+def galaxy(params, map_struct, catalog_struct):
 
     nside = params["nside"]
-
-    catalogfile = os.path.join(params["outputDir"],'catalog.csv')
-    if not os.path.isfile(catalogfile):
-        print("Please enable --doCatalog")
-        exit(0)
-    cat = np.loadtxt(catalogfile)
 
     tile_structs = {}
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
 
         moc_struct = {}
-        for ii, tess in enumerate(cat):
-            index, ra, dec, Sloc, S = tess[0], tess[1], tess[2], tess[3], tess[4]
-            index = index.astype(int)
-            moc_struct[index] = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
+        cnt = 0
+        for ra, dec, Sloc, S in zip(catalog_struct["ra"], catalog_struct["dec"], catalog_struct["Sloc"], catalog_struct["S"]):
+            moc_struct[cnt] = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
+            cnt = cnt + 1
 
         tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
         tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
-        for ii, tess in enumerate(cat):
-            index, ra, dec, Sloc, S = tess[0], tess[1], tess[2], tess[3], tess[4]
-            index = index.astype(int)
-            tile_struct[index]['prob'] = Sloc
+
+        cnt = 0
+        for ra, dec, Sloc, S in zip(catalog_struct["ra"], catalog_struct["dec"], catalog_struct["Sloc"], catalog_struct["S"]):
+            tile_struct[cnt]['prob'] = Sloc
+            cnt = cnt + 1
+
         tile_structs[telescope] = tile_struct
 
     return tile_structs
