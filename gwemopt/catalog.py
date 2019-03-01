@@ -139,13 +139,13 @@ def get_catalog(params, map_struct):
     theta = 0.5 * np.pi - dec * 2 * np.pi /360.0
     phi = ra * 2 * np.pi /360.0
     ipix = hp.ang2pix(map_struct["nside"], ra, dec, lonlat=True).astype(int)
-
     if "distnorm" in map_struct:
         Sloc = map_struct["prob"][ipix] * (map_struct["distnorm"][ipix] * norm(map_struct["distmu"][ipix], map_struct["distsigma"][ipix]).pdf(r))**params["powerlaw_dist_exp"] / map_struct["pixarea"]
     else:
         Sloc = copy.copy(map_struct["prob"][ipix])
 
     S = Sloc*Slum*Sdet
+
     prob = np.zeros(map_struct["prob"].shape)
     prob[ipix] = prob[ipix] + S
     prob = prob / np.sum(prob)
@@ -169,13 +169,20 @@ def get_catalog(params, map_struct):
         idx = np.arange(1000).astype(int)
         ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
 
-    catalogfile = os.path.join(params["outputDir"],'catalog.csv')
-    fid = open(catalogfile,'w')
-    cnt = 0
-    for a, b, c, d in zip(ra, dec, Sloc, S):
-        fid.write("%d %.5f %.5f %.5e %.5e\n"%(cnt,a,b,c,d))
-        cnt = cnt + 1
-    fid.close()
+    catalog_struct = {}
+    catalog_struct["ra"] = ra
+    catalog_struct["dec"] = dec
+    catalog_struct["Sloc"] = Sloc
+    catalog_struct["S"] = S
 
-    return map_struct
+    if params["doPlots"]:
+        catalogfile = os.path.join(params["outputDir"],'catalog.csv')
+        fid = open(catalogfile,'w')
+        cnt = 0
+        for a, b, c, d in zip(ra, dec, Sloc, S):
+            fid.write("%d %.5f %.5f %.5e %.5e\n"%(cnt,a,b,c,d))
+            cnt = cnt + 1
+        fid.close()
+
+    return map_struct, catalog_struct
 
