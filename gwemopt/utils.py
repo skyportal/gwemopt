@@ -67,7 +67,7 @@ def read_skymap(params,is3D=False):
             distnorm = localizations[0].distnorm
             map_struct["distnorm"] = distnorm
 
-            if len(map_struct["distmu"]) > 0:
+            if not map_struct["distmu"] is None:
                 is3D = True
 
     else:
