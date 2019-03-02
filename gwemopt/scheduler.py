@@ -9,7 +9,9 @@ from VOEventLib.Vutil import utilityTable, stringVOEvent, VOEventExportClass
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u
-import glue.segments as segments
+
+import ligo.segments as segments
+
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
 import gwemopt.hungarian
