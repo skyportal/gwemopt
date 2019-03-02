@@ -56,7 +56,6 @@ install_requires = [
     'matplotlib>=1.2.0',
     'astropy>=1.1.1',
     'astropy-healpix',
-    'lscsoft-glue',
     'python-dateutil',
     'mocpy',
     'astroquery',
@@ -64,7 +63,8 @@ install_requires = [
     'pyephem',
     'pyyaml',
     'VOEventLib',
-    'joblib'
+    'joblib',
+    'ligo-segments'
 ]
 
 # test dependencies

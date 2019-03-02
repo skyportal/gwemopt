@@ -20,9 +20,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches
 import matplotlib.path
 
-#import gwemopt.glue as segments
-import glue
-import glue.segments as segments
+import ligo.segments as segments
 
 def readParamsFromFile(file):
     """@read gwemopt params file

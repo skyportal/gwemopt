@@ -10,9 +10,7 @@ import astropy.units as u
 from joblib import Parallel, delayed
 import ephem
 
-#import gwemopt.glue as segments
-import glue
-import glue.segments as segments
+import ligo.segments as segments
 import gwemopt.utils
 
 def get_telescope_segments(params):
