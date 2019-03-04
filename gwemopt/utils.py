@@ -97,9 +97,9 @@ def read_skymap(params,is3D=False):
     map_struct["prob"] = hp.ud_grade(map_struct["prob"],nside,power=-2)
 
     if is3D:
-        map_struct["distmu"] = hp.ud_grade(map_struct["distmu"],nside,power=-2) 
-        map_struct["distsigma"] = hp.ud_grade(map_struct["distsigma"],nside,power=-2) 
-        map_struct["distnorm"] = hp.ud_grade(map_struct["distnorm"],nside,power=-2) 
+        map_struct["distmu"] = hp.ud_grade(map_struct["distmu"],nside,power=0) 
+        map_struct["distsigma"] = hp.ud_grade(map_struct["distsigma"],nside,power=0) 
+        map_struct["distnorm"] = hp.ud_grade(map_struct["distnorm"],nside,power=0) 
 
         nside_down = 32
         distmu_down = hp.ud_grade(map_struct["distmu"],nside_down,power=-2)
