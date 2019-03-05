@@ -64,7 +64,8 @@ install_requires = [
     'pyyaml',
     'VOEventLib',
     'joblib',
-    'ligo-segments'
+    'ligo-segments',
+    'ligo.skymap'
 ]
 
 # test dependencies
