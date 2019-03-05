@@ -94,18 +94,22 @@ def read_skymap(params,is3D=False):
     
             map_struct["prob"] = prob_data
 
-    nside = hp.pixelfunc.get_nside(prob_data)
+    natural_nside = hp.pixelfunc.get_nside(prob_data)
     nside = params["nside"]
+    
+    print("natural_nside =", natural_nside)
+    print("nside =", nside)
     
     if not is3D:
         map_struct["prob"] = hp.ud_grade(map_struct["prob"],nside,power=-2)
 
     if is3D:
-        map_struct["prob"], map_struct["distmu"],\
-        map_struct["distsigma"], map_struct["distnorm"] = ligodist.ud_grade(map_struct["prob"],\
-                                                                            map_struct["distmu"],\
-                                                                            map_struct["distsigma"],\
-                                                                            nside)
+        if natural_nside != nside:
+            map_struct["prob"], map_struct["distmu"],\
+            map_struct["distsigma"], map_struct["distnorm"] = ligodist.ud_grade(map_struct["prob"],\
+                                                                                map_struct["distmu"],\
+                                                                                map_struct["distsigma"],\
+                                                                                nside)
         
         nside_down = 32
         _, distmu_down,\
