@@ -136,13 +136,23 @@ def get_catalog(params, map_struct):
     Sdet[Sdet<0.01] = 0.01
     Sdet[Sdet>1.0] = 1.0
 
+    n, cl, dist_exp = params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"]
+    prob_scaled = copy.deepcopy(map_struct["prob"])
+    prob_sorted = np.sort(prob_scaled)[::-1]
+    prob_indexes = np.argsort(prob_scaled)[::-1]
+    prob_cumsum = np.cumsum(prob_sorted)
+    index = np.argmin(np.abs(prob_cumsum - cl)) + 1
+    prob_scaled[prob_indexes[index:]] = 0.0
+    prob_scaled = prob_scaled**n
+    prob_scaled = prob_scaled / np.nansum(prob_scaled)
+
     theta = 0.5 * np.pi - dec * 2 * np.pi /360.0
     phi = ra * 2 * np.pi /360.0
     ipix = hp.ang2pix(map_struct["nside"], ra, dec, lonlat=True).astype(int)
     if "distnorm" in map_struct:
-        Sloc = map_struct["prob"][ipix] * (map_struct["distnorm"][ipix] * norm(map_struct["distmu"][ipix], map_struct["distsigma"][ipix]).pdf(r))**params["powerlaw_dist_exp"] / map_struct["pixarea"]
+        Sloc = prob_scaled[ipix] * (map_struct["distnorm"][ipix] * norm(map_struct["distmu"][ipix], map_struct["distsigma"][ipix]).pdf(r))**params["powerlaw_dist_exp"] / map_struct["pixarea"]
     else:
-        Sloc = copy.copy(map_struct["prob"][ipix])
+        Sloc = copy.copy(prob_scaled[ipix])
 
     S = Sloc*Slum*Sdet
 
