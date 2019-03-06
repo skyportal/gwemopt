@@ -21,6 +21,8 @@ import matplotlib.patches
 import matplotlib.path
 
 import ligo.segments as segments
+import ligo.skymap.distance as ligodist
+
 
 def readParamsFromFile(file):
     """@read gwemopt params file
@@ -85,26 +87,36 @@ def read_skymap(params,is3D=False):
             map_struct["distsigma"] = distsigma_data / params["DScale"]
             map_struct["prob"] = prob_data
             map_struct["distnorm"] = norm_data
-    
+
         else:
             prob_data = hp.read_map(filename, field=0, verbose=False)
             prob_data = prob_data / np.sum(prob_data)
     
             map_struct["prob"] = prob_data
 
-    nside = hp.pixelfunc.get_nside(prob_data)
+    natural_nside = hp.pixelfunc.get_nside(prob_data)
     nside = params["nside"]
-    map_struct["prob"] = hp.ud_grade(map_struct["prob"],nside,power=-2)
+    
+    print("natural_nside =", natural_nside)
+    print("nside =", nside)
+    
+    if not is3D:
+        map_struct["prob"] = hp.ud_grade(map_struct["prob"],nside,power=-2)
 
     if is3D:
-        map_struct["distmu"] = hp.ud_grade(map_struct["distmu"],nside,power=-2) 
-        map_struct["distsigma"] = hp.ud_grade(map_struct["distsigma"],nside,power=-2) 
-        map_struct["distnorm"] = hp.ud_grade(map_struct["distnorm"],nside,power=-2) 
-
+        if natural_nside != nside:
+            map_struct["prob"], map_struct["distmu"],\
+            map_struct["distsigma"], map_struct["distnorm"] = ligodist.ud_grade(map_struct["prob"],\
+                                                                                map_struct["distmu"],\
+                                                                                map_struct["distsigma"],\
+                                                                                nside)
+        
         nside_down = 32
-        distmu_down = hp.ud_grade(map_struct["distmu"],nside_down,power=-2)
-        distsigma_down = hp.ud_grade(map_struct["distsigma"],nside_down,power=-2)
-        distnorm_down = hp.ud_grade(map_struct["distnorm"],nside_down,power=-2)
+        _, distmu_down,\
+        distsigma_down, distnorm_down = ligodist.ud_grade(map_struct["prob"],\
+                                                          map_struct["distmu"],\
+                                                          map_struct["distsigma"],\
+                                                          nside_down)
 
         r = np.linspace(0, 2000)
         map_struct["distmed"] = np.zeros(distmu_down.shape)
