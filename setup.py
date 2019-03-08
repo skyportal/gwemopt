@@ -65,7 +65,8 @@ install_requires = [
     'VOEventLib',
     'joblib',
     'ligo-segments',
-    'ligo.skymap'
+    'ligo.skymap',
+    'h5py'
 ]
 
 # test dependencies
