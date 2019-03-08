@@ -14,6 +14,7 @@ matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
 
+import ligo.gracedb
 from ligo.gracedb.rest import GraceDb, HTTPError
 from ligo.gracedb.rest import GraceDbBasic
 

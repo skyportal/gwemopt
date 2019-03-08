@@ -1,5 +1,6 @@
 
 import os, sys
+import copy
 import numpy as np
 import healpy as hp
 
@@ -116,7 +117,6 @@ def waw(params, map_struct, tile_structs):
             tile_struct[key]["exposureTime"] = exposureTime
             tile_struct[key]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
         coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
-
         coverage_structs.append(coverage_struct)
 
     if params["doPlots"]:
@@ -144,9 +144,21 @@ def powerlaw(params, map_struct, tile_structs):
 
         config_struct = params["config"][telescope]
         tile_struct = tile_structs[telescope]
-        tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)      
 
-        coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
+        if params["doAlternatingFilters"]:
+            filters, exposuretimes = params["filters"], params["exposuretimes"]
+            tile_struct_hold = copy.copy(tile_struct)
+            coverage_structs_hold = []
+            for filt, exposuretime in zip(filters,exposuretimes):
+                params["filters"] = [filt]
+                params["exposuretimes"] = [exposuretime]
+                tile_struct_hold = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct_hold)      
+                coverage_struct_hold = gwemopt.scheduler.scheduler(params, config_struct, tile_struct_hold)
+                coverage_structs_hold.append(coverage_struct_hold)
+            coverage_struct = combine_coverage_structs(coverage_structs_hold)
+        else:
+            tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)      
+            coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
         coverage_structs.append(coverage_struct)
 
     map_struct["prob"] = full_prob_map
@@ -158,9 +170,21 @@ def pem(params, map_struct, tile_structs):
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
         tile_struct = tile_structs[telescope]
-        tile_struct = gwemopt.tiles.pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
 
-        coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
+        if params["doAlternatingFilters"]:
+            filters, exposuretimes = params["filters"], params["exposuretimes"]
+            tile_struct_hold = copy.copy(tile_struct)
+            coverage_structs_hold = []
+            for filt, exposuretime in zip(filters,exposuretimes):
+                params["filters"] = [filt]
+                params["exposuretimes"] = [exposuretime]
+                tile_struct_hold = gwemopt.tiles.pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct_hold)
+                coverage_struct_hold = gwemopt.scheduler.scheduler(params, config_struct, tile_struct_hold)
+                coverage_structs_hold.append(coverage_struct_hold)
+            coverage_struct = combine_coverage_structs(coverage_structs_hold)
+        else:
+            tile_struct = gwemopt.tiles.pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
+            coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
         coverage_structs.append(coverage_struct)
 
     return combine_coverage_structs(coverage_structs)
@@ -182,4 +206,3 @@ def timeallocation(params, map_struct, tile_structs):
         coverage_struct = gwemopt.coverage.pem(params, map_struct, tile_structs)
 
     return coverage_struct 
-

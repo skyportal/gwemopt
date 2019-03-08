@@ -139,6 +139,8 @@ def parse_commandline():
 
     parser.add_option("--doSingleExposure",  action="store_true", default=False)
     parser.add_option("--filters",default="r,g,r")
+    parser.add_option("--doAlternatingFilters",  action="store_true", default=False)
+
     parser.add_option("--exposuretimes",default="30.0,30.0,30.0")
     parser.add_option("--doReferences",  action="store_true", default=False)
 
@@ -263,6 +265,7 @@ def params_struct(opts):
     params["filters"] = opts.filters.split(",")
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
     params["mindiff"] = 0.0
+    params["doAlternatingFilters"] = opts.doAlternatingFilters
     params["doReferences"] = opts.doReferences
 
     params["airmass"] = opts.airmass
