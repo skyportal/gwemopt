@@ -297,3 +297,85 @@ def tesselation_packing(config_struct):
         fid.write('%d %.5f %.5f\n'%(ii,ra[ii],dec[ii]))
     fid.close()
 
+def open_tess(path_tess):
+    """
+    This function open a tessellation file and return two list containing
+    the information of each tile center (a list of RA and a list of Dec).
+  
+    Input parameters
+    ----------------   
+    path_tess : str
+        path of the tessellation file
+    """        
+    tesslation = open(path_tess,'r')
+    
+    list_ra = []
+    list_dec = []
+    
+    for line in tesslation:
+        line = line.strip('\n').split(' ')
+        
+            
+        list_ra += [float(line[1])]
+        list_dec += [float(line[2])]
+    
+    tesslation.close()
+    
+    return list_ra, list_dec
+
+
+def rotation_tiling(path_tess, ra_center=0, dec_center=90, name='rot'):
+    """
+    This function open a tessellation file and creat a new tessellation
+    by rotating the previous one to get ra_center, dec_center considered as
+    the new center of the created tessellation.
+    
+    By default ra_center=0 and dec_center=90, that make an 90degrees rotation
+    in a positive dec orientation.
+    
+    Input parameters
+    ----------------   
+    path_tess : str
+        path of the tessellation file that you want to rotate
+    ra_center : float
+        RA of the new point that you want to consider as center
+    dec_center : float
+        Dec of the new point that you want to consider as center
+    name = str
+        string added to the name of the tessellation, default = 'rot'
+    """
+    
+    list_ra, list_dec = open_tess(path_tess)
+    
+    #for all ra,dec we apply the rotation and take care of the periodic limit conditions
+    for i in range(len(list_ra)):
+        
+        current_ra = list_ra[i]
+        current_dec = list_dec[i]
+        
+        #apply the rotation
+        current_ra += ra_center
+        current_dec += dec_center
+        
+        #security for the periodic limit conditions
+        #for dec
+        if current_dec > 90.:
+            current_dec = -180. + current_dec
+        elif current_dec < -90.:
+            current_dec = 180 - current_dec        
+    
+        #for ra
+        if current_ra > 360.:
+            current_ra = current_ra - 360.
+        elif current_ra < 0.:
+            current_ra = 360. + current_ra
+        
+        list_ra[i] = current_ra
+        list_dec[i] = current_dec
+         
+    #open and write the result in a new tessellation file
+    tess_rot = open(path_tess.replace(".tess",'')+"_{}.tess".format(name),'w')
+    for n in range(len(list_ra)):
+        tess_rot.write('%d %.5f %.5f\n'%(n,list_ra[n],list_dec[n]))
+    tess_rot.close()
+    return
