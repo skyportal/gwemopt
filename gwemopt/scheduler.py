@@ -391,6 +391,9 @@ def scheduler(params, config_struct, tile_struct):
         keys, filts = get_order(params,tile_struct,tilesegmentlists,exposurelist,observatory)
     if params["doPlots"]:
         gwemopt.plotting.scheduler(params,exposurelist,keys)
+
+    exposureused = np.where(np.array(keys)>=0)[0]
+    coverage_struct["exposureused"] = exposureused
     while len(exposurelist) > 0:
         key, filt = keys[0], filts[0]
         if key == -1:
