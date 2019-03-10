@@ -149,12 +149,22 @@ def powerlaw(params, map_struct, tile_structs):
             filters, exposuretimes = params["filters"], params["exposuretimes"]
             tile_struct_hold = copy.copy(tile_struct)
             coverage_structs_hold = []
+            cnt = 0
             for filt, exposuretime in zip(filters,exposuretimes):
                 params["filters"] = [filt]
                 params["exposuretimes"] = [exposuretime]
+                
+                if cnt > 0:
+                   if len(coverage_struct_hold["exposureused"]) > 0:
+                       maxidx = (np.max(coverage_struct_hold["exposureused"])+1).astype(int)
+                       if maxidx > len(config_struct["exposurelist"]):
+                           exposurelistnew = config_struct["exposurelist"][maxidx:]
+                           config_struct["exposurelist"] = exposurelistnew
+
                 tile_struct_hold = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct_hold)      
                 coverage_struct_hold = gwemopt.scheduler.scheduler(params, config_struct, tile_struct_hold)
                 coverage_structs_hold.append(coverage_struct_hold)
+                cnt = cnt + 1
             coverage_struct = combine_coverage_structs(coverage_structs_hold)
         else:
             tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)      
