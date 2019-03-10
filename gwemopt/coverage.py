@@ -13,7 +13,7 @@ import gwemopt.scheduler
 def combine_coverage_structs(coverage_structs):
 
     coverage_struct_combined = {}
-    coverage_struct_combined["data"] = np.empty((0,7))
+    coverage_struct_combined["data"] = np.empty((0,8))
     coverage_struct_combined["filters"] = np.empty((0,1))
     coverage_struct_combined["ipix"] = []
     coverage_struct_combined["patch"] = []
@@ -39,7 +39,7 @@ def read_coverage(params, telescope, filename):
     lines = filter(None,lines)
 
     coverage_struct = {}
-    coverage_struct["data"] = np.empty((0,7))
+    coverage_struct["data"] = np.empty((0,8))
     coverage_struct["filters"] = []
     coverage_struct["ipix"] = []
     coverage_struct["patch"] = []
@@ -53,7 +53,7 @@ def read_coverage(params, telescope, filename):
         filt = lineSplit[6]
         mag = float(lineSplit[7])
 
-        coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[ra,dec,mjd,mag,config_struct["exposuretime"],-1,-1]]),axis=0)
+        coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[ra,dec,mjd,mag,config_struct["exposuretime"],-1,-1,-1]]),axis=0)
         coverage_struct["filters"].append(filt)
 
         if telescope == "ATLAS":
