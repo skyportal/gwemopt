@@ -144,7 +144,7 @@ def get_catalog(params, map_struct):
     index = np.argmin(np.abs(prob_cumsum - cl)) + 1
     prob_scaled[prob_indexes[index:]] = 0.0
     prob_scaled = prob_scaled**n
-    prob_scaled = prob_scaled / np.nansum(prob_scaled)
+#    prob_scaled = prob_scaled / np.nansum(prob_scaled)
 
     theta = 0.5 * np.pi - dec * 2 * np.pi /360.0
     phi = ra * 2 * np.pi /360.0
