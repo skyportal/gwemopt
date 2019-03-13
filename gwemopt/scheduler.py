@@ -200,6 +200,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
             airmass = 1 / np.cos((90. - alts) * np.pi / 180.)
             below_horizon_mask = horizon_mask * 10.**100
             airmass = airmass + below_horizon_mask
+
             # print(airmass)
 
             # while the patch is rising, apply greedy method
@@ -226,15 +227,15 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
                         filts[ii] = filt
 
                 idxs[ii] = idx2
-                print(len(ras), len(decs), len(probs), len(exposureids))
+                # print(len(ras), len(decs), len(probs), len(exposureids))
 
             # once the patch has risen, create a matrix of the remaining exposure times and tiles
             elif not horizon_mask.any() and len(exposureids) > 1:
                 matrix.append(probs/airmass)
                 probmatrix.append(probs * (True^horizon_mask))
 
-        tilematrix = np.array(matrix)
-        print(tilematrix.shape)
+            tilematrix = np.array(matrix)
+            print(tilematrix.shape)
 
     if params["scheduleType"] == "greedy":
         for ii in np.arange(len(exposurelist)): 
@@ -316,10 +317,10 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
             print("...calculating Hungarian solution...")
             hungarian = gwemopt.hungarian.Hungarian(tilematrix, profit_matrix=True)
             hungarian.calculate()
-            # print(tilematrix)
             print("...Hungarian solution calculated...\n")
             optimal_points = np.array(hungarian.asigned_points)
             # sort the optimal points first on probability
+            print(optimal_points)
             order = np.argsort(optimal_points[:, 0])
             optimal_points = optimal_points[order]
             max_no_observ = min(tilematrix.shape)
@@ -342,9 +343,10 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
                     #     print(tileexptime[idx])
                 except: continue
 
-                greedy_tile_idx = len(exposurelist) - max(tilematrix.shape)
-                print("amw after index:", greedy_tile_idx)
-                idxs[idx0 + greedy_tile_idx] = idx2
+                # greedy_tile_idx = len(exposurelist) - max(tilematrix.shape)
+                # print("amw after index:", greedy_tile_idx)
+                # idxs[idx0 + greedy_tile_idx] = idx2
+                idxs[idx0] = idx2
 
 
         else: print("The localization is not visible from the site.")
@@ -492,7 +494,7 @@ def scheduler(params, config_struct, tile_struct):
             mag = config_struct["magnitude"] + nmag
             exposureTime = (mjd_exposure_end-mjd_exposure_start)*86400.0
 
-            coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_mid,mag,exposureTime,airmass,int(key),tile_struct_hold["prob"]]]),axis=0)
+            coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_mid,mag,exposureTime,int(key),tile_struct_hold["prob"],airmass]]),axis=0)
 
             coverage_struct["filters"].append(filt)
             coverage_struct["patch"].append(tile_struct_hold["patch"])
@@ -584,7 +586,7 @@ def write_xml(xmlfile,map_struct,coverage_struct,config_struct):
         prob = np.sum(map_struct["prob"][ipix])
 
         ra, dec = data[0], data[1]
-        observ_time, exposure_time, airmass, field_id, prob = data[2], data[4], data[5], data[6], data[7]
+        observ_time, exposure_time, field_id, prob, airmass = data[2], data[4], data[5], data[6], data[7]
 
         table_field.setValue("grid_id", ii, 0)
         table_field.setValue("field_id", ii, field_id)
@@ -644,8 +646,8 @@ def summary(params, map_struct, coverage_struct):
             prob = np.sum(map_struct["prob"][ipix])
 
             ra, dec = data[0], data[1]
-            observ_time, exposure_time, airmass, field_id, prob = data[2], data[4], data[5], data[6], data[7]
-            fid.write('%d %.5f %.5f %.5f %d %.5f %.5f %s\n'%(field_id,ra,dec,observ_time,exposure_time,airmass,prob,filt))
+            observ_time, exposure_time, field_id, prob, airmass = data[2], data[4], data[5], data[6], data[7]
+            fid.write('%d %.5f %.5f %.5f %d %.5f %.5f %s\n'%(field_id,ra,dec,observ_time,exposure_time,prob,airmass,filt))
 
             idx1 = np.argmin(np.sqrt((config_struct["tesselation"][:,1]-data[0])**2 + (config_struct["tesselation"][:,2]-data[1])**2))
             idx2 = filts.index(filt)
