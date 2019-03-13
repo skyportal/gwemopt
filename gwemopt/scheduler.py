@@ -201,8 +201,6 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
             below_horizon_mask = horizon_mask * 10.**100
             airmass = airmass + below_horizon_mask
 
-            # print(airmass)
-
             # while the patch is rising, apply greedy method
             if horizon_mask.any() or len(exposureids)==1:
                 exptimecheck = np.where(exposurelist[ii][0]-tileexptime <
@@ -235,7 +233,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
                 probmatrix.append(probs * (True^horizon_mask))
 
             tilematrix = np.array(matrix)
-            print(tilematrix.shape)
+            # print(tilematrix.shape)
 
     if params["scheduleType"] == "greedy":
         for ii in np.arange(len(exposurelist)): 
@@ -314,19 +312,19 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
         tilematrix_mask = tilematrix > 10**(-10)
 
         if tilematrix_mask.any():
-            print("...calculating Hungarian solution...")
+            # print("...calculating Hungarian solution...")
             hungarian = gwemopt.hungarian.Hungarian(tilematrix, profit_matrix=True)
             hungarian.calculate()
-            print("...Hungarian solution calculated...\n")
+            # print("...Hungarian solution calculated...\n")
             optimal_points = np.array(hungarian.assigned_points)
             # sort the optimal points first on probability
-            print(optimal_points)
+            # print(optimal_points)
             order = np.argsort(optimal_points[:, 0])
             optimal_points = optimal_points[order]
             max_no_observ = min(tilematrix.shape)
             print(optimal_points.shape)
 
-            for jj in range(max_no_observ):
+            # for jj in range(max_no_observ):
                 # idx0 indexes over the time windows, idx1 indexes over the probabilities
                 # idx2 gets the exposure id of the tile, used to assign tileexptime and tilenexps
                 try:
@@ -334,7 +332,6 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
                     idx1 = optimal_points[jj][0]
                     idx2 = exposureids[idx1.astype(int)]
                     tileprob = probmatrix[idx0][idx1]
-                    print(tileprob)
                     if len(tilefilts[idx2]) > 0:
                         filt = tilefilts[idx2].pop(0)
                         filts[jj] = filt
@@ -343,10 +340,10 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
                     #     print(tileexptime[idx])
                 except: continue
 
-                # greedy_tile_idx = len(exposurelist) - max(tilematrix.shape)
+                greedy_tile_idx = len(exposurelist) - max(tilematrix.shape)
                 # print("amw after index:", greedy_tile_idx)
-                # idxs[idx0 + greedy_tile_idx] = idx2
-                idxs[idx0] = idx2
+                idxs[idx0 + greedy_tile_idx] = idx2
+                # idxs[idx0] = idx2
 
 
         else: print("The localization is not visible from the site.")
