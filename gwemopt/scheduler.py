@@ -147,6 +147,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
         for jj, key in enumerate(keys):
             tilesegmentlist = tilesegmentlists[jj]
             if tilesegmentlist.intersects_segment(exposurelist[ii]):
+                if tile_struct[key]["prob"] == 0: continue
                 exposureids.append(key)
                 probs.append(tile_struct[key]["prob"])
 
@@ -171,7 +172,6 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
 
     idxs = -1*np.ones((len(exposureids_tiles.keys()),))
     filts = ['n'] * len(exposureids_tiles.keys())
-    obstimes = np.zeros(len(exposureids_tiles.keys()))
 
     if nexps == 0:
         return idxs, filts    
