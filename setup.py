@@ -66,8 +66,7 @@ install_requires = [
     'joblib',
     'ligo-segments',
     'ligo.skymap',
-    'h5py',
-    'multiprocessing'
+    'h5py'
 ]
 
 # test dependencies
