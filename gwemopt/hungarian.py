@@ -7,7 +7,7 @@ __author__ = "Javed Rana <javed@iucaa.in>"
 
 ### Imports
 import numpy as np
-
+import multiprocessing as mp
 
 class Hungarian:
     '''Use Hungarian algorithm to minimize the cost'''
@@ -16,13 +16,13 @@ class Hungarian:
         '''Input the cost matrix.
         If the profit_matrix is true then make it the cost matrix
         '''
-        self.asigned_points = []
+        self.assigned_points = []
         newmatrix = np.array(matrix)
         ### Padding of zeros if the matrix is not balanced.
         matrix_shape = newmatrix.shape
         max_size = max(matrix_shape)
-        if max_size > 3*matrix_shape[1]:
-            max_size = 3*matrix_shape[1]
+        if max_size > 100*matrix_shape[1]:
+            max_size = 100*matrix_shape[1]
             newmatrix = newmatrix[:max_size]
         matrix_shape = newmatrix.shape
         pad_row = max_size - matrix_shape[0]
@@ -65,19 +65,19 @@ class Hungarian:
             ### Initial assigning of the jobs
             zerolines = ZeroLines(self.cost_matrix)
             zerolines.calculate()
-            init_asignment = zerolines.asigned_points
+            init_assignment = zerolines.assigned_points
 
             check_matrix = self.cost_matrix.copy()
             ### Mark all the zeros with minimum lines
             markedRC = markRowColumn(self.cost_matrix)
-            markedRC.calculate(init_asignment)
+            markedRC.calculate(init_assignment)
             optimal_line = markedRC.optimal_line
             ### Check whether any farther improvement is possible
             if (check_matrix == self.cost_matrix).all():
                 break
             if optimal_line == len(self.cost_matrix):
                 break
-        self.asigned_points = zerolines.asigned_points
+        self.assigned_points = zerolines.assigned_points
 
 ### Step 2
 ### Find the minimum line to cover the all zeros
@@ -97,14 +97,14 @@ class ZeroLines:
         self.optimal_column = []
         self.zero_mask = [] 
         self.position_matrix = []
-        self.asigned_points = []
+        self.assigned_points = []
 
-    def rowasign(self, row_mask, matrix_column):
+    def rowassign(self, row_mask, matrix_column):
         '''Find the zeros in the row and return the column index of the first zero'''
         return matrix_column[row_mask][0]
 
     def newmatrix(self, delete_index, axis=0):
-        '''Delete the asigned column'''
+        '''Delete the assigned column'''
         self.zero_mask = np.delete(self.zero_mask, delete_index, axis=axis)
         self.position_matrix = np.delete(self.position_matrix, delete_index, axis=axis)
 
@@ -121,8 +121,8 @@ class ZeroLines:
         for row_index in range(rowlen):
             row_mask = self.zero_mask[row_index]
             if row_mask.sum()==1:
-                cindex_asignrow = self.rowasign(row_mask, self.position_matrix[row_index])
-                self.asigned_points.append(cindex_asignrow)
+                cindex_assignrow = self.rowassign(row_mask, self.position_matrix[row_index])
+                self.assigned_points.append(cindex_assignrow)
                 delete_index = self.deleteindex(row_mask)
                 ### The changed matrix
                 self.newmatrix(delete_index, axis=1)
@@ -135,8 +135,8 @@ class ZeroLines:
         for column_index in range(columnlen):
             column_mask = self.zero_mask[:,column_index]
             if column_mask.sum()==1:
-                rindex_asigncolumn = self.rowasign(column_mask, self.position_matrix[:,column_index])
-                self.asigned_points.append(rindex_asigncolumn)
+                rindex_assigncolumn = self.rowassign(column_mask, self.position_matrix[:,column_index])
+                self.assigned_points.append(rindex_assigncolumn)
                 delete_index = self.deleteindex(column_mask)
                 ### The changed matrix
                 self.newmatrix(delete_index, axis=0)
@@ -149,8 +149,8 @@ class ZeroLines:
         for row_index in range(rowlen):
             row_mask = self.zero_mask[row_index]
             if row_mask.any():
-                cindex_asignrow = self.rowasign(row_mask, self.position_matrix[row_index])
-                self.asigned_points.append(cindex_asignrow)
+                cindex_assignrow = self.rowassign(row_mask, self.position_matrix[row_index])
+                self.assigned_points.append(cindex_assignrow)
                 delete_index = self.deleteindex(row_mask)
                 ### The changed matrix
                 self.newmatrix(delete_index, axis=1)
@@ -179,7 +179,7 @@ class ZeroLines:
                 self.coverExtraZeros()
 
 
-### Mark the unasigned rows and 
+### Mark the unassigned rows and 
 class markRowColumn:
     '''Mark all rows having no assignments.
     Mark all (unmarked) columns having zeros in newly marked rows.
@@ -197,7 +197,7 @@ class markRowColumn:
         self.unmarked_columns = []
         self.optimal_line = 0
 
-    def zeroUnasignedRow(self, row):
+    def zeroUnassignedRow(self, row):
         '''Find the zero in the unmarked rows'''
         row_mask = row == 0.
         if row_mask.any():
@@ -211,7 +211,7 @@ class markRowColumn:
         f_matrix = np.delete(f_matrix, self.unmarked_rows, axis=0)
         return f_matrix
 
-    def __mark_row_column(self, unasignd_rows, asignd_columns, asignd_rows):
+    def __mark_row_column(self, unassigned_rows, assigned_columns, assigned_rows):
         '''Mark all (unmarked) columns having zeros in newly marked row.
         Mark all rows having assignments in newly marked columns.
         '''
@@ -219,14 +219,17 @@ class markRowColumn:
             '''First marking of the rows and columns from the unassigned 
             rows
             '''
-            for ri in self.marked_rows:
-                cindex = self.zeroUnasignedRow(self.cost_matrix[ri])
-                for ci in cindex:
+            pool = mp.Pool(mp.cpu_count())
+            cindex = pool.map(self.zeroUnassignedRow, [self.cost_matrix[ri] for ri in self.marked_rows])
+            pool.close()
+            for i in range(len(cindex)):
+                # cindex = self.zeroUnassignedRow(self.cost_matrix[ri])
+                for ci in cindex[i]:
                     self.marked_columns.append(ci)
             for ci in self.marked_columns:
-                if ci in asignd_columns:
-                    index = np.argmin(abs(asignd_columns-ci))
-                    self.marked_rows.append(asignd_rows[index])
+                if ci in assigned_columns:
+                    index = np.argmin(abs(assigned_columns-ci))
+                    self.marked_rows.append(assigned_rows[index])
             self.marked_rows = list(set(self.marked_rows))
             self.marked_columns = list(set(self.marked_columns))
             self.unmarked_rows = np.delete(np.arange(len(self.cost_matrix)), self.marked_rows)
@@ -251,14 +254,14 @@ class markRowColumn:
         for point in intersect_points:
             self.cost_matrix[point[0],point[1]] += min_element 
 
-    def calculate(self, asignd_points):
+    def calculate(self, assigned_points):
         '''Calculate marked'''
-        asignd_rows = (np.array(asignd_points).T)[0]
-        asignd_columns = (np.array(asignd_points).T)[1]
-        self.marked_rows = [ri for ri in range(len(self.cost_matrix)) if ri not in asignd_rows]
-        unasignd_rows = self.cost_matrix[self.marked_rows]
+        assigned_rows = (np.array(assigned_points).T)[0]
+        assigned_columns = (np.array(assigned_points).T)[1]
+        self.marked_rows = [ri for ri in range(len(self.cost_matrix)) if ri not in assigned_rows]
+        unassigned_rows = self.cost_matrix[self.marked_rows]
 
-        self.__mark_row_column(unasignd_rows, asignd_columns, asignd_rows)
+        self.__mark_row_column(unassigned_rows, assigned_columns, assigned_rows)
         self.marked_columns = np.unique(np.array(self.marked_columns))
         self.marked_rows = np.unique(np.array(self.marked_rows))
         self.unmarked_rows = np.delete(np.arange(len(self.cost_matrix)), self.marked_rows)
@@ -272,30 +275,4 @@ class markRowColumn:
         if len(f_matrix):
             self.minElementSub(f_matrix, intersect_points)
         self.optimal_line = len(self.unmarked_rows) + len(self.marked_columns)
-
-
-
-
-
-
-# if __name__ == '__main__':
-#     # profit_matrix = [
-#     #     [9, 11, 14, 11, 07],
-#     #     [06, 15, 13, 13, 10],
-#     #     [12, 13, 06, 8, 8],
-#     #     [11, 9, 10, 12, 9],
-#     #     [07, 12, 14, 10, 14]]
-#     np.random.seed(8)
-#     ar = np.random.random(10000)
-#     ar = ar/np.sum(ar[0])
-#     profit_matrix = ar.reshape(100,100)
-#     prob_order = np.argsort(profit_matrix[0, :])
-#     profit_matrix = profit_matrix[prob_order]
-#     hungarian = Hungarian(profit_matrix, profit_matrix=True)
-#     hungarian.calculate()
-#     optimal_points = np.array(hungarian.assigned_points)
-#     time_order = np.argsort(optimal_points[:, 0])
-#     optimal_points = optimal_points[time_order]
-#     print(optimal_points)
-#     print(profit_matrix[0:6, 0:10])
 

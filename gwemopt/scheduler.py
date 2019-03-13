@@ -318,7 +318,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
             hungarian = gwemopt.hungarian.Hungarian(tilematrix, profit_matrix=True)
             hungarian.calculate()
             print("...Hungarian solution calculated...\n")
-            optimal_points = np.array(hungarian.asigned_points)
+            optimal_points = np.array(hungarian.assigned_points)
             # sort the optimal points first on probability
             print(optimal_points)
             order = np.argsort(optimal_points[:, 0])
