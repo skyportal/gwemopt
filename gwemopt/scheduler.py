@@ -9,7 +9,7 @@ from VOEventLib.Vutil import utilityTable, stringVOEvent, VOEventExportClass
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u
-import glue.segments as segments
+import ligo.segments as segments
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
 import gwemopt.hungarian
@@ -201,7 +201,8 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
             below_horizon_mask = horizon_mask * 10.**100
             airmass = airmass + below_horizon_mask
 
-            # while the patch is rising, apply greedy method
+            # if part of patch below horizon, apply greedy method
+            # temporary solution until runtime issue fixed
             if horizon_mask.any() or len(exposureids)==1:
                 exptimecheck = np.where(exposurelist[ii][0]-tileexptime <
                     params["mindiff"]/86400.0)[0]
@@ -225,7 +226,6 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
                         filts[ii] = filt
 
                 idxs[ii] = idx2
-                # print(len(ras), len(decs), len(probs), len(exposureids))
 
             # once the patch has risen, create a matrix of the remaining exposure times and tiles
             elif not horizon_mask.any() and len(exposureids) > 1:
@@ -233,7 +233,6 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
                 probmatrix.append(probs * (True^horizon_mask))
 
             tilematrix = np.array(matrix)
-            # print(tilematrix.shape)
 
     if params["scheduleType"] == "greedy":
         for ii in np.arange(len(exposurelist)): 
@@ -312,19 +311,15 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
         tilematrix_mask = tilematrix > 10**(-10)
 
         if tilematrix_mask.any():
-            # print("...calculating Hungarian solution...")
             hungarian = gwemopt.hungarian.Hungarian(tilematrix, profit_matrix=True)
             hungarian.calculate()
-            # print("...Hungarian solution calculated...\n")
             optimal_points = np.array(hungarian.assigned_points)
             # sort the optimal points first on probability
-            # print(optimal_points)
             order = np.argsort(optimal_points[:, 0])
             optimal_points = optimal_points[order]
             max_no_observ = min(tilematrix.shape)
-            print(optimal_points.shape)
 
-            # for jj in range(max_no_observ):
+            for jj in range(max_no_observ):
                 # idx0 indexes over the time windows, idx1 indexes over the probabilities
                 # idx2 gets the exposure id of the tile, used to assign tileexptime and tilenexps
                 try:
@@ -335,15 +330,10 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
                     if len(tilefilts[idx2]) > 0:
                         filt = tilefilts[idx2].pop(0)
                         filts[jj] = filt
-                    # if idx2 in keynames:
-                    #     idx = keynames.index(idx2)
-                    #     print(tileexptime[idx])
                 except: continue
 
                 greedy_tile_idx = len(exposurelist) - max(tilematrix.shape)
-                # print("amw after index:", greedy_tile_idx)
                 idxs[idx0 + greedy_tile_idx] = idx2
-                # idxs[idx0] = idx2
 
 
         else: print("The localization is not visible from the site.")
