@@ -7,7 +7,7 @@ __author__ = "Javed Rana <javed@iucaa.in>"
 
 ### Imports
 import numpy as np
-
+import multiprocessing as mp
 
 class Hungarian:
     '''Use Hungarian algorithm to minimize the cost'''
@@ -21,6 +21,10 @@ class Hungarian:
         ### Padding of zeros if the matrix is not balanced.
         matrix_shape = newmatrix.shape
         max_size = max(matrix_shape)
+        if max_size > 100*matrix_shape[1]:
+            max_size = 100*matrix_shape[1]
+            newmatrix = newmatrix[:max_size]
+        matrix_shape = newmatrix.shape
         pad_row = max_size - matrix_shape[0]
         pad_column = max_size - matrix_shape[1]
         newmatrix = np.pad(newmatrix, ((0,pad_row),(0,pad_column)), 'constant', constant_values=(0.))
@@ -215,9 +219,12 @@ class markRowColumn:
             '''First marking of the rows and columns from the unassigned 
             rows
             '''
-            for ri in self.marked_rows:
-                cindex = self.zeroUnassignedRow(self.cost_matrix[ri])
-                for ci in cindex:
+            pool = mp.Pool(mp.cpu_count())
+            cindex = pool.map(self.zeroUnassignedRow, [self.cost_matrix[ri] for ri in self.marked_rows])
+            pool.close()
+            for i in range(len(cindex)):
+                # cindex = self.zeroUnassignedRow(self.cost_matrix[ri])
+                for ci in cindex[i]:
                     self.marked_columns.append(ci)
             for ci in self.marked_columns:
                 if ci in assigned_columns:
@@ -268,5 +275,4 @@ class markRowColumn:
         if len(f_matrix):
             self.minElementSub(f_matrix, intersect_points)
         self.optimal_line = len(self.unmarked_rows) + len(self.marked_columns)
-
 
