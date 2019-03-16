@@ -61,15 +61,17 @@ def read_skymap(params,is3D=False):
             map_struct["prob"] = prob_data
 
             distmu = localizations[0].distmu
-            map_struct["distmu"] = distmu
-
             distsigma = localizations[0].distsigma
-            map_struct["distsigma"] = distsigma
-
             distnorm = localizations[0].distnorm
-            map_struct["distnorm"] = distnorm
 
-            if not map_struct["distmu"] is None:
+            if distmu is None:            
+                map_struct["distmu"] = None
+                map_struct["distsigma"] = None
+                map_struct["distnorm"] = None
+            else:
+                map_struct["distmu"] = np.array(distmu)
+                map_struct["distsigma"] = np.array(distsigma)
+                map_struct["distnorm"] = np.array(distnorm)
                 is3D = True
 
     else:
