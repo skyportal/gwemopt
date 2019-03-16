@@ -105,6 +105,7 @@ def createTileFile(params, preComputedFile, radecs=None, tileFile=None):
 
     closestTileIndex = []
 
+    ras_all, decs_all = [], []
     for ii in pixelIndex:
             s = np.arccos( np.sin(np.pi*dec[ii]/180.)\
                     * np.sin(np.pi*Dec_tile/180.)\
@@ -112,15 +113,23 @@ def createTileFile(params, preComputedFile, radecs=None, tileFile=None):
                     * np.cos(np.pi*Dec_tile/180.) \
                     * np.cos(np.pi*(RA_tile - ra[ii])/180.) )
             index = np.argmin(s) ### minimum angular distance index
+
+            ras_all.append(RA_tile[index])
+            decs_all.append(Dec_tile[index])
             closestTileIndex.append(tile_index[index])
 
     closestTileIndex = np.array(closestTileIndex)
-    uniqueTiles = np.unique(closestTileIndex)
+    ras_all = np.array(ras_all)
+    decs_all = np.array(decs_all)
+ 
+    uniqueTiles, indices = np.unique(closestTileIndex, return_index=True)
+    ras_unique = ras_all[indices]
+    decs_unique = decs_all[indices] 
 
-    pixelsInTile = []
-    for tile in uniqueTiles:
+    pixelsInTile = {}
+    for ii, tile in enumerate(uniqueTiles):
         whereThisTile = tile == closestTileIndex ### pixels indices in this tile
-        pixelsInTile.append(pixelIndex[whereThisTile])
+        pixelsInTile[ii+1] = [pixelIndex[whereThisTile],ras_unique[ii],decs_unique[ii]]
 
     File = open(preComputedFile, 'wb')
     pickle.dump(pixelsInTile, File)
