@@ -96,6 +96,8 @@ def parse_commandline():
     parser.add_option("--doCatalogDatabase",  action="store_true", default=False)
     parser.add_option("--catalogDir", help="catalog directory",default="../catalogs")
     parser.add_option("--galaxy_catalog", help="Source catalog",default="GLADE")
+    parser.add_option("--galaxy_grade", help="grade to use ('S' or 'Sloc')",
+                      type=str, default="S")
     parser.add_option("--catalog_n",default=1.0,type=float)
  
     parser.add_option("--doObservability",  action="store_true", default=False)
@@ -274,6 +276,7 @@ def params_struct(opts):
     params["catalog_n"] = opts.catalog_n
     params["doUseCatalog"] = opts.doUseCatalog
     params["doCatalogDatabase"] = opts.doCatalogDatabase
+    params["galaxy_grade"] = opts.galaxy_grade
 
     params["doChipGaps"] = opts.doChipGaps
     
