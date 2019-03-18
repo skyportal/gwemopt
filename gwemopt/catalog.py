@@ -261,20 +261,21 @@ def get_catalog(params, map_struct):
     catalog_struct["Sloc"] = Sloc
     catalog_struct["S"] = S
 
-    catalogfile = os.path.join(params["outputDir"], 'catalog.csv')
-    fid = open(catalogfile, 'w')
-    cnt = 1
-    if params["galaxy_catalog"] == "GLADE":
-        fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS\n")
-        for a, b, c, d, e, f, g, h, i, j, k in zip(ra, dec, Sloc, S, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS):
-            fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k))
-            cnt = cnt + 1
-    else:
-        fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z\n")
-        for a, b, c, d in zip(ra, dec, Sloc, S, distmpc, z):
-            fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f\n" % (cnt, a, b, c, d, e, f))
-            cnt = cnt + 1
+    if params["doPlots"] or params["writeCatalog"]:
+        catalogfile = os.path.join(params["outputDir"], 'catalog.csv')
+        fid = open(catalogfile, 'w')
+        cnt = 1
+        if params["galaxy_catalog"] == "GLADE":
+            fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS\n")
+            for a, b, c, d, e, f, g, h, i, j, k in zip(ra, dec, Sloc, S, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS):
+                fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k))
+                cnt = cnt + 1
+        else:
+            fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z\n")
+            for a, b, c, d in zip(ra, dec, Sloc, S, distmpc, z):
+                fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f\n" % (cnt, a, b, c, d, e, f))
+                cnt = cnt + 1
 
-    fid.close()
+        fid.close()
 
     return map_struct, catalog_struct
