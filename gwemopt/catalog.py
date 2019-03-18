@@ -261,7 +261,7 @@ def get_catalog(params, map_struct):
     catalog_struct["Sloc"] = Sloc
     catalog_struct["S"] = S
 
-    if params["doPlots"] or params["writeCatalog"]:
+    if params["writeCatalog"]:
         catalogfile = os.path.join(params["outputDir"], 'catalog.csv')
         fid = open(catalogfile, 'w')
         cnt = 1
