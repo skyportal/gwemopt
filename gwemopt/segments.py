@@ -246,11 +246,10 @@ def get_segments(params, config_struct):
     return segmentlist
 
 def get_segments_tile(config_struct, observatory, radec, segmentlist):
-
     observer = ephem.Observer()
     observer.lat = str(config_struct["latitude"])
     observer.lon = str(config_struct["longitude"])
-    observer.horizon = str(30.0)
+    observer.horizon = str(config_struct["horizon"])
     observer.elevation = config_struct["elevation"]
 
     fxdbdy = ephem.FixedBody()
