@@ -45,56 +45,57 @@ def readParamsFromFile(file):
                         params[line_split[0]] = line_split[1]
     return params
 
-def read_skymap(params,is3D=False):
-    map_struct = {}
+def read_skymap(params,is3D=False,map_struct=None):
 
-    if params["doDatabase"]:
-        models = params["models"]
-        localizations_all = models.Localization.query.all()
-        localizations = models.Localization.query.filter_by(dateobs=params["dateobs"],localization_name=params["localization_name"]).all()
-        if localizations == None:
-            print("No localization with dateobs=%s"%params["dateobs"])
-            exit(0)
-        else:
-            prob_data = localizations[0].healpix
-            prob_data = prob_data / np.sum(prob_data)
-            map_struct["prob"] = prob_data
+    if not map_struct is None:
+        map_struct = {}
 
-            distmu = localizations[0].distmu
-            distsigma = localizations[0].distsigma
-            distnorm = localizations[0].distnorm
-
-            if distmu is None:            
-                map_struct["distmu"] = None
-                map_struct["distsigma"] = None
-                map_struct["distnorm"] = None
+        if params["doDatabase"]:
+            models = params["models"]
+            localizations_all = models.Localization.query.all()
+            localizations = models.Localization.query.filter_by(dateobs=params["dateobs"],localization_name=params["localization_name"]).all()
+            if localizations == None:
+                print("No localization with dateobs=%s"%params["dateobs"])
+                exit(0)
             else:
-                map_struct["distmu"] = np.array(distmu)
-                map_struct["distsigma"] = np.array(distsigma)
-                map_struct["distnorm"] = np.array(distnorm)
-                is3D = True
-
-    else:
-        filename = params["skymap"]
+                prob_data = localizations[0].healpix
+                prob_data = prob_data / np.sum(prob_data)
+                map_struct["prob"] = prob_data
     
-        if is3D:
-            healpix_data = hp.read_map(filename, field=(0,1,2,3), verbose=False)
+                distmu = localizations[0].distmu
+                distsigma = localizations[0].distsigma
+                distnorm = localizations[0].distnorm
     
-            distmu_data = healpix_data[1]
-            distsigma_data = healpix_data[2]
-            prob_data = healpix_data[0]
-            norm_data = healpix_data[3]
-    
-            map_struct["distmu"] = distmu_data / params["DScale"]
-            map_struct["distsigma"] = distsigma_data / params["DScale"]
-            map_struct["prob"] = prob_data
-            map_struct["distnorm"] = norm_data
-
+                if distmu is None:            
+                    map_struct["distmu"] = None
+                    map_struct["distsigma"] = None
+                    map_struct["distnorm"] = None
+                else:
+                    map_struct["distmu"] = np.array(distmu)
+                    map_struct["distsigma"] = np.array(distsigma)
+                    map_struct["distnorm"] = np.array(distnorm)
+                    is3D = True
         else:
-            prob_data = hp.read_map(filename, field=0, verbose=False)
-            prob_data = prob_data / np.sum(prob_data)
+            filename = params["skymap"]
+        
+            if is3D:
+                healpix_data = hp.read_map(filename, field=(0,1,2,3), verbose=False)
+        
+                distmu_data = healpix_data[1]
+                distsigma_data = healpix_data[2]
+                prob_data = healpix_data[0]
+                norm_data = healpix_data[3]
+        
+                map_struct["distmu"] = distmu_data / params["DScale"]
+                map_struct["distsigma"] = distsigma_data / params["DScale"]
+                map_struct["prob"] = prob_data
+                map_struct["distnorm"] = norm_data
     
-            map_struct["prob"] = prob_data
+            else:
+                prob_data = hp.read_map(filename, field=0, verbose=False)
+                prob_data = prob_data / np.sum(prob_data)
+        
+                map_struct["prob"] = prob_data
 
     natural_nside = hp.pixelfunc.get_nside(prob_data)
     nside = params["nside"]
