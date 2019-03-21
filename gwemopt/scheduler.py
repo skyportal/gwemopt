@@ -107,7 +107,7 @@ def find_tile_greedy_slew(current_time, current_ra, current_dec, tilesegmentlist
     return idx2, slew_readout_selected, exp_idle_seg
 
 
-def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
+def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, config_struct):
     '''
     tile_struct: dictionary. key -> struct info. 
     tilesegmentlists: list of lists. Segments for each tile in tile_struct 
@@ -195,7 +195,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory):
             t = Time(exposurelist[ii][0], format='mjd')
             altaz = get_altaz_tiles(ras, decs, observatory, t)
             alts = altaz.alt.degree
-            horizon = 29.5
+            horizon = config_struct["horizon"]
             horizon_mask = alts <= horizon
             airmass = 1 / np.cos((90. - alts) * np.pi / 180.)
             below_horizon_mask = horizon_mask * 10.**100
@@ -436,7 +436,7 @@ def scheduler(params, config_struct, tile_struct):
     if params["scheduleType"].endswith('_slew'):
         keys, exposurelist, filts = get_order_slew(params, tile_struct, tilesegmentlists, config_struct)
     else:
-        keys, filts = get_order(params,tile_struct,tilesegmentlists,exposurelist,observatory)
+        keys, filts = get_order(params,tile_struct,tilesegmentlists,exposurelist,observatory, config_struct)
     if params["doPlots"]:
         gwemopt.plotting.scheduler(params,exposurelist,keys)
 
