@@ -140,6 +140,11 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
 
         nexps = nexps + tile_struct[key]["nexposures"]
 
+    if "dec_constraint" in config_struct:
+        dec_constraint = config_struct["dec_constraint"].split(",")
+        dec_min = float(dec_constraint[0])
+        dec_max = float(dec_constraint[1])
+
     for ii in range(len(exposurelist)):
         exposureids_tiles[ii] = {}
         exposureids = []
@@ -148,6 +153,9 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
             tilesegmentlist = tilesegmentlists[jj]
             if tilesegmentlist.intersects_segment(exposurelist[ii]):
                 if tile_struct[key]["prob"] == 0: continue
+                if "dec_constraint" in config_struct:
+                    print(tile_struct[key]["dec"],dec_min,dec_max)
+                    if (tile_struct[key]["dec"] < dec_min) or (tile_struct[key]["dec"] > dec_max): continue
                 exposureids.append(key)
                 probs.append(tile_struct[key]["prob"])
 
