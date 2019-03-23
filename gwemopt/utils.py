@@ -47,7 +47,7 @@ def readParamsFromFile(file):
 
 def read_skymap(params,is3D=False,map_struct=None):
 
-    if not map_struct is None:
+    if map_struct is None:
         map_struct = {}
 
         if params["doDatabase"]:
@@ -97,7 +97,7 @@ def read_skymap(params,is3D=False,map_struct=None):
         
                 map_struct["prob"] = prob_data
 
-    natural_nside = hp.pixelfunc.get_nside(prob_data)
+    natural_nside = hp.pixelfunc.get_nside(map_struct["prob"])
     nside = params["nside"]
     
     print("natural_nside =", natural_nside)

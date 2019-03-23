@@ -29,6 +29,11 @@ def get_telescope_segments(params):
 
 def get_moon_segments(config_struct,segmentlist,observer,fxdbdy,radec):
 
+    if "moon_constraint" in config_struct:
+        moon_constraint = float(config_struct["moon_constraint"])
+    else:
+        moon_constraint = 20.0
+
     moonsegmentlist = segments.segmentlist()
     dt = 1.0/24.0
     tt = np.arange(segmentlist[0][0],segmentlist[-1][1]+dt,dt)
@@ -64,7 +69,7 @@ def get_moon_segments(config_struct,segmentlist,observer,fxdbdy,radec):
         #print("Angle between moon and target: %.5f"%(angle))
 
         #if angle >= 50.0*moon.moon_phase**2:
-        if angle >= 20.0:
+        if angle >= moon_constraint:
             segment = segments.segment(tt[ii],tt[ii+1])
             moonsegmentlist = moonsegmentlist + segments.segmentlist([segment])
             moonsegmentlist.coalesce()
