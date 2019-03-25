@@ -161,6 +161,7 @@ def get_catalog(params, map_struct):
         a, b2a, pa = a[idx], b2a[idx], pa[idx]
         btc = btc[idx]
 
+        z = -1*np.ones(distmpc.shape)
         r = distmpc * 1.0
         mag = magb * 1.0
 
