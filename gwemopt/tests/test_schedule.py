@@ -231,7 +231,10 @@ def test_scheduler():
     testpath = config_directory = os.path.join(gwemoptpath, 'tests')
     skymap = os.path.join(testpath, 'data/MS190227n_bayestar.fits.gz')
     gpstime = 1235311089.400738
- 
-    params = params_struct(skymap, gpstime)
-    map_struct, tile_structs, coverage_struct = gen_structs(params)
 
+    teles=['ZTF','KPED']
+    doReferences_list = [True,False]
+    for tele,doReferences in zip(teles,doReferences_list): 
+        params = params_struct(skymap, gpstime, tele=tele,
+                               doReferences=doReferences)
+        map_struct, tile_structs, coverage_struct = gen_structs(params)
