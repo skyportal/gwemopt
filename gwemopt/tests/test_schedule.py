@@ -93,7 +93,7 @@ def params_struct(skymap, gpstime, tobs=None, filt=['r'],
     elif tele in ["KPED", "GROWTH-India"]:
         params["tilesType"] = "galaxy"
         params["catalogDir"] = catalog_directory
-        params["galaxy_catalog"] = "CLU"
+        params["galaxy_catalog"] = "GLADE"
         params["galaxy_grade"] = "S"
         params["writeCatalog"] = False
         params["catalog_n"] = 1.0
