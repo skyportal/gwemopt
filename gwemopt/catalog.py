@@ -196,9 +196,21 @@ def get_catalog(params, map_struct):
 
     if "distnorm" in map_struct:
         if map_struct["distnorm"] is not None:
+            
+            #creat an mask to cut at 3 sigma in distance
+            mask = np.zeros(len(r))
+
+            condition_indexer = np.where( (r < (map_struct["distmu"][ipix] + (3*map_struct["distsigma"][ipix]))) & (r > (map_struct["distmu"][ipix] - (3*map_struct["distsigma"][ipix])) )) 
+            mask[condition_indexer] = 1
+
             Sloc = prob_scaled[ipix] * (map_struct["distnorm"][ipix] *
                                         norm(map_struct["distmu"][ipix],
                                         map_struct["distsigma"][ipix]).pdf(r))**params["powerlaw_dist_exp"] / map_struct["pixarea"]
+            
+
+            #multiplie the Sloc by 1 or 0 according to the 3 sigma condistion
+            Sloc = Sloc*mask
+
         else:
             Sloc = copy.copy(prob_scaled[ipix])
     else:
@@ -206,7 +218,7 @@ def get_catalog(params, map_struct):
 
     # Set nan values to zero
     Sloc[np.isnan(Sloc)] = 0
-
+    print(len(np.where(Sloc != 0)[0]))
     S = Sloc*Slum*Sdet
     prob = np.zeros(map_struct["prob"].shape)
     if params["galaxy_grade"] == "Sloc":
@@ -229,7 +241,8 @@ def get_catalog(params, map_struct):
     if params["galaxy_catalog"] == "GLADE":
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]
-
+    
+    """
     Sthresh = np.max(grade)*0.01
     idx = np.where(grade >= Sthresh)[0]
     grade = grade[idx]
@@ -238,9 +251,11 @@ def get_catalog(params, map_struct):
     if params["galaxy_catalog"] == "GLADE":
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]
-
+    """
+    
     idx = np.argsort(grade)[::-1]
     grade = grade[idx]
+
     ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
     distmpc, z = distmpc[idx], z[idx]
     if params["galaxy_catalog"] == "GLADE":
