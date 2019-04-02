@@ -157,9 +157,8 @@ def moc(params, map_struct, moc_structs):
  
         config_struct = params["config"][telescope]
         moc_struct = moc_structs[telescope]
- 
-        tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
 
+        tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
         tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
         tile_structs[telescope] = tile_struct
 

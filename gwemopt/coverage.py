@@ -19,6 +19,7 @@ def combine_coverage_structs(coverage_structs):
     coverage_struct_combined["patch"] = []
     coverage_struct_combined["FOV"] = np.empty((0,1))
     coverage_struct_combined["area"] = np.empty((0,1))
+    coverage_struct_combined["telescope"] = np.empty((0,1))
     for coverage_struct in coverage_structs:
         coverage_struct_combined["data"] = np.append(coverage_struct_combined["data"],coverage_struct["data"],axis=0)
         coverage_struct_combined["filters"] = np.append(coverage_struct_combined["filters"],coverage_struct["filters"])
@@ -26,7 +27,7 @@ def combine_coverage_structs(coverage_structs):
         coverage_struct_combined["patch"] = coverage_struct_combined["patch"] + coverage_struct["patch"]
         coverage_struct_combined["FOV"] = np.append(coverage_struct_combined["FOV"],coverage_struct["FOV"])
         coverage_struct_combined["area"] = np.append(coverage_struct_combined["area"],coverage_struct["area"])
-
+        coverage_struct_combined["telescope"] = np.append(coverage_struct_combined["telescope"],coverage_struct["telescope"])
     return coverage_struct_combined
 
 def read_coverage(params, telescope, filename):
@@ -126,9 +127,12 @@ def waw(params, map_struct, tile_structs):
 
 def powerlaw(params, map_struct, tile_structs):
 
+    map_struct_hold = copy.deepcopy(map_struct)
+
     coverage_structs = []
     n_scope = 0
     full_prob_map = map_struct["prob"]
+    filters, exposuretimes = params["filters"], params["exposuretimes"]
 
     for telescope in params["telescopes"]:
 
@@ -146,7 +150,6 @@ def powerlaw(params, map_struct, tile_structs):
         tile_struct = tile_structs[telescope]
 
         if params["doAlternatingFilters"]:
-            filters, exposuretimes = params["filters"], params["exposuretimes"]
             tile_struct_hold = copy.copy(tile_struct)
             coverage_structs_hold = []
             cnt = 0
@@ -161,20 +164,25 @@ def powerlaw(params, map_struct, tile_structs):
                            exposurelistnew = config_struct["exposurelist"][maxidx:]
                            config_struct["exposurelist"] = exposurelistnew
 
-                tile_struct_hold = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct_hold)      
+                tile_struct_hold = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct_hold)      
                 coverage_struct_hold = gwemopt.scheduler.scheduler(params, config_struct, tile_struct_hold)
                 coverage_structs_hold.append(coverage_struct_hold)
                 cnt = cnt + 1
             coverage_struct = combine_coverage_structs(coverage_structs_hold)
         else:
-            tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)      
+            tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct)      
             coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
         coverage_structs.append(coverage_struct)
+
+        if params["doIterativeTiling"]:
+            map_struct_hold = gwemopt.utils.slice_map_tiles(map_struct_hold, tile_struct)
 
     map_struct["prob"] = full_prob_map
     return combine_coverage_structs(coverage_structs)
 
 def pem(params, map_struct, tile_structs):
+
+    map_struct_hold = copy.deepcopy(map_struct)
 
     coverage_structs = []
     for telescope in params["telescopes"]:
@@ -188,14 +196,17 @@ def pem(params, map_struct, tile_structs):
             for filt, exposuretime in zip(filters,exposuretimes):
                 params["filters"] = [filt]
                 params["exposuretimes"] = [exposuretime]
-                tile_struct_hold = gwemopt.tiles.pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct_hold)
+                tile_struct_hold = gwemopt.tiles.pem_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct_hold)
                 coverage_struct_hold = gwemopt.scheduler.scheduler(params, config_struct, tile_struct_hold)
                 coverage_structs_hold.append(coverage_struct_hold)
             coverage_struct = combine_coverage_structs(coverage_structs_hold)
         else:
-            tile_struct = gwemopt.tiles.pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
+            tile_struct = gwemopt.tiles.pem_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct)
             coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
         coverage_structs.append(coverage_struct)
+
+        if params["doIterativeTiling"]:
+            map_struct_hold = gwemopt.utils.slice_map_tiles(map_struct_hold, tile_struct)
 
     return combine_coverage_structs(coverage_structs)
 
