@@ -92,6 +92,7 @@ def parse_commandline():
     parser.add_option("--tilesType", help="tiling type",default="moc")
 
     parser.add_option("--doIterativeTiling",  action="store_true", default=False)
+    parser.add_option("--doMinimalTiling",  action="store_true", default=False)
 
     parser.add_option("--doCatalog",  action="store_true", default=False)
     parser.add_option("--doUseCatalog",  action="store_true", default=False)
@@ -277,6 +278,7 @@ def params_struct(opts):
     params["airmass"] = opts.airmass
 
     params["doIterativeTiling"] = opts.doIterativeTiling
+    params["doMinimalTiling"] = opts.doMinimalTiling
 
     params["doCatalog"] = opts.doCatalog
     params["catalog_n"] = opts.catalog_n
@@ -362,7 +364,7 @@ if opts.doSplit:
 if opts.doTiles:
     if params["tilesType"] == "moc":
         print("Generating MOC struct...")
-        moc_structs = gwemopt.moc.create_moc(params)
+        moc_structs = gwemopt.moc.create_moc(params, map_struct=map_struct)
         tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
     elif params["tilesType"] == "ranked":
         print("Generating ranked struct...")

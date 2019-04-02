@@ -1,4 +1,5 @@
 import time
+import copy
 
 from mocpy import MOC
 from astropy.table import Table
@@ -8,15 +9,33 @@ import numpy as np
 
 import gwemopt.utils
 
-def create_moc(params):
+def create_moc(params, map_struct=None):
 
     nside = params["nside"]
+
+    if params["doMinimalTiling"]:
+        prob = map_struct["prob"]
+        n, cl, dist_exp = params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"]
+        prob_scaled = copy.deepcopy(prob)
+        prob_sorted = np.sort(prob_scaled)[::-1]
+        prob_indexes = np.argsort(prob_scaled)[::-1]
+        prob_cumsum = np.cumsum(prob_sorted)
+        index = np.argmin(np.abs(prob_cumsum - cl)) + 1
+        prob_indexes = prob_indexes[:index+1]
 
     moc_structs = {}
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
         tesselation = config_struct["tesselation"]
         moc_struct = {}
+
+        if params["doMinimalTiling"]:
+            idxs = hp.pixelfunc.ang2pix(map_struct["nside"], tesselation[:,1], tesselation[:,2], lonlat=True)
+            isin = np.isin(idxs, prob_indexes)
+            
+            idxs = [i for i, x in enumerate(isin) if x]
+            print("Keeping %d/%d tiles" % (len(idxs), len(tesselation)))
+            tesselation = tesselation[idxs,:]
 
         if params["doParallel"]:
             moclists = Parallel(n_jobs=params["Ncores"])(delayed(Fov2Moc)(params, config_struct, telescope, tess[1], tess[2], nside) for tess in tesselation)
