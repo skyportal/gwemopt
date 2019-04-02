@@ -42,6 +42,7 @@ def params_struct(skymap, gpstime, tobs=None, filt=['r'],
         if not telescope == tele: continue
         params["config"][telescope] =\
             gwemopt.utils.readParamsFromFile(config_file)
+        params["config"][telescope]["telescope"] = telescope
         if "tesselationFile" in params["config"][telescope]:
             params["config"][telescope]["tesselationFile"] =\
                 os.path.join(config_directory,
@@ -130,6 +131,7 @@ def params_struct(skymap, gpstime, tobs=None, filt=['r'],
     params["doSplit"] = False
     params["doParallel"] = False
     params["doUseCatalog"] = False
+    params["doIterativeTiling"] = False
 
     if params["doEvent"]:
         params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)

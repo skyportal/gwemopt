@@ -91,6 +91,8 @@ def parse_commandline():
     parser.add_option("--doTiles",  action="store_true", default=False)
     parser.add_option("--tilesType", help="tiling type",default="moc")
 
+    parser.add_option("--doIterativeTiling",  action="store_true", default=False)
+
     parser.add_option("--doCatalog",  action="store_true", default=False)
     parser.add_option("--doUseCatalog",  action="store_true", default=False)
     parser.add_option("--doCatalogDatabase",  action="store_true", default=False)
@@ -187,6 +189,7 @@ def params_struct(opts):
     for configFile in configFiles:
         telescope = configFile.split("/")[-1].replace(".config","")
         params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
+        params["config"][telescope]["telescope"] = telescope
         if opts.doSingleExposure:
             exposuretime = np.array(opts.exposuretimes.split(","),dtype=np.float)[0]
 
@@ -272,6 +275,8 @@ def params_struct(opts):
     params["doReferences"] = opts.doReferences
 
     params["airmass"] = opts.airmass
+
+    params["doIterativeTiling"] = opts.doIterativeTiling
 
     params["doCatalog"] = opts.doCatalog
     params["catalog_n"] = opts.catalog_n

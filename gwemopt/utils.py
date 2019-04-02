@@ -431,4 +431,9 @@ def get_exposures(params, config_struct, segmentlist):
 
     return exposurelist
 
+def slice_map_tiles(map_struct, tile_struct):
 
+    for ii,key in enumerate(tile_struct.keys()):
+        map_struct["prob"][tile_struct[key]["ipix"]] = 0.0
+
+    return map_struct

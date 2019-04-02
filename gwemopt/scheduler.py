@@ -499,6 +499,8 @@ def scheduler(params, config_struct, tile_struct):
     coverage_struct["area"] = np.array(coverage_struct["area"])
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
     coverage_struct["FOV"] = config_struct["FOV"]*np.ones((len(coverage_struct["filters"]),))
+    coverage_struct["telescope"] = [config_struct["telescope"]]*len(coverage_struct["filters"])
+
     return coverage_struct
 
 
@@ -631,6 +633,9 @@ def summary(params, map_struct, coverage_struct):
 
         fid = open(schedulefile,'w')
         for ii in range(len(coverage_struct["ipix"])):
+            if not telescope == coverage_struct["telescope"][ii]:
+                continue
+
             data = coverage_struct["data"][ii,:]
             filt = coverage_struct["filters"][ii]
             ipix = coverage_struct["ipix"][ii]
