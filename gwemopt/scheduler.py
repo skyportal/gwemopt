@@ -154,7 +154,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
             if tilesegmentlist.intersects_segment(exposurelist[ii]):
                 if tile_struct[key]["prob"] == 0: continue
                 if "dec_constraint" in config_struct:
-                    print(tile_struct[key]["dec"],dec_min,dec_max)
+                    #print(tile_struct[key]["dec"],dec_min,dec_max)
                     if (tile_struct[key]["dec"] < dec_min) or (tile_struct[key]["dec"] > dec_max): continue
                 exposureids.append(key)
                 probs.append(tile_struct[key]["prob"])
@@ -499,7 +499,8 @@ def scheduler(params, config_struct, tile_struct):
     coverage_struct["area"] = np.array(coverage_struct["area"])
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
     coverage_struct["FOV"] = config_struct["FOV"]*np.ones((len(coverage_struct["filters"]),))
-    coverage_struct["telescope"] = [config_struct["telescope"]]*len(coverage_struct["filters"])
+    #coverage_struct["telescope"] = [config_struct["telescope"]]*len(coverage_struct["filters"])
+    coverage_struct["telescope"] = [config_struct]*len(coverage_struct["filters"])
 
     return coverage_struct
 
