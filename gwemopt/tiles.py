@@ -23,10 +23,10 @@ def galaxy(params, map_struct, catalog_struct):
 
         config_struct = params["config"][telescope]
 
-        # Merge in single pointing galaxies separating by less than FOV*ratio_FOV
+        # Combine in a single pointing, galaxies that are distant by
+        # less than FoV * params['galaxies_FoV_sep']
         # Take galaxy with highest proba at the center of new pointing
-        #ratio_FOV = 0.3
-        FOV = params["config"][telescope]['FOV']
+        FoV = params["config"][telescope]['FOV']
         new_ra = []
         new_dec = []
         new_Sloc = []
