@@ -72,6 +72,7 @@ install_requires = [
 # test dependencies
 tests_require = [
     'pytest>=3.1',
+    'pytest-runner',
     'freezegun',
     'sqlparse',
     'bs4',
