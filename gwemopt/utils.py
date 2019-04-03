@@ -431,9 +431,18 @@ def get_exposures(params, config_struct, segmentlist):
 
     return exposurelist
 
-def slice_map_tiles(map_struct, tile_struct):
+def slice_map_tiles(map_struct, coverage_struct):
 
-    for ii,key in enumerate(tile_struct.keys()):
-        map_struct["prob"][tile_struct[key]["ipix"]] = 0.0
+    for ii in range(len(coverage_struct["ipix"])):
+        data = coverage_struct["data"][ii,:]
+        filt = coverage_struct["filters"][ii]
+        ipix = coverage_struct["ipix"][ii]
+        patch = coverage_struct["patch"][ii]
+        FOV = coverage_struct["FOV"][ii]
+        area = coverage_struct["area"][ii]
+
+        observ_time, exposure_time, field_id, prob, airmass = data[2], data[4], data[5], data[6], data[7]
+
+        map_struct["prob"][ipix] = 0.0
 
     return map_struct

@@ -110,7 +110,6 @@ def waw(params, map_struct, tile_structs):
         if strategy_struct is None:
             print("Change distance scale...")
             exit(0)
-        print(np.sum(strategy_struct))
         strategy_struct = strategy_struct*86400.0
         keys = tile_struct.keys()
         for key, prob, exposureTime in zip(keys, ranked_tile_probs, strategy_struct):
@@ -175,7 +174,7 @@ def powerlaw(params, map_struct, tile_structs):
         coverage_structs.append(coverage_struct)
 
         if params["doIterativeTiling"]:
-            map_struct_hold = gwemopt.utils.slice_map_tiles(map_struct_hold, tile_struct)
+            map_struct_hold = gwemopt.utils.slice_map_tiles(map_struct_hold, coverage_struct)
 
     map_struct["prob"] = full_prob_map
     return combine_coverage_structs(coverage_structs)
@@ -206,7 +205,7 @@ def pem(params, map_struct, tile_structs):
         coverage_structs.append(coverage_struct)
 
         if params["doIterativeTiling"]:
-            map_struct_hold = gwemopt.utils.slice_map_tiles(map_struct_hold, tile_struct)
+            map_struct_hold = gwemopt.utils.slice_map_tiles(map_struct_hold, coverage_struct)
 
     return combine_coverage_structs(coverage_structs)
 
