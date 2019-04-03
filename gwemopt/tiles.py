@@ -34,7 +34,7 @@ def galaxy(params, map_struct, catalog_struct):
         indexes2keep = [bool(i) for i in np.ones(len(catalog_struct["ra"]))]
         cnt=0
         for ra, dec, Sloc, S in zip(catalog_struct["ra"], catalog_struct["dec"], catalog_struct["Sloc"], catalog_struct["S"]):
-            mask = ((FOV * params['galaxies_FoV_sep'])**2 >= (catalog_struct["ra"] - ra)**2 + (catalog_struct["dec"] - dec)**2) & (indexes2keep)
+            mask = ((FoV * params['galaxies_FoV_sep'])**2 >= (catalog_struct["ra"] - ra)**2 + (catalog_struct["dec"] - dec)**2) & (indexes2keep)
             if indexes2keep[cnt]:
                 new_ra.append(ra)
                 new_dec.append(dec)
