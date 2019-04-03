@@ -341,11 +341,43 @@ def get_segments_tiles(params, config_struct, tile_struct):
         for ii,key in enumerate(keys):
             tile_struct[key]["segmentlist"] = tilesegmentlists[ii]
     else:
+
         for ii,key in enumerate(keys):
             #if np.mod(ii,100) == 0: 
             #    print("Generating segments for tile %d/%d"%(ii+1,len(radecs)))
             radec = radecs[ii]
-            tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
-            tile_struct[key]["segmentlist"] = tilesegmentlist
+
+            if params["doMinimalTiling"]:
+                if ii == 0:
+                    keys_computed = [key]
+                    radecs_computed = np.atleast_2d([radec.ra.value, radec.dec.value])
+                    tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
+                    tile_struct[key]["segmentlist"] = tilesegmentlist
+                else:
+                    seps = angular_distance(radec.ra.value, radec.dec.value,
+                                            radecs_computed[:,0],
+                                            radecs_computed[:,1])
+                    sepmin = np.min(seps)
+                    sepamin = np.argmin(seps)
+                    if sepmin <= 5.0:
+                        key_computed = keys_computed[sepamin]
+                        tile_struct[key]["segmentlist"] = copy.deepcopy(tile_struct[key_computed]["segmentlist"])
+                    else:
+                        keys_computed.append(key)
+                        radecs_computed = np.vstack((radecs_computed,[radec.ra.value, radec.dec.value]))
+                        tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
+                        tile_struct[key]["segmentlist"] = tilesegmentlist
+            else:
+                tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
+                tile_struct[key]["segmentlist"] = tilesegmentlist
 
     return tile_struct
+
+def angular_distance(ra1, dec1, ra2, dec2):
+
+    delt_lon = (ra1 - ra2)*np.pi/180.
+    delt_lat = (dec1 - dec2)*np.pi/180.
+    dist = 2.0*np.arcsin( np.sqrt( np.sin(delt_lat/2.0)**2 + \
+         np.cos(dec1*np.pi/180.)*np.cos(dec2*np.pi/180.)*np.sin(delt_lon/2.0)**2 ) )  
+
+    return dist/np.pi*180.
