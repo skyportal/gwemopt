@@ -108,6 +108,8 @@ def params_struct(skymap, gpstime, tobs=None, filt=['r'],
     params["powerlaw_n"] = 1.0
     params["powerlaw_dist_exp"] = 0.0
 
+    params["galaxies_FoV_sep"] = 0.0
+
     params["doPlots"] = False
     params["doMovie"] = False
     params["doObservability"] = True
