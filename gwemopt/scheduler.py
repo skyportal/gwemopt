@@ -198,7 +198,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
 
         for ii in np.arange(len(exposurelist)):
 
-            # first, check whether the entire patch is above the horizon
+            # first, create an array of airmass-weighted probabilities
             t = Time(exposurelist[ii][0], format='mjd')
             altaz = get_altaz_tiles(ras, decs, observatory, t)
             alts = altaz.alt.degree
@@ -286,7 +286,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
             tileavailable[jj] = tileavailable[jj] - 1  
 
     elif params["scheduleType"] == "airmass_weighted":
-        
+        # then use the Hungarian algorithm (munkres) to schedule high prob tiles at low airmass
         tilematrix_mask = tilematrix > 10**(-10)
 
         if tilematrix_mask.any():
@@ -447,17 +447,20 @@ def scheduler(params, config_struct, tile_struct):
             # the (middle) tile observation time is mjd_exposure_mid
             mjd_exposure_mid = (mjd_exposure_start+mjd_exposure_end)/2.0
 
-            # calculate airmass for each tile at the middle of its exposure:
-            t = Time(mjd_exposure_mid, format='mjd')
+            # calculate airmass for each tile at the start of its exposure:
+            t = Time(mjd_exposure_start, format='mjd')
             altaz = get_altaz_tiles(tile_struct_hold["ra"], tile_struct_hold["dec"], observatory, t)
             alt = altaz.alt.degree
             airmass = 1 / np.cos((90. - alt) * np.pi / 180)
+
+            # total duration of the observation (?)
+
 
             nmag = np.log(nexp) / np.log(2.5)
             mag = config_struct["magnitude"] + nmag
             exposureTime = (mjd_exposure_end-mjd_exposure_start)*86400.0
 
-            coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_mid,mag,exposureTime,int(key),tile_struct_hold["prob"],airmass]]),axis=0)
+            coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_start,mag,exposureTime,int(key),tile_struct_hold["prob"],airmass]]),axis=0)
 
             coverage_struct["filters"].append(filt)
             coverage_struct["patch"].append(tile_struct_hold["patch"])
