@@ -16,24 +16,54 @@ import gwemopt.quadrants
 import gwemopt.moc
 
 def galaxy(params, map_struct, catalog_struct):
-
     nside = params["nside"]
 
     tile_structs = {}
     for telescope in params["telescopes"]:
+
         config_struct = params["config"][telescope]
+
+        # Combine in a single pointing, galaxies that are distant by
+        # less than FoV * params['galaxies_FoV_sep']
+        # Take galaxy with highest proba at the center of new pointing
+        FoV = params["config"][telescope]['FOV']
+        new_ra = []
+        new_dec = []
+        new_Sloc = []
+        new_S = []
+        indexes2keep = [bool(i) for i in np.ones(len(catalog_struct["ra"]))]
+        cnt=0
+        for ra, dec, Sloc, S in zip(catalog_struct["ra"], catalog_struct["dec"], catalog_struct["Sloc"], catalog_struct["S"]):
+            mask = ((FoV * params['galaxies_FoV_sep'])**2 >= (catalog_struct["ra"] - ra)**2 + (catalog_struct["dec"] - dec)**2) & (indexes2keep)
+            if indexes2keep[cnt]:
+                new_ra.append(ra)
+                new_dec.append(dec)
+                new_Sloc.append(np.sum(catalog_struct["Sloc"][mask]))
+                new_S.append(np.sum(catalog_struct["S"][mask]))
+                # discard galaxies already taken into account
+                indexes2discard = np.where(mask)[0]
+                for index in indexes2discard:
+                    indexes2keep[index] = False
+            cnt+=1
+
+        # redefine catalog_struct
+        catalog_struct_new = {}
+        catalog_struct_new["ra"] = new_ra
+        catalog_struct_new["dec"] = new_dec
+        catalog_struct_new["Sloc"] = new_Sloc
+        catalog_struct_new["S"] = new_S
 
         moc_struct = {}
         cnt = 0
-        for ra, dec, Sloc, S in zip(catalog_struct["ra"], catalog_struct["dec"], catalog_struct["Sloc"], catalog_struct["S"]):
+        for ra, dec, Sloc, S in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"]):
             moc_struct[cnt] = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
             cnt = cnt + 1
-
+        
         tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
         tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
 
         cnt = 0
-        for ra, dec, Sloc, S in zip(catalog_struct["ra"], catalog_struct["dec"], catalog_struct["Sloc"], catalog_struct["S"]):
+        for ra, dec, Sloc, S in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"]):
             tile_struct[cnt]['prob'] = Sloc
             cnt = cnt + 1
 
