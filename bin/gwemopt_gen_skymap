@@ -42,6 +42,9 @@ import matplotlib.pyplot as plt
 
 import gwemopt.utils, gwemopt.plotting
 
+import ligo.skymap
+from ligo.skymap import io
+
 __author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
 __version__ = 1.0
 __date__    = "6/17/2017"
@@ -240,7 +243,8 @@ else:
 if opts.doIntersect:
     healpix = get_intersect(healpix,opts.original_skymap,opts.nside)
 
-hp.fitsfunc.write_map(opts.skymap,healpix,overwrite=True)
+#hp.fitsfunc.write_map(opts.skymap,healpix,overwrite=True)
+io.write_sky_map(opts.skymap, healpix)
 
 unit='Gravitational-wave probability'
 cbar=False
