@@ -66,12 +66,14 @@ install_requires = [
     'joblib',
     'ligo-segments',
     'ligo.skymap',
-    'h5py'
+    'h5py',
+    'munkres'
 ]
 
 # test dependencies
 tests_require = [
     'pytest>=3.1',
+    'pytest-runner',
     'freezegun',
     'sqlparse',
     'bs4',

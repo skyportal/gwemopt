@@ -418,12 +418,14 @@ def get_exposures(params, config_struct, segmentlist):
     segmentlist: the segments that the telescope can do the follow-up.
     '''
     exposurelist = segments.segmentlist()
+    if config_struct["overhead_per_exposure"] is not None: overhead = config_struct["overhead_per_exposure"]
+    else: overhead = 0.0
 
     exposure_time = np.max(params["exposuretimes"])
 
     for ii in range(len(segmentlist)):
         start_segment, end_segment = segmentlist[ii][0], segmentlist[ii][1]
-        exposures = np.arange(start_segment, end_segment, exposure_time/86400.0)
+        exposures = np.arange(start_segment, end_segment, (overhead+exposure_time)/86400.0)
         #exposurelist = np.append(exposurelist,exposures)
 
         for jj in range(len(exposures)):

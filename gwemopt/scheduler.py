@@ -12,7 +12,7 @@ import astropy.units as u
 import ligo.segments as segments
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
-import gwemopt.hungarian
+from munkres import Munkres, make_cost_matrix
 
 def get_altaz_tiles(ras, decs, observatory, obstime):
 
@@ -154,7 +154,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
             if tilesegmentlist.intersects_segment(exposurelist[ii]):
                 if tile_struct[key]["prob"] == 0: continue
                 if "dec_constraint" in config_struct:
-                    print(tile_struct[key]["dec"],dec_min,dec_max)
+                    #print(tile_struct[key]["dec"],dec_min,dec_max)
                     if (tile_struct[key]["dec"] < dec_min) or (tile_struct[key]["dec"] > dec_max): continue
                 exposureids.append(key)
                 probs.append(tile_struct[key]["prob"])
@@ -187,19 +187,18 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
     if params["scheduleType"] == "airmass_weighted":
 
         # # first step is to sort the array in order of descending probability
-        # indsort = np.argsort(-np.array(probs))
-        # probs = np.array(probs)[indsort]
-        # ras = np.array(ras)[indsort]
-        # decs = np.array(decs)[indsort]
-        # exposureids = np.array(exposureids)[indsort] 
+        indsort = np.argsort(-np.array(probs))
+        probs = np.array(probs)[indsort]
+        ras = np.array(ras)[indsort]
+        decs = np.array(decs)[indsort]
+        exposureids = np.array(exposureids)[indsort] 
 
-        matrix = []
-        probmatrix = []
+        tilematrix = np.zeros((len(exposurelist), len(ras)))
+        probmatrix = np.zeros((len(exposurelist), len(ras)))
 
-        old_exposureids = exposureids.copy()
         for ii in np.arange(len(exposurelist)):
 
-            # first, check whether the entire patch is above the horizon
+            # first, create an array of airmass-weighted probabilities
             t = Time(exposurelist[ii][0], format='mjd')
             altaz = get_altaz_tiles(ras, decs, observatory, t)
             alts = altaz.alt.degree
@@ -208,39 +207,11 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
             airmass = 1 / np.cos((90. - alts) * np.pi / 180.)
             below_horizon_mask = horizon_mask * 10.**100
             airmass = airmass + below_horizon_mask
+            airmass_weight = 10 ** (0.4 * 0.1 * (airmass - 1) )
+            tilematrix[ii, :] = np.array(probs/airmass_weight)
+            probmatrix[ii, :] = np.array(probs * (True^horizon_mask))
 
-            # if part of patch below horizon, apply greedy method
-            # temporary solution until runtime issue fixed
-            if horizon_mask.any() or len(exposureids)==1:
-                exptimecheck = np.where(exposurelist[ii][0]-tileexptime <
-                    params["mindiff"]/86400.0)[0]
-                exptimecheckkeys = [keynames[x] for x in exptimecheck]
-                # find_tile finds the tile that covers the largest probablity
-                # restricted by availability of tile and timeallocation
-                idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,exptimecheckkeys=exptimecheckkeys)
-                
-                if idx2 in old_exposureids:
-                    idx = old_exposureids.index(idx2)
-                    ras.pop(idx)
-                    decs.pop(idx)
-                    old_exposureids.pop(idx)
 
-                if idx2 in keynames:
-                    idx = keynames.index(idx2)
-                    tilenexps[idx] = tilenexps[idx] - 1
-                    tileexptime[idx] = exposurelist[ii][0]
-                    if len(tilefilts[idx2]) > 0:
-                        filt = tilefilts[idx2].pop(0)
-                        filts[ii] = filt
-
-                idxs[ii] = idx2
-
-            # once the patch has risen, create a matrix of the remaining exposure times and tiles
-            elif not horizon_mask.any() and len(exposureids) > 1:
-                matrix.append(probs/airmass)
-                probmatrix.append(probs * (True^horizon_mask))
-
-            tilematrix = np.array(matrix)
 
     if params["scheduleType"] == "greedy":
         for ii in np.arange(len(exposurelist)): 
@@ -315,34 +286,31 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
             tileavailable[jj] = tileavailable[jj] - 1  
 
     elif params["scheduleType"] == "airmass_weighted":
-        
+        # then use the Hungarian algorithm (munkres) to schedule high prob tiles at low airmass
         tilematrix_mask = tilematrix > 10**(-10)
 
         if tilematrix_mask.any():
-            hungarian = gwemopt.hungarian.Hungarian(tilematrix, profit_matrix=True)
-            hungarian.calculate()
-            optimal_points = np.array(hungarian.assigned_points)
-            # sort the optimal points first on probability
-            order = np.argsort(optimal_points[:, 0])
-            optimal_points = optimal_points[order]
+            print("Calculating Hungarian solution...")
+            total_cost = 0
+            cost_matrix = make_cost_matrix(tilematrix)
+            m = Munkres()
+            optimal_points = m.compute(cost_matrix)
+            print("Hungarian solution calculated...")
             max_no_observ = min(tilematrix.shape)
-
             for jj in range(max_no_observ):
+                idx0, idx1 = optimal_points[jj]
                 # idx0 indexes over the time windows, idx1 indexes over the probabilities
                 # idx2 gets the exposure id of the tile, used to assign tileexptime and tilenexps
                 try:
-                    idx0 = optimal_points[jj][1]
-                    idx1 = optimal_points[jj][0]
-                    idx2 = exposureids[idx1.astype(int)]
-                    tileprob = probmatrix[idx0][idx1]
+                    idx2 = exposureids[idx1]
+                    pamw = tilematrix[idx0][idx1]
+                    total_cost += pamw
                     if len(tilefilts[idx2]) > 0:
                         filt = tilefilts[idx2].pop(0)
-                        filts[jj] = filt
+                        filts[idx0] = filt
                 except: continue
 
-                greedy_tile_idx = len(exposurelist) - max(tilematrix.shape)
-                idxs[idx0 + greedy_tile_idx] = idx2
-
+                idxs[idx0] = idx2
 
         else: print("The localization is not visible from the site.")
 
@@ -479,17 +447,20 @@ def scheduler(params, config_struct, tile_struct):
             # the (middle) tile observation time is mjd_exposure_mid
             mjd_exposure_mid = (mjd_exposure_start+mjd_exposure_end)/2.0
 
-            # calculate airmass for each tile at the middle of its exposure:
-            t = Time(mjd_exposure_mid, format='mjd')
+            # calculate airmass for each tile at the start of its exposure:
+            t = Time(mjd_exposure_start, format='mjd')
             altaz = get_altaz_tiles(tile_struct_hold["ra"], tile_struct_hold["dec"], observatory, t)
             alt = altaz.alt.degree
             airmass = 1 / np.cos((90. - alt) * np.pi / 180)
+
+            # total duration of the observation (?)
+
 
             nmag = np.log(nexp) / np.log(2.5)
             mag = config_struct["magnitude"] + nmag
             exposureTime = (mjd_exposure_end-mjd_exposure_start)*86400.0
 
-            coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_mid,mag,exposureTime,int(key),tile_struct_hold["prob"],airmass]]),axis=0)
+            coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_start,mag,exposureTime,int(key),tile_struct_hold["prob"],airmass]]),axis=0)
 
             coverage_struct["filters"].append(filt)
             coverage_struct["patch"].append(tile_struct_hold["patch"])
@@ -499,7 +470,8 @@ def scheduler(params, config_struct, tile_struct):
     coverage_struct["area"] = np.array(coverage_struct["area"])
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
     coverage_struct["FOV"] = config_struct["FOV"]*np.ones((len(coverage_struct["filters"]),))
-    coverage_struct["telescope"] = [config_struct["telescope"]]*len(coverage_struct["filters"])
+    #coverage_struct["telescope"] = [config_struct["telescope"]]*len(coverage_struct["filters"])
+    coverage_struct["telescope"] = [config_struct]*len(coverage_struct["filters"])
 
     return coverage_struct
 

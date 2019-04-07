@@ -218,7 +218,7 @@ def get_catalog(params, map_struct):
 
     # Set nan values to zero
     Sloc[np.isnan(Sloc)] = 0
-    print(len(np.where(Sloc != 0)[0]))
+
     S = Sloc*Slum*Sdet
     prob = np.zeros(map_struct["prob"].shape)
     if params["galaxy_grade"] == "Sloc":
