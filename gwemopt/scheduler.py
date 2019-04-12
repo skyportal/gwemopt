@@ -315,8 +315,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
         else: print("The localization is not visible from the site.")
 
     else:
-        print("Scheduling options are greedy/sear/weighted/airmass_weighted, or with _slew.")
-        exit(0)
+        raise ValueError("Scheduling options are greedy/sear/weighted/airmass_weighted, or with _slew.")
 
     return idxs, filts
 
@@ -377,8 +376,7 @@ def get_order_slew(params, tile_struct, tilesegmentlists, config_struct):
     elif params["scheduleType"] == "weighted_slew":
         print('weighted_slew is not ready yet.')
     else:
-        print("Scheduling options are greedy/sear/weighted, or with _slew.")
-        exit(0)
+        raise ValueError("Scheduling options are greedy/sear/weighted, or with _slew.")
 
     return idxs, exposurelist, filts
 

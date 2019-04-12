@@ -136,8 +136,7 @@ def get_catalog(params, map_struct):
 
     elif params["galaxy_catalog"] == "CLU":
         if not os.path.isfile(catalogFile):
-            print("Please add %s." % catalogFile)
-            exit(0)
+            raise ValueError("Please add %s." % catalogFile)
 
         with h5py.File(catalogFile, 'r') as f:
             name = f['name'][:]
