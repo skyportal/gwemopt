@@ -80,8 +80,7 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
             #ipix = np.where(Z.inside_nogaps(RAs, Decs))[0]  # Ignore chip gaps
             ipix = np.where(Z.inside(RAs, Decs))[0]
         else:
-            print("Requested chip gaps with non-ZTF detector, failing.")
-            exit(0)
+            raise ValueError("Requested chip gaps with non-ZTF detector, failing.")
 
     moc_struct["ra"] = ra_pointing
     moc_struct["dec"] = dec_pointing

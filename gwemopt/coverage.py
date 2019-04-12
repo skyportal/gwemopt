@@ -108,8 +108,7 @@ def waw(params, map_struct, tile_structs):
         ranked_tile_probs = gwemopt.tiles.compute_tiles_map(tile_struct, map_struct["prob"], func='np.sum(x)')
         strategy_struct = gwemopt.waw.construct_followup_strategy_tiles(map_struct["prob"],detmaps,t,tile_struct,T_int,params["Tobs"])
         if strategy_struct is None:
-            print("Change distance scale...")
-            exit(0)
+            raise ValueError("Change distance scale...")
         strategy_struct = strategy_struct*86400.0
         keys = tile_struct.keys()
         for key, prob, exposureTime in zip(keys, ranked_tile_probs, strategy_struct):
@@ -219,8 +218,7 @@ def timeallocation(params, map_struct, tile_structs):
             print("Generating WAW schedule...")
             coverage_struct = gwemopt.coverage.waw(params, map_struct, tile_structs)
         else:
-            print("Need to enable --do3D for waw")
-            exit(0)
+            raise ValueError("Need to enable --do3D for waw")
     elif params["timeallocationType"] == "pem":
         print("Generating PEM schedule...")
         coverage_struct = gwemopt.coverage.pem(params, map_struct, tile_structs)

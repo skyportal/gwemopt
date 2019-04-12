@@ -55,8 +55,7 @@ def read_skymap(params,is3D=False,map_struct=None):
             localizations_all = models.Localization.query.all()
             localizations = models.Localization.query.filter_by(dateobs=params["dateobs"],localization_name=params["localization_name"]).all()
             if localizations == None:
-                print("No localization with dateobs=%s"%params["dateobs"])
-                exit(0)
+                raise ValueError("No localization with dateobs=%s"%params["dateobs"])
             else:
                 prob_data = localizations[0].healpix
                 prob_data = prob_data / np.sum(prob_data)
