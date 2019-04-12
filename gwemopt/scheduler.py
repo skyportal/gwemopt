@@ -468,8 +468,7 @@ def scheduler(params, config_struct, tile_struct):
     coverage_struct["area"] = np.array(coverage_struct["area"])
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
     coverage_struct["FOV"] = config_struct["FOV"]*np.ones((len(coverage_struct["filters"]),))
-    #coverage_struct["telescope"] = [config_struct["telescope"]]*len(coverage_struct["filters"])
-    coverage_struct["telescope"] = [config_struct]*len(coverage_struct["filters"])
+    coverage_struct["telescope"] = [config_struct["telescope"]]*len(coverage_struct["filters"])
 
     return coverage_struct
 
