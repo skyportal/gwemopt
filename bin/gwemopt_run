@@ -291,7 +291,7 @@ def params_struct(opts):
     params["writeCatalog"] = opts.writeCatalog
 
     params["doChipGaps"] = opts.doChipGaps
-    
+ 
     params["doSplit"] = opts.doSplit
     params["splitType"] = opts.splitType
     params["Nregions"] = opts.Nregions
