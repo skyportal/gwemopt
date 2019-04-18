@@ -220,7 +220,6 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
                     prob = 0.0
 
             tile_struct[key]["prob"] = prob
-
             tile_struct[key]["exposureTime"] = exposureTime
             tile_struct[key]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
             tile_struct[key]["filt"] = [config_struct["filt"]] * tile_struct[key]["nexposures"]
