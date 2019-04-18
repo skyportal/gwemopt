@@ -417,7 +417,7 @@ def get_exposures(params, config_struct, segmentlist):
     segmentlist: the segments that the telescope can do the follow-up.
     '''
     exposurelist = segments.segmentlist()
-    if config_struct["overhead_per_exposure"] is not None: overhead = config_struct["overhead_per_exposure"]
+    if "overhead_per_exposure" in config_struct.keys(): overhead = config_struct["overhead_per_exposure"]
     else: overhead = 0.0
 
     exposure_time = np.max(params["exposuretimes"])
