@@ -154,6 +154,24 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
         for ii in range(len(params["exposuretimes"])):
             ranked_tile_times[ranked_tile_probs>0,ii] = params["exposuretimes"][ii]
         for key, prob, exposureTime, tileprob in zip(keys, ranked_tile_probs, ranked_tile_times, tile_probs):
+
+            # Try to load the minimum duration of time from telescope config file
+            # Otherwise set it to zero
+            try:
+                min_obs_duration = config_struct["min_observability_duration"] / 24
+            except:
+                min_obs_duration = 0.0
+
+            # Check that a given tile is observable a minimum amount of time
+            # If not set the proba associated to the tile to zero
+            if 'segmentlist' and 'prob' in tile_struct[key] and tile_struct[key]['segmentlist'] and min_obs_duration > 0.0:
+                observability_duration = 0.0 
+                for counter in range(len(tile_struct[key]['segmentlist'])):
+                    observability_duration += tile_struct[key]['segmentlist'][counter][1] - tile_struct[key]['segmentlist'][counter][0]
+                if tile_struct[key]['prob'] > 0.0 and observability_duration < min_obs_duration: 
+                   tileprob = 0.0
+
+
             tile_struct[key]["prob"] = tileprob
             if prob == 0.0:
                 tile_struct[key]["exposureTime"] = 0.0
@@ -185,9 +203,23 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
         keys = tile_struct.keys()
 
         for key, prob, exposureTime, tileprob in zip(keys, ranked_tile_probs, ranked_tile_times, tile_probs):
-            
-            tile_struct[key]["prob"] = prob
+            # Try to load the minimum duration of time from telescope config file
+            # Otherwise set it to zero
+            try:
+                min_obs_duration = config_struct["min_observability_duration"] / 24
+            except:
+                min_obs_duration = 0.0
 
+            # Check that a given tile is observable a minimum amount of time
+            # If not set the proba associated to the tile to zero
+            if 'segmentlist' and 'prob' in tile_struct[key] and tile_struct[key]['segmentlist'] and min_obs_duration > 0.0:
+                observability_duration = 0.0 
+                for counter in range(len(tile_struct[key]['segmentlist'])):
+                    observability_duration += tile_struct[key]['segmentlist'][counter][1] - tile_struct[key]['segmentlist'][counter][0]
+                if tile_struct[key]['prob'] > 0.0 and observability_duration < min_obs_duration: 
+                    prob = 0.0
+
+            tile_struct[key]["prob"] = prob
             tile_struct[key]["exposureTime"] = exposureTime
             tile_struct[key]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
             tile_struct[key]["filt"] = [config_struct["filt"]] * tile_struct[key]["nexposures"]
