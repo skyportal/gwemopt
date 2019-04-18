@@ -79,7 +79,7 @@ def params_struct(skymap, gpstime, tobs=None, filt=['r'],
         observer = ephem.Observer()
         observer.lat = str(params["config"][telescope]["latitude"])
         observer.lon = str(params["config"][telescope]["longitude"])
-        observer.horizon = str(-12.0)
+        observer.horizon = str(params["config"][telescope]["horizon"])
         observer.elevation = params["config"][telescope]["elevation"]
         params["config"][telescope]["observer"] = observer
 
@@ -96,6 +96,16 @@ def params_struct(skymap, gpstime, tobs=None, filt=['r'],
         params["catalogDir"] = catalog_directory
         params["galaxy_catalog"] = "GLADE"
         params["galaxy_grade"] = "S"
+        params["writeCatalog"] = False
+        params["catalog_n"] = 1.0
+        params["powerlaw_dist_exp"] = 1.0
+    elif tele in ['TRE']:
+        params["tilesType"] = "moc"
+    elif tele in ['TNT']:
+        params["tilesType"] = "galaxy"
+        params["catalogDir"] = catalog_directory
+        params["galaxy_catalog"] = "GLADE"
+        params["galaxy_grade"] = "Sloc"
         params["writeCatalog"] = False
         params["catalog_n"] = 1.0
         params["powerlaw_dist_exp"] = 1.0
@@ -237,8 +247,8 @@ def test_scheduler():
     skymap = os.path.join(testpath, 'data/MS190227n_bayestar.fits.gz')
     gpstime = 1235311089.400738
 
-    teles=['ZTF','KPED']
-    doReferences_list = [True,False]
+    teles=['ZTF','KPED', 'TRE', 'TNT']
+    doReferences_list = [True,False, False, False]
     for tele,doReferences in zip(teles,doReferences_list): 
         params = params_struct(skymap, gpstime, tele=tele,
                                doReferences=doReferences)
