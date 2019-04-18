@@ -79,7 +79,7 @@ def params_struct(skymap, gpstime, tobs=None, filt=['r'],
         observer = ephem.Observer()
         observer.lat = str(params["config"][telescope]["latitude"])
         observer.lon = str(params["config"][telescope]["longitude"])
-        observer.horizon = str(params["config"][telescope]["horizon"])
+        observer.horizon = str(-12.0)
         observer.elevation = params["config"][telescope]["elevation"]
         params["config"][telescope]["observer"] = observer
 
