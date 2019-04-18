@@ -107,8 +107,14 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
         prob = map_struct["prob"]
 
     n, cl, dist_exp = params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"]
-    tile_probs = compute_tiles_map(tile_struct, prob, func='np.sum(x)')
-    tile_probs[tile_probs<np.max(tile_probs)*0.01] = 0.0 
+    
+    if params["tilesType"] == "galaxy":
+        tile_probs = compute_tiles_map(tile_struct, prob, func='center')
+    else:
+        tile_probs = compute_tiles_map(tile_struct, prob, func='np.sum(x)')
+
+    tile_probs[tile_probs<np.max(tile_probs)*0.01] = 0.0
+ 
     prob_scaled = copy.deepcopy(prob)
     prob_sorted = np.sort(prob_scaled)[::-1]
     prob_indexes = np.argsort(prob_scaled)[::-1]
@@ -117,13 +123,18 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
     prob_scaled[prob_indexes[index:]] = 0.0
     prob_scaled = prob_scaled**n
     prob_scaled = prob_scaled / np.nansum(prob_scaled)
+    
+    if params["tilesType"] == "galaxy":
+        ranked_tile_probs = compute_tiles_map(tile_struct, prob_scaled, func='center')
+    else:
+        ranked_tile_probs = compute_tiles_map(tile_struct, prob_scaled, func='np.sum(x)')
 
-    ranked_tile_probs = compute_tiles_map(tile_struct, prob_scaled, func='np.sum(x)')
     ranked_tile_probs[np.isnan(ranked_tile_probs)] = 0.0
     ranked_tile_probs_thresh = np.max(ranked_tile_probs)*0.01
     ranked_tile_probs[ranked_tile_probs<=ranked_tile_probs_thresh] = 0.0
     ranked_tile_probs = ranked_tile_probs / np.nansum(ranked_tile_probs)
 
+    
     if "distmed" in map_struct:
         distmed = map_struct["distmed"]
         distmed[distmed<=0] = np.nan
@@ -136,7 +147,7 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
         ranked_tile_probs = ranked_tile_probs*ranked_tile_distances_median
         ranked_tile_probs = ranked_tile_probs / np.nansum(ranked_tile_probs)
         ranked_tile_probs[np.isnan(ranked_tile_probs)] = 0.0
-
+        
     if params["doSingleExposure"]:
         keys = tile_struct.keys()
         ranked_tile_times = np.zeros((len(ranked_tile_probs),len(params["exposuretimes"])))
@@ -190,6 +201,7 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
         ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
 
         keys = tile_struct.keys()
+
         for key, prob, exposureTime, tileprob in zip(keys, ranked_tile_probs, ranked_tile_times, tile_probs):
             # Try to load the minimum duration of time from telescope config file
             # Otherwise set it to zero
@@ -211,7 +223,7 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
             tile_struct[key]["exposureTime"] = exposureTime
             tile_struct[key]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
             tile_struct[key]["filt"] = [config_struct["filt"]] * tile_struct[key]["nexposures"]
-
+            
     return tile_struct
 
 def moc(params, map_struct, moc_structs):
@@ -292,6 +304,18 @@ def compute_tiles_map(tile_struct, skymap, func=None):
 
     if func is None:
         f = lambda x: np.sum(x)
+        
+    elif func == 'center':
+        keys = tile_struct.keys()
+        ntiles = len(keys)
+        vals = np.nan*np.ones((ntiles,))
+        nside = hp.npix2nside(len(skymap))
+        for ii,key in enumerate(tile_struct.keys()):
+            pix_center = hp.ang2pix(nside, tile_struct[key]['ra'], tile_struct[key]['dec'], lonlat=True)
+            val = skymap[pix_center]
+            vals[ii] = val        
+        return vals
+    
     else:
         f = lambda x: eval(func)
 

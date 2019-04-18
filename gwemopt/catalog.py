@@ -220,8 +220,9 @@ def get_catalog(params, map_struct):
 
     S = Sloc*Slum*Sdet
     prob = np.zeros(map_struct["prob"].shape)
-    if params["galaxy_grade"] == "Sloc":
-        prob[ipix] = prob[ipix] + Sloc
+    if params["galaxy_grade"] == "Sloc":     
+        for j in range(len(ipix)):
+            prob[ipix[j]] += Sloc[j]
         grade = Sloc
     elif params["galaxy_grade"] == "S":
         prob[ipix] = prob[ipix] + S
