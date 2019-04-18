@@ -209,10 +209,9 @@ class QuadProb:
     Class :: Instantiate a QuadProb object that will allow us to calculate the
              probability content in a single quadrant.
     '''
-    def __init__(self, RA, Dec, ID):
+    def __init__(self, RA, Dec):
         self.RA = RA
         self.Dec = Dec
-        self.ID = ID.astype(int)
         self.quadMap = {1: [0, 1, 2, 3], 2: [4, 5, 6, 7],
                         3: [8, 9, 10, 11], 4: [12, 13, 14, 15],
                         5: [16, 17, 18, 19], 6: [20, 21, 22, 23],
@@ -234,11 +233,11 @@ class QuadProb:
                        [0, -self.quadrant_scale.to(u.deg).value]]
         return _wcs
 
-def get_quadrant_ipix(nside, field_id, ra, dec):
+def get_quadrant_ipix(nside, ra, dec):
 
     ipixs = []
  
-    tile = QuadProb(field_id, ra, dec)
+    tile = QuadProb(ra, dec)
     Z = ZTFtile(ra, dec)
     quad_cents_RA, quad_cents_Dec = Z.quadrant_centers()
     quadIndices = np.arange(64)
