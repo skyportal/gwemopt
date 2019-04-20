@@ -146,26 +146,21 @@ def powerlaw(params, map_struct, tile_structs):
 
         config_struct = params["config"][telescope]
         tile_struct = tile_structs[telescope]
+        if config_struct["filt_change_time"]: filt_change_time = config_struct["filt_change_time"]
+        else: filt_change_time = 0
 
         if params["doAlternatingFilters"]:
             tile_struct_hold = copy.copy(tile_struct)
             coverage_structs_hold = []
-            cnt = 0
-            for filt, exposuretime in zip(filters,exposuretimes):
-                params["filters"] = [filt]
-                params["exposuretimes"] = [exposuretime]
-                
-                if cnt > 0:
-                   if len(coverage_struct_hold["exposureused"]) > 0:
-                       maxidx = (np.max(coverage_struct_hold["exposureused"])+1).astype(int)
-                       if maxidx < len(config_struct["exposurelist"]):
-                           exposurelistnew = config_struct["exposurelist"][maxidx:]
-                           config_struct["exposurelist"] = exposurelistnew
-
+            maxidx = 0
+            for i in range(len(exposuretimes)):
+                params["filters"] = [filters[i]]
+                params["exposuretimes"] = [exposuretimes[i]]
+                config_struct["exposurelist"] = config_struct["exposurelist"][maxidx:]
                 tile_struct_hold = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct_hold)      
                 coverage_struct_hold = gwemopt.scheduler.scheduler(params, config_struct, tile_struct_hold)
+                maxidx = int(coverage_struct_hold["exposureused"][-1])
                 coverage_structs_hold.append(coverage_struct_hold)
-                cnt = cnt + 1
             coverage_struct = combine_coverage_structs(coverage_structs_hold)
         else:
             tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct)      
