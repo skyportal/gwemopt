@@ -163,7 +163,6 @@ def powerlaw(params, map_struct, tile_structs):
                            config_struct["exposurelist"] = exposurelistnew
 
                 tile_struct_hold = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct_hold)      
-                print(len(config_struct["exposurelist"]))
                 coverage_struct_hold = gwemopt.scheduler.scheduler(params, config_struct, tile_struct_hold)
                 coverage_structs_hold.append(coverage_struct_hold)
                 cnt = cnt + 1
