@@ -259,14 +259,12 @@ def get_quadrant_ipix(nside, ra, dec):
                         (1, 1, 1)), unit=u.deg,
                     frame=skyoffset_frames[:, np.newaxis, np.newaxis]
                 ).transform_to(ICRS)
-
     quadrant_xyz = np.moveaxis(
-        quadrant_coords_icrs.cartesian.xyz.value, 0, -1)
-    quadrant_xyz = np.squeeze(quadrant_xyz)
+        quadrant_coords_icrs.cartesian.xyz.value, 0, -1)[0]
 
     ipixs = []
     for subfield_id, xyz in enumerate(quadrant_xyz):
-        ipix = hp.query_polygon(nside, xyz, nest=True)
+        ipix = hp.query_polygon(nside, xyz)
         ipixs.append(ipix.tolist())
     return ipixs
 
