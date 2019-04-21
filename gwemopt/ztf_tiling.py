@@ -21,7 +21,6 @@ from astropy.table import Table
 from astropy import constants as c, units as u
 from astropy.coordinates import SkyCoord, ICRS
 from astropy.wcs import WCS
-from scipy.spatial.transform import Rotation as R
 import astropy
 import healpy
 # import cPickle as pickle
