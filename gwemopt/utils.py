@@ -425,7 +425,6 @@ def get_exposures(params, config_struct, segmentlist):
     for ii in range(len(segmentlist)):
         start_segment, end_segment = segmentlist[ii][0], segmentlist[ii][1]
         exposures = np.arange(start_segment, end_segment, (overhead+exposure_time)/86400.0)
-        #exposurelist = np.append(exposurelist,exposures)
 
         for jj in range(len(exposures)):
             exposurelist.append(segments.segment(exposures[jj],exposures[jj]+exposure_time/86400.0))
