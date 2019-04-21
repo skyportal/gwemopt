@@ -54,7 +54,7 @@ install_requires = [
     'numpy>=1.7.1',
     'scipy>=1.2.1',    
     'matplotlib>=1.2.0',
-    'astropy>=.1.1',
+    'astropy>=1.1.1',
     'astropy-healpix',
     'python-dateutil',
     'mocpy',
