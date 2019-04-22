@@ -262,6 +262,14 @@ def get_catalog(params, map_struct):
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]
 
+    # Keep only galaxies within 3sigma in distance
+    mask = Sloc > 0
+    ra, dec, Sloc, S = ra[mask], dec[mask], Sloc[mask], S[mask]
+    distmpc, z = distmpc[mask], z[mask]
+    if params["galaxy_catalog"] == "GLADE":
+        GWGC, PGC, HyperLEDA = GWGC[mask], PGC[mask], HyperLEDA[mask]
+        _2MASS, SDSS = _2MASS[mask], SDSS[mask]
+
     if len(ra) > 1000:
         print('Cutting catalog to top 1000 galaxies...')
         idx = np.arange(1000).astype(int)
@@ -271,6 +279,7 @@ def get_catalog(params, map_struct):
             GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
             _2MASS, SDSS = _2MASS[idx], SDSS[idx]
 
+    
     catalog_struct = {}
     catalog_struct["ra"] = ra
     catalog_struct["dec"] = dec
