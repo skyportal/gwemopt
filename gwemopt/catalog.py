@@ -288,7 +288,7 @@ def get_catalog(params, map_struct):
                 cnt = cnt + 1
         else:
             fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z\n")
-            for a, b, c, d in zip(ra, dec, Sloc, S, distmpc, z):
+            for a, b, c, d, e, f in zip(ra, dec, Sloc, S, distmpc, z):
                 fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f\n" % (cnt, a, b, c, d, e, f))
                 cnt = cnt + 1
 
