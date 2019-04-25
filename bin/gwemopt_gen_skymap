@@ -87,6 +87,10 @@ def parse_commandline():
     parser.add_option("--doIntersect",  action="store_true", default=False)
     parser.add_option("-o", "--original_skymap", help="GW skymap.", default='../data/GRB181222/glg_healpix_all_bn181222841.fit')
 
+    parser.add_option("--doCandidate",  action="store_true", default=False)
+    parser.add_option("--ra_candidate",default=258.341454)
+    parser.add_option("--dec_candidate",default=-9.964466)
+
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
 
@@ -253,6 +257,8 @@ cbar=False
 plt.figure()
 hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix))
 gwemopt.plotting.add_edges()
+if opts.doCandidate:
+    hp.visufunc.projscatter(opts.ra_candidate, opts.dec_candidate, lonlat=True)
 plt.show()
 plt.savefig(opts.skymapplot,dpi=200)
 plt.close('all')
