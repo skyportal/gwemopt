@@ -211,9 +211,16 @@ def get_ha_segments(config_struct,segmentlist,observer,fxdbdy,radec):
     else:
         ha_min, ha_max = -24.0, 24.0
 
+    if config_struct["telescope"] == "DECam":
+        if radec.dec.deg <= -30.0:
+            ha_min, ha_max = -5.2, 5.2
+        else:
+            ha_min, ha_max = -0.644981*np.sqrt(35.0-radec.dec.deg), 0.644981*np.sqrt(35.0-radec.dec.deg)
+            
     location = astropy.coordinates.EarthLocation(config_struct["longitude"],
                                                  config_struct["latitude"],
                                                  config_struct["elevation"])
+
     halist = segments.segmentlist()
     for seg in segmentlist:
         mjds = np.linspace(seg[0], seg[1], 100)
@@ -221,7 +228,8 @@ def get_ha_segments(config_struct,segmentlist,observer,fxdbdy,radec):
         lst = tt.sidereal_time('mean')
         ha = (lst - radec.ra).hour
         idx = np.where((ha >= ha_min) & (ha <= ha_max))[0]
-        halist.append(segments.segment(mjds[idx[0]],mjds[idx[-1]]))
+        if len(idx) >= 2:
+            halist.append(segments.segment(mjds[idx[0]],mjds[idx[-1]]))
  
     return halist
 
