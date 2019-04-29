@@ -165,8 +165,10 @@ def get_catalog(params, map_struct):
         mag = magb * 1.0
 
     L_nu = const * 10.**((mag + MAB0)/(-2.5))
-    L_nu = np.log10(L_nu)
+    L_nu = L_nu / np.nanmax(L_nu)
     L_nu = L_nu**params["catalog_n"]
+    L_nu[L_nu < 0.001] = 0.001
+    L_nu[L_nu > 1.0] = 1.0
     Slum = L_nu / np.sum(L_nu)
 
     mlim, M_KNmin, M_KNmax = 22, -17, -12
@@ -217,6 +219,7 @@ def get_catalog(params, map_struct):
 
     # Set nan values to zero
     Sloc[np.isnan(Sloc)] = 0
+    Slum[np.isnan(Slum)] = 0
 
     S = Sloc*Slum*Sdet
     prob = np.zeros(map_struct["prob"].shape)
@@ -288,7 +291,7 @@ def get_catalog(params, map_struct):
                 cnt = cnt + 1
         else:
             fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z\n")
-            for a, b, c, d in zip(ra, dec, Sloc, S, distmpc, z):
+            for a, b, c, d, e, f in zip(ra, dec, Sloc, S, distmpc, z):
                 fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f\n" % (cnt, a, b, c, d, e, f))
                 cnt = cnt + 1
 

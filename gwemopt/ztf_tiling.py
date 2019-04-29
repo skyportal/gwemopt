@@ -19,7 +19,7 @@ import numpy as np
 import healpy as hp
 from astropy.table import Table
 from astropy import constants as c, units as u
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, ICRS
 from astropy.wcs import WCS
 import astropy
 import healpy
@@ -209,10 +209,9 @@ class QuadProb:
     Class :: Instantiate a QuadProb object that will allow us to calculate the
              probability content in a single quadrant.
     '''
-    def __init__(self, RA, Dec, ID):
+    def __init__(self, RA, Dec):
         self.RA = RA
         self.Dec = Dec
-        self.ID = ID.astype(int)
         self.quadMap = {1: [0, 1, 2, 3], 2: [4, 5, 6, 7],
                         3: [8, 9, 10, 11], 4: [12, 13, 14, 15],
                         5: [16, 17, 18, 19], 6: [20, 21, 22, 23],
@@ -234,23 +233,37 @@ class QuadProb:
                        [0, -self.quadrant_scale.to(u.deg).value]]
         return _wcs
 
-def get_quadrant_ipix(nside, field_id, ra, dec):
+def get_ztf_quadrants():
+    """Calculate ZTF quadrant footprints as offsets from the telescope
+    boresight."""
+    quad_prob = QuadProb(0, 0)
+    ztf_tile = ZTFtile(0, 0)
+    quad_cents_ra, quad_cents_dec = ztf_tile.quadrant_centers()
+    offsets = np.asarray([
+        quad_prob.getWCS(
+            quad_cents_ra[quadrant_id],
+            quad_cents_dec[quadrant_id]
+        ).calc_footprint(axes=quad_prob.quadrant_size)
+        for quadrant_id in range(64)])
+    return np.transpose(offsets, (2, 0, 1))
+
+def get_quadrant_ipix(nside, ra, dec):
+
+    quadrant_coords = get_ztf_quadrants()
+
+    skyoffset_frames = SkyCoord(ra, dec, unit=u.deg).skyoffset_frame()
+    quadrant_coords_icrs = SkyCoord(
+                    *np.tile(
+                        quadrant_coords[:, np.newaxis, ...],
+                        (1, 1, 1)), unit=u.deg,
+                    frame=skyoffset_frames[:, np.newaxis, np.newaxis]
+                ).transform_to(ICRS)
+    quadrant_xyz = np.moveaxis(
+        quadrant_coords_icrs.cartesian.xyz.value, 0, -1)[0]
 
     ipixs = []
- 
-    tile = QuadProb(field_id, ra, dec)
-    Z = ZTFtile(ra, dec)
-    quad_cents_RA, quad_cents_Dec = Z.quadrant_centers()
-    quadIndices = np.arange(64)
-    for quadrant_id in quadIndices:
-        thisQuad = tile.getWCS(quad_cents_RA[quadrant_id],
-                               quad_cents_Dec[quadrant_id])
-        footprint = thisQuad.calc_footprint(axes=tile.quadrant_size)
-
-        xyz = [] 
-        for r, d in footprint:
-            xyz.append(hp.ang2vec(r, d, lonlat=True))
-        ipix = hp.query_polygon(nside, np.array(xyz)).tolist()
-        ipixs.append(ipix)    
-
+    for subfield_id, xyz in enumerate(quadrant_xyz):
+        ipix = hp.query_polygon(nside, xyz)
+        ipixs.append(ipix.tolist())
     return ipixs
+

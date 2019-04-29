@@ -8,6 +8,7 @@ import healpy as hp
 import numpy as np
 
 import gwemopt.utils
+import gwemopt.ztf_tiling
 
 def create_moc(params, map_struct=None):
 
@@ -71,14 +72,9 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
         ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside)
 
     if params["doChipGaps"]:
-        npix = hp.nside2npix(nside)
-        pixel_index = np.arange(npix)
-        RAs, Decs = hp.pix2ang(nside, pixel_index, lonlat=True, nest=False)
-
         if telescope == "ZTF":
-            Z = gwemopt.quadrants.ZTFtile(ra_pointing, dec_pointing, config_struct)
-            #ipix = np.where(Z.inside_nogaps(RAs, Decs))[0]  # Ignore chip gaps
-            ipix = np.where(Z.inside(RAs, Decs))[0]
+            ipixs = gwemopt.ztf_tiling.get_quadrant_ipix(nside, ra_pointing, dec_pointing)
+            ipix = list({y for x in ipixs for y in x})
         else:
             raise ValueError("Requested chip gaps with non-ZTF detector, failing.")
 

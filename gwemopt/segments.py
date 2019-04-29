@@ -202,6 +202,37 @@ def get_skybrightness(config_struct,segmentlist,observer,fxdbdy,radec):
 
     return moonsegmentlist
 
+def get_ha_segments(config_struct,segmentlist,observer,fxdbdy,radec):
+
+    if "ha_constraint" in config_struct:
+        ha_constraint = config_struct["ha_constraint"].split(",")
+        ha_min = float(ha_constraint[0])
+        ha_max = float(ha_constraint[1])
+    else:
+        ha_min, ha_max = -24.0, 24.0
+
+    if config_struct["telescope"] == "DECam":
+        if radec.dec.deg <= -30.0:
+            ha_min, ha_max = -5.2, 5.2
+        else:
+            ha_min, ha_max = -0.644981*np.sqrt(35.0-radec.dec.deg), 0.644981*np.sqrt(35.0-radec.dec.deg)
+            
+    location = astropy.coordinates.EarthLocation(config_struct["longitude"],
+                                                 config_struct["latitude"],
+                                                 config_struct["elevation"])
+
+    halist = segments.segmentlist()
+    for seg in segmentlist:
+        mjds = np.linspace(seg[0], seg[1], 100)
+        tt = Time(mjds, format='mjd', scale='utc', location=location)
+        lst = tt.sidereal_time('mean')
+        ha = (lst - radec.ra).hour
+        idx = np.where((ha >= ha_min) & (ha <= ha_max))[0]
+        if len(idx) >= 2:
+            halist.append(segments.segment(mjds[idx[0]],mjds[idx[-1]]))
+ 
+    return halist
+
 def get_segments(params, config_struct):
 
     gpstime = params["gpstime"]
@@ -303,6 +334,9 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
     #moonsegmentlist = get_skybrightness(\
     #    config_struct,segmentlist,observer,fxdbdy,radec)
 
+    halist = get_ha_segments(\
+        config_struct,segmentlist,observer,fxdbdy,radec)    
+
     moonsegmentlist = get_moon_segments(\
         config_struct,segmentlist,observer,fxdbdy,radec)
 
@@ -310,7 +344,8 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
     tilesegmentlistdic["observations"] = segmentlist
     tilesegmentlistdic["tile"] = tilesegmentlist
     tilesegmentlistdic["moon"] = moonsegmentlist
-    tilesegmentlist = tilesegmentlistdic.intersection(["observations","tile","moon"])
+    tilesegmentlistdic["halist"] = halist
+    tilesegmentlist = tilesegmentlistdic.intersection(["observations","tile","moon","halist"])
     #tilesegmentlist = tilesegmentlistdic.intersection(["observations","tile"])
     tilesegmentlist.coalesce()
 
