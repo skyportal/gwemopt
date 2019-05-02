@@ -67,7 +67,7 @@ def find_tile(exposureids_tile,exposureids,probs, idxs = None, exptimecheckkeys 
 
 
 def find_tile_greedy_slew(current_time, current_ra, current_dec, tilesegmentlists, tileprobs, config_struct, tile_struct, 
-        keynames, tileAllocatedTime, exptimecheckkeys = [], idle = 0):
+        keynames, tileAllocatedTime, observatory, exptimecheckkeys = [], idle = 0):
     next_obs = -1
     idx2 = -1
     score_selected = -1
@@ -79,7 +79,13 @@ def find_tile_greedy_slew(current_time, current_ra, current_dec, tilesegmentlist
         if keynames[ii] in exptimecheckkeys or np.absolute(tileAllocatedTime[ii]) < 1e-5:
             continue
         # calculate slew readout time
-        distance = np.sqrt((tile_struct[key]['ra'] - current_ra)**2 +  (tile_struct[key]['dec'] - current_dec)**2)
+        t = Time(current_time, format='mjd')
+        altaz1 = get_altaz_tiles(current_ra, current_dec, observatory, t)
+        altaz2 = get_altaz_tiles(tile_struct[key]['ra'], tile_struct[key]['dec'], observatory, t)
+        alt1 = altaz1.alt.radian
+        alt2 = altaz2.alt.radian
+        deltaaz = np.abs(altaz2.az.radian - altaz1.az.radian)
+        distance = np.arccos( (np.sin(alt1) * np.sin(alt2)) + (np.cos(alt1) * np.cos(alt2) * np.cos(deltaaz) ) ) * (180 / np.pi) # in degrees
         slew_readout = np.max([config_struct['readout'], distance / config_struct['slew_rate']])
         slew_readout = np.max([slew_readout - idle, 0])
         slew_readout = slew_readout / 86400
@@ -320,7 +326,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
     return idxs, filts
 
 
-def get_order_slew(params, tile_struct, tilesegmentlists, config_struct):   
+def get_order_slew(params, tile_struct, tilesegmentlists, observatory, config_struct):   
     keys = tile_struct.keys() 
     keynames = []
     namekeys = {}
@@ -332,7 +338,7 @@ def get_order_slew(params, tile_struct, tilesegmentlists, config_struct):
         tilefilts[key] = copy.deepcopy(tile_struct[key]["filt"])
         keynames.append(key) 
         namekeys[key] = jj
-        tileAllocatedTime[key] = tile_struct[key]["exposureTime"] / 86400
+        tileAllocatedTime[key] = np.array(tile_struct[key]["exposureTime"]) / 86400
     lastObs = np.zeros((len(keys),))
 
     idxs = []
@@ -341,15 +347,16 @@ def get_order_slew(params, tile_struct, tilesegmentlists, config_struct):
 
     if params["scheduleType"] == "greedy_slew":
         current_time = Time(params['gpstime'], format='gps', scale='utc').mjd + np.min(params["Tobs"][::2])
-        current_ra = config_struct["latitude"]
-        current_dec = config_struct["longitude"]
+        c = astropy.coordinates.SkyCoord(config_struct["longitude"]*u.degree, config_struct["latitude"]*u.degree, frame='icrs')
+        current_ra = c.ra   # for now
+        current_dec = c.dec
         idle = 0
         while True:
             # check the time gap since last observation
             exptimecheck = np.where(current_time - lastObs < params["mindiff"]/86400.0)[0]
             exptimecheckkeys = [keynames[x] for x in exptimecheck]
             idx2, slew_readout, exp_idle_seg = find_tile_greedy_slew(current_time, current_ra, current_dec, tilesegmentlists, tileprobs, 
-                    config_struct, tile_struct, keynames, tileAllocatedTime, exptimecheckkeys=exptimecheckkeys, idle=idle)
+                    config_struct, tile_struct, keynames, tileAllocatedTime, observatory, exptimecheckkeys=exptimecheckkeys, idle=idle)
             if idx2 != -1:
                 exp_idle_len = exp_idle_seg[1] - exp_idle_seg[0]
                 idle = 0
@@ -408,7 +415,7 @@ def scheduler(params, config_struct, tile_struct):
         tilesegmentlists.append(tile_struct[key]["segmentlist"]) 
     print("Generating schedule order...")
     if params["scheduleType"].endswith('_slew'):
-        keys, exposurelist, filts = get_order_slew(params, tile_struct, tilesegmentlists, config_struct)
+        keys, exposurelist, filts = get_order_slew(params, tile_struct, tilesegmentlists, observatory, config_struct)
     else:
         keys, filts = get_order(params,tile_struct,tilesegmentlists,exposurelist,observatory, config_struct)
     if params["doPlots"]:
