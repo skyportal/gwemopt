@@ -57,7 +57,7 @@ def find_tile(exposureids_tile, exposureids, probs, idxs=None,
                                     np.array(exposureids_tile["decs"]))
             slew_readout = readout/(dist/slew_rate)
             slew_readout[slew_readout>1] = 1.0
-            score = np.array(exposureids_tile["probs"]) * slew_rate 
+            score = np.array(exposureids_tile["probs"]) * slew_readout 
             idx = np.argmax(score)
         else:
             idx = np.argmax(exposureids_tile["probs"])
