@@ -60,8 +60,8 @@ def parse_commandline():
     """
     parser = optparse.OptionParser(usage=__doc__,version=__version__)
 
-    parser.add_option("-s", "--skymap", help="GW skymap.", default='../output/skymaps/GW190425_new.fit')
-    parser.add_option("-p", "--skymapplot", help="GW skymap plot.", default='../output/skymaps/GW190425_new.pdf')
+    parser.add_option("-s", "--skymap", help="GW skymap.", default='../output/skymaps/AMON190503.fit')
+    parser.add_option("-p", "--skymapplot", help="GW skymap plot.", default='../output/skymaps/AMON190503.pdf')
 
     parser.add_option("--nside",default=512,type=int)
 
@@ -70,9 +70,9 @@ def parse_commandline():
     parser.add_option("--doExcise",  action="store_true", default=False)
     parser.add_option("--excise_file",default="/Users/mcoughlin/Code/ZTF/growth-too-marshal/pixels")
 
-    parser.add_option("--ra",default=234.913)
-    parser.add_option("--dec",default=50.419)
-    parser.add_option("--radius",default=24.229,type=float)
+    parser.add_option("--ra",default=120.28)
+    parser.add_option("--dec",default=6.35)
+    parser.add_option("--radius",default=0.77,type=float)
     parser.add_option("--radius_inner",default=8.242,type=float)
     parser.add_option("--radius_outer",default=2.398,type=float)
 

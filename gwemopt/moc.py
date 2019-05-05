@@ -76,7 +76,7 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
             ipixs = gwemopt.ztf_tiling.get_quadrant_ipix(nside, ra_pointing, dec_pointing)
             ipix = list({y for x in ipixs for y in x})
         else:
-            raise ValueError("Requested chip gaps with non-ZTF detector, failing.")
+            print("Requested chip gaps with non-ZTF detector, will use moc.")
 
     moc_struct["ra"] = ra_pointing
     moc_struct["dec"] = dec_pointing
