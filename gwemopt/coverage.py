@@ -164,11 +164,9 @@ def powerlaw(params, map_struct, tile_structs):
                 if i > 0: config_struct["exposurelist"] = config_struct["exposurelist"].shift(30 * 60 / 86400.)
                 tile_struct_hold = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct_hold)      
                 coverage_struct_hold = gwemopt.scheduler.scheduler(params, config_struct, tile_struct_hold)
-                print(coverage_struct_hold["exposureused"])
                 if len(coverage_struct_hold["exposureused"]) > 0:
                     maxidx = int(coverage_struct_hold["exposureused"][-1])
                     deltaL = total_nexps - maxidx
-                    print("deltaL:", deltaL)
                 elif len(coverage_struct_hold["exposureused"]) == 0: deltaL = 0
                 coverage_structs_hold.append(coverage_struct_hold)
                 if deltaL <= 1: break
