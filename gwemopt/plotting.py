@@ -243,6 +243,31 @@ def coverage(params, map_struct, coverage_struct):
     min_time = np.min(coverage_struct["data"][idx,4])
     max_time = np.max(coverage_struct["data"][idx,4])
 
+    plotName = os.path.join(params["outputDir"],'coverage.pdf')
+    plt.figure(figsize=(10,8))
+    ax = plt.gca()
+    for ii in range(len(coverage_struct["ipix"])):
+        data = coverage_struct["data"][ii,:]
+        filt = coverage_struct["filters"][ii]
+        ipix = coverage_struct["ipix"][ii]
+        patch = coverage_struct["patch"][ii]
+        FOV = coverage_struct["FOV"][ii]
+
+        if filt=="g":
+            color = "g"
+        elif filt=="r":
+            color = "r"
+        else:
+            color = "k"
+
+        plt.scatter(data[2],data[5],s=20,color=color)
+
+    plt.xlabel("Time [MJD]")
+    plt.ylabel("Tile Number")
+    plt.show()
+    plt.savefig(plotName,dpi=200)
+    plt.close('all')
+
     plotName = os.path.join(params["outputDir"],'tiles_coverage.pdf')
     plt.figure()
     hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
