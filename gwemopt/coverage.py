@@ -155,20 +155,28 @@ def powerlaw(params, map_struct, tile_structs):
             tile_struct_hold = copy.copy(tile_struct)
             coverage_structs_hold = []
             maxidx = 0
+            total_nexps  = len(segments.segmentlist(config_struct["exposurelist"]))
             for i in range(len(exposuretimes)):
                 params["filters"] = [filters[i]]
                 params["exposuretimes"] = [exposuretimes[i]]
                 config_struct["exposurelist"] = segments.segmentlist(config_struct["exposurelist"][maxidx:])
-                if i > 0: config_struct["exposurelist"] = config_struct["exposurelist"].shift(filt_change_time / 86400.)
+                # add in a 30 min gap between filter blocks
+                if i > 0: config_struct["exposurelist"] = config_struct["exposurelist"].shift(30 * 60 / 86400.)
                 tile_struct_hold = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct_hold)      
                 coverage_struct_hold = gwemopt.scheduler.scheduler(params, config_struct, tile_struct_hold)
+                print(coverage_struct_hold["exposureused"])
                 if len(coverage_struct_hold["exposureused"]) > 0:
                     maxidx = int(coverage_struct_hold["exposureused"][-1])
+                    deltaL = total_nexps - maxidx
+                    print("deltaL:", deltaL)
+                elif len(coverage_struct_hold["exposureused"]) == 0: deltaL = 0
                 coverage_structs_hold.append(coverage_struct_hold)
+                if deltaL <= 1: break
             coverage_struct = combine_coverage_structs(coverage_structs_hold)
         else:
             tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct)      
             coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
+
         coverage_structs.append(coverage_struct)
 
         if params["doIterativeTiling"]:
