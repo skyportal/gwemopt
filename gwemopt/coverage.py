@@ -155,11 +155,11 @@ def powerlaw(params, map_struct, tile_structs):
             tile_struct_hold = copy.copy(tile_struct)
             coverage_structs_hold = []
             maxidx = 0
-            total_nexps  = len(segments.segmentlist(config_struct["exposurelist"]))
-            for i in range(len(exposuretimes)):
+            for i in range(len(exposuretimes)):)
                 params["filters"] = [filters[i]]
                 params["exposuretimes"] = [exposuretimes[i]]
                 config_struct["exposurelist"] = segments.segmentlist(config_struct["exposurelist"][maxidx:])
+                total_nexps  = len(config_struct["exposurelist"])
                 # add in a 30 min gap between filter blocks
                 if i > 0: config_struct["exposurelist"] = config_struct["exposurelist"].shift(30 * 60 / 86400.)
                 tile_struct_hold = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct_hold)      
