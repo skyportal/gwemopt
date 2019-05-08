@@ -220,7 +220,7 @@ def get_ellipse_coords(a=0.0, b=0.0, x=0.0, y=0.0, angle=0.0, npts=10):
 
     return pts
 
-def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='#FFFFFF', edgecolor='#FFFFFF', rotation=None):
+def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='k', edgecolor='k', rotation=None):
 
     theta = 0.5 * np.pi - np.deg2rad(dec_pointing)
     phi = np.deg2rad(ra_pointing)
@@ -261,7 +261,7 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='
 
     return ipix, radecs, patch, area
 
-def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, color='#FFFFFF', edgecolor='#FFFFFF', rotation=None):
+def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, color='k', edgecolor='k', rotation=None):
 
     area = tileSide*tileSide
 

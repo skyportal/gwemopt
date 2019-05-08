@@ -41,7 +41,7 @@ matplotlib.use('Agg')
 matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
-from matplotlib import transforms
+from matplotlib import cm
 
 import gwemopt.utils, gwemopt.plotting
 import gwemopt.moc, gwemopt.tiles 
@@ -150,10 +150,11 @@ tiles_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
 
 unit='Gravitational-wave probability'
 cbar=False
+cmap = plt.get_cmap('PuBuGn')
 
 plotName = os.path.join(params["outputDir"],'tiles.pdf')
 plt.figure()
-hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,rot=[opts.rotation,0,0])
+hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,rot=[opts.rotation,0,0],cmap=cmap)
 ax = plt.gca()
 for telescope in tiles_structs:
     tiles_struct = tiles_structs[telescope]
