@@ -65,11 +65,16 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
            """
 
     moc_struct = {}
-    
+   
+    if "rotation" in params:
+        rotation=params["rotation"]
+    else:
+        rotation=None
+ 
     if config_struct["FOV_type"] == "square": 
-        ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside)
+        ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, rotation=rotation)
     elif config_struct["FOV_type"] == "circle":
-        ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside)
+        ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, rotation=rotation)
 
     if params["doChipGaps"]:
         if telescope == "ZTF":

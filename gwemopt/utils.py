@@ -220,7 +220,7 @@ def get_ellipse_coords(a=0.0, b=0.0, x=0.0, y=0.0, angle=0.0, npts=10):
 
     return pts
 
-def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='#FFFFFF', edgecolor='#FFFFFF'):
+def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='#FFFFFF', edgecolor='#FFFFFF', rotation=None):
 
     theta = 0.5 * np.pi - np.deg2rad(dec_pointing)
     phi = np.deg2rad(ra_pointing)
@@ -248,7 +248,7 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='
 
     xyz = hp.ang2vec(radecs[:,0],radecs[:,1],lonlat=True)
 
-    proj = hp.projector.MollweideProj(rot=None, coord=None)
+    proj = hp.projector.MollweideProj(rot=rotation, coord=None)
     x,y = proj.vec2xy(xyz[:,0],xyz[:,1],xyz[:,2])
     xy = np.zeros(radecs.shape)
     xy[:,0] = x
@@ -261,7 +261,7 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='
 
     return ipix, radecs, patch, area
 
-def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, color='#FFFFFF', edgecolor='#FFFFFF'):
+def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, color='#FFFFFF', edgecolor='#FFFFFF', rotation=None):
 
     area = tileSide*tileSide
 
@@ -318,7 +318,7 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, col
     #    return [], [], [], []
 
     xyz = np.array(xyz)
-    proj = hp.projector.MollweideProj(rot=None, coord=None) 
+    proj = hp.projector.MollweideProj(rot=rotation, coord=None) 
     x,y = proj.vec2xy(xyz[:,0],xyz[:,1],xyz[:,2])
     xy = np.zeros(radecs.shape)
     xy[:,0] = x
