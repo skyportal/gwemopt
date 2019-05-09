@@ -420,6 +420,9 @@ def get_exposures(params, config_struct, segmentlist):
     if "overhead_per_exposure" in config_struct.keys(): overhead = config_struct["overhead_per_exposure"]
     else: overhead = 0.0
 
+    # add the filter change time to the total overheads for integrated
+    if not params["doAlternatingFilters"]: overhead = overhead + config_struct["filt_change_time"]
+
     exposure_time = np.max(params["exposuretimes"])
 
     for ii in range(len(segmentlist)):
