@@ -118,7 +118,7 @@ for configFile in configFiles:
 obs = table.Table.read(opts.fields, format="ascii",
                        names=("fieldID","fId","time"))
 transients = table.Table.read(opts.transients, format="ascii",
-                              names=("name","jd","ra","dec"))
+                              names=("name","ra","dec"))
 
 params["outputDir"] = opts.outputDir
 
@@ -188,23 +188,24 @@ for telescope in tiles_structs:
         ax.add_patch(patch_cpy)        
 
         #tiles.plot()
-for transient in transients:
-    hp.visufunc.projplot(transient["ra"], transient["dec"], lonlat=True,
-                         marker="o",markersize=10)
-    hp.visufunc.projtext(transient["ra"]+2.0, transient["dec"], 
-                         transient["name"][-3:],
-                         lonlat=True, fontsize=4)
 
 hp.graticule(verbose=False)
 plt.grid(True)
 lons = np.arange(-150.0,180,30.0)
 lats = np.zeros(lons.shape)
 for lon, lat in zip(lons,lats):
-    hp.projtext(lon,lat,"%.0f"%lon,lonlat=True)
+    hp.projtext(lon,lat,"%.0f"%lon,lonlat=True,color='k')
 lats = np.arange(-60.0,90,30.0)
 lons = np.zeros(lons.shape)
 for lon, lat in zip(lons,lats):
-    hp.projtext(lon,lat,"%.0f"%lat,lonlat=True)
+    hp.projtext(lon,lat,"%.0f"%lat,lonlat=True,color='k')
+
+for transient in transients:
+    hp.visufunc.projplot(transient["ra"], transient["dec"], lonlat=True,
+                         marker="o",markersize=10)
+    hp.visufunc.projtext(transient["ra"]+2.0, transient["dec"], 
+                         transient["name"][-3:],
+                         lonlat=True, fontsize=4, color='w')
 
 #gwemopt.plotting.add_edges()
 plt.show()
