@@ -178,7 +178,7 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
                 tile_struct[key]["nexposures"] = 0
                 tile_struct[key]["filt"] = []
             else:
-                if params["doReferences"]:
+                if params["doReferences"] and (telescope in ["ZTF", "DECam"]):
                     tile_struct[key]["exposureTime"] = []
                     tile_struct[key]["nexposures"] = []
                     tile_struct[key]["filt"] = []

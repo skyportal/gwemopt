@@ -150,6 +150,8 @@ def powerlaw(params, map_struct, tile_structs):
         if "filt_change_time" in config_struct.keys(): filt_change_time = config_struct["filt_change_time"]
         else: filt_change_time = 0
 
+        if params["doIterativeTiling"] and (params["tilesType"] == "galaxy"):
+            tile_struct = gwemopt.utils.slice_galaxy_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))
 
         if params["doAlternatingFilters"]:
             tile_struct_hold = copy.copy(tile_struct)
@@ -173,7 +175,8 @@ def powerlaw(params, map_struct, tile_structs):
                     elif extra_time <= 0: extra_time = filt_change_time
                     config_struct["exposurelist"] = config_struct["exposurelist"].shift(extra_time / 86400.)
 
-                tile_struct_hold = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct_hold)      
+                if not params["tilesType"] == "galaxy":
+                    tile_struct_hold = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct_hold)      
                 coverage_struct_hold = gwemopt.scheduler.scheduler(params, config_struct, tile_struct_hold)
 
                 if len(coverage_struct_hold["exposureused"]) > 0:
@@ -185,16 +188,16 @@ def powerlaw(params, map_struct, tile_structs):
                 if deltaL <= 1: break
 
             coverage_struct = combine_coverage_structs(coverage_structs_hold)
-
-
         else:
-            tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct)      
+            if not params["tilesType"] == "galaxy":
+                tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct)      
             coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
 
         coverage_structs.append(coverage_struct)
 
         if params["doIterativeTiling"]:
-            map_struct_hold = gwemopt.utils.slice_map_tiles(map_struct_hold, coverage_struct)
+            map_struct_hold = gwemopt.utils.slice_map_tiles(params, map_struct_hold, coverage_struct)
+                
 
     map_struct["prob"] = full_prob_map
     return combine_coverage_structs(coverage_structs)

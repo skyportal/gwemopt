@@ -10,6 +10,7 @@ from scipy.stats import norm
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u
+from astropy.coordinates import SkyCoord
 
 import matplotlib
 #matplotlib.rc('text', usetex=True)
@@ -434,7 +435,12 @@ def get_exposures(params, config_struct, segmentlist):
 
     return exposurelist
 
-def slice_map_tiles(map_struct, coverage_struct):
+def slice_map_tiles(params, map_struct, coverage_struct):
+
+    sort_idx = np.argsort(map_struct["prob"])[::-1]
+    csm = np.empty(len(map_struct["prob"]))
+    csm[sort_idx] = np.cumsum(map_struct["prob"][sort_idx])
+    ipix_keep = np.where(csm <= params["iterativeOverlap"])[0]
 
     for ii in range(len(coverage_struct["ipix"])):
         data = coverage_struct["data"][ii,:]
@@ -446,6 +452,33 @@ def slice_map_tiles(map_struct, coverage_struct):
 
         observ_time, exposure_time, field_id, prob, airmass = data[2], data[4], data[5], data[6], data[7]
 
-        map_struct["prob"][ipix] = 0.0
+        ipix_slice = np.setdiff1d(ipix, ipix_keep)
+        map_struct["prob"][ipix_slice] = 0.0
 
     return map_struct
+
+def slice_galaxy_tiles(params, tile_struct, coverage_struct):
+
+    coverage_ras = coverage_struct["data"][:,0]
+    coverage_decs = coverage_struct["data"][:,1]
+
+    if len(coverage_ras) == 0:
+        return tile_struct
+
+    keys = tile_struct.keys()
+    ras, decs = [], []
+    for key in keys:
+        ras.append(tile_struct[key]["ra"])
+        decs.append(tile_struct[key]["dec"])
+    ras, decs = np.array(ras), np.array(decs)
+
+    catalog1 = SkyCoord(ra=coverage_ras*u.degree,
+                        dec=coverage_decs*u.degree, frame='icrs')
+    catalog2 = SkyCoord(ra=ras*u.degree, dec=decs*u.degree, frame='icrs')
+    idx,sep,_ = catalog2.match_to_catalog_sky(catalog1)
+
+    for key, s in zip(keys, sep):
+        if s.arcsec <= 1:
+            tile_struct[key]['prob'] = 0.0
+
+    return tile_struct

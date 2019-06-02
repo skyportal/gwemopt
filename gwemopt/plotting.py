@@ -13,6 +13,9 @@ matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
 
 def observability(params,map_struct):
+
+    cmap = 'PuBuGn'
+
     observability_struct = map_struct["observability"]
 
     unit='Gravitational-wave probability'
@@ -20,7 +23,7 @@ def observability(params,map_struct):
 
     for telescope in observability_struct.keys():
         plotName = os.path.join(params["outputDir"],'observability_%s.pdf'%telescope)
-        hp.mollview(map_struct["prob"]*observability_struct[telescope]["observability"],title='',unit=unit,cbar=cbar,min=np.min(map_struct["prob"]),max=np.max(map_struct["prob"]))
+        hp.mollview(map_struct["prob"]*observability_struct[telescope]["observability"],title='',unit=unit,cbar=cbar,min=np.min(map_struct["prob"]),max=np.max(map_struct["prob"]),cmap=cmap)
         add_edges()
         plt.show()
         plt.savefig(plotName,dpi=200)
@@ -36,7 +39,7 @@ def observability(params,map_struct):
             for ii,dt in enumerate(dts):
                 plotName = os.path.join(moviedir,'observability-%04d.png'%ii)
                 title = "Detectability Map: %.2f Days"%dt
-                hp.mollview(map_struct["prob"]*observability_struct[telescope]["dts"][dt],title=title,cbar=cbar,min=np.min(map_struct["prob"]),max=np.max(map_struct["prob"]))
+                hp.mollview(map_struct["prob"]*observability_struct[telescope]["dts"][dt],title=title,cbar=cbar,min=np.min(map_struct["prob"]),max=np.max(map_struct["prob"]),cmap=cmap)
                 add_edges()
                 plt.show()
                 plt.savefig(plotName,dpi=200)
@@ -68,12 +71,14 @@ def tauprob(params,tau,prob):
 
 def tiles(params,map_struct,tiles_structs):
 
+    cmap = 'PuBuGn'
+
     unit='Gravitational-wave probability'
     cbar=False
 
     plotName = os.path.join(params["outputDir"],'tiles.pdf')
     plt.figure()
-    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
+    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,cmap=cmap)
     ax = plt.gca()
     for telescope in tiles_structs:
         tiles_struct = tiles_structs[telescope]
@@ -93,11 +98,12 @@ def tiles(params,map_struct,tiles_structs):
         rot=(90,0,0)
         plotName = os.path.join(params["outputDir"],'tiles_ref.pdf')
         plt.figure()
-        hp.mollview(np.zeros(map_struct["prob"].shape),title='',unit=unit,cbar=cbar,cmap=plt.get_cmap('Greens'))
+        hp.mollview(np.zeros(map_struct["prob"].shape),title='',unit=unit,cbar=cbar,cmap=cmap)
         ax = plt.gca()
         for telescope in tiles_structs:
             config_struct = params["config"][telescope]
             tiles_struct = tiles_structs[telescope]
+            if not "reference_images" in config_struct: continue
             for index in tiles_struct.keys():
                 if not index in config_struct["reference_images"]: continue
                 if len(params["filters"]) == 1:
@@ -132,6 +138,8 @@ def add_edges():
 
 def skymap(params,map_struct):
 
+    cmap = 'PuBuGn'
+
     unit='Gravitational-wave probability'
     cbar=False
 
@@ -139,7 +147,7 @@ def skymap(params,map_struct):
     lats = np.zeros(lons.shape)
 
     plotName = os.path.join(params["outputDir"],'prob.pdf')
-    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,min=np.percentile(map_struct["prob"],1),max=np.percentile(map_struct["prob"],99))
+    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,min=np.percentile(map_struct["prob"],1),max=np.percentile(map_struct["prob"],99),cmap=cmap)
     add_edges()
     plt.show()
     plt.savefig(plotName,dpi=200)
@@ -226,12 +234,14 @@ def efficiency(params, map_struct, efficiency_structs):
 
 def coverage(params, map_struct, coverage_struct):
 
+    cmap = 'PuBuGn'
+
     unit='Gravitational-wave probability'
     cbar=False
 
     plotName = os.path.join(params["outputDir"],'mollview_coverage.pdf')
     plt.figure()
-    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
+    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,cmap=cmap)
     hp.projplot(coverage_struct["data"][:,0], coverage_struct["data"][:,1], 'wx', lonlat=True, coord='G')
     add_edges()
     plt.show()
@@ -270,7 +280,7 @@ def coverage(params, map_struct, coverage_struct):
 
     plotName = os.path.join(params["outputDir"],'tiles_coverage.pdf')
     plt.figure()
-    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
+    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar, cmap=cmap)
     add_edges()
     ax = plt.gca()
     for ii in range(len(coverage_struct["ipix"])):
@@ -293,7 +303,7 @@ def coverage(params, map_struct, coverage_struct):
 
     plotName = os.path.join(params["outputDir"],'tiles_coverage_scaled.pdf')
     plt.figure()
-    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
+    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,cmap=cmap)
     add_edges()
     ax = plt.gca()
     for ii in range(len(coverage_struct["ipix"])):
@@ -339,7 +349,8 @@ def coverage(params, map_struct, coverage_struct):
             title = "Coverage Map: %.2f"%mjd       
     
             plt.figure()
-            hp.mollview(map_struct["prob"],title=title,unit=unit,cbar=cbar)
+            hp.mollview(map_struct["prob"],title=title,unit=unit,cbar=cbar,
+                        cmap=cmap)
             add_edges()
             ax = plt.gca()
     

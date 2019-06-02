@@ -148,6 +148,7 @@ def parse_commandline():
     parser.add_option("--doSingleExposure",  action="store_true", default=False)
     parser.add_option("--filters",default="r,g,r")
     parser.add_option("--doAlternatingFilters",  action="store_true", default=False)
+    parser.add_option("--iterativeOverlap",default=0.0,type=float)
 
     parser.add_option("--exposuretimes",default="30.0,30.0,30.0")
     parser.add_option("--doReferences",  action="store_true", default=False)
@@ -281,6 +282,7 @@ def params_struct(opts):
     params["airmass"] = opts.airmass
 
     params["doIterativeTiling"] = opts.doIterativeTiling
+    params["iterativeOverlap"] = opts.iterativeOverlap
     params["doMinimalTiling"] = opts.doMinimalTiling
 
     params["doCatalog"] = opts.doCatalog
