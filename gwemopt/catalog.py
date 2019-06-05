@@ -217,6 +217,10 @@ def get_catalog(params, map_struct):
     else:
         Sloc = copy.copy(prob_scaled[ipix])
 
+    # this happens when we are using a tiny catalog...
+    if np.all(Sloc == 0.0):
+        Sloc[:] = 1.0
+
     # Set nan values to zero
     Sloc[np.isnan(Sloc)] = 0
     Slum[np.isnan(Slum)] = 0

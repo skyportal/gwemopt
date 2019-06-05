@@ -24,6 +24,11 @@ def create_moc(params, map_struct=None):
         index = np.argmin(np.abs(prob_cumsum - cl)) + 1
         prob_indexes = prob_indexes[:index+1]
 
+    if "doUsePrimary" in params:
+        doUsePrimary = params["doUsePrimary"]
+    else:
+        doUsePrimary = False
+
     moc_structs = {}
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
@@ -42,10 +47,15 @@ def create_moc(params, map_struct=None):
             moclists = Parallel(n_jobs=params["Ncores"])(delayed(Fov2Moc)(params, config_struct, telescope, tess[1], tess[2], nside) for tess in tesselation)
             for ii, tess in enumerate(tesselation):
                 index, ra, dec = tess[0], tess[1], tess[2]
+                if (telescope == "ZTF") and doUsePrimary and (index > 880):
+                    continue
                 moc_struct[index] = moclists[ii]    
         else:
             for ii, tess in enumerate(tesselation):
                 index, ra, dec = tess[0], tess[1], tess[2]
+                if (telescope == "ZTF") and doUsePrimary and (index > 880):
+                    print(index)
+                    continue
                 index = index.astype(int)
                 moc_struct[index] = Fov2Moc(params, config_struct, telescope, ra, dec, nside)
         moc_structs[telescope] = moc_struct

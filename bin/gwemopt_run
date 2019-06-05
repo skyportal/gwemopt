@@ -154,6 +154,7 @@ def parse_commandline():
     parser.add_option("--doReferences",  action="store_true", default=False)
 
     parser.add_option("--doChipGaps",  action="store_true", default=False)
+    parser.add_option("--doUsePrimary",  action="store_true", default=False)
 
     parser.add_option("--doSplit",action="store_true",default=False)
     parser.add_option("--splitType",default="regional")
@@ -293,6 +294,7 @@ def params_struct(opts):
     params["writeCatalog"] = opts.writeCatalog
 
     params["doChipGaps"] = opts.doChipGaps
+    params["doUsePrimary"] = opts.doUsePrimary
  
     params["doSplit"] = opts.doSplit
     params["splitType"] = opts.splitType
@@ -402,7 +404,7 @@ if opts.doTiles:
         tile_structs = gwemopt.tiles.galaxy(params, map_struct, catalog_struct)
 
     else:
-        print("Need tilesType to be moc, greedy, hierarchical, or ranked")
+        print("Need tilesType to be moc, greedy, hierarchical, ranked or galaxy")
         exit(0)
 
     if opts.doPlots:
