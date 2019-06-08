@@ -93,6 +93,7 @@ def parse_commandline():
 
     parser.add_option("--doIterativeTiling",  action="store_true", default=False)
     parser.add_option("--doMinimalTiling",  action="store_true", default=False)
+    parser.add_option("--doOverlappingScheduling",  action="store_true", default=False)
 
     parser.add_option("--doCatalog",  action="store_true", default=False)
     parser.add_option("--doUseCatalog",  action="store_true", default=False)
@@ -127,6 +128,8 @@ def parse_commandline():
     parser.add_option("--DScale",default=1.0,type=float)
     #parser.add_option("--Tobs",default="0.0,1.0,1.0,2.0,2.0,3.0,3.0,4.0")
     parser.add_option("--Tobs",default="0.0,1.0")
+
+    parser.add_option("--mindiff",default=0.0,type=float)
 
     parser.add_option("--powerlaw_cl",default=0.9,type=float)
     parser.add_option("--powerlaw_n",default=1.0,type=float)
@@ -276,7 +279,7 @@ def params_struct(opts):
     params["doSingleExposure"] = opts.doSingleExposure
     params["filters"] = opts.filters.split(",")
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
-    params["mindiff"] = 0.0
+    params["mindiff"] = opts.mindiff
     params["doAlternatingFilters"] = opts.doAlternatingFilters
     params["doReferences"] = opts.doReferences
 
@@ -285,6 +288,7 @@ def params_struct(opts):
     params["doIterativeTiling"] = opts.doIterativeTiling
     params["iterativeOverlap"] = opts.iterativeOverlap
     params["doMinimalTiling"] = opts.doMinimalTiling
+    params["doOverlappingScheduling"] = opts.doOverlappingScheduling
 
     params["doCatalog"] = opts.doCatalog
     params["catalog_n"] = opts.catalog_n

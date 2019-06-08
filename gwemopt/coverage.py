@@ -153,6 +153,9 @@ def powerlaw(params, map_struct, tile_structs):
         if params["doIterativeTiling"] and (params["tilesType"] == "galaxy"):
             tile_struct = gwemopt.utils.slice_galaxy_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))
 
+        if params["doOverlappingScheduling"]:
+            tile_struct = gwemopt.utils.check_overlapping_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))
+
         if params["doAlternatingFilters"]:
             tile_struct_hold = copy.copy(tile_struct)
             coverage_structs_hold = []
@@ -188,6 +191,7 @@ def powerlaw(params, map_struct, tile_structs):
                 if deltaL <= 1: break
 
             coverage_struct = combine_coverage_structs(coverage_structs_hold)
+
         else:
             if not params["tilesType"] == "galaxy":
                 tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct)      
@@ -198,7 +202,6 @@ def powerlaw(params, map_struct, tile_structs):
         if params["doIterativeTiling"]:
             map_struct_hold = gwemopt.utils.slice_map_tiles(params, map_struct_hold, coverage_struct)
                 
-
     map_struct["prob"] = full_prob_map
     return combine_coverage_structs(coverage_structs)
 

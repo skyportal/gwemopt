@@ -54,7 +54,6 @@ def create_moc(params, map_struct=None):
             for ii, tess in enumerate(tesselation):
                 index, ra, dec = tess[0], tess[1], tess[2]
                 if (telescope == "ZTF") and doUsePrimary and (index > 880):
-                    print(index)
                     continue
                 index = index.astype(int)
                 moc_struct[index] = Fov2Moc(params, config_struct, telescope, ra, dec, nside)

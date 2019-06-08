@@ -124,11 +124,13 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
         ras, decs = [], []
         for jj, key in enumerate(keys):
             tilesegmentlist = tilesegmentlists[jj]
+            if tile_struct[key]["prob"] == 0: continue
+            if "dec_constraint" in config_struct:
+                if (tile_struct[key]["dec"] < dec_min) or (tile_struct[key]["dec"] > dec_max): continue
+            if "epochs" in tile_struct[key]:
+                if np.any(np.abs(exposurelist[ii][0]-tile_struct[key]["epochs"][:,2]) < params["mindiff"]/86400.0):
+                    continue
             if tilesegmentlist.intersects_segment(exposurelist[ii]):
-                if tile_struct[key]["prob"] == 0: continue
-                if "dec_constraint" in config_struct:
-                    #print(tile_struct[key]["dec"],dec_min,dec_max)
-                    if (tile_struct[key]["dec"] < dec_min) or (tile_struct[key]["dec"] > dec_max): continue
                 exposureids.append(key)
                 probs.append(tile_struct[key]["prob"])
                 ras.append(tile_struct[key]["ra"])
