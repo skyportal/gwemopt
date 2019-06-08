@@ -12,9 +12,13 @@ matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
 
-def observability(params,map_struct):
-
+try:
+    import ligo.skymap.plot
+    cmap = "cylon"
+except:
     cmap = 'PuBuGn'
+
+def observability(params,map_struct):
 
     observability_struct = map_struct["observability"]
 
@@ -70,8 +74,6 @@ def tauprob(params,tau,prob):
     plt.close('all')
 
 def tiles(params,map_struct,tiles_structs):
-
-    cmap = 'PuBuGn'
 
     unit='Gravitational-wave probability'
     cbar=False
@@ -137,8 +139,6 @@ def add_edges():
         hp.projtext(lon,lat,"%.0f"%lat,lonlat=True)
 
 def skymap(params,map_struct):
-
-    cmap = 'PuBuGn'
 
     unit='Gravitational-wave probability'
     cbar=False
@@ -233,8 +233,6 @@ def efficiency(params, map_struct, efficiency_structs):
     plt.close('all')
 
 def coverage(params, map_struct, coverage_struct):
-
-    cmap = 'PuBuGn'
 
     unit='Gravitational-wave probability'
     cbar=False
