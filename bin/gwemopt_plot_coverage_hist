@@ -1,0 +1,123 @@
+#!/usr/bin/python
+
+# Copyright (C) 2017 Michael Coughlin
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 3 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+# Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+""".
+Gravitational-wave Electromagnetic Optimization
+
+This script generates an optimized list of pointings and content for
+reviewing gravitational-wave skymap likelihoods.
+
+Comments should be e-mailed to michael.coughlin@ligo.org.
+
+"""
+
+
+import os, sys, glob, optparse, shutil, warnings
+import numpy as np
+np.random.seed(0)
+
+import healpy as hp
+
+import matplotlib
+#matplotlib.rc('text', usetex=True)
+matplotlib.use('Agg')
+matplotlib.rcParams.update({'font.size': 16})
+matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
+import matplotlib.pyplot as plt
+
+# =============================================================================
+#
+#                                    MAIN
+#
+# =============================================================================
+
+warnings.filterwarnings("ignore")
+
+filename1 = "../output/GW190425/0.900_DECam_ZTF_GIT/tiles_coverage_hist.dat"
+filename2 = "../output/GW190425/0.900_DECam_ZTF_GIT_Overlapping/tiles_coverage_hist.dat"
+filename3 = "../output/GW190425/0.900_ATLAS_PS1/tiles_coverage_hist.dat"
+filename4 = "../output/GW190425/0.900_ATLAS_PS1_Overlapping/tiles_coverage_hist.dat"
+filename5 = "../output/GW190425/0.900_TCA_OAJ_IRIS/tiles_coverage_hist.dat"
+filename6 = "../output/GW190425/0.900_TCA_OAJ_IRIS_Overlapping/tiles_coverage_hist.dat"
+
+data1, data2 = np.loadtxt(filename1), np.loadtxt(filename2)
+data3, data4 = np.loadtxt(filename3), np.loadtxt(filename4)
+data5, data6 = np.loadtxt(filename5), np.loadtxt(filename6)
+
+bins = np.linspace(0.0, 24.0, 25)
+
+plotName = '../output/tiles_coverage_hist.pdf'
+plt.figure(figsize=(10,8))
+plt.hist(24.0*np.array(data1), bins=bins, color='k', histtype='step', linestyle='-', label="GROWTH")
+plt.hist(24.0*np.array(data2), bins=bins, color='k', histtype='step', linestyle='--')
+plt.hist(24.0*np.array(data3), bins=bins, color='b', histtype='step', linestyle='-', label="PS/ATLAS")
+plt.hist(24.0*np.array(data4), bins=bins, color='b', histtype='step', linestyle='--')
+plt.hist(24.0*np.array(data5), bins=bins, color='g', histtype='step', linestyle='-', label="GRANDMA")
+plt.hist(24.0*np.array(data6), bins=bins, color='g', histtype='step', linestyle='--')
+plt.xlim([0,24])
+plt.xlabel('Time between observations [hours]')
+plt.ylabel('Number of observations')
+plt.legend()
+plt.show()
+plt.savefig(plotName,dpi=200)
+plt.close('all')
+
+dist1 = np.sort(24.0*np.array(data1))
+cumint1 = 100*np.arange(len(dist1)) / len(dist1)
+dist2 = np.sort(24.0*np.array(data2))
+cumint2 = 100*np.arange(len(dist2)) / len(dist2)
+dist3 = np.sort(24.0*np.array(data3))
+cumint3 = 100*np.arange(len(dist3)) / len(dist3)
+dist4 = np.sort(24.0*np.array(data4))
+cumint4 = 100*np.arange(len(dist4)) / len(dist4)
+dist5 = np.sort(24.0*np.array(data5))
+cumint5 = 100*np.arange(len(dist5)) / len(dist5)
+dist6 = np.sort(24.0*np.array(data6))
+cumint6 = 100*np.arange(len(dist6)) / len(dist6)
+
+plotName = '../output/tiles_coverage_cumhist.pdf'
+fig, ax1 = plt.subplots(figsize=(12,8))
+# These are in unitless percentages of the figure size. (0,0 is bottom left)
+left, bottom, width, height = [0.6, 0.2, 0.25, 0.25]
+ax2 = fig.add_axes([left, bottom, width, height])
+
+plt.axes(ax1)
+plt.step(dist1, cumint1, color='k', where='mid', linestyle='-', label="GROWTH")
+plt.step(dist2, cumint2, color='k', where='mid', linestyle='--')
+plt.step(dist3, cumint3, color='b', where='mid', linestyle='-', label="PS/ATLAS")
+plt.step(dist4, cumint4, color='b', where='mid', linestyle='--')
+plt.step(dist5, cumint5, color='g', where='mid', linestyle='-', label="GRANDMA")
+plt.step(dist6, cumint6, color='g', where='mid', linestyle='--')
+plt.xlabel('Time between observations [hours]')
+plt.ylabel('Cumulative percentage of observations')
+plt.legend(loc=2)
+
+plt.axes(ax2)
+plt.hist(24.0*np.array(data1), bins=bins, color='k', histtype='step', linestyle='-', label="GROWTH")
+plt.hist(24.0*np.array(data2), bins=bins, color='k', histtype='step', linestyle='--')
+plt.hist(24.0*np.array(data3), bins=bins, color='b', histtype='step', linestyle='-', label="PS/ATLAS")
+plt.hist(24.0*np.array(data4), bins=bins, color='b', histtype='step', linestyle='--')
+plt.hist(24.0*np.array(data5), bins=bins, color='g', histtype='step', linestyle='-', label="GRANDMA")
+plt.hist(24.0*np.array(data6), bins=bins, color='g', histtype='step', linestyle='--')
+plt.xlim([0,24])
+plt.xlabel('Time between observations [hours]')
+plt.ylabel('Number of observations')
+
+plt.show()
+plt.savefig(plotName,dpi=200)
+plt.close('all')

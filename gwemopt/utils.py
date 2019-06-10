@@ -501,24 +501,37 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
 
     catalog1 = SkyCoord(ra=coverage_ras*u.degree,
                         dec=coverage_decs*u.degree, frame='icrs')
-    catalog2 = SkyCoord(ra=ras*u.degree, dec=decs*u.degree, frame='icrs')
-    idx,sep,_ = catalog1.match_to_catalog_sky(catalog2)
+    if params["tilesType"] == "galaxy":
+        catalog2 = SkyCoord(ra=ras*u.degree, dec=decs*u.degree, frame='icrs')
+        idx,sep,_ = catalog1.match_to_catalog_sky(catalog2)
 
-    for ii, s in enumerate(sep):
-        key = keys[idx[ii]]
-
-        if params["tilesType"] == "galaxy":
+        for ii, s in enumerate(sep):
+            key = keys[idx[ii]]
             if s.arcsec > 1:
                 continue
-        else:
-            overlap = np.union1d(tile_struct[key]["ipix"],
-                               coverage_ipixs[ii])
-            rat = float(len(overlap) / len(tile_struct[key]["ipix"]))
-            if rat < 0.5:
-                continue
+            if not 'epochs' in tile_struct[key]:
+                tile_struct[key]["epochs"] = np.empty((0,8))
+            tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][ii,:]),axis=0)
+    else:
+        for ii, key in enumerate(keys):
+            catalog2 = SkyCoord(ra=tile_struct[key]["ra"]*u.degree,
+                                dec=tile_struct[key]["dec"]*u.degree,
+                                frame='icrs')
+            sep = catalog1.separation(catalog2)
+            ipix = tile_struct[key]["ipix"]
+            for jj, s in enumerate(sep):
+                if s.deg > 25:
+                    continue
+                ipix2 = coverage_struct["ipix"][jj]
+                overlap = np.intersect1d(ipix, ipix2)
+                rat = np.array([float(len(overlap)) / float(len(ipix)),
+                                float(len(overlap)) / float(len(ipix2))])
+        
+                if np.max(rat) < 0.5:
+                    continue
  
-        if not 'epochs' in tile_struct[key]:
-            tile_struct[key]["epochs"] = np.empty((0,8))
-        tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][ii,:]),axis=0)
+                if not 'epochs' in tile_struct[key]:
+                    tile_struct[key]["epochs"] = np.empty((0,8))
+                tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
 
     return tile_struct

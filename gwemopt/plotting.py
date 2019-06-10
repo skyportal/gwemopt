@@ -3,6 +3,8 @@ import os, sys, copy
 import numpy as np
 import healpy as hp
 
+from astropy.time import Time
+
 from scipy.stats import norm
 
 import matplotlib
@@ -11,6 +13,7 @@ matplotlib.use('Agg')
 matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import cm
 
 try:
     import ligo.skymap.plot
@@ -298,6 +301,149 @@ def coverage(params, map_struct, coverage_struct):
     plt.show()
     plt.savefig(plotName,dpi=200)
     plt.close('all')
+
+    diffs = []
+    for ii in range(len(coverage_struct["ipix"])):
+        ipix = coverage_struct["ipix"][ii]
+        for jj in range(len(coverage_struct["ipix"])):
+            if ii >= jj: continue
+            if coverage_struct["telescope"][ii] == coverage_struct["telescope"][jj]:
+                continue
+            ipix2 = coverage_struct["ipix"][jj]
+            overlap = np.intersect1d(ipix, ipix2)
+            rat = np.array([float(len(overlap)) / float(len(ipix)),
+                            float(len(overlap)) / float(len(ipix2))])
+            if np.any(rat > 0.5):
+                diffs.append(np.abs(coverage_struct["data"][ii,2] - coverage_struct["data"][jj,2]))
+
+    filename = os.path.join(params["outputDir"],'tiles_coverage_hist.dat')
+    fid = open(filename, 'w')
+    for ii in range(len(diffs)):
+        fid.write('%.10f\n' % diffs[ii])
+    fid.close()
+
+    plotName = os.path.join(params["outputDir"],'tiles_coverage_hist.pdf')
+    fig = plt.figure(figsize=(12, 8))
+    #hist, bin_edges = np.histogram(diffs, bins=20)
+    bins = np.linspace(0.0, 24.0, 25)
+    plt.hist(24.0*np.array(diffs), bins=bins)
+    plt.xlabel('Difference Between Observations [hours]')
+    plt.ylabel('Number of Observations')
+    plt.show()
+    plt.savefig(plotName,dpi=200)
+    plt.close('all')
+
+    gpstime = params["gpstime"]
+    event_mjd = Time(gpstime, format='gps', scale='utc').mjd
+
+    colors=cm.rainbow(np.linspace(0,1,len(params["telescopes"])))
+    plotName = os.path.join(params["outputDir"],'tiles_coverage_int.pdf')
+
+    fig = plt.figure(figsize=(12, 8))
+
+    gs = fig.add_gridspec(4, 1)
+    ax1 = fig.add_subplot(gs[0:3, 0], projection='astro hours mollweide')
+    ax2 = fig.add_subplot(gs[3, 0])
+    ax3 = ax2.twinx()   # mirror them
+
+    plt.axes(ax1)
+    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar, cmap=cmap,
+                hold=True)
+    add_edges()
+    ax = plt.gca()
+    for ii in range(len(coverage_struct["ipix"])):
+        data = coverage_struct["data"][ii,:]
+        filt = coverage_struct["filters"][ii]
+        ipix = coverage_struct["ipix"][ii]
+        patch = coverage_struct["patch"][ii]
+        FOV = coverage_struct["FOV"][ii]
+
+        #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
+        patch_cpy = copy.copy(patch)
+        patch_cpy.axes = None
+        patch_cpy.figure = None
+        patch_cpy.set_transform(ax.transData)
+
+        for telescope, color in zip(params["telescopes"],colors):
+            if telescope == coverage_struct["telescope"][ii]:
+                patch_cpy.set_facecolor(color)
+
+        hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
+        #tiles.plot()
+
+    idxs = np.argsort(coverage_struct["data"][:,2])
+    colors=cm.rainbow(np.linspace(0,1,len(params["telescopes"])))
+
+    plt.axes(ax2)
+    for telescope, color in zip(params["telescopes"],colors):
+        ipixs = np.empty((0,2))
+        cum_prob = 0.0
+        cum_area = 0.0
+
+        tts, cum_probs, cum_areas = [], [], []
+
+        for ii in idxs:
+            data = coverage_struct["data"][ii,:]
+            filt = coverage_struct["filters"][ii]
+            ipix = coverage_struct["ipix"][ii]
+            patch = coverage_struct["patch"][ii]
+            FOV = coverage_struct["FOV"][ii]
+            area = coverage_struct["area"][ii]
+            
+            if not telescope == coverage_struct["telescope"][ii]:
+                continue
+
+            ipixs = np.append(ipixs,ipix)
+            ipixs = np.unique(ipixs).astype(int)
+
+            cum_prob = np.sum(map_struct["prob"][ipixs])
+            cum_area = len(ipixs) * map_struct["pixarea_deg2"]
+
+            tts.append(data[2]-event_mjd)
+            cum_probs.append(cum_prob)
+            cum_areas.append(cum_area)
+
+        ax2.plot(tts, cum_probs, color=color, linestyle='-', label=telescope)
+        ax2.set_xlabel('Time since event [days]')
+        ax2.set_ylabel('Integrated Probability')
+
+        ax3.plot(tts, cum_areas, color=color, linestyle='--') 
+        ax3.set_ylabel('Sky area [sq. deg.]')
+
+    ipixs = np.empty((0,2))
+    cum_prob = 0.0
+    cum_area = 0.0
+
+    tts, cum_probs, cum_areas = [], [], []
+
+    for ii in idxs:
+        data = coverage_struct["data"][ii,:]
+        filt = coverage_struct["filters"][ii]
+        ipix = coverage_struct["ipix"][ii]
+        patch = coverage_struct["patch"][ii]
+        FOV = coverage_struct["FOV"][ii]
+        area = coverage_struct["area"][ii]
+
+        ipixs = np.append(ipixs,ipix)
+        ipixs = np.unique(ipixs).astype(int)
+
+        cum_prob = np.sum(map_struct["prob"][ipixs])
+        cum_area = len(ipixs) * map_struct["pixarea_deg2"]
+
+        tts.append(data[2]-event_mjd)
+        cum_probs.append(cum_prob)
+        cum_areas.append(cum_area)
+
+    ax2.plot(tts, cum_probs, color='k', linestyle='-', label='All')
+    ax3.plot(tts, cum_areas, color='k', linestyle='--')
+
+    ax2.legend(loc=1)
+    plt.show()
+    plt.savefig(plotName,dpi=200)
+    plt.close('all')
+
+    print('Total Cumulate Probability, Area: %.5f, %.5f' % (cum_probs[-1],
+                                                            cum_areas[-1]))
 
     plotName = os.path.join(params["outputDir"],'tiles_coverage_scaled.pdf')
     plt.figure()
