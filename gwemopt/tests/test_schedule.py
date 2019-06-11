@@ -89,9 +89,7 @@ def params_struct(skymap, gpstime, tobs=None, filt=['r'],
     params["tilingDir"] = tiling_directory
     params["event"] = ""
     params["telescopes"] = [tele]
-    if tele == "ZTF":
-        params["tilesType"] = "ranked"
-    elif tele in ["KPED", "GROWTH-India"]:
+    if tele in ["KPED", "GROWTH-India"]:
         params["tilesType"] = "galaxy"
         params["catalogDir"] = catalog_directory
         params["galaxy_catalog"] = "GLADE"
@@ -145,6 +143,7 @@ def params_struct(skymap, gpstime, tobs=None, filt=['r'],
     params["doUseCatalog"] = False
     params["doIterativeTiling"] = False
     params["doMinimalTiling"] = False
+    params["doOverlappingScheduling"] = False
 
     if params["doEvent"]:
         params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)
