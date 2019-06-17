@@ -226,6 +226,11 @@ def get_catalog(params, map_struct):
     Slum[np.isnan(Slum)] = 0
 
     S = Sloc*Slum*Sdet
+
+    # now normalize the distributions
+    S = S / np.sum(S)
+    Sloc = Sloc / np.sum(Sloc)
+
     prob = np.zeros(map_struct["prob"].shape)
     if params["galaxy_grade"] == "Sloc":     
         for j in range(len(ipix)):
@@ -277,9 +282,9 @@ def get_catalog(params, map_struct):
         GWGC, PGC, HyperLEDA = GWGC[mask], PGC[mask], HyperLEDA[mask]
         _2MASS, SDSS = _2MASS[mask], SDSS[mask]
 
-    if len(ra) > 1000:
-        print('Cutting catalog to top 1000 galaxies...')
-        idx = np.arange(1000).astype(int)
+    if len(ra) > 5000:
+        print('Cutting catalog to top 5000 galaxies...')
+        idx = np.arange(5000).astype(int)
         ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
         distmpc, z = distmpc[idx], z[idx]
         if params["galaxy_catalog"] == "GLADE":

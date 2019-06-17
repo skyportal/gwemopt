@@ -15,6 +15,8 @@ matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 
+from gwemopt.segments import angular_distance
+
 try:
     import ligo.skymap.plot
     cmap = "cylon"
@@ -235,7 +237,7 @@ def efficiency(params, map_struct, efficiency_structs):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
-def coverage(params, map_struct, coverage_struct):
+def coverage(params, map_struct, coverage_struct, catalog_struct=None):
 
     unit='Gravitational-wave probability'
     cbar=False
@@ -292,6 +294,9 @@ def coverage(params, map_struct, coverage_struct):
         FOV = coverage_struct["FOV"][ii]
 
         #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
+        if patch == []:
+            continue
+
         patch_cpy = copy.copy(patch)
         patch_cpy.axes = None
         patch_cpy.figure = None
@@ -303,18 +308,35 @@ def coverage(params, map_struct, coverage_struct):
     plt.close('all')
 
     diffs = []
-    for ii in range(len(coverage_struct["ipix"])):
-        ipix = coverage_struct["ipix"][ii]
-        for jj in range(len(coverage_struct["ipix"])):
-            if ii >= jj: continue
-            if coverage_struct["telescope"][ii] == coverage_struct["telescope"][jj]:
-                continue
-            ipix2 = coverage_struct["ipix"][jj]
-            overlap = np.intersect1d(ipix, ipix2)
-            rat = np.array([float(len(overlap)) / float(len(ipix)),
-                            float(len(overlap)) / float(len(ipix2))])
-            if np.any(rat > 0.5):
+    if params["tilesType"] == "galaxy":
+        coverage_ras = coverage_struct["data"][:,0]
+        coverage_decs = coverage_struct["data"][:,1]
+        coverage_mjds = coverage_struct["data"][:,2]
+
+        for ii in range(len(coverage_ras)-1):
+            current_ra, current_dec = coverage_ras[ii], coverage_decs[ii]
+            current_mjd = coverage_mjds[ii]
+
+            dist = angular_distance(current_ra, current_dec,
+                                    coverage_ras[ii+1:],
+                                    coverage_decs[ii+1:])
+            idx = np.where(dist <= 1/3600.0)[0]
+            if len(idx) > 0:
+                jj = idx[0]
                 diffs.append(np.abs(coverage_struct["data"][ii,2] - coverage_struct["data"][jj,2]))
+    else:
+        for ii in range(len(coverage_struct["ipix"])):
+            ipix = coverage_struct["ipix"][ii]
+            for jj in range(len(coverage_struct["ipix"])):
+                if ii >= jj: continue
+                if coverage_struct["telescope"][ii] == coverage_struct["telescope"][jj]:
+                    continue
+                ipix2 = coverage_struct["ipix"][jj]
+                overlap = np.intersect1d(ipix, ipix2)
+                rat = np.array([float(len(overlap)) / float(len(ipix)),
+                                float(len(overlap)) / float(len(ipix2))])
+                if np.any(rat > 0.5):
+                    diffs.append(np.abs(coverage_struct["data"][ii,2] - coverage_struct["data"][jj,2]))
 
     filename = os.path.join(params["outputDir"],'tiles_coverage_hist.dat')
     fid = open(filename, 'w')
@@ -358,18 +380,26 @@ def coverage(params, map_struct, coverage_struct):
         patch = coverage_struct["patch"][ii]
         FOV = coverage_struct["FOV"][ii]
 
-        #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
-        patch_cpy = copy.copy(patch)
-        patch_cpy.axes = None
-        patch_cpy.figure = None
-        patch_cpy.set_transform(ax.transData)
+        if params["tilesType"] == "galaxy":
+            for telescope, color in zip(params["telescopes"],colors):
+                if telescope == coverage_struct["telescope"][ii]:
+                    hp.projscatter(data[0], data[1], lonlat=True, 
+                                   s=20, color=color)
+        else:
+            if patch == []:
+                continue
+            #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
+            patch_cpy = copy.copy(patch)
+            patch_cpy.axes = None
+            patch_cpy.figure = None
+            patch_cpy.set_transform(ax.transData)
 
-        for telescope, color in zip(params["telescopes"],colors):
-            if telescope == coverage_struct["telescope"][ii]:
-                patch_cpy.set_facecolor(color)
+            for telescope, color in zip(params["telescopes"],colors):
+                if telescope == coverage_struct["telescope"][ii]:
+                    patch_cpy.set_facecolor(color)
 
-        hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
-        #tiles.plot()
+            hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
+            #tiles.plot()
 
     idxs = np.argsort(coverage_struct["data"][:,2])
     colors=cm.rainbow(np.linspace(0,1,len(params["telescopes"])))
@@ -393,21 +423,44 @@ def coverage(params, map_struct, coverage_struct):
             if not telescope == coverage_struct["telescope"][ii]:
                 continue
 
-            ipixs = np.append(ipixs,ipix)
-            ipixs = np.unique(ipixs).astype(int)
+            if params["tilesType"] == "galaxy":
+                dist = angular_distance(data[0], data[1],
+                                        coverage_struct["data"][:ii,0],
+                                        coverage_struct["data"][:ii,1])
+                dist2 = angular_distance(data[0], data[1],
+                                         catalog_struct["ra"],
+                                         catalog_struct["dec"])
+                if not np.any(dist < 1/3600.0):
+                    cum_area = cum_area + 1
+                    idx = np.argmin(dist2)
+                    if params["galaxy_grade"] == "Sloc":
+                        cum_prob = cum_prob + catalog_struct["Sloc"][idx]
+                    elif params["galaxy_grade"] == "S":
+                        cum_prob = cum_prob + catalog_struct["S"][idx]
+                    print(cum_area, cum_prob) 
+            else:
+                ipixs = np.append(ipixs,ipix)
+                ipixs = np.unique(ipixs).astype(int)
 
-            cum_prob = np.sum(map_struct["prob"][ipixs])
-            cum_area = len(ipixs) * map_struct["pixarea_deg2"]
+                cum_prob = np.sum(map_struct["prob"][ipixs])
+                cum_area = len(ipixs) * map_struct["pixarea_deg2"]
 
-            tts.append(data[2]-event_mjd)
             cum_probs.append(cum_prob)
             cum_areas.append(cum_area)
+            tts.append(data[2]-event_mjd)
 
         ax2.plot(tts, cum_probs, color=color, linestyle='-', label=telescope)
-        ax2.set_xlabel('Time since event [days]')
+        ax3.plot(tts, cum_areas, color=color, linestyle='--') 
+
+    ax2.set_xlabel('Time since event [days]')
+    if params["tilesType"] == "galaxy":
+        ax2.set_ylabel('Integrated Metric')
+    else:
         ax2.set_ylabel('Integrated Probability')
 
-        ax3.plot(tts, cum_areas, color=color, linestyle='--') 
+    if params["tilesType"] == "galaxy":
+        ax3.set_ylabel('Number of galaxies')
+    else:
         ax3.set_ylabel('Sky area [sq. deg.]')
 
     ipixs = np.empty((0,2))
@@ -424,11 +477,26 @@ def coverage(params, map_struct, coverage_struct):
         FOV = coverage_struct["FOV"][ii]
         area = coverage_struct["area"][ii]
 
-        ipixs = np.append(ipixs,ipix)
-        ipixs = np.unique(ipixs).astype(int)
+        if params["tilesType"] == "galaxy":
+            dist = angular_distance(data[0], data[1],
+                                    coverage_struct["data"][:ii,0],
+                                    coverage_struct["data"][:ii,1])
+            dist2 = angular_distance(data[0], data[1],
+                                     catalog_struct["ra"],
+                                     catalog_struct["dec"])
+            if not np.any(dist < 1/3600.0):
+                cum_area = cum_area + 1
+                idx = np.argmin(dist2)
+                if params["galaxy_grade"] == "Sloc":
+                    cum_prob = cum_prob + catalog_struct["Sloc"][idx]
+                elif params["galaxy_grade"] == "S":
+                    cum_prob = cum_prob + catalog_struct["S"][idx]
+        else:
+            ipixs = np.append(ipixs,ipix)
+            ipixs = np.unique(ipixs).astype(int)
 
-        cum_prob = np.sum(map_struct["prob"][ipixs])
-        cum_area = len(ipixs) * map_struct["pixarea_deg2"]
+            cum_prob = np.sum(map_struct["prob"][ipixs])
+            cum_area = len(ipixs) * map_struct["pixarea_deg2"]
 
         tts.append(data[2]-event_mjd)
         cum_probs.append(cum_prob)
@@ -456,6 +524,9 @@ def coverage(params, map_struct, coverage_struct):
         ipix = coverage_struct["ipix"][ii]
         patch = coverage_struct["patch"][ii]
         FOV = coverage_struct["FOV"][ii]
+
+        if patch == []:
+            continue
 
         #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
         patch_cpy = copy.copy(patch)
@@ -507,6 +578,9 @@ def coverage(params, map_struct, coverage_struct):
                 patch = coverage_struct["patch"][ii]
                 FOV = coverage_struct["FOV"][ii]
     
+                if patch == []:
+                    continue
+
                 #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
                 patch_cpy = copy.copy(patch)
                 patch_cpy.axes = None

@@ -453,6 +453,7 @@ def slice_map_tiles(params, map_struct, coverage_struct):
         observ_time, exposure_time, field_id, prob, airmass = data[2], data[4], data[5], data[6], data[7]
 
         ipix_slice = np.setdiff1d(ipix, ipix_keep)
+        if len(ipix_slice) == 0: continue
         map_struct["prob"][ipix_slice] = 0.0
 
     return map_struct
@@ -524,6 +525,9 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                     continue
                 ipix2 = coverage_struct["ipix"][jj]
                 overlap = np.intersect1d(ipix, ipix2)
+                if len(overlap) == 0:
+                    continue
+
                 rat = np.array([float(len(overlap)) / float(len(ipix)),
                                 float(len(overlap)) / float(len(ipix2))])
         

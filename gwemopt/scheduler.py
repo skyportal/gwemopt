@@ -478,7 +478,9 @@ def computeSlewReadoutTime(config_struct, coverage_struct):
     prev_dec = config_struct["longitude"]
     acc_time = 0
     for dat in coverage_struct['data']:
-        slew_readout_time = np.maximum(np.sqrt((prev_ra - dat[0])**2 + (prev_dec - dat[1])**2) / slew_rate, readout)
+        dist = angular_distance(prev_ra, prev_dec,
+                                dat[0], dat[1])
+        slew_readout_time = np.max([dist/slew_rate, readout])
         acc_time += slew_readout_time
         prev_dec = dat[0]
         prev_ra = dat[1]

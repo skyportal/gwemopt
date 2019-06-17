@@ -433,7 +433,11 @@ if opts.doSchedule or opts.doCoverage:
 
     if opts.doPlots:
         print("Plotting coverage...")
-        gwemopt.plotting.coverage(params, map_struct, coverage_struct)
+        if opts.doCatalog:
+            gwemopt.plotting.coverage(params, map_struct, coverage_struct,
+                                      catalog_struct=catalog_struct)
+        else:
+            gwemopt.plotting.coverage(params, map_struct, coverage_struct)
 
 if opts.doEfficiency:
     if opts.doSchedule or opts.doCoverage:
