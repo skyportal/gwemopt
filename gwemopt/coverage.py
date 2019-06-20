@@ -21,6 +21,8 @@ def combine_coverage_structs(coverage_structs):
     coverage_struct_combined["FOV"] = np.empty((0,1))
     coverage_struct_combined["area"] = np.empty((0,1))
     coverage_struct_combined["telescope"] = np.empty((0,1))
+    coverage_struct_combined["galaxies"] = []    
+
     for coverage_struct in coverage_structs:
         coverage_struct_combined["data"] = np.append(coverage_struct_combined["data"],coverage_struct["data"],axis=0)
         coverage_struct_combined["filters"] = np.append(coverage_struct_combined["filters"],coverage_struct["filters"])
@@ -29,6 +31,9 @@ def combine_coverage_structs(coverage_structs):
         coverage_struct_combined["FOV"] = np.append(coverage_struct_combined["FOV"],coverage_struct["FOV"])
         coverage_struct_combined["area"] = np.append(coverage_struct_combined["area"],coverage_struct["area"])
         coverage_struct_combined["telescope"] = np.append(coverage_struct_combined["telescope"],coverage_struct["telescope"])
+        if "galaxies" in coverage_struct:
+            coverage_struct_combined["galaxies"] = coverage_struct_combined["galaxies"] + coverage_struct["galaxies"]
+
     return coverage_struct_combined
 
 def read_coverage(params, telescope, filename):

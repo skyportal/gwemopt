@@ -395,6 +395,8 @@ def scheduler(params, config_struct, tile_struct):
     coverage_struct["ipix"] = []
     coverage_struct["patch"] = []
     coverage_struct["area"] = []
+    if params["tilesType"] == "galaxy":
+        coverage_struct["galaxies"] = []
 
     observatory = astropy.coordinates.EarthLocation(
         lat=config_struct["latitude"]*u.deg, lon=config_struct["longitude"]*u.deg, height=config_struct["elevation"]*u.m)
@@ -462,6 +464,8 @@ def scheduler(params, config_struct, tile_struct):
             coverage_struct["patch"].append(tile_struct_hold["patch"])
             coverage_struct["ipix"].append(tile_struct_hold["ipix"])
             coverage_struct["area"].append(tile_struct_hold["area"])
+            if params["tilesType"] == "galaxy":
+                coverage_struct["galaxies"].append(tile_struct_hold["galaxies"])
 
     coverage_struct["area"] = np.array(coverage_struct["area"])
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
@@ -618,7 +622,10 @@ def summary(params, map_struct, coverage_struct):
             observ_time, exposure_time, field_id, prob, airmass = data[2], data[4], data[5], data[6], data[7]
             fid.write('%d %.5f %.5f %.5f %d %.5f %.5f %s\n'%(field_id,ra,dec,observ_time,exposure_time,prob,airmass,filt))
 
-            idx1 = np.argmin(np.sqrt((config_struct["tesselation"][:,1]-data[0])**2 + (config_struct["tesselation"][:,2]-data[1])**2))
+            dist = angular_distance(data[0], data[1],
+                                    config_struct["tesselation"][:,1],
+                                    config_struct["tesselation"][:,2])
+            idx1 = np.argmin(dist)
             idx2 = filts.index(filt)
             fields[idx1,0] = config_struct["tesselation"][idx1,0]
             fields[idx1,1] = prob
