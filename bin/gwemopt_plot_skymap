@@ -41,6 +41,7 @@ matplotlib.use('Agg')
 matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
 import gwemopt.utils, gwemopt.plotting
 import gwemopt.moc, gwemopt.tiles 
@@ -60,14 +61,17 @@ def parse_commandline():
     """
     parser = optparse.OptionParser(usage=__doc__,version=__version__)
 
-    parser.add_option("-s", "--skymap", help="GW skymap.", default='../input/../input/NICER_AJ_M1_FWHM12.0.fits')
+    parser.add_option("-s", "--skymap", help="GW skymap.", default='../data/GW190425/LALInference.fits.gz')
+    parser.add_option("--fields", help="Observed fields.", default='../data/GW190425/fields.dat')
+    parser.add_option("--transients", help="Transient list.", default='../data/GW190425/transients.dat')
 
     parser.add_option("-c", "--configDirectory", help="GW-EM config file directory.", default ="../config/")
-    parser.add_option("-o", "--outputDir", help="output directory",default="../output_field")
+    parser.add_option("-o", "--outputDir", help="output directory",default="../output/GW190425")
 
     parser.add_option("-t", "--telescope", help="Telescope.", default ="ZTF")
     parser.add_option("--nside",default=256,type=int)
-    parser.add_option("-f","--filter",default=1,type=int)
+    parser.add_option("-f","--filter",default="1,2")
+    parser.add_option("--rotation",default=240.0,type=float)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -98,6 +102,7 @@ warnings.filterwarnings("ignore")
 
 # Parse command line
 opts = parse_commandline()
+filters = [int(x) for x in opts.filter.split(",")]
 
 params = {}
 params["config"] = {}
@@ -106,35 +111,23 @@ for configFile in configFiles:
     telescope = configFile.split("/")[-1].replace(".config","")
     if not opts.telescope == telescope: continue
     params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
+    params["config"][telescope]["telescope"] = telescope
     params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2),comments='%')
     params["config"][telescope]["tot_obs_time"] = 1.0
 
-filename = '../input/ZTF.observed'
-obs = table.unique(table.Table.read(filename,
-    format='ascii', data_start=2, data_end=-1)['field', 'fId', 'count'])
-
-fieldIDs = []
-filename = '../input/june_july_fields.txt'
-lines = [line.rstrip('\n') for line in open(filename)]
-lines = lines[1:]
-for line in lines:
-    lineSplit = list(filter(None,line.split(" ")))
-    if len(lineSplit) < 8: continue
-    fieldIDs.append(lineSplit[1])
-filename = '../input/august_fields.txt'
-lines = [line.rstrip('\n') for line in open(filename)]
-lines = lines[1:]
-for line in lines:
-    lineSplit = list(filter(None,line.split(" ")))
-    if len(lineSplit) < 8: continue
-    fieldIDs.append(lineSplit[2])
-fieldIDs = np.unique(fieldIDs)
+obs = table.Table.read(opts.fields, format="ascii",
+                       names=("fieldID","fId","time"))
+transients = table.Table.read(opts.transients, format="ascii",
+                              names=("name","ra","dec"))
 
 params["outputDir"] = opts.outputDir
 
 if not os.path.isdir(params["outputDir"]):
     os.makedirs(params["outputDir"])
 
+params["tilesType"] = "moc"
+params["doMinimalTiling"] = False
+params["doParallel"] = False
 params["telescopes"] = [opts.telescope]
 params["nside"] = opts.nside
 params["doChipGaps"] = False
@@ -144,38 +137,35 @@ params["gpstime"] = 1000000000
 params["Tobs"] = np.array([0.0,1.0])
 params["exposuretimes"] = [30.0]
 params = gwemopt.segments.get_telescope_segments(params)
+params["rotation"] = [opts.rotation,0,0]
 
 moc_structs = gwemopt.moc.create_moc(params)
 
 map_struct = {}
-npix = hp.nside2npix(opts.nside)
-healpix = np.zeros(npix)
-
-original_data = hp.read_map(opts.skymap)
-healpix = hp.ud_grade(original_data,opts.nside,power=-2)
-healpix = healpix / np.sum(healpix)
-r = hp.rotator.Rotator(coord=['G','C'])
-healpix = r.rotate_map(healpix)
-healpix = healpix / np.sum(healpix)
+healpix = hp.read_map(opts.skymap)
 map_struct["prob"] = healpix
+map_struct["prob"] = hp.ud_grade(map_struct["prob"],opts.nside,power=-2)
 
 tiles_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
 
 unit='Gravitational-wave probability'
 cbar=False
+cmap = plt.get_cmap('PuBuGn')
 
 plotName = os.path.join(params["outputDir"],'tiles.pdf')
 plt.figure()
-hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar)
+hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,rot=[opts.rotation,0,0],cmap=cmap)
 ax = plt.gca()
 for telescope in tiles_structs:
     tiles_struct = tiles_structs[telescope]
     for index in tiles_struct.keys():
-        idx = np.where((obs["field"]==index) & (obs["fId"]==opts.filter))[0]
-        if len(idx) == 0:
-            count = 0
-        else:
-            count = np.array(obs["count"][idx])[0]
+        idx = np.where(obs["fieldID"]==index)[0]
+        rows = obs[idx]
+        idx2 = []
+        for ii, row in enumerate(rows):
+            if row["fId"] in filters:
+                idx2.append(ii)
+        rows = rows[idx2]
 
         ipix, corners, patch = tiles_struct[index]["ipix"], tiles_struct[index]["corners"], tiles_struct[index]["patch"]
         #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
@@ -188,16 +178,36 @@ for telescope in tiles_structs:
         current_alpha = patch_cpy.get_alpha()
 
         if current_alpha > 0.0:
-            alpha = count/250.0
-            if alpha > 1:
-                alpha = 1.0
+            alpha = len(rows)
+            if alpha >= 1:
+                alpha = 0.5
             patch_cpy.set_alpha(alpha)
-        if np.isin(index,fieldIDs):
-            patch_cpy.set_color('black')
-        hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
+        #if np.isin(index,fieldIDs):
+        #    patch_cpy.set_color('black')
+        #hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
+        ax.add_patch(patch_cpy)        
 
         #tiles.plot()
-gwemopt.plotting.add_edges()
+
+hp.graticule(verbose=False)
+plt.grid(True)
+lons = np.arange(-150.0,180,30.0)
+lats = np.zeros(lons.shape)
+for lon, lat in zip(lons,lats):
+    hp.projtext(lon,lat,"%.0f"%lon,lonlat=True,color='k')
+lats = np.arange(-60.0,90,30.0)
+lons = np.zeros(lons.shape)
+for lon, lat in zip(lons,lats):
+    hp.projtext(lon,lat,"%.0f"%lat,lonlat=True,color='k')
+
+for transient in transients:
+    hp.visufunc.projplot(transient["ra"], transient["dec"], lonlat=True,
+                         marker="o",markersize=10)
+    hp.visufunc.projtext(transient["ra"]+2.0, transient["dec"], 
+                         transient["name"][-3:],
+                         lonlat=True, fontsize=4, color='w')
+
+#gwemopt.plotting.add_edges()
 plt.show()
 plt.savefig(plotName,dpi=200)
 plt.close('all')

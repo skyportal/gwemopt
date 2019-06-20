@@ -24,6 +24,11 @@ def create_moc(params, map_struct=None):
         index = np.argmin(np.abs(prob_cumsum - cl)) + 1
         prob_indexes = prob_indexes[:index+1]
 
+    if "doUsePrimary" in params:
+        doUsePrimary = params["doUsePrimary"]
+    else:
+        doUsePrimary = False
+
     moc_structs = {}
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
@@ -42,10 +47,14 @@ def create_moc(params, map_struct=None):
             moclists = Parallel(n_jobs=params["Ncores"])(delayed(Fov2Moc)(params, config_struct, telescope, tess[1], tess[2], nside) for tess in tesselation)
             for ii, tess in enumerate(tesselation):
                 index, ra, dec = tess[0], tess[1], tess[2]
+                if (telescope == "ZTF") and doUsePrimary and (index > 880):
+                    continue
                 moc_struct[index] = moclists[ii]    
         else:
             for ii, tess in enumerate(tesselation):
                 index, ra, dec = tess[0], tess[1], tess[2]
+                if (telescope == "ZTF") and doUsePrimary and (index > 880):
+                    continue
                 index = index.astype(int)
                 moc_struct[index] = Fov2Moc(params, config_struct, telescope, ra, dec, nside)
         moc_structs[telescope] = moc_struct
@@ -65,18 +74,23 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
            """
 
     moc_struct = {}
-    
+   
+    if "rotation" in params:
+        rotation=params["rotation"]
+    else:
+        rotation=None
+ 
     if config_struct["FOV_type"] == "square": 
-        ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside)
+        ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, rotation=rotation)
     elif config_struct["FOV_type"] == "circle":
-        ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside)
+        ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, rotation=rotation)
 
     if params["doChipGaps"]:
         if telescope == "ZTF":
             ipixs = gwemopt.ztf_tiling.get_quadrant_ipix(nside, ra_pointing, dec_pointing)
             ipix = list({y for x in ipixs for y in x})
         else:
-            raise ValueError("Requested chip gaps with non-ZTF detector, failing.")
+            print("Requested chip gaps with non-ZTF detector, will use moc.")
 
     moc_struct["ra"] = ra_pointing
     moc_struct["dec"] = dec_pointing

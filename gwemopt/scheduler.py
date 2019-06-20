@@ -124,11 +124,13 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
         ras, decs = [], []
         for jj, key in enumerate(keys):
             tilesegmentlist = tilesegmentlists[jj]
+            if tile_struct[key]["prob"] == 0: continue
+            if "dec_constraint" in config_struct:
+                if (tile_struct[key]["dec"] < dec_min) or (tile_struct[key]["dec"] > dec_max): continue
+            if "epochs" in tile_struct[key]:
+                if np.any(np.abs(exposurelist[ii][0]-tile_struct[key]["epochs"][:,2]) < params["mindiff"]/86400.0):
+                    continue
             if tilesegmentlist.intersects_segment(exposurelist[ii]):
-                if tile_struct[key]["prob"] == 0: continue
-                if "dec_constraint" in config_struct:
-                    #print(tile_struct[key]["dec"],dec_min,dec_max)
-                    if (tile_struct[key]["dec"] < dec_min) or (tile_struct[key]["dec"] > dec_max): continue
                 exposureids.append(key)
                 probs.append(tile_struct[key]["prob"])
                 ras.append(tile_struct[key]["ra"])
@@ -393,6 +395,8 @@ def scheduler(params, config_struct, tile_struct):
     coverage_struct["ipix"] = []
     coverage_struct["patch"] = []
     coverage_struct["area"] = []
+    if params["tilesType"] == "galaxy":
+        coverage_struct["galaxies"] = []
 
     observatory = astropy.coordinates.EarthLocation(
         lat=config_struct["latitude"]*u.deg, lon=config_struct["longitude"]*u.deg, height=config_struct["elevation"]*u.m)
@@ -460,6 +464,8 @@ def scheduler(params, config_struct, tile_struct):
             coverage_struct["patch"].append(tile_struct_hold["patch"])
             coverage_struct["ipix"].append(tile_struct_hold["ipix"])
             coverage_struct["area"].append(tile_struct_hold["area"])
+            if params["tilesType"] == "galaxy":
+                coverage_struct["galaxies"].append(tile_struct_hold["galaxies"])
 
     coverage_struct["area"] = np.array(coverage_struct["area"])
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
@@ -476,7 +482,9 @@ def computeSlewReadoutTime(config_struct, coverage_struct):
     prev_dec = config_struct["longitude"]
     acc_time = 0
     for dat in coverage_struct['data']:
-        slew_readout_time = np.maximum(np.sqrt((prev_ra - dat[0])**2 + (prev_dec - dat[1])**2) / slew_rate, readout)
+        dist = angular_distance(prev_ra, prev_dec,
+                                dat[0], dat[1])
+        slew_readout_time = np.max([dist/slew_rate, readout])
         acc_time += slew_readout_time
         prev_dec = dat[0]
         prev_ra = dat[1]
@@ -614,7 +622,10 @@ def summary(params, map_struct, coverage_struct):
             observ_time, exposure_time, field_id, prob, airmass = data[2], data[4], data[5], data[6], data[7]
             fid.write('%d %.5f %.5f %.5f %d %.5f %.5f %s\n'%(field_id,ra,dec,observ_time,exposure_time,prob,airmass,filt))
 
-            idx1 = np.argmin(np.sqrt((config_struct["tesselation"][:,1]-data[0])**2 + (config_struct["tesselation"][:,2]-data[1])**2))
+            dist = angular_distance(data[0], data[1],
+                                    config_struct["tesselation"][:,1],
+                                    config_struct["tesselation"][:,2])
+            idx1 = np.argmin(dist)
             idx2 = filts.index(filt)
             fields[idx1,0] = config_struct["tesselation"][idx1,0]
             fields[idx1,1] = prob

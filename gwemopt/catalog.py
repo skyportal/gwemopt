@@ -217,11 +217,20 @@ def get_catalog(params, map_struct):
     else:
         Sloc = copy.copy(prob_scaled[ipix])
 
+    # this happens when we are using a tiny catalog...
+    if np.all(Sloc == 0.0):
+        Sloc[:] = 1.0
+
     # Set nan values to zero
     Sloc[np.isnan(Sloc)] = 0
     Slum[np.isnan(Slum)] = 0
 
     S = Sloc*Slum*Sdet
+
+    # now normalize the distributions
+    S = S / np.sum(S)
+    Sloc = Sloc / np.sum(Sloc)
+
     prob = np.zeros(map_struct["prob"].shape)
     if params["galaxy_grade"] == "Sloc":     
         for j in range(len(ipix)):
@@ -265,15 +274,24 @@ def get_catalog(params, map_struct):
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]
 
-    if len(ra) > 1000:
-        print('Cutting catalog to top 1000 galaxies...')
-        idx = np.arange(1000).astype(int)
+    # Keep only galaxies within 3sigma in distance
+    mask = Sloc > 0
+    ra, dec, Sloc, S = ra[mask], dec[mask], Sloc[mask], S[mask]
+    distmpc, z = distmpc[mask], z[mask]
+    if params["galaxy_catalog"] == "GLADE":
+        GWGC, PGC, HyperLEDA = GWGC[mask], PGC[mask], HyperLEDA[mask]
+        _2MASS, SDSS = _2MASS[mask], SDSS[mask]
+
+    if len(ra) > 2000:
+        print('Cutting catalog to top 2000 galaxies...')
+        idx = np.arange(2000).astype(int)
         ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
         distmpc, z = distmpc[idx], z[idx]
         if params["galaxy_catalog"] == "GLADE":
             GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
             _2MASS, SDSS = _2MASS[idx], SDSS[idx]
 
+    
     catalog_struct = {}
     catalog_struct["ra"] = ra
     catalog_struct["dec"] = dec

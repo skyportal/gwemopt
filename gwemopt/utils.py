@@ -10,6 +10,7 @@ from scipy.stats import norm
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u
+from astropy.coordinates import SkyCoord
 
 import matplotlib
 #matplotlib.rc('text', usetex=True)
@@ -220,7 +221,7 @@ def get_ellipse_coords(a=0.0, b=0.0, x=0.0, y=0.0, angle=0.0, npts=10):
 
     return pts
 
-def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='#FFFFFF', edgecolor='#FFFFFF'):
+def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='k', edgecolor='k', rotation=None):
 
     theta = 0.5 * np.pi - np.deg2rad(dec_pointing)
     phi = np.deg2rad(ra_pointing)
@@ -248,7 +249,7 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='
 
     xyz = hp.ang2vec(radecs[:,0],radecs[:,1],lonlat=True)
 
-    proj = hp.projector.MollweideProj(rot=None, coord=None)
+    proj = hp.projector.MollweideProj(rot=rotation, coord=None)
     x,y = proj.vec2xy(xyz[:,0],xyz[:,1],xyz[:,2])
     xy = np.zeros(radecs.shape)
     xy[:,0] = x
@@ -261,7 +262,7 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='
 
     return ipix, radecs, patch, area
 
-def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, color='#FFFFFF', edgecolor='#FFFFFF'):
+def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, color='k', edgecolor='k', rotation=None):
 
     area = tileSide*tileSide
 
@@ -318,7 +319,7 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, col
     #    return [], [], [], []
 
     xyz = np.array(xyz)
-    proj = hp.projector.MollweideProj(rot=None, coord=None) 
+    proj = hp.projector.MollweideProj(rot=rotation, coord=None) 
     x,y = proj.vec2xy(xyz[:,0],xyz[:,1],xyz[:,2])
     xy = np.zeros(radecs.shape)
     xy[:,0] = x
@@ -420,6 +421,9 @@ def get_exposures(params, config_struct, segmentlist):
     if "overhead_per_exposure" in config_struct.keys(): overhead = config_struct["overhead_per_exposure"]
     else: overhead = 0.0
 
+    # add the filter change time to the total overheads for integrated
+    if not params["doAlternatingFilters"]: overhead = overhead + config_struct["filt_change_time"]
+
     exposure_time = np.max(params["exposuretimes"])
 
     for ii in range(len(segmentlist)):
@@ -431,7 +435,12 @@ def get_exposures(params, config_struct, segmentlist):
 
     return exposurelist
 
-def slice_map_tiles(map_struct, coverage_struct):
+def slice_map_tiles(params, map_struct, coverage_struct):
+
+    sort_idx = np.argsort(map_struct["prob"])[::-1]
+    csm = np.empty(len(map_struct["prob"]))
+    csm[sort_idx] = np.cumsum(map_struct["prob"][sort_idx])
+    ipix_keep = np.where(csm <= params["iterativeOverlap"])[0]
 
     for ii in range(len(coverage_struct["ipix"])):
         data = coverage_struct["data"][ii,:]
@@ -443,6 +452,104 @@ def slice_map_tiles(map_struct, coverage_struct):
 
         observ_time, exposure_time, field_id, prob, airmass = data[2], data[4], data[5], data[6], data[7]
 
-        map_struct["prob"][ipix] = 0.0
+        ipix_slice = np.setdiff1d(ipix, ipix_keep)
+        if len(ipix_slice) == 0: continue
+        map_struct["prob"][ipix_slice] = 0.0
 
     return map_struct
+
+def slice_galaxy_tiles(params, tile_struct, coverage_struct):
+
+    coverage_ras = coverage_struct["data"][:,0]
+    coverage_decs = coverage_struct["data"][:,1]
+
+    if len(coverage_ras) == 0:
+        return tile_struct
+
+    keys = tile_struct.keys()
+    ras, decs = [], []
+    for key in keys:
+        ras.append(tile_struct[key]["ra"])
+        decs.append(tile_struct[key]["dec"])
+    ras, decs = np.array(ras), np.array(decs)
+
+    catalog1 = SkyCoord(ra=coverage_ras*u.degree,
+                        dec=coverage_decs*u.degree, frame='icrs')
+
+    for ii, key in enumerate(keys):
+        catalog2 = SkyCoord(ra=tile_struct[key]["ra"]*u.degree,
+                            dec=tile_struct[key]["dec"]*u.degree,
+                            frame='icrs')
+        sep = catalog1.separation(catalog2)
+        galaxies = tile_struct[key]["galaxies"]
+        for jj, s in enumerate(sep):
+            if s.deg > 1:
+                continue
+            galaxies2 = coverage_struct["galaxies"][jj]
+            overlap = np.setdiff1d(galaxies, galaxies2)
+            if len(overlap) == 0:
+                tile_struct[key]['prob'] = 0.0
+                break
+
+    return tile_struct
+
+def check_overlapping_tiles(params, tile_struct, coverage_struct):
+
+    coverage_ras = coverage_struct["data"][:,0]
+    coverage_decs = coverage_struct["data"][:,1]
+    coverage_mjds = coverage_struct["data"][:,2]
+    coverage_ipixs = coverage_struct["ipix"]
+    if len(coverage_ras) == 0:
+        return tile_struct
+
+    keys = list(tile_struct.keys())
+    ras, decs = [], []
+    for key in keys:
+        ras.append(tile_struct[key]["ra"])
+        decs.append(tile_struct[key]["dec"])
+    ras, decs = np.array(ras), np.array(decs)
+
+    catalog1 = SkyCoord(ra=coverage_ras*u.degree,
+                        dec=coverage_decs*u.degree, frame='icrs')
+    if params["tilesType"] == "galaxy":
+        for ii, key in enumerate(keys):
+            catalog2 = SkyCoord(ra=tile_struct[key]["ra"]*u.degree,
+                                dec=tile_struct[key]["dec"]*u.degree,
+                                frame='icrs')
+            sep = catalog1.separation(catalog2)
+            galaxies = tile_struct[key]["galaxies"]
+            for jj, s in enumerate(sep):
+                if s.deg > 1:
+                    continue
+                galaxies2 = coverage_struct["galaxies"][jj]
+                overlap = np.setdiff1d(galaxies, galaxies2)
+                if len(overlap) == 0:
+                    if not 'epochs' in tile_struct[key]:
+                        tile_struct[key]["epochs"] = np.empty((0,8))
+                    tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
+    else:
+        for ii, key in enumerate(keys):
+            catalog2 = SkyCoord(ra=tile_struct[key]["ra"]*u.degree,
+                                dec=tile_struct[key]["dec"]*u.degree,
+                                frame='icrs')
+            sep = catalog1.separation(catalog2)
+            ipix = tile_struct[key]["ipix"]
+            for jj, s in enumerate(sep):
+                if s.deg > 25:
+                    continue
+                ipix2 = coverage_struct["ipix"][jj]
+                overlap = np.intersect1d(ipix, ipix2)
+                if len(overlap) == 0:
+                    continue
+
+                rat = np.array([float(len(overlap)) / float(len(ipix)),
+                                float(len(overlap)) / float(len(ipix2))])
+        
+                if np.max(rat) < 0.5:
+                    continue
+ 
+                if not 'epochs' in tile_struct[key]:
+                    tile_struct[key]["epochs"] = np.empty((0,8))
+                tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
+
+    return tile_struct

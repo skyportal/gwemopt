@@ -31,18 +31,31 @@ def galaxy(params, map_struct, catalog_struct):
         new_dec = []
         new_Sloc = []
         new_S = []
+        galaxies = []
         indexes2keep = [bool(i) for i in np.ones(len(catalog_struct["ra"]))]
         cnt=0
         for ra, dec, Sloc, S in zip(catalog_struct["ra"], catalog_struct["dec"], catalog_struct["Sloc"], catalog_struct["S"]):
-            mask = ((FoV * params['galaxies_FoV_sep'])**2 >= (catalog_struct["ra"] - ra)**2 + (catalog_struct["dec"] - dec)**2) & (indexes2keep)
+            if config_struct["FOV_type"] == "square":
+                decCorners = (dec - FoV / 2.0, dec + FoV / 2.0)
+                # assume small enough to use average dec for corners
+                raCorners = (ra - (FoV / 2.0) / np.cos(np.deg2rad(dec)) , ra + (FoV / 2.0) / np.cos(np.deg2rad(dec)))
+                idx1 = np.where((catalog_struct["ra"]>=raCorners[0]) & (catalog_struct["ra"]<=raCorners[1]))[0]
+                idx2 = np.where((catalog_struct["dec"]>=decCorners[0]) & (catalog_struct["dec"]<=decCorners[1]))[0]
+                mask = np.intersect1d(idx1,idx2)
+            elif config_struct["FOV_type"] == "circle":
+                dist = angular_distance(ra, dec,
+                                        catalog_struct["ra"],
+                                        catalog_struct["dec"])
+                mask = np.where((FoV * params['galaxies_FoV_sep'] <= dist) & (indexes2keep))[0]
             if indexes2keep[cnt]:
                 new_ra.append(ra)
                 new_dec.append(dec)
                 new_Sloc.append(np.sum(catalog_struct["Sloc"][mask]))
                 new_S.append(np.sum(catalog_struct["S"][mask]))
+                galaxies.append(mask)
                 # discard galaxies already taken into account
                 indexes2discard = np.where(mask)[0]
-                for index in indexes2discard:
+                for index in mask:
                     indexes2keep[index] = False
             cnt+=1
 
@@ -52,6 +65,7 @@ def galaxy(params, map_struct, catalog_struct):
         catalog_struct_new["dec"] = new_dec
         catalog_struct_new["Sloc"] = new_Sloc
         catalog_struct_new["S"] = new_S
+        catalog_struct_new["galaxies"] = galaxies
 
         moc_struct = {}
         cnt = 0
@@ -63,8 +77,9 @@ def galaxy(params, map_struct, catalog_struct):
         tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
 
         cnt = 0
-        for ra, dec, Sloc, S in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"]):
+        for ra, dec, Sloc, S, galaxies in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"],catalog_struct_new["galaxies"]):
             tile_struct[cnt]['prob'] = Sloc
+            tile_struct[cnt]['galaxies'] = galaxies
             cnt = cnt + 1
 
         tile_structs[telescope] = tile_struct
@@ -178,7 +193,7 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
                 tile_struct[key]["nexposures"] = 0
                 tile_struct[key]["filt"] = []
             else:
-                if params["doReferences"]:
+                if params["doReferences"] and (telescope in ["ZTF", "DECam"]):
                     tile_struct[key]["exposureTime"] = []
                     tile_struct[key]["nexposures"] = []
                     tile_struct[key]["filt"] = []
