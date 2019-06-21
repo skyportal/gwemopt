@@ -67,7 +67,8 @@ install_requires = [
     'ligo-segments',
     'ligo.skymap',
     'h5py',
-    'munkres'
+    'munkres',
+    'shapely'
 ]
 
 # test dependencies
