@@ -227,10 +227,6 @@ def get_catalog(params, map_struct):
 
     S = Sloc*Slum*Sdet
 
-    # now normalize the distributions
-    S = S / np.sum(S)
-    Sloc = Sloc / np.sum(Sloc)
-
     prob = np.zeros(map_struct["prob"].shape)
     if params["galaxy_grade"] == "Sloc":     
         for j in range(len(ipix)):
@@ -291,6 +287,9 @@ def get_catalog(params, map_struct):
             GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
             _2MASS, SDSS = _2MASS[idx], SDSS[idx]
 
+    # now normalize the distributions
+    S = S / np.sum(S)
+    Sloc = Sloc / np.sum(Sloc)
     
     catalog_struct = {}
     catalog_struct["ra"] = ra

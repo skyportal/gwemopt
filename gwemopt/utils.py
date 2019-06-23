@@ -473,10 +473,22 @@ def slice_galaxy_tiles(params, tile_struct, coverage_struct):
         decs.append(tile_struct[key]["dec"])
     ras, decs = np.array(ras), np.array(decs)
 
+    prob = np.zeros((len(keys),))
+    for ii, key in enumerate(keys):
+        prob[ii] = prob[ii] + tile_struct[key]['prob']
+
+    sort_idx = np.argsort(prob)[::-1]
+    csm = np.empty(len(prob))
+    csm[sort_idx] = np.cumsum(prob[sort_idx])
+    ipix_keep = np.where(csm <= params["iterativeOverlap"])[0]
+ 
     catalog1 = SkyCoord(ra=coverage_ras*u.degree,
                         dec=coverage_decs*u.degree, frame='icrs')
 
     for ii, key in enumerate(keys):
+        # in the golden tile set
+        if ii in ipix_keep: continue
+
         catalog2 = SkyCoord(ra=tile_struct[key]["ra"]*u.degree,
                             dec=tile_struct[key]["dec"]*u.degree,
                             frame='icrs')
