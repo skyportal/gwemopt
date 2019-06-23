@@ -111,8 +111,8 @@ def galaxy(params, map_struct, catalog_struct):
 
             new_ra.append(ra_center)
             new_dec.append(dec_center)
-            new_Sloc.append(np.sum(catalog_struct["Sloc"][mask]))
-            new_S.append(np.sum(catalog_struct["S"][mask]))
+            new_Sloc.append(np.sum(catalog_struct["Sloc"][idxRem][mask]))
+            new_S.append(np.sum(catalog_struct["S"][idxRem][mask]))
             galaxies.append(idxRem[mask])
 
             idxRem = np.setdiff1d(idxRem, idxRem[mask])
