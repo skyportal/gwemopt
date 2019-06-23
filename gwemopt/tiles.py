@@ -136,7 +136,11 @@ def galaxy(params, map_struct, catalog_struct):
 
         cnt = 0
         for ra, dec, Sloc, S, galaxies in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"],catalog_struct_new["galaxies"]):
-            tile_struct[cnt]['prob'] = Sloc
+            if params["galaxy_grade"] == "Sloc":
+                tile_struct[cnt]['prob'] = Sloc
+            elif params["galaxy_grade"] == "S":
+                tile_struct[cnt]['prob'] = S
+
             tile_struct[cnt]['galaxies'] = galaxies
             if config_struct["FOV_type"] == "square":
                 tile_struct[cnt]['area'] = params["config"][telescope]['FOV']**2
