@@ -154,6 +154,9 @@ def parse_commandline():
     parser.add_option("--iterativeOverlap",default=0.0,type=float)
 
     parser.add_option("--exposuretimes",default="30.0,30.0,30.0")
+
+    parser.add_option("--doMaxTiles",  action="store_true", default=False)
+    parser.add_option("--max_nb_tiles",default="-1,-1,-1")
     parser.add_option("--doReferences",  action="store_true", default=False)
 
     parser.add_option("--doChipGaps",  action="store_true", default=False)
@@ -282,6 +285,9 @@ def params_struct(opts):
     params["doSingleExposure"] = opts.doSingleExposure
     params["filters"] = opts.filters.split(",")
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
+
+    params["doMaxTiles"] = opts.doMaxTiles
+    params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","),dtype=np.float)
     params["mindiff"] = opts.mindiff
     params["doAlternatingFilters"] = opts.doAlternatingFilters
     params["doReferences"] = opts.doReferences

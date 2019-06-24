@@ -152,6 +152,7 @@ def powerlaw(params, map_struct, tile_structs):
 
         config_struct = params["config"][telescope]
         tile_struct = tile_structs[telescope]
+
         if "filt_change_time" in config_struct.keys(): filt_change_time = config_struct["filt_change_time"]
         else: filt_change_time = 0
 
@@ -184,7 +185,10 @@ def powerlaw(params, map_struct, tile_structs):
                     config_struct["exposurelist"] = config_struct["exposurelist"].shift(extra_time / 86400.)
 
                 if not params["tilesType"] == "galaxy":
-                    tile_struct_hold = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct_hold)      
+                    tile_struct_hold = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct_hold)
+
+                if params["doMaxTiles"]:
+                    tile_struct_hold = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct_hold) 
                 coverage_struct_hold = gwemopt.scheduler.scheduler(params, config_struct, tile_struct_hold)
 
                 if len(coverage_struct_hold["exposureused"]) > 0:
@@ -200,6 +204,9 @@ def powerlaw(params, map_struct, tile_structs):
         else:
             if not params["tilesType"] == "galaxy":
                 tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct)      
+
+            if params["doMaxTiles"]:
+                tile_struct = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct)
             coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
 
         coverage_structs.append(coverage_struct)
