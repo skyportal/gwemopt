@@ -1,11 +1,13 @@
 
 import os, sys
+import time
 import copy
 import numpy as np
 import healpy as hp
 import itertools
 
 from scipy.stats import norm
+from scipy.optimize import minimize
 
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
@@ -24,6 +26,9 @@ import matplotlib.path
 import ligo.segments as segments
 import ligo.skymap.distance as ligodist
 
+import gwemopt.moc
+import gwemopt.tiles
+import gwemopt.segments
 
 def readParamsFromFile(file):
     """@read gwemopt params file
@@ -435,6 +440,71 @@ def get_exposures(params, config_struct, segmentlist):
 
     return exposurelist
 
+def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
+
+    #import emcee
+    #ndim, nwalkers = 2, 4
+
+    nside = params["nside"]
+    #def lnlike(skyposition):
+    #    ra, dec = skyposition
+    #    moc_struct = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
+    #    val = np.sum(map_struct["prob"][moc_struct["ipix"]])
+    #    return val+lnprior(skyposition)
+
+    #def lnprior(skyposition):
+    #    ra, dec = skyposition
+    #    if (ra < bounds[0][0]) or (ra > bounds[0][1]):
+    #        return -np.inf
+    #    if (dec < bounds[1][0]) or (dec > bounds[1][1]):
+    #        return -np.inf
+    #    return 0 
+
+    width = config_struct["FOV"]/2.0
+    moc_struct = {}
+    keys = list(tile_struct.keys())
+    for ii, key in enumerate(keys):
+        if tile_struct[key]['prob'] == 0.0: continue
+
+        if np.mod(ii,100) == 0:
+            print("Optimizing tile %d/%d" % (ii, len(keys)))
+
+        x0 = [tile_struct[key]["ra"], tile_struct[key]["dec"]]
+        FOV = config_struct["FOV"]
+        bounds = [[tile_struct[key]["ra"]-width, tile_struct[key]["ra"]+width],
+                  [tile_struct[key]["dec"]-width, tile_struct[key]["dec"]+width]]
+
+        ras = np.linspace(tile_struct[key]["ra"]-width, tile_struct[key]["ra"]+width, 10)
+        decs = np.linspace(tile_struct[key]["dec"]-width, tile_struct[key]["dec"]+width, 10)
+        RAs, DECs = np.meshgrid(ras, decs)
+        ras, decs = RAs.flatten(), DECs.flatten()
+
+        #sampler = emcee.EnsembleSampler(nwalkers, ndim, lnlike)
+        #start = time.time()
+        #pos = [[tile_struct[key]["ra"],tile_struct[key]["dec"]] + np.random.rand(ndim)*FOV for i in range(nwalkers)]
+        #pos, prob, state = sampler.run_mcmc(pos, 100)
+        #sampler.reset()
+        #start = time.time()
+        #result = sampler.run_mcmc(pos, 1000)
+        #end = time.time()
+        #tileCenters = sampler.flatchain
+        #rows = np.unique(tileCenters, axis=0)
+        vals = []
+        for ra, dec in zip(ras, decs):
+            moc_struct_temp = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
+            val = np.sum(map_struct["prob"][moc_struct_temp["ipix"]]) 
+            vals.append(val)
+        idx = np.argmax(vals)
+        ra, dec = ras[idx], decs[idx]
+        moc_struct[key] = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
+
+        map_struct['prob'][moc_struct[key]["ipix"]] = 0.0
+
+    tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+    tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
+ 
+    return tile_struct
+
 def slice_map_tiles(params, map_struct, coverage_struct):
 
     sort_idx = np.argsort(map_struct["prob"])[::-1]
@@ -457,6 +527,28 @@ def slice_map_tiles(params, map_struct, coverage_struct):
         map_struct["prob"][ipix_slice] = 0.0
 
     return map_struct
+
+def slice_number_tiles(params, telescope, tile_struct):
+
+    keys = tile_struct.keys()
+
+    prob = np.zeros((len(keys),))
+    for ii, key in enumerate(keys):
+        prob[ii] = prob[ii] + tile_struct[key]['prob']
+
+    sort_idx = np.argsort(prob)[::-1]
+    idx = params["telescopes"].index(telescope)
+    max_nb_tile = params["max_nb_tiles"][idx]
+    if max_nb_tile < 0:
+        return tile_struct
+    idx_keep = sort_idx[:int(max_nb_tile)]
+
+    for ii, key in enumerate(keys):
+        # in the golden tile set
+        if ii in idx_keep: continue
+        tile_struct[key]['prob'] = 0.0
+
+    return tile_struct        
 
 def slice_galaxy_tiles(params, tile_struct, coverage_struct):
 

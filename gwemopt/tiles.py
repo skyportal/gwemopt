@@ -408,11 +408,11 @@ def compute_tiles_map(tile_struct, skymap, func=None):
 
     return vals
 
-def tesselation_spiral(config_struct):
+def tesselation_spiral(config_struct, scale=0.80):
     if config_struct["FOV_type"] == "square":
-        FOV = config_struct["FOV"]*config_struct["FOV"]
+        FOV = config_struct["FOV"]*config_struct["FOV"]*scale
     elif config_struct["FOV_type"] == "circle":
-        FOV = np.pi*config_struct["FOV"]*config_struct["FOV"]
+        FOV = np.pi*config_struct["FOV"]*config_struct["FOV"]*scale
 
     area_of_sphere = 4*np.pi*(180/np.pi)**2
     n = int(np.ceil(area_of_sphere/FOV))
@@ -434,12 +434,12 @@ def tesselation_spiral(config_struct):
         fid.write('%d %.5f %.5f\n'%(ii,ra[ii],dec[ii]))
     fid.close()   
 
-def tesselation_packing(config_struct):
+def tesselation_packing(config_struct, scale=0.97):
     sphere_radius = 1.0
     if config_struct["FOV_type"] == "square":
-        circle_radius = np.deg2rad(config_struct["FOV"]/2.0)
+        circle_radius = np.deg2rad(config_struct["FOV"]/2.0) * scale
     elif config_struct["FOV_type"] == "circle":
-        circle_radius = np.deg2rad(config_struct["FOV"])
+        circle_radius = np.deg2rad(config_struct["FOV"]) * scale
     vertical_count = int( (np.pi*sphere_radius)/(2*circle_radius) )
 
     phis = []
