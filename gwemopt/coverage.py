@@ -138,7 +138,7 @@ def powerlaw(params, map_struct, tile_structs):
     full_prob_map = map_struct["prob"]
     filters, exposuretimes = params["filters"], params["exposuretimes"]
 
-    for telescope in params["telescopes"]:
+    for jj, telescope in enumerate(params["telescopes"]):
 
         if params["doSplit"]:
             if "observability" in map_struct:
@@ -158,6 +158,9 @@ def powerlaw(params, map_struct, tile_structs):
 
         if params["doIterativeTiling"] and (params["tilesType"] == "galaxy"):
             tile_struct = gwemopt.utils.slice_galaxy_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))
+
+        if params["doPerturbativeTiling"] and (jj>0) and (not params["tilesType"] == "galaxy"):
+            tile_struct = gwemopt.utils.perturb_tiles(params, config_struct, telescope, map_struct_hold, tile_struct)
 
         if params["doOverlappingScheduling"]:
             tile_struct = gwemopt.utils.check_overlapping_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))

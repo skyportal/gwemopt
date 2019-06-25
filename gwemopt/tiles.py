@@ -408,7 +408,7 @@ def compute_tiles_map(tile_struct, skymap, func=None):
 
     return vals
 
-def tesselation_spiral(config_struct, scale=0.9):
+def tesselation_spiral(config_struct, scale=0.80):
     if config_struct["FOV_type"] == "square":
         FOV = config_struct["FOV"]*config_struct["FOV"]*scale
     elif config_struct["FOV_type"] == "circle":

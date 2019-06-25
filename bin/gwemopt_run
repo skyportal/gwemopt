@@ -94,6 +94,7 @@ def parse_commandline():
     parser.add_option("--doIterativeTiling",  action="store_true", default=False)
     parser.add_option("--doMinimalTiling",  action="store_true", default=False)
     parser.add_option("--doOverlappingScheduling",  action="store_true", default=False)
+    parser.add_option("--doPerturbativeTiling",  action="store_true", default=False)
 
     parser.add_option("--doCatalog",  action="store_true", default=False)
     parser.add_option("--doUseCatalog",  action="store_true", default=False)
@@ -194,11 +195,14 @@ def params_struct(opts):
         gwemopt command line options
     """
 
+    telescopes = opts.telescopes.split(",") 
+
     params = {}
     params["config"] = {}
     configFiles = glob.glob("%s/*.config"%opts.configDirectory)
     for configFile in configFiles:
         telescope = configFile.split("/")[-1].replace(".config","")
+        if not telescope in telescopes: continue
         params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
         params["config"][telescope]["telescope"] = telescope
         if opts.doSingleExposure:
@@ -249,7 +253,7 @@ def params_struct(opts):
     params["catalogDir"] = opts.catalogDir
     params["event"] = opts.event
     params["coverageFiles"] = opts.coverageFiles.split(",")
-    params["telescopes"] = opts.telescopes.split(",")
+    params["telescopes"] = telescopes
     params["lightcurveFiles"] = opts.lightcurveFiles.split(",")
     params["tilesType"] = opts.tilesType
     params["scheduleType"] = opts.scheduleType
@@ -298,6 +302,7 @@ def params_struct(opts):
     params["iterativeOverlap"] = opts.iterativeOverlap
     params["doMinimalTiling"] = opts.doMinimalTiling
     params["doOverlappingScheduling"] = opts.doOverlappingScheduling
+    params["doPerturbativeTiling"] = opts.doPerturbativeTiling
 
     params["doCatalog"] = opts.doCatalog
     params["catalog_n"] = opts.catalog_n
