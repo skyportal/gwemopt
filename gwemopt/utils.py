@@ -471,7 +471,15 @@ def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
         vals = []
         for ra, dec in zip(ras, decs):
             moc_struct_temp = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
-            val = np.sum(map_struct_hold["prob"][moc_struct_temp["ipix"]]) 
+            idx = np.where(map_struct_hold["prob"][moc_struct_temp["ipix"]] == 0)[0]
+            if len(map_struct_hold["prob"][moc_struct_temp["ipix"]]) == 0:
+                rat = 0.0
+            else:
+                rat = float(len(idx)) / float(len(map_struct_hold["prob"][moc_struct_temp["ipix"]]))
+            if rat > params["maximumOverlap"]:
+                val = 0.0
+            else:
+                val = np.sum(map_struct_hold["prob"][moc_struct_temp["ipix"]]) 
             vals.append(val)
         idx = np.argmax(vals)
         ra, dec = ras[idx], decs[idx]
