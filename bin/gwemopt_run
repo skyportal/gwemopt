@@ -437,7 +437,7 @@ if opts.doTiles:
 if opts.doSchedule:
     if opts.doTiles:
         print("Generating coverage...")
-        coverage_struct = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
+        tile_structs, coverage_struct = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
     else:
         print("Need to enable --doTiles to use --doSchedule")
         exit(0)

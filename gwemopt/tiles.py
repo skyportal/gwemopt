@@ -400,11 +400,14 @@ def compute_tiles_map(tile_struct, skymap, func=None):
     else:
         f = lambda x: eval(func)
 
+    prob = copy.deepcopy(skymap)
+
     keys = tile_struct.keys()
     ntiles = len(keys)
     vals = np.nan*np.ones((ntiles,))
     for ii,key in enumerate(tile_struct.keys()):
-        vals[ii] = f(skymap[tile_struct[key]["ipix"]])
+        vals[ii] = f(prob[tile_struct[key]["ipix"]])
+        prob[tile_struct[key]["ipix"]] = 0.0
 
     return vals
 

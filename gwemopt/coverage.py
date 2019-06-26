@@ -212,13 +212,14 @@ def powerlaw(params, map_struct, tile_structs):
                 tile_struct = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct)
             coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
 
+        tile_structs[telescope] = tile_struct
         coverage_structs.append(coverage_struct)
 
         if params["doIterativeTiling"]:
             map_struct_hold = gwemopt.utils.slice_map_tiles(params, map_struct_hold, coverage_struct)
                 
     map_struct["prob"] = full_prob_map
-    return combine_coverage_structs(coverage_structs)
+    return tile_structs, combine_coverage_structs(coverage_structs)
 
 def pem(params, map_struct, tile_structs):
 
@@ -254,7 +255,7 @@ def timeallocation(params, map_struct, tile_structs):
 
     if params["timeallocationType"] == "powerlaw":
         print("Generating powerlaw schedule...")
-        coverage_struct = gwemopt.coverage.powerlaw(params, map_struct, tile_structs)
+        tile_structs, coverage_struct = gwemopt.coverage.powerlaw(params, map_struct, tile_structs)
     elif params["timeallocationType"] == "waw":
         if params["do3D"]:
             print("Generating WAW schedule...")
@@ -265,4 +266,4 @@ def timeallocation(params, map_struct, tile_structs):
         print("Generating PEM schedule...")
         coverage_struct = gwemopt.coverage.pem(params, map_struct, tile_structs)
 
-    return coverage_struct 
+    return tile_structs, coverage_struct 
