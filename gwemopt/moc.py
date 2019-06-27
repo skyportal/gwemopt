@@ -1,27 +1,62 @@
 import time
+import copy
 
 from mocpy import MOC
 from astropy.table import Table
-
+from joblib import Parallel, delayed
 import healpy as hp
 import numpy as np
 
 import gwemopt.utils
+import gwemopt.ztf_tiling
 
-def create_moc(params):
+def create_moc(params, map_struct=None):
 
     nside = params["nside"]
+
+    if params["doMinimalTiling"]:
+        prob = map_struct["prob"]
+        n, cl, dist_exp = params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"]
+        prob_scaled = copy.deepcopy(prob)
+        prob_sorted = np.sort(prob_scaled)[::-1]
+        prob_indexes = np.argsort(prob_scaled)[::-1]
+        prob_cumsum = np.cumsum(prob_sorted)
+        index = np.argmin(np.abs(prob_cumsum - cl)) + 1
+        prob_indexes = prob_indexes[:index+1]
+
+    if "doUsePrimary" in params:
+        doUsePrimary = params["doUsePrimary"]
+    else:
+        doUsePrimary = False
 
     moc_structs = {}
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
         tesselation = config_struct["tesselation"]
         moc_struct = {}
-        for ii, tess in enumerate(tesselation):
-            index, ra, dec = tess[0], tess[1], tess[2]
-            index = index.astype(int)
-            moc_struct[index] = Fov2Moc(params, config_struct, telescope, ra, dec, nside)
- 
+
+        if params["doMinimalTiling"]:
+            idxs = hp.pixelfunc.ang2pix(map_struct["nside"], tesselation[:,1], tesselation[:,2], lonlat=True)
+            isin = np.isin(idxs, prob_indexes)
+            
+            idxs = [i for i, x in enumerate(isin) if x]
+            print("Keeping %d/%d tiles" % (len(idxs), len(tesselation)))
+            tesselation = tesselation[idxs,:]
+
+        if params["doParallel"]:
+            moclists = Parallel(n_jobs=params["Ncores"])(delayed(Fov2Moc)(params, config_struct, telescope, tess[1], tess[2], nside) for tess in tesselation)
+            for ii, tess in enumerate(tesselation):
+                index, ra, dec = tess[0], tess[1], tess[2]
+                if (telescope == "ZTF") and doUsePrimary and (index > 880):
+                    continue
+                moc_struct[index] = moclists[ii]    
+        else:
+            for ii, tess in enumerate(tesselation):
+                index, ra, dec = tess[0], tess[1], tess[2]
+                if (telescope == "ZTF") and doUsePrimary and (index > 880):
+                    continue
+                index = index.astype(int)
+                moc_struct[index] = Fov2Moc(params, config_struct, telescope, ra, dec, nside)
         moc_structs[telescope] = moc_struct
 
     return moc_structs
@@ -39,24 +74,23 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
            """
 
     moc_struct = {}
-    
+   
+    if "rotation" in params:
+        rotation=params["rotation"]
+    else:
+        rotation=None
+ 
     if config_struct["FOV_type"] == "square": 
-        ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside)
+        ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, rotation=rotation)
     elif config_struct["FOV_type"] == "circle":
-        ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside)
+        ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, rotation=rotation)
 
     if params["doChipGaps"]:
-        npix = hp.nside2npix(nside)
-        pixel_index = np.arange(npix)
-        RAs, Decs = hp.pix2ang(nside, pixel_index, lonlat=True, nest=False)
-
         if telescope == "ZTF":
-            Z = gwemopt.quadrants.ZTFtile(ra_pointing, dec_pointing, config_struct)
-            #ipix = np.where(Z.inside_nogaps(RAs, Decs))[0]  # Ignore chip gaps
-            ipix = np.where(Z.inside(RAs, Decs))[0]
-        else:
-            print("Requested chip gaps with non-ZTF detector, failing.")
-            exit(0)
+            ipixs = gwemopt.ztf_tiling.get_quadrant_ipix(nside, ra_pointing, dec_pointing)
+            ipix = list({y for x in ipixs for y in x})
+        #else:
+        #    print("Requested chip gaps with non-ZTF detector, will use moc.")
 
     moc_struct["ra"] = ra_pointing
     moc_struct["dec"] = dec_pointing

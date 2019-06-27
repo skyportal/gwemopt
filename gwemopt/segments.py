@@ -7,12 +7,10 @@ import copy
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u
-
+from joblib import Parallel, delayed
 import ephem
 
-#import gwemopt.glue as segments
-import glue
-import glue.segments as segments
+import ligo.segments as segments
 import gwemopt.utils
 
 def get_telescope_segments(params):
@@ -30,6 +28,11 @@ def get_telescope_segments(params):
     return params
 
 def get_moon_segments(config_struct,segmentlist,observer,fxdbdy,radec):
+
+    if "moon_constraint" in config_struct:
+        moon_constraint = float(config_struct["moon_constraint"])
+    else:
+        moon_constraint = 20.0
 
     moonsegmentlist = segments.segmentlist()
     dt = 1.0/24.0
@@ -66,7 +69,7 @@ def get_moon_segments(config_struct,segmentlist,observer,fxdbdy,radec):
         #print("Angle between moon and target: %.5f"%(angle))
 
         #if angle >= 50.0*moon.moon_phase**2:
-        if angle >= 20.0:
+        if angle >= moon_constraint:
             segment = segments.segment(tt[ii],tt[ii+1])
             moonsegmentlist = moonsegmentlist + segments.segmentlist([segment])
             moonsegmentlist.coalesce()
@@ -199,6 +202,37 @@ def get_skybrightness(config_struct,segmentlist,observer,fxdbdy,radec):
 
     return moonsegmentlist
 
+def get_ha_segments(config_struct,segmentlist,observer,fxdbdy,radec):
+
+    if "ha_constraint" in config_struct:
+        ha_constraint = config_struct["ha_constraint"].split(",")
+        ha_min = float(ha_constraint[0])
+        ha_max = float(ha_constraint[1])
+    else:
+        ha_min, ha_max = -24.0, 24.0
+
+    if config_struct["telescope"] == "DECam":
+        if radec.dec.deg <= -30.0:
+            ha_min, ha_max = -5.2, 5.2
+        else:
+            ha_min, ha_max = -0.644981*np.sqrt(35.0-radec.dec.deg), 0.644981*np.sqrt(35.0-radec.dec.deg)
+            
+    location = astropy.coordinates.EarthLocation(config_struct["longitude"],
+                                                 config_struct["latitude"],
+                                                 config_struct["elevation"])
+
+    halist = segments.segmentlist()
+    for seg in segmentlist:
+        mjds = np.linspace(seg[0], seg[1], 100)
+        tt = Time(mjds, format='mjd', scale='utc', location=location)
+        lst = tt.sidereal_time('mean')
+        ha = (lst - radec.ra).hour
+        idx = np.where((ha >= ha_min) & (ha <= ha_max))[0]
+        if len(idx) >= 2:
+            halist.append(segments.segment(mjds[idx[0]],mjds[idx[-1]]))
+ 
+    return halist
+
 def get_segments(params, config_struct):
 
     gpstime = params["gpstime"]
@@ -248,11 +282,10 @@ def get_segments(params, config_struct):
     return segmentlist
 
 def get_segments_tile(config_struct, observatory, radec, segmentlist):
-
     observer = ephem.Observer()
     observer.lat = str(config_struct["latitude"])
     observer.lon = str(config_struct["longitude"])
-    observer.horizon = str(30.0)
+    observer.horizon = str(config_struct["horizon"])
     observer.elevation = config_struct["elevation"]
 
     fxdbdy = ephem.FixedBody()
@@ -301,6 +334,9 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
     #moonsegmentlist = get_skybrightness(\
     #    config_struct,segmentlist,observer,fxdbdy,radec)
 
+    halist = get_ha_segments(\
+        config_struct,segmentlist,observer,fxdbdy,radec)    
+
     moonsegmentlist = get_moon_segments(\
         config_struct,segmentlist,observer,fxdbdy,radec)
 
@@ -308,13 +344,14 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist):
     tilesegmentlistdic["observations"] = segmentlist
     tilesegmentlistdic["tile"] = tilesegmentlist
     tilesegmentlistdic["moon"] = moonsegmentlist
-    tilesegmentlist = tilesegmentlistdic.intersection(["observations","tile","moon"])
+    tilesegmentlistdic["halist"] = halist
+    tilesegmentlist = tilesegmentlistdic.intersection(["observations","tile","moon","halist"])
     #tilesegmentlist = tilesegmentlistdic.intersection(["observations","tile"])
     tilesegmentlist.coalesce()
 
     return tilesegmentlist
 
-def get_segments_tiles(config_struct, tile_struct):
+def get_segments_tiles(params, config_struct, tile_struct):
 
     observatory = astropy.coordinates.EarthLocation(
         lat=config_struct["latitude"]*u.deg, lon=config_struct["longitude"]*u.deg, height=config_struct["elevation"]*u.m)
@@ -333,13 +370,49 @@ def get_segments_tiles(config_struct, tile_struct):
     # Convert to RA, Dec.
     radecs = astropy.coordinates.SkyCoord(
             ra=np.array(ras)*u.degree, dec=np.array(decs)*u.degree, frame='icrs')
-    tilesegmentlists = []
-    for ii,key in enumerate(keys):
-        #if np.mod(ii,100) == 0: 
-        #    print("Generating segments for tile %d/%d"%(ii+1,len(radecs)))
-        radec = radecs[ii]
-        tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
-        tilesegmentlists.append(tilesegmentlist)
-        tile_struct[key]["segmentlist"] = tilesegmentlist
+
+    if params["doParallel"]:
+        tilesegmentlists = Parallel(n_jobs=params["Ncores"])(delayed(get_segments_tile)(config_struct, observatory, radec, segmentlist) for radec in radecs)
+        for ii,key in enumerate(keys):
+            tile_struct[key]["segmentlist"] = tilesegmentlists[ii]
+    else:
+
+        for ii,key in enumerate(keys):
+            #if np.mod(ii,100) == 0: 
+            #    print("Generating segments for tile %d/%d"%(ii+1,len(radecs)))
+            radec = radecs[ii]
+
+            if params["doMinimalTiling"]:
+                if ii == 0:
+                    keys_computed = [key]
+                    radecs_computed = np.atleast_2d([radec.ra.value, radec.dec.value])
+                    tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
+                    tile_struct[key]["segmentlist"] = tilesegmentlist
+                else:
+                    seps = angular_distance(radec.ra.value, radec.dec.value,
+                                            radecs_computed[:,0],
+                                            radecs_computed[:,1])
+                    sepmin = np.min(seps)
+                    sepamin = np.argmin(seps)
+                    if sepmin <= 5.0:
+                        key_computed = keys_computed[sepamin]
+                        tile_struct[key]["segmentlist"] = copy.deepcopy(tile_struct[key_computed]["segmentlist"])
+                    else:
+                        keys_computed.append(key)
+                        radecs_computed = np.vstack((radecs_computed,[radec.ra.value, radec.dec.value]))
+                        tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
+                        tile_struct[key]["segmentlist"] = tilesegmentlist
+            else:
+                tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
+                tile_struct[key]["segmentlist"] = tilesegmentlist
 
     return tile_struct
+
+def angular_distance(ra1, dec1, ra2, dec2):
+
+    delt_lon = (ra1 - ra2)*np.pi/180.
+    delt_lat = (dec1 - dec2)*np.pi/180.
+    dist = 2.0*np.arcsin( np.sqrt( np.sin(delt_lat/2.0)**2 + \
+         np.cos(dec1*np.pi/180.)*np.cos(dec2*np.pi/180.)*np.sin(delt_lon/2.0)**2 ) )  
+
+    return dist/np.pi*180.

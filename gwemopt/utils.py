@@ -1,15 +1,18 @@
 
 import os, sys
+import time
 import copy
 import numpy as np
 import healpy as hp
 import itertools
 
 from scipy.stats import norm
+from scipy.optimize import minimize
 
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u
+from astropy.coordinates import SkyCoord
 
 import matplotlib
 #matplotlib.rc('text', usetex=True)
@@ -20,9 +23,12 @@ import matplotlib.pyplot as plt
 import matplotlib.patches
 import matplotlib.path
 
-#import gwemopt.glue as segments
-import glue
-import glue.segments as segments
+import ligo.segments as segments
+import ligo.skymap.distance as ligodist
+
+import gwemopt.moc
+import gwemopt.tiles
+import gwemopt.segments
 
 def readParamsFromFile(file):
     """@read gwemopt params file
@@ -45,65 +51,80 @@ def readParamsFromFile(file):
                         params[line_split[0]] = line_split[1]
     return params
 
-def read_skymap(params,is3D=False):
-    map_struct = {}
+def read_skymap(params,is3D=False,map_struct=None):
 
-    if params["doDatabase"]:
-        models = params["models"]
-        localizations_all = models.Localization.query.all()
-        localizations = models.Localization.query.filter_by(dateobs=params["dateobs"],localization_name=params["localization_name"]).all()
-        if localizations == None:
-            print("No localization with dateobs=%s"%params["dateobs"])
-            exit(0)
+    if map_struct is None:
+        map_struct = {}
+
+        if params["doDatabase"]:
+            models = params["models"]
+            localizations_all = models.Localization.query.all()
+            localizations = models.Localization.query.filter_by(dateobs=params["dateobs"],localization_name=params["localization_name"]).all()
+            if localizations == None:
+                raise ValueError("No localization with dateobs=%s"%params["dateobs"])
+            else:
+                prob_data = localizations[0].healpix
+                prob_data = prob_data / np.sum(prob_data)
+                map_struct["prob"] = prob_data
+    
+                distmu = localizations[0].distmu
+                distsigma = localizations[0].distsigma
+                distnorm = localizations[0].distnorm
+    
+                if distmu is None:            
+                    map_struct["distmu"] = None
+                    map_struct["distsigma"] = None
+                    map_struct["distnorm"] = None
+                else:
+                    map_struct["distmu"] = np.array(distmu)
+                    map_struct["distsigma"] = np.array(distsigma)
+                    map_struct["distnorm"] = np.array(distnorm)
+                    is3D = True
         else:
-            prob_data = localizations[0].healpix
-            prob_data = prob_data / np.sum(prob_data)
-            map_struct["prob"] = prob_data
-
-            distmu = localizations[0].distmu
-            map_struct["distmu"] = distmu
-
-            distsigma = localizations[0].distsigma
-            map_struct["distsigma"] = distsigma
-
-            distnorm = localizations[0].distnorm
-            map_struct["distnorm"] = distnorm
-
-    else:
-        filename = params["skymap"]
+            filename = params["skymap"]
+        
+            if is3D:
+                healpix_data = hp.read_map(filename, field=(0,1,2,3), verbose=False)
+        
+                distmu_data = healpix_data[1]
+                distsigma_data = healpix_data[2]
+                prob_data = healpix_data[0]
+                norm_data = healpix_data[3]
+        
+                map_struct["distmu"] = distmu_data / params["DScale"]
+                map_struct["distsigma"] = distsigma_data / params["DScale"]
+                map_struct["prob"] = prob_data
+                map_struct["distnorm"] = norm_data
     
-        if is3D:
-            healpix_data = hp.read_map(filename, field=(0,1,2,3), verbose=False)
-    
-            distmu_data = healpix_data[1]
-            distsigma_data = healpix_data[2]
-            prob_data = healpix_data[0]
-            norm_data = healpix_data[3]
-    
-            map_struct["distmu"] = distmu_data / params["DScale"]
-            map_struct["distsigma"] = distsigma_data / params["DScale"]
-            map_struct["prob"] = prob_data
-            map_struct["distnorm"] = norm_data
-    
-        else:
-            prob_data = hp.read_map(filename, field=0, verbose=False)
-            prob_data = prob_data / np.sum(prob_data)
-    
-            map_struct["prob"] = prob_data
+            else:
+                prob_data = hp.read_map(filename, field=0, verbose=False)
+                prob_data = prob_data / np.sum(prob_data)
+        
+                map_struct["prob"] = prob_data
 
-    nside = hp.pixelfunc.get_nside(prob_data)
+    natural_nside = hp.pixelfunc.get_nside(map_struct["prob"])
     nside = params["nside"]
-    map_struct["prob"] = hp.ud_grade(map_struct["prob"],nside,power=-2)
+    
+    print("natural_nside =", natural_nside)
+    print("nside =", nside)
+    
+    if not is3D:
+        map_struct["prob"] = hp.ud_grade(map_struct["prob"],nside,power=-2)
 
     if is3D:
-        map_struct["distmu"] = hp.ud_grade(map_struct["distmu"],nside,power=-2) 
-        map_struct["distsigma"] = hp.ud_grade(map_struct["distsigma"],nside,power=-2) 
-        map_struct["distnorm"] = hp.ud_grade(map_struct["distnorm"],nside,power=-2) 
-
+        if natural_nside != nside:
+            map_struct["prob"], map_struct["distmu"],\
+            map_struct["distsigma"], map_struct["distnorm"] = ligodist.ud_grade(map_struct["prob"],\
+                                                                                map_struct["distmu"],\
+                                                                                map_struct["distsigma"],\
+                                                                                nside)
+        
         nside_down = 32
-        distmu_down = hp.ud_grade(map_struct["distmu"],nside_down,power=-2)
-        distsigma_down = hp.ud_grade(map_struct["distsigma"],nside_down,power=-2)
-        distnorm_down = hp.ud_grade(map_struct["distnorm"],nside_down,power=-2)
+        _, distmu_down,\
+        distsigma_down, distnorm_down = ligodist.ud_grade(map_struct["prob"],\
+                                                          map_struct["distmu"],\
+                                                          map_struct["distsigma"],\
+                                                          nside_down)
 
         r = np.linspace(0, 2000)
         map_struct["distmed"] = np.zeros(distmu_down.shape)
@@ -205,7 +226,7 @@ def get_ellipse_coords(a=0.0, b=0.0, x=0.0, y=0.0, angle=0.0, npts=10):
 
     return pts
 
-def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='#FFFFFF', edgecolor='#FFFFFF'):
+def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='k', edgecolor='k', rotation=None):
 
     theta = 0.5 * np.pi - np.deg2rad(dec_pointing)
     phi = np.deg2rad(ra_pointing)
@@ -233,7 +254,7 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='
 
     xyz = hp.ang2vec(radecs[:,0],radecs[:,1],lonlat=True)
 
-    proj = hp.projector.MollweideProj(rot=None, coord=None)
+    proj = hp.projector.MollweideProj(rot=rotation, coord=None)
     x,y = proj.vec2xy(xyz[:,0],xyz[:,1],xyz[:,2])
     xy = np.zeros(radecs.shape)
     xy[:,0] = x
@@ -246,7 +267,7 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='
 
     return ipix, radecs, patch, area
 
-def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, color='#FFFFFF', edgecolor='#FFFFFF'):
+def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, color='k', edgecolor='k', rotation=None):
 
     area = tileSide*tileSide
 
@@ -303,7 +324,7 @@ def getSquarePixels(ra_pointing, dec_pointing, tileSide, nside, alpha = 0.4, col
     #    return [], [], [], []
 
     xyz = np.array(xyz)
-    proj = hp.projector.MollweideProj(rot=None, coord=None) 
+    proj = hp.projector.MollweideProj(rot=rotation, coord=None) 
     x,y = proj.vec2xy(xyz[:,0],xyz[:,1],xyz[:,2])
     xy = np.zeros(radecs.shape)
     xy[:,0] = x
@@ -402,17 +423,224 @@ def get_exposures(params, config_struct, segmentlist):
     segmentlist: the segments that the telescope can do the follow-up.
     '''
     exposurelist = segments.segmentlist()
+    if "overhead_per_exposure" in config_struct.keys(): overhead = config_struct["overhead_per_exposure"]
+    else: overhead = 0.0
+
+    # add the filter change time to the total overheads for integrated
+    if not params["doAlternatingFilters"]: overhead = overhead + config_struct["filt_change_time"]
 
     exposure_time = np.max(params["exposuretimes"])
 
     for ii in range(len(segmentlist)):
         start_segment, end_segment = segmentlist[ii][0], segmentlist[ii][1]
-        exposures = np.arange(start_segment, end_segment, exposure_time/86400.0)
-        #exposurelist = np.append(exposurelist,exposures)
+        exposures = np.arange(start_segment, end_segment, (overhead+exposure_time)/86400.0)
 
         for jj in range(len(exposures)):
             exposurelist.append(segments.segment(exposures[jj],exposures[jj]+exposure_time/86400.0))
 
     return exposurelist
 
+def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
 
+    map_struct_hold = copy.deepcopy(map_struct)
+    nside = params["nside"]
+
+    if config_struct["FOV_type"] == "square":
+        width = config_struct["FOV"]/0.5
+    elif config_struct["FOV_type"] == "circle":
+        width = config_struct["FOV"]*1.0
+
+    moc_struct = {}
+    keys = list(tile_struct.keys())
+    for ii, key in enumerate(keys):
+        if tile_struct[key]['prob'] == 0.0: continue
+
+        if np.mod(ii,100) == 0:
+            print("Optimizing tile %d/%d" % (ii, len(keys)))
+
+        x0 = [tile_struct[key]["ra"], tile_struct[key]["dec"]]
+        FOV = config_struct["FOV"]
+        bounds = [[tile_struct[key]["ra"]-width, tile_struct[key]["ra"]+width],
+                  [tile_struct[key]["dec"]-width, tile_struct[key]["dec"]+width]]
+
+        ras = np.linspace(tile_struct[key]["ra"]-width, tile_struct[key]["ra"]+width, 10)
+        decs = np.linspace(tile_struct[key]["dec"]-width, tile_struct[key]["dec"]+width, 10)
+        RAs, DECs = np.meshgrid(ras, decs)
+        ras, decs = RAs.flatten(), DECs.flatten()
+
+        vals = []
+        for ra, dec in zip(ras, decs):
+            moc_struct_temp = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
+            idx = np.where(map_struct_hold["prob"][moc_struct_temp["ipix"]] == 0)[0]
+            if len(map_struct_hold["prob"][moc_struct_temp["ipix"]]) == 0:
+                rat = 0.0
+            else:
+                rat = float(len(idx)) / float(len(map_struct_hold["prob"][moc_struct_temp["ipix"]]))
+            if rat > params["maximumOverlap"]:
+                val = 0.0
+            else:
+                val = np.sum(map_struct_hold["prob"][moc_struct_temp["ipix"]]) 
+            vals.append(val)
+        idx = np.argmax(vals)
+        ra, dec = ras[idx], decs[idx]
+        moc_struct[key] = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
+
+        map_struct_hold['prob'][moc_struct[key]["ipix"]] = 0.0
+
+    tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+    tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
+ 
+    return tile_struct
+
+def slice_map_tiles(params, map_struct, coverage_struct):
+
+    sort_idx = np.argsort(map_struct["prob"])[::-1]
+    csm = np.empty(len(map_struct["prob"]))
+    csm[sort_idx] = np.cumsum(map_struct["prob"][sort_idx])
+    ipix_keep = np.where(csm <= params["iterativeOverlap"])[0]
+
+    for ii in range(len(coverage_struct["ipix"])):
+        data = coverage_struct["data"][ii,:]
+        filt = coverage_struct["filters"][ii]
+        ipix = coverage_struct["ipix"][ii]
+        patch = coverage_struct["patch"][ii]
+        FOV = coverage_struct["FOV"][ii]
+        area = coverage_struct["area"][ii]
+
+        observ_time, exposure_time, field_id, prob, airmass = data[2], data[4], data[5], data[6], data[7]
+
+        ipix_slice = np.setdiff1d(ipix, ipix_keep)
+        if len(ipix_slice) == 0: continue
+        map_struct["prob"][ipix_slice] = 0.0
+
+    return map_struct
+
+def slice_number_tiles(params, telescope, tile_struct):
+
+    keys = tile_struct.keys()
+
+    prob = np.zeros((len(keys),))
+    for ii, key in enumerate(keys):
+        prob[ii] = prob[ii] + tile_struct[key]['prob']
+
+    sort_idx = np.argsort(prob)[::-1]
+    idx = params["telescopes"].index(telescope)
+    max_nb_tile = params["max_nb_tiles"][idx]
+    if max_nb_tile < 0:
+        return tile_struct
+    idx_keep = sort_idx[:int(max_nb_tile)]
+
+    for ii, key in enumerate(keys):
+        # in the golden tile set
+        if ii in idx_keep: continue
+        tile_struct[key]['prob'] = 0.0
+
+    return tile_struct        
+
+def slice_galaxy_tiles(params, tile_struct, coverage_struct):
+
+    coverage_ras = coverage_struct["data"][:,0]
+    coverage_decs = coverage_struct["data"][:,1]
+
+    if len(coverage_ras) == 0:
+        return tile_struct
+
+    keys = tile_struct.keys()
+    ras, decs = [], []
+    for key in keys:
+        ras.append(tile_struct[key]["ra"])
+        decs.append(tile_struct[key]["dec"])
+    ras, decs = np.array(ras), np.array(decs)
+
+    prob = np.zeros((len(keys),))
+    for ii, key in enumerate(keys):
+        prob[ii] = prob[ii] + tile_struct[key]['prob']
+
+    sort_idx = np.argsort(prob)[::-1]
+    csm = np.empty(len(prob))
+    csm[sort_idx] = np.cumsum(prob[sort_idx])
+    ipix_keep = np.where(csm <= params["iterativeOverlap"])[0]
+ 
+    catalog1 = SkyCoord(ra=coverage_ras*u.degree,
+                        dec=coverage_decs*u.degree, frame='icrs')
+
+    for ii, key in enumerate(keys):
+        # in the golden tile set
+        if ii in ipix_keep: continue
+
+        catalog2 = SkyCoord(ra=tile_struct[key]["ra"]*u.degree,
+                            dec=tile_struct[key]["dec"]*u.degree,
+                            frame='icrs')
+        sep = catalog1.separation(catalog2)
+        galaxies = tile_struct[key]["galaxies"]
+        for jj, s in enumerate(sep):
+            if s.deg > 1:
+                continue
+            galaxies2 = coverage_struct["galaxies"][jj]
+            overlap = np.setdiff1d(galaxies, galaxies2)
+            if len(overlap) == 0:
+                tile_struct[key]['prob'] = 0.0
+                break
+
+    return tile_struct
+
+def check_overlapping_tiles(params, tile_struct, coverage_struct):
+
+    coverage_ras = coverage_struct["data"][:,0]
+    coverage_decs = coverage_struct["data"][:,1]
+    coverage_mjds = coverage_struct["data"][:,2]
+    coverage_ipixs = coverage_struct["ipix"]
+    if len(coverage_ras) == 0:
+        return tile_struct
+
+    keys = list(tile_struct.keys())
+    ras, decs = [], []
+    for key in keys:
+        ras.append(tile_struct[key]["ra"])
+        decs.append(tile_struct[key]["dec"])
+    ras, decs = np.array(ras), np.array(decs)
+
+    catalog1 = SkyCoord(ra=coverage_ras*u.degree,
+                        dec=coverage_decs*u.degree, frame='icrs')
+    if params["tilesType"] == "galaxy":
+        for ii, key in enumerate(keys):
+            catalog2 = SkyCoord(ra=tile_struct[key]["ra"]*u.degree,
+                                dec=tile_struct[key]["dec"]*u.degree,
+                                frame='icrs')
+            sep = catalog1.separation(catalog2)
+            galaxies = tile_struct[key]["galaxies"]
+            for jj, s in enumerate(sep):
+                if s.deg > 1:
+                    continue
+                galaxies2 = coverage_struct["galaxies"][jj]
+                overlap = np.setdiff1d(galaxies, galaxies2)
+                if len(overlap) == 0:
+                    if not 'epochs' in tile_struct[key]:
+                        tile_struct[key]["epochs"] = np.empty((0,8))
+                    tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
+    else:
+        for ii, key in enumerate(keys):
+            catalog2 = SkyCoord(ra=tile_struct[key]["ra"]*u.degree,
+                                dec=tile_struct[key]["dec"]*u.degree,
+                                frame='icrs')
+            sep = catalog1.separation(catalog2)
+            ipix = tile_struct[key]["ipix"]
+            for jj, s in enumerate(sep):
+                if s.deg > 25:
+                    continue
+                ipix2 = coverage_struct["ipix"][jj]
+                overlap = np.intersect1d(ipix, ipix2)
+                if len(overlap) == 0:
+                    continue
+
+                rat = np.array([float(len(overlap)) / float(len(ipix)),
+                                float(len(overlap)) / float(len(ipix2))])
+        
+                if np.max(rat) < 0.5:
+                    continue
+ 
+                if not 'epochs' in tile_struct[key]:
+                    tile_struct[key]["epochs"] = np.empty((0,8))
+                tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
+
+    return tile_struct

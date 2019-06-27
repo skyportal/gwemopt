@@ -1,6 +1,10 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-import os, sys, copy
-
+import os
+import sys
+import copy
+import h5py
 import numpy as np
 import healpy as hp
 
@@ -8,19 +12,23 @@ from scipy.stats import norm
 from scipy.special import gammaincinv
 
 from astroquery.vizier import Vizier
-Vizier.ROW_LIMIT = -1
 
 from astropy.table import Table
 from astropy.io import ascii
 from astropy.cosmology import WMAP9 as cosmo
 from astropy.table import Column
 import astropy.units as u
-import astropy.constants as c
+
+# Unset row limits when querying Vizier
+Vizier.ROW_LIMIT = -1
+
 
 def get_catalog(params, map_struct):
+    if not os.path.isdir(params["catalogDir"]):
+        os.makedirs(params["catalogDir"])
 
-    if not os.path.isdir(params["catalogDir"]): os.makedirs(params["catalogDir"])
-    catalogFile = os.path.join(params["catalogDir"],"%s.csv"%params["galaxy_catalog"])
+    catalogFile = os.path.join(params["catalogDir"],
+                               "%s.hdf5" % params["galaxy_catalog"])
 
     """AB Magnitude zero point."""
     MAB0 = -2.5 * np.log10(3631.e-23)
@@ -29,73 +37,281 @@ def get_catalog(params, map_struct):
 
     if params["galaxy_catalog"] == "2MRS":
         if not os.path.isfile(catalogFile):
+            import astropy.constants as c
+
             cat, = Vizier.get_catalogs('J/ApJS/199/26/table3')
-            ascii.write(cat,catalogFile,format='ecsv')
+
+            ra, dec = cat["RAJ2000"], cat["DEJ2000"]
+            cz = cat["cz"]
+            magk = cat["Ktmag"]
+
+            z = (u.Quantity(cat['cz']) / c.c).to(u.dimensionless_unscaled)
+
+            completeness = 0.5
+            alpha = -1.0
+            MK_star = -23.55
+            MK_max = MK_star + 2.5 * np.log10(gammaincinv(alpha + 2,
+                                                          completeness))
+            MK = magk - cosmo.distmod(z)
+            idx = (z > 0) & (MK < MK_max)
+
+            ra, dec = ra[idx], dec[idx]
+            z = z[idx]
+            magk = magk[idx]
+
+            distmpc = cosmo.luminosity_distance(z).to('Mpc').value
+
+            with h5py.File(catalogFile, 'w') as f:
+                f.create_dataset('ra', data=ra)
+                f.create_dataset('dec', data=dec)
+                f.create_dataset('z', data=z)
+                f.create_dataset('magk', data=magk)
+                f.create_dataset('distmpc', data=distmpc)
+
         else:
-            cat = ascii.read(catalogFile,format='ecsv')
+            with h5py.File(catalogFile, 'r') as f:
+                ra, dec = f['ra'][:], f['dec'][:]
+                z = f['z'][:]
+                magk = f['magk'][:]
+                distmpc = f['distmpc'][:]
+        r = distmpc * 1.0
+        mag = magk * 1.0
 
-        completeness = 0.5
-        alpha = -1.0
-        MK_star = -23.55
-        MK_max = MK_star + 2.5 * np.log10(gammaincinv(alpha + 2, completeness))
-
-        z = (u.Quantity(cat['cz']) / c.c).to(u.dimensionless_unscaled)
-        MK = cat['Ktmag'] - cosmo.distmod(z)
-        keep = (z > 0) & (MK < MK_max)
-
-        cat = cat[keep]
-        z = z[keep]
-        r = cosmo.luminosity_distance(z).to('Mpc').value
-
-        mag = cat['Ktmag']
-        L_nu =  const * 10.**((mag + MAB0)/(-2.5))
- 
     elif params["galaxy_catalog"] == "GLADE":
         if not os.path.isfile(catalogFile):
             cat, = Vizier.get_catalogs('VII/281/glade2')
-            ascii.write(cat,catalogFile,format='ecsv')
+
+            ra, dec = cat["RAJ2000"], cat["DEJ2000"]
+            distmpc, z = cat["Dist"], cat["z"]
+            magb, magk = cat["Bmag"], cat["Kmag"]
+            # Keep track of galaxy identifier
+            GWGC, PGC, HyperLEDA = cat["GWGC"], cat["PGC"], cat["HyperLEDA"]
+            _2MASS, SDSS = cat["_2MASS"], cat["SDSS-DR12"]
+
+            idx = np.where(distmpc >= 0)[0]
+            ra, dec = ra[idx], dec[idx]
+            distmpc, z = distmpc[idx], z[idx]
+            magb, magk = magb[idx], magk[idx]
+            GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
+            _2MASS, SDSS = _2MASS[idx], SDSS[idx]
+
+            with h5py.File(catalogFile, 'w') as f:
+                f.create_dataset('ra', data=ra)
+                f.create_dataset('dec', data=dec)
+                f.create_dataset('distmpc', data=distmpc)
+                f.create_dataset('magb', data=magb)
+                f.create_dataset('magk', data=magk)
+                f.create_dataset('z', data=z)
+                # Add galaxy identifier
+                f.create_dataset('GWGC', data=GWGC)
+                f.create_dataset('PGC', data=PGC)
+                f.create_dataset('HyperLEDA', data=HyperLEDA)
+                f.create_dataset('2MASS', data=_2MASS)
+                f.create_dataset('SDSS', data=SDSS)
+
         else:
-            cat = ascii.read(catalogFile,format='ecsv')
-        r = cat["Dist"]
+            with h5py.File(catalogFile, 'r') as f:
+                ra, dec = f['ra'][:], f['dec'][:]
+                distmpc, z = f['distmpc'][:], f['z'][:]
+                magb, magk = f['magb'][:], f['magk'][:]
+                GWGC, PGC, _2MASS = f['GWGC'][:], f['PGC'][:], f['2MASS'][:]
+                HyperLEDA, SDSS = f['HyperLEDA'][:], f['SDSS'][:]
+                # Convert bytestring to unicode
+                GWGC = GWGC.astype('U')
+                PGC = PGC.astype('U')
+                HyperLEDA = HyperLEDA.astype('U')
+                _2MASS = _2MASS.astype('U')
+                SDSS = SDSS.astype('U')
 
-        mag = cat['Bmag']
-        L_nu =  const * 10.**((mag + MAB0)/(-2.5))
+        # Keep only galaxies with finite B mag when using it in the grade
+        if params["galaxy_grade"] == "S":
+            idx = np.where(~np.isnan(magb))[0]
+            ra, dec, distmpc = ra[idx], dec[idx], distmpc[idx]
+            magb, magk = magb[idx], magk[idx]
+            GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
+            _2MASS, SDSS = _2MASS[idx], SDSS[idx]
 
-    L_nu =  const * 10.**((mag + MAB0)/(-2.5))
-    L_nu = np.log10(L_nu)
+        r = distmpc * 1.0
+        mag = magb * 1.0
+
+    elif params["galaxy_catalog"] == "CLU":
+        if not os.path.isfile(catalogFile):
+            raise ValueError("Please add %s." % catalogFile)
+
+        with h5py.File(catalogFile, 'r') as f:
+            name = f['name'][:]
+            ra, dec = f['ra'][:], f['dec'][:]
+            sfr_fuv, mstar = f['sfr_fuv'][:], f['mstar'][:]
+            distmpc, magb = f['distmpc'][:], f['magb'][:]
+            a, b2a, pa = f['a'][:], f['b2a'][:], f['pa'][:]
+            btc = f['btc'][:]
+
+        idx = np.where(distmpc >= 0)[0]
+        ra, dec = ra[idx], dec[idx]
+        sfr_fuv, mstar = sfr_fuv[idx], mstar[idx]
+        distmpc, magb = distmpc[idx], magb[idx]
+        a, b2a, pa = a[idx], b2a[idx], pa[idx]
+        btc = btc[idx]
+
+        idx = np.where(~np.isnan(magb))[0]
+        ra, dec = ra[idx], dec[idx]
+        sfr_fuv, mstar = sfr_fuv[idx], mstar[idx]
+        distmpc, magb = distmpc[idx], magb[idx]
+        a, b2a, pa = a[idx], b2a[idx], pa[idx]
+        btc = btc[idx]
+
+        z = -1*np.ones(distmpc.shape)
+        r = distmpc * 1.0
+        mag = magb * 1.0
+
+    L_nu = const * 10.**((mag + MAB0)/(-2.5))
+    L_nu = L_nu / np.nanmax(L_nu)
     L_nu = L_nu**params["catalog_n"]
+    L_nu[L_nu < 0.001] = 0.001
+    L_nu[L_nu > 1.0] = 1.0
     Slum = L_nu / np.sum(L_nu)
+
     mlim, M_KNmin, M_KNmax = 22, -17, -12
-    L_KNmin, L_KNmax = const * 10.**((M_KNmin + MAB0)/(-2.5)), const * 10.**((M_KNmax + MAB0)/(-2.5))
+    L_KNmin = const * 10.**((M_KNmin + MAB0)/(-2.5))
+    L_KNmax = const * 10.**((M_KNmax + MAB0)/(-2.5))
 
     Llim = 4. * np.pi * (r * 1e6 * pc_cm)**2. * 10.**((mlim + MAB0)/(-2.5))
     Sdet = (L_KNmax-Llim)/(L_KNmax-L_KNmin)
-    Sdet[Sdet<0.01] = 0.01
-    Sdet[Sdet>1.0] = 1.0
+    Sdet[Sdet < 0.01] = 0.01
+    Sdet[Sdet > 1.0] = 1.0
 
-    theta = 0.5 * np.pi - cat['DEJ2000'].to('rad').value
-    phi = cat['RAJ2000'].to('rad').value
-    ipix = hp.ang2pix(map_struct["nside"], cat['RAJ2000'].to('deg').value, cat['DEJ2000'].to('deg').value, lonlat=True)
+    n, cl = params["powerlaw_n"], params["powerlaw_cl"]
+    dist_exp = params["powerlaw_dist_exp"]
+
+    prob_scaled = copy.deepcopy(map_struct["prob"])
+    prob_sorted = np.sort(prob_scaled)[::-1]
+    prob_indexes = np.argsort(prob_scaled)[::-1]
+    prob_cumsum = np.cumsum(prob_sorted)
+    index = np.argmin(np.abs(prob_cumsum - cl)) + 1
+    prob_scaled[prob_indexes[index:]] = 0.0
+    prob_scaled = prob_scaled**n
+
+    theta = 0.5 * np.pi - dec * 2 * np.pi / 360.0
+    phi = ra * 2 * np.pi / 360.0
+    ipix = hp.ang2pix(map_struct["nside"], ra, dec, lonlat=True)
 
     if "distnorm" in map_struct:
-        Sloc = map_struct["prob"][ipix] * (map_struct["distnorm"][ipix] * norm(map_struct["distmu"][ipix], map_struct["distsigma"][ipix]).pdf(r))**params["powerlaw_dist_exp"] / map_struct["pixarea"]
-        Sloc = copy.copy(map_struct["prob"][ipix])
+        if map_struct["distnorm"] is not None:
+            
+            #creat an mask to cut at 3 sigma in distance
+            mask = np.zeros(len(r))
+
+            condition_indexer = np.where( (r < (map_struct["distmu"][ipix] + (3*map_struct["distsigma"][ipix]))) & (r > (map_struct["distmu"][ipix] - (3*map_struct["distsigma"][ipix])) )) 
+            mask[condition_indexer] = 1
+
+            Sloc = prob_scaled[ipix] * (map_struct["distnorm"][ipix] *
+                                        norm(map_struct["distmu"][ipix],
+                                        map_struct["distsigma"][ipix]).pdf(r))**params["powerlaw_dist_exp"] / map_struct["pixarea"]
+            
+
+            #multiplie the Sloc by 1 or 0 according to the 3 sigma condistion
+            Sloc = Sloc*mask
+
+        else:
+            Sloc = copy.copy(prob_scaled[ipix])
     else:
-        Sloc = copy.copy(map_struct["prob"][ipix])
+        Sloc = copy.copy(prob_scaled[ipix])
+
+    # this happens when we are using a tiny catalog...
+    if np.all(Sloc == 0.0):
+        Sloc[:] = 1.0
+
+    # Set nan values to zero
+    Sloc[np.isnan(Sloc)] = 0
+    Slum[np.isnan(Slum)] = 0
 
     S = Sloc*Slum*Sdet
+
     prob = np.zeros(map_struct["prob"].shape)
-    prob[ipix] = prob[ipix] + S
+    if params["galaxy_grade"] == "Sloc":     
+        for j in range(len(ipix)):
+            prob[ipix[j]] += Sloc[j]
+        grade = Sloc
+    elif params["galaxy_grade"] == "S":
+        prob[ipix] = prob[ipix] + S
+        grade = S
+
     prob = prob / np.sum(prob)
 
     map_struct['prob_catalog'] = prob
     if params["doUseCatalog"]:
-        map_struct['prob'] = prob 
+        map_struct['prob'] = prob
 
-    idx = np.argsort(S)[::-1]
-    top50 = cat[idx][:50]
-    catalogfile = os.path.join(params["outputDir"],'catalog.csv')
-    top50['RAJ2000', 'DEJ2000'].write(catalogfile, format='csv', overwrite=True)
+    idx = np.where(~np.isnan(grade))[0]
+    grade = grade[idx]
+    ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
+    distmpc, z = distmpc[idx], z[idx]
+    if params["galaxy_catalog"] == "GLADE":
+        GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
+        _2MASS, SDSS = _2MASS[idx], SDSS[idx]
+    
+    """
+    Sthresh = np.max(grade)*0.01
+    idx = np.where(grade >= Sthresh)[0]
+    grade = grade[idx]
+    ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
+    distmpc, z = distmpc[idx], z[idx]
+    if params["galaxy_catalog"] == "GLADE":
+        GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
+        _2MASS, SDSS = _2MASS[idx], SDSS[idx]
+    """
+    
+    idx = np.argsort(grade)[::-1]
+    grade = grade[idx]
 
-    return map_struct
+    ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
+    distmpc, z = distmpc[idx], z[idx]
+    if params["galaxy_catalog"] == "GLADE":
+        GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
+        _2MASS, SDSS = _2MASS[idx], SDSS[idx]
 
+    # Keep only galaxies within 3sigma in distance
+    mask = Sloc > 0
+    ra, dec, Sloc, S = ra[mask], dec[mask], Sloc[mask], S[mask]
+    distmpc, z = distmpc[mask], z[mask]
+    if params["galaxy_catalog"] == "GLADE":
+        GWGC, PGC, HyperLEDA = GWGC[mask], PGC[mask], HyperLEDA[mask]
+        _2MASS, SDSS = _2MASS[mask], SDSS[mask]
+
+    if len(ra) > 2000:
+        print('Cutting catalog to top 2000 galaxies...')
+        idx = np.arange(2000).astype(int)
+        ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
+        distmpc, z = distmpc[idx], z[idx]
+        if params["galaxy_catalog"] == "GLADE":
+            GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
+            _2MASS, SDSS = _2MASS[idx], SDSS[idx]
+
+    # now normalize the distributions
+    S = S / np.sum(S)
+    Sloc = Sloc / np.sum(Sloc)
+    
+    catalog_struct = {}
+    catalog_struct["ra"] = ra
+    catalog_struct["dec"] = dec
+    catalog_struct["Sloc"] = Sloc
+    catalog_struct["S"] = S
+
+    if params["writeCatalog"]:
+        catalogfile = os.path.join(params["outputDir"], 'catalog.csv')
+        fid = open(catalogfile, 'w')
+        cnt = 1
+        if params["galaxy_catalog"] == "GLADE":
+            fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS\n")
+            for a, b, c, d, e, f, g, h, i, j, k in zip(ra, dec, Sloc, S, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS):
+                fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k))
+                cnt = cnt + 1
+        else:
+            fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z\n")
+            for a, b, c, d, e, f in zip(ra, dec, Sloc, S, distmpc, z):
+                fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f\n" % (cnt, a, b, c, d, e, f))
+                cnt = cnt + 1
+
+        fid.close()
+
+    return map_struct, catalog_struct

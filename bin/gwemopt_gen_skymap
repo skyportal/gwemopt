@@ -42,6 +42,9 @@ import matplotlib.pyplot as plt
 
 import gwemopt.utils, gwemopt.plotting
 
+import ligo.skymap
+from ligo.skymap import io
+
 __author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
 __version__ = 1.0
 __date__    = "6/17/2017"
@@ -57,18 +60,20 @@ def parse_commandline():
     """
     parser = optparse.OptionParser(usage=__doc__,version=__version__)
 
-    parser.add_option("-s", "--skymap", help="GW skymap.", default='../output/skymaps/GRB181222_annulus.fit')
-    parser.add_option("-p", "--skymapplot", help="GW skymap plot.", default='../output/skymaps/GRB181222_annulus.pdf')
+    parser.add_option("-s", "--skymap", help="GW skymap.", default='../output/skymaps/GW190425_new.fit')
+    parser.add_option("-p", "--skymapplot", help="GW skymap plot.", default='../output/skymaps/GW190425_new.pdf')
 
-    parser.add_option("--nside",default=256,type=int)
+    parser.add_option("--nside",default=512,type=int)
 
     parser.add_option("--doCircle",  action="store_true", default=False)
     parser.add_option("--doAnnulus",  action="store_true", default=False)
-
-    parser.add_option("--ra",default=294.324)
-    parser.add_option("--dec",default=-23.694)
-    parser.add_option("--radius",default=51.089,type=float)
-    parser.add_option("--radius_sigma",default=0.097,type=float)
+    parser.add_option("--doExcise",  action="store_true", default=False)
+    parser.add_option("--excise_file",default="/Users/mcoughlin/Code/ZTF/growth-too-marshal/pixels")
+    parser.add_option("--ra",default=120.28)
+    parser.add_option("--dec",default=6.35)
+    parser.add_option("--radius",default=0.77,type=float)
+    parser.add_option("--radius_inner",default=8.242,type=float)
+    parser.add_option("--radius_outer",default=2.398,type=float)
 
     parser.add_option("--doSquare",  action="store_true", default=False)
     #parser.add_option("--ras",default="290.010,290.186,265.423,264.736")
@@ -81,7 +86,11 @@ def parse_commandline():
     parser.add_option("--lat",default="-18.0,-42.0,-66.0,-89.0")
 
     parser.add_option("--doIntersect",  action="store_true", default=False)
-    parser.add_option("-o", "--original_skymap", help="GW skymap.", default='../data/GRB181222/glg_healpix_all_bn181222841.fit')
+    parser.add_option("-o", "--original_skymap", help="GW skymap.", default='../data/GW190425/LALInference.fits')
+
+    parser.add_option("--doCandidate",  action="store_true", default=False)
+    parser.add_option("--ra_candidate",default=255.326375)
+    parser.add_option("--dec_candidate",default=-7.002889)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -102,6 +111,14 @@ def parse_commandline():
 
     return opts
 
+def do_excise(healpix,excise_file):
+
+    ipix = np.loadtxt(excise_file).astype(int)
+    healpix[ipix] = 0.0
+    healpix = healpix / np.sum(healpix)
+
+    return healpix
+
 def get_intersect(healpix,original_skymap,nside):
 
     original_data = hp.read_map(original_skymap)
@@ -113,7 +130,7 @@ def get_intersect(healpix,original_skymap,nside):
 
     return healpix    
 
-def gen_annulus(ra,dec,radius,error,nside):
+def gen_annulus(ra,dec,radius,error_inner,error_outer,nside):
 
     ra, dec = float(ra), float(dec)
 
@@ -121,8 +138,8 @@ def gen_annulus(ra,dec,radius,error,nside):
     phi = np.deg2rad(ra)
 
     xyz = hp.ang2vec(theta, phi)
-    ipix1 = hp.query_disc(nside, xyz, np.deg2rad(radius-error)) 
-    ipix2 = hp.query_disc(nside, xyz, np.deg2rad(radius+error))    
+    ipix1 = hp.query_disc(nside, xyz, np.deg2rad(radius-error_inner)) 
+    ipix2 = hp.query_disc(nside, xyz, np.deg2rad(radius+error_outer))    
     ipix = np.setdiff1d(ipix2,ipix1)
 
     npix = hp.nside2npix(nside)
@@ -226,7 +243,7 @@ elif opts.doSquare:
     decs = [float(x) for x in opts.decs.split(",")]
     healpix = gen_square(ras,decs,opts.nside)
 elif opts.doAnnulus:
-    healpix = gen_annulus(opts.ra,opts.dec,opts.radius,opts.radius_sigma,opts.nside)
+    healpix = gen_annulus(opts.ra,opts.dec,opts.radius,opts.radius_inner,opts.radius_outer,opts.nside)
 elif opts.doTESS:
     #ras = [float(x) for x in opts.ras.split(",")]
     #decs = [float(x) for x in opts.decs.split(",")]
@@ -234,13 +251,18 @@ elif opts.doTESS:
     lons = [float(x) for x in opts.lon.split(",")]
     healpix = gen_TESS(lats,lons,opts.nside)
 else:
-    print("Please specify --doCircle, --doSquare, --doTESS or --doAnnulus")
-    exit(0)
+    npix = hp.nside2npix(opts.nside)
+    n = np.ones(npix)
+    healpix = n / np.sum(n)    
 
 if opts.doIntersect:
     healpix = get_intersect(healpix,opts.original_skymap,opts.nside)
 
-hp.fitsfunc.write_map(opts.skymap,healpix,overwrite=True)
+if opts.doExcise:
+    healpix = do_excise(healpix,opts.excise_file)
+
+#hp.fitsfunc.write_map(opts.skymap,healpix,overwrite=True)
+io.write_sky_map(opts.skymap, healpix, moc=True)
 
 unit='Gravitational-wave probability'
 cbar=False
@@ -248,6 +270,8 @@ cbar=False
 plt.figure()
 hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix))
 gwemopt.plotting.add_edges()
+if opts.doCandidate:
+    hp.visufunc.projscatter(opts.ra_candidate, opts.dec_candidate, lonlat=True)
 plt.show()
 plt.savefig(opts.skymapplot,dpi=200)
 plt.close('all')

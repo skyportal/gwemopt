@@ -8,7 +8,7 @@ refs = table.unique(table.Table.read(filename,
 reference_images = {group[0]['field']: group['fid'].astype(int).tolist()
     for group in refs.group_by('field').groups}
 
-filename = '../input/ZTF.tess'
+filename = '../input/ZTF.tess.alternative'
 #filename = '../input/ZTF.tess.all'
 fields = np.loadtxt(filename,usecols=range(3))
 refs_slice = np.array([0,0,0])

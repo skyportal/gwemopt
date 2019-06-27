@@ -91,11 +91,19 @@ def parse_commandline():
     parser.add_option("--doTiles",  action="store_true", default=False)
     parser.add_option("--tilesType", help="tiling type",default="moc")
 
+    parser.add_option("--doIterativeTiling",  action="store_true", default=False)
+    parser.add_option("--doMinimalTiling",  action="store_true", default=False)
+    parser.add_option("--doOverlappingScheduling",  action="store_true", default=False)
+    parser.add_option("--doPerturbativeTiling",  action="store_true", default=False)
+
     parser.add_option("--doCatalog",  action="store_true", default=False)
     parser.add_option("--doUseCatalog",  action="store_true", default=False)
     parser.add_option("--doCatalogDatabase",  action="store_true", default=False)
     parser.add_option("--catalogDir", help="catalog directory",default="../catalogs")
     parser.add_option("--galaxy_catalog", help="Source catalog",default="GLADE")
+    parser.add_option("--galaxy_grade", help="grade to use ('S' or 'Sloc')",
+                      type=str, default="S")
+    parser.add_option("--writeCatalog",  action="store_true", default=False)
     parser.add_option("--catalog_n",default=1.0,type=float)
  
     parser.add_option("--doObservability",  action="store_true", default=False)
@@ -122,9 +130,13 @@ def parse_commandline():
     #parser.add_option("--Tobs",default="0.0,1.0,1.0,2.0,2.0,3.0,3.0,4.0")
     parser.add_option("--Tobs",default="0.0,1.0")
 
+    parser.add_option("--mindiff",default=0.0,type=float)
+
     parser.add_option("--powerlaw_cl",default=0.9,type=float)
     parser.add_option("--powerlaw_n",default=1.0,type=float)
     parser.add_option("--powerlaw_dist_exp",default=0,type=float)
+
+    parser.add_option("--galaxies_FoV_sep",default=1.0,type=float)
 
     parser.add_option("--doFootprint", action="store_true", default=False)
     parser.add_option("--footprint_ra",default=30.0,type=float)
@@ -139,14 +151,25 @@ def parse_commandline():
 
     parser.add_option("--doSingleExposure",  action="store_true", default=False)
     parser.add_option("--filters",default="r,g,r")
+    parser.add_option("--doAlternatingFilters",  action="store_true", default=False)
+    parser.add_option("--iterativeOverlap",default=0.0,type=float)
+    parser.add_option("--maximumOverlap",default=1.0,type=float)
+
     parser.add_option("--exposuretimes",default="30.0,30.0,30.0")
+
+    parser.add_option("--doMaxTiles",  action="store_true", default=False)
+    parser.add_option("--max_nb_tiles",default="-1,-1,-1")
     parser.add_option("--doReferences",  action="store_true", default=False)
 
     parser.add_option("--doChipGaps",  action="store_true", default=False)
+    parser.add_option("--doUsePrimary",  action="store_true", default=False)
 
     parser.add_option("--doSplit",action="store_true",default=False)
     parser.add_option("--splitType",default="regional")
     parser.add_option("--Nregions",default=768,type=int)
+
+    parser.add_option("--doParallel",action="store_true",default=False)
+    parser.add_option("--Ncores",default=4,type=int)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -173,12 +196,16 @@ def params_struct(opts):
         gwemopt command line options
     """
 
+    telescopes = opts.telescopes.split(",") 
+
     params = {}
     params["config"] = {}
     configFiles = glob.glob("%s/*.config"%opts.configDirectory)
     for configFile in configFiles:
         telescope = configFile.split("/")[-1].replace(".config","")
+        if not telescope in telescopes: continue
         params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
+        params["config"][telescope]["telescope"] = telescope
         if opts.doSingleExposure:
             exposuretime = np.array(opts.exposuretimes.split(","),dtype=np.float)[0]
 
@@ -191,7 +218,10 @@ def params_struct(opts):
                     gwemopt.tiles.tesselation_spiral(params["config"][telescope])
                 elif params["config"][telescope]["FOV_type"] == "square":
                     gwemopt.tiles.tesselation_packing(params["config"][telescope])
-            params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2),comments='%')
+            if opts.tilesType == "galaxy":
+                params["config"][telescope]["tesselation"] = np.empty((3,))
+            else:
+                params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2),comments='%')
 
         if "referenceFile" in params["config"][telescope]:
             refs = table.unique(table.Table.read(
@@ -224,7 +254,7 @@ def params_struct(opts):
     params["catalogDir"] = opts.catalogDir
     params["event"] = opts.event
     params["coverageFiles"] = opts.coverageFiles.split(",")
-    params["telescopes"] = opts.telescopes.split(",")
+    params["telescopes"] = telescopes
     params["lightcurveFiles"] = opts.lightcurveFiles.split(",")
     params["tilesType"] = opts.tilesType
     params["scheduleType"] = opts.scheduleType
@@ -238,6 +268,7 @@ def params_struct(opts):
     params["powerlaw_cl"] = opts.powerlaw_cl
     params["powerlaw_n"] = opts.powerlaw_n
     params["powerlaw_dist_exp"] = opts.powerlaw_dist_exp
+    params["galaxies_FoV_sep"] = opts.galaxies_FoV_sep
 
     params["doPlots"] = opts.doPlots
     params["doMovie"] = opts.doMovie
@@ -259,21 +290,38 @@ def params_struct(opts):
     params["doSingleExposure"] = opts.doSingleExposure
     params["filters"] = opts.filters.split(",")
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
-    params["mindiff"] = 0.0
+
+    params["doMaxTiles"] = opts.doMaxTiles
+    params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","),dtype=np.float)
+    params["mindiff"] = opts.mindiff
+    params["doAlternatingFilters"] = opts.doAlternatingFilters
     params["doReferences"] = opts.doReferences
 
     params["airmass"] = opts.airmass
+
+    params["doIterativeTiling"] = opts.doIterativeTiling
+    params["iterativeOverlap"] = opts.iterativeOverlap
+    params["maximumOverlap"] = opts.maximumOverlap
+    params["doMinimalTiling"] = opts.doMinimalTiling
+    params["doOverlappingScheduling"] = opts.doOverlappingScheduling
+    params["doPerturbativeTiling"] = opts.doPerturbativeTiling
 
     params["doCatalog"] = opts.doCatalog
     params["catalog_n"] = opts.catalog_n
     params["doUseCatalog"] = opts.doUseCatalog
     params["doCatalogDatabase"] = opts.doCatalogDatabase
+    params["galaxy_grade"] = opts.galaxy_grade
+    params["writeCatalog"] = opts.writeCatalog
 
     params["doChipGaps"] = opts.doChipGaps
-    
+    params["doUsePrimary"] = opts.doUsePrimary
+ 
     params["doSplit"] = opts.doSplit
     params["splitType"] = opts.splitType
     params["Nregions"] = opts.Nregions
+
+    params["doParallel"] = opts.doParallel
+    params["Ncores"] = opts.Ncores
 
     return params
 
@@ -315,7 +363,7 @@ else:
 
 if opts.doCatalog:
     print("Generating catalog...")
-    map_struct = gwemopt.catalog.get_catalog(params, map_struct)
+    map_struct, catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
 
 if opts.doPlots:
     print("Plotting skymap...")
@@ -343,7 +391,7 @@ if opts.doSplit:
 if opts.doTiles:
     if params["tilesType"] == "moc":
         print("Generating MOC struct...")
-        moc_structs = gwemopt.moc.create_moc(params)
+        moc_structs = gwemopt.moc.create_moc(params, map_struct=map_struct)
         tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
     elif params["tilesType"] == "ranked":
         print("Generating ranked struct...")
@@ -370,8 +418,18 @@ if opts.doTiles:
             for index in tiles_struct.keys():
                 ra, dec = tiles_struct[index]["ra"], tiles_struct[index]["dec"]
                 params["config"][telescope]["tesselation"] = np.append(params["config"][telescope]["tesselation"],[[index,ra,dec]],axis=0)
+
+    elif params["tilesType"] == "galaxy":
+        print("Generating galaxy struct...")
+        tile_structs = gwemopt.tiles.galaxy(params, map_struct, catalog_struct)
+        for telescope in params["telescopes"]:
+            params["config"][telescope]["tesselation"] = np.empty((0,3))
+            tiles_struct = tile_structs[telescope]
+            for index in tiles_struct.keys():
+                ra, dec = tiles_struct[index]["ra"], tiles_struct[index]["dec"]
+                params["config"][telescope]["tesselation"] = np.append(params["config"][telescope]["tesselation"],[[index,ra,dec]],axis=0)
     else:
-        print("Need tilesType to be moc, greedy, hierarchical, or ranked")
+        print("Need tilesType to be moc, greedy, hierarchical, ranked or galaxy")
         exit(0)
 
     if opts.doPlots:
@@ -381,7 +439,7 @@ if opts.doTiles:
 if opts.doSchedule:
     if opts.doTiles:
         print("Generating coverage...")
-        coverage_struct = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
+        tile_structs, coverage_struct = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
     else:
         print("Need to enable --doTiles to use --doSchedule")
         exit(0)
@@ -396,7 +454,11 @@ if opts.doSchedule or opts.doCoverage:
 
     if opts.doPlots:
         print("Plotting coverage...")
-        gwemopt.plotting.coverage(params, map_struct, coverage_struct)
+        if opts.doCatalog:
+            gwemopt.plotting.coverage(params, map_struct, coverage_struct,
+                                      catalog_struct=catalog_struct)
+        else:
+            gwemopt.plotting.coverage(params, map_struct, coverage_struct)
 
 if opts.doEfficiency:
     if opts.doSchedule or opts.doCoverage:

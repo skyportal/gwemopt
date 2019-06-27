@@ -9,10 +9,148 @@ from scipy.stats import norm
 
 from astropy.time import Time
 
+from shapely.geometry import MultiPoint
+
 import gwemopt.utils
 import gwemopt.rankedTilesGenerator
 import gwemopt.samplers, gwemopt.segments
 import gwemopt.quadrants
+import gwemopt.moc
+
+from gwemopt.segments import angular_distance
+
+def get_rectangle(ras, decs, ra_size, dec_size):
+
+    ras[ras>180.0] = ras[ras>180.0] - 360.0
+
+    poly = MultiPoint([(x,y) for x,y in zip(ras,decs)]).envelope
+    minx, miny, maxx, maxy = poly.bounds
+    width = maxx - minx
+    height = maxy - miny
+
+    while (width < ra_size) or (height < dec_size):
+
+        ra_mean, dec_mean = np.mean(ras), np.mean(decs)    
+        dist = angular_distance(ra_mean, dec_mean,
+                                ras, decs)
+        idx = np.setdiff1d(np.arange(len(ras)),np.argmax(dist))
+        ras, decs = ras[idx], decs[idx]
+
+        if len(ras) == 1:
+            return np.mod(ras[0], 360.0), decs[0]
+
+        poly = MultiPoint([(x,y) for x,y in zip(ras,decs)]).envelope
+        minx, miny, maxx, maxy = poly.bounds
+        width = maxx - minx
+        height = maxy - miny
+
+    return np.mod((minx+maxx)/2.0, 360.0), (miny+maxy)/2.0    
+
+def galaxy(params, map_struct, catalog_struct):
+    nside = params["nside"]
+
+    tile_structs = {}
+    for telescope in params["telescopes"]:
+
+        config_struct = params["config"][telescope]
+
+        # Combine in a single pointing, galaxies that are distant by
+        # less than FoV * params['galaxies_FoV_sep']
+        # Take galaxy with highest proba at the center of new pointing
+        FoV = params["config"][telescope]['FOV'] * params['galaxies_FoV_sep']
+        new_ra = []
+        new_dec = []
+        new_Sloc = []
+        new_S = []
+        galaxies = []
+        idxRem = np.arange(len(catalog_struct["ra"])).astype(int)
+
+        while len(idxRem) > 0:
+            ii = idxRem[0]
+            ra, dec, Sloc, S = catalog_struct["ra"][ii], catalog_struct["dec"][ii], catalog_struct["Sloc"][ii], catalog_struct["S"][ii]    
+            
+            if config_struct["FOV_type"] == "square":
+                decCorners = (dec - FoV, dec + FoV)
+                # assume small enough to use average dec for corners
+                raCorners = (ra - FoV/np.cos(np.deg2rad(dec)) , ra + FoV / np.cos(np.deg2rad(dec)))
+                idx1 = np.where((catalog_struct["ra"][idxRem]>=raCorners[0]) & (catalog_struct["ra"][idxRem]<=raCorners[1]))[0]
+                idx2 = np.where((catalog_struct["dec"][idxRem]>=decCorners[0]) & (catalog_struct["dec"][idxRem]<=decCorners[1]))[0]
+                mask = np.intersect1d(idx1,idx2)
+
+                if len(mask) > 1:
+                    ra_center, dec_center = get_rectangle(catalog_struct["ra"][idxRem][mask], catalog_struct["dec"][idxRem][mask], FoV/np.cos(np.deg2rad(dec)), FoV)
+
+                    decCorners = (dec_center - FoV/2.0, dec_center + FoV/2.0)
+                    raCorners = (ra_center - FoV/(2.0*np.cos(np.deg2rad(dec))) , ra_center + FoV/(2.0*np.cos(np.deg2rad(dec))))
+                    idx1 = np.where((catalog_struct["ra"][idxRem]>=raCorners[0]) & (catalog_struct["ra"][idxRem]<=raCorners[1]))[0]
+                    idx2 = np.where((catalog_struct["dec"][idxRem]>=decCorners[0]) & (catalog_struct["dec"][idxRem]<=decCorners[1]))[0]
+                    mask2 = np.intersect1d(idx1,idx2)
+                    # did the optimization help?
+                    if len(mask2) > 2:
+                        mask = mask2
+                else:
+                    ra_center, dec_center = np.mean(catalog_struct["ra"][idxRem][mask]), np.mean(catalog_struct["dec"][idxRem][mask])
+
+            elif config_struct["FOV_type"] == "circle":
+                dist = angular_distance(ra, dec,
+                                        catalog_struct["ra"][idxRem],
+                                        catalog_struct["dec"][idxRem])
+                mask = np.where((2 * FoV) >= dist)[0]
+                if len(mask) > 1:
+                    ra_center, dec_center = get_rectangle(catalog_struct["ra"][idxRem][mask], catalog_struct["dec"][idxRem][mask], (FoV/np.sqrt(2))/np.cos(np.deg2rad(dec)), FoV/np.sqrt(2))
+
+                    dist = angular_distance(ra_center, dec_center,
+                                            catalog_struct["ra"][idxRem],
+                                            catalog_struct["dec"][idxRem])
+                    mask2 = np.where(FoV >= dist)[0]
+                    # did the optimization help?
+                    if len(mask2) > 2:
+                        mask = mask2
+                else:
+                    ra_center, dec_center = np.mean(catalog_struct["ra"][idxRem][mask]), np.mean(catalog_struct["dec"][idxRem][mask])
+
+            new_ra.append(ra_center)
+            new_dec.append(dec_center)
+            new_Sloc.append(np.sum(catalog_struct["Sloc"][idxRem][mask]))
+            new_S.append(np.sum(catalog_struct["S"][idxRem][mask]))
+            galaxies.append(idxRem[mask])
+
+            idxRem = np.setdiff1d(idxRem, idxRem[mask])
+
+        # redefine catalog_struct
+        catalog_struct_new = {}
+        catalog_struct_new["ra"] = new_ra
+        catalog_struct_new["dec"] = new_dec
+        catalog_struct_new["Sloc"] = new_Sloc
+        catalog_struct_new["S"] = new_S
+        catalog_struct_new["galaxies"] = galaxies
+
+        moc_struct = {}
+        cnt = 0
+        for ra, dec, Sloc, S in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"]):
+            moc_struct[cnt] = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
+            cnt = cnt + 1
+        
+        tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+        tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
+
+        cnt = 0
+        for ra, dec, Sloc, S, galaxies in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"],catalog_struct_new["galaxies"]):
+            if params["galaxy_grade"] == "Sloc":
+                tile_struct[cnt]['prob'] = Sloc
+            elif params["galaxy_grade"] == "S":
+                tile_struct[cnt]['prob'] = S
+
+            tile_struct[cnt]['galaxies'] = galaxies
+            if config_struct["FOV_type"] == "square":
+                tile_struct[cnt]['area'] = params["config"][telescope]['FOV']**2
+            elif config_struct["FOV_type"] == "circle":
+                tile_struct[cnt]['area'] = 4*np.pi*params["config"][telescope]['FOV']**2
+            cnt = cnt + 1
+
+        tile_structs[telescope] = tile_struct
+
+    return tile_structs
 
 def greedy(params, map_struct):
 
@@ -21,7 +159,7 @@ def greedy(params, map_struct):
         config_struct = params["config"][telescope]
 
         tile_struct = gwemopt.samplers.greedy_tiles_struct(params, config_struct, telescope, map_struct)
-        tile_struct = gwemopt.segments.get_segments_tiles(config_struct, tile_struct)
+        tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
 
         tile_structs[telescope] = tile_struct
 
@@ -34,7 +172,7 @@ def hierarchical(params, map_struct):
         config_struct = params["config"][telescope]
 
         tile_struct = gwemopt.samplers.hierarchical_tiles_struct(params, config_struct, telescope, map_struct)
-        tile_struct = gwemopt.segments.get_segments_tiles(config_struct, tile_struct)
+        tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
 
         tile_structs[telescope] = tile_struct
 
@@ -50,8 +188,14 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
         prob = map_struct["prob"]
 
     n, cl, dist_exp = params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"]
-    tile_probs = compute_tiles_map(tile_struct, prob, func='np.sum(x)')
-    tile_probs[tile_probs<np.max(tile_probs)*0.01] = 0.0 
+    
+    if params["tilesType"] == "galaxy":
+        tile_probs = compute_tiles_map(params, tile_struct, prob, func='center')
+    else:
+        tile_probs = compute_tiles_map(params, tile_struct, prob, func='np.sum(x)')
+
+    tile_probs[tile_probs<np.max(tile_probs)*0.01] = 0.0
+ 
     prob_scaled = copy.deepcopy(prob)
     prob_sorted = np.sort(prob_scaled)[::-1]
     prob_indexes = np.argsort(prob_scaled)[::-1]
@@ -60,39 +204,62 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
     prob_scaled[prob_indexes[index:]] = 0.0
     prob_scaled = prob_scaled**n
     prob_scaled = prob_scaled / np.nansum(prob_scaled)
+    
+    if params["tilesType"] == "galaxy":
+        ranked_tile_probs = compute_tiles_map(params, tile_struct, prob_scaled, func='center')
+    else:
+        ranked_tile_probs = compute_tiles_map(params, tile_struct, prob_scaled, func='np.sum(x)')
 
-    ranked_tile_probs = compute_tiles_map(tile_struct, prob_scaled, func='np.sum(x)')
     ranked_tile_probs[np.isnan(ranked_tile_probs)] = 0.0
     ranked_tile_probs_thresh = np.max(ranked_tile_probs)*0.01
     ranked_tile_probs[ranked_tile_probs<=ranked_tile_probs_thresh] = 0.0
     ranked_tile_probs = ranked_tile_probs / np.nansum(ranked_tile_probs)
 
+    
     if "distmed" in map_struct:
         distmed = map_struct["distmed"]
         distmed[distmed<=0] = np.nan
         distmed[~np.isfinite(distmed)] = np.nan
         #distmed[distmed<np.nanmedian(distmed)/4.0] = np.nanmedian(distmed)/4.0
 
-        ranked_tile_distances = compute_tiles_map(tile_struct, distmed, func='np.nanmedian(x)')        
+        ranked_tile_distances = compute_tiles_map(params, tile_struct, distmed, func='np.nanmedian(x)')        
         ranked_tile_distances_median = ranked_tile_distances / np.nanmedian(ranked_tile_distances)
         ranked_tile_distances_median = ranked_tile_distances_median**dist_exp
         ranked_tile_probs = ranked_tile_probs*ranked_tile_distances_median
         ranked_tile_probs = ranked_tile_probs / np.nansum(ranked_tile_probs)
         ranked_tile_probs[np.isnan(ranked_tile_probs)] = 0.0
-
+        
     if params["doSingleExposure"]:
         keys = tile_struct.keys()
         ranked_tile_times = np.zeros((len(ranked_tile_probs),len(params["exposuretimes"])))
         for ii in range(len(params["exposuretimes"])):
             ranked_tile_times[ranked_tile_probs>0,ii] = params["exposuretimes"][ii]
         for key, prob, exposureTime, tileprob in zip(keys, ranked_tile_probs, ranked_tile_times, tile_probs):
+
+            # Try to load the minimum duration of time from telescope config file
+            # Otherwise set it to zero
+            try:
+                min_obs_duration = config_struct["min_observability_duration"] / 24
+            except:
+                min_obs_duration = 0.0
+
+            # Check that a given tile is observable a minimum amount of time
+            # If not set the proba associated to the tile to zero
+            if 'segmentlist' and 'prob' in tile_struct[key] and tile_struct[key]['segmentlist'] and min_obs_duration > 0.0:
+                observability_duration = 0.0 
+                for counter in range(len(tile_struct[key]['segmentlist'])):
+                    observability_duration += tile_struct[key]['segmentlist'][counter][1] - tile_struct[key]['segmentlist'][counter][0]
+                if tile_struct[key]['prob'] > 0.0 and observability_duration < min_obs_duration: 
+                   tileprob = 0.0
+
+
             tile_struct[key]["prob"] = tileprob
             if prob == 0.0:
                 tile_struct[key]["exposureTime"] = 0.0
                 tile_struct[key]["nexposures"] = 0
                 tile_struct[key]["filt"] = []
             else:
-                if params["doReferences"]:
+                if params["doReferences"] and (telescope in ["ZTF", "DECam"]):
                     tile_struct[key]["exposureTime"] = []
                     tile_struct[key]["nexposures"] = []
                     tile_struct[key]["filt"] = []
@@ -115,12 +282,29 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
         ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
 
         keys = tile_struct.keys()
+
         for key, prob, exposureTime, tileprob in zip(keys, ranked_tile_probs, ranked_tile_times, tile_probs):
+            # Try to load the minimum duration of time from telescope config file
+            # Otherwise set it to zero
+            try:
+                min_obs_duration = config_struct["min_observability_duration"] / 24
+            except:
+                min_obs_duration = 0.0
+
+            # Check that a given tile is observable a minimum amount of time
+            # If not set the proba associated to the tile to zero
+            if 'segmentlist' and 'prob' in tile_struct[key] and tile_struct[key]['segmentlist'] and min_obs_duration > 0.0:
+                observability_duration = 0.0 
+                for counter in range(len(tile_struct[key]['segmentlist'])):
+                    observability_duration += tile_struct[key]['segmentlist'][counter][1] - tile_struct[key]['segmentlist'][counter][0]
+                if tile_struct[key]['prob'] > 0.0 and observability_duration < min_obs_duration: 
+                    prob = 0.0
+
             tile_struct[key]["prob"] = prob
             tile_struct[key]["exposureTime"] = exposureTime
             tile_struct[key]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
             tile_struct[key]["filt"] = [config_struct["filt"]] * tile_struct[key]["nexposures"]
-
+            
     return tile_struct
 
 def moc(params, map_struct, moc_structs):
@@ -130,10 +314,9 @@ def moc(params, map_struct, moc_structs):
  
         config_struct = params["config"][telescope]
         moc_struct = moc_structs[telescope]
- 
-        tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
 
-        tile_struct = gwemopt.segments.get_segments_tiles(config_struct, tile_struct)
+        tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+        tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
         tile_structs[telescope] = tile_struct
 
     return tile_structs
@@ -147,7 +330,7 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
     else:
         prob = map_struct["prob"]
 
-    ranked_tile_probs = compute_tiles_map(tile_struct, prob, func='np.sum(x)')
+    ranked_tile_probs = compute_tiles_map(params, tile_struct, prob, func='np.sum(x)')
     ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
 
     lim_mag = config_struct["magnitude"]
@@ -198,26 +381,49 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
     return tile_struct
 
-def compute_tiles_map(tile_struct, skymap, func=None):
+def compute_tiles_map(params, tile_struct, skymap, func=None):
 
     if func is None:
         f = lambda x: np.sum(x)
+        
+    elif func == 'center':
+        keys = tile_struct.keys()
+        ntiles = len(keys)
+        vals = np.nan*np.ones((ntiles,))
+        nside = hp.npix2nside(len(skymap))
+        for ii,key in enumerate(tile_struct.keys()):
+            pix_center = hp.ang2pix(nside, tile_struct[key]['ra'], tile_struct[key]['dec'], lonlat=True)
+            val = skymap[pix_center]
+            vals[ii] = val        
+        return vals
+    
     else:
         f = lambda x: eval(func)
+
+    prob = copy.deepcopy(skymap)
 
     keys = tile_struct.keys()
     ntiles = len(keys)
     vals = np.nan*np.ones((ntiles,))
     for ii,key in enumerate(tile_struct.keys()):
-        vals[ii] = f(skymap[tile_struct[key]["ipix"]])
+        idx = np.where(prob[tile_struct[key]["ipix"]] == 0)[0]
+        if len(prob[tile_struct[key]["ipix"]]) == 0:
+            rat = 0.0
+        else:
+            rat = float(len(idx)) / float(len(prob[tile_struct[key]["ipix"]]))
+        if rat > params["maximumOverlap"]:
+            vals[ii] = 0.0            
+        else:
+            vals[ii] = f(prob[tile_struct[key]["ipix"]])
+        prob[tile_struct[key]["ipix"]] = 0.0
 
     return vals
 
-def tesselation_spiral(config_struct):
+def tesselation_spiral(config_struct, scale=0.80):
     if config_struct["FOV_type"] == "square":
-        FOV = config_struct["FOV"]*config_struct["FOV"]
+        FOV = config_struct["FOV"]*config_struct["FOV"]*scale
     elif config_struct["FOV_type"] == "circle":
-        FOV = np.pi*config_struct["FOV"]*config_struct["FOV"]
+        FOV = np.pi*config_struct["FOV"]*config_struct["FOV"]*scale
 
     area_of_sphere = 4*np.pi*(180/np.pi)**2
     n = int(np.ceil(area_of_sphere/FOV))
@@ -239,12 +445,12 @@ def tesselation_spiral(config_struct):
         fid.write('%d %.5f %.5f\n'%(ii,ra[ii],dec[ii]))
     fid.close()   
 
-def tesselation_packing(config_struct):
+def tesselation_packing(config_struct, scale=0.97):
     sphere_radius = 1.0
     if config_struct["FOV_type"] == "square":
-        circle_radius = np.deg2rad(config_struct["FOV"]/2.0)
+        circle_radius = np.deg2rad(config_struct["FOV"]/2.0) * scale
     elif config_struct["FOV_type"] == "circle":
-        circle_radius = np.deg2rad(config_struct["FOV"])
+        circle_radius = np.deg2rad(config_struct["FOV"]) * scale
     vertical_count = int( (np.pi*sphere_radius)/(2*circle_radius) )
 
     phis = []

@@ -52,23 +52,29 @@ CMDCLASS=versioneer.get_cmdclass()
 # package dependencies
 install_requires = [
     'numpy>=1.7.1',
-    'scipy>=0.12.1',
+    'scipy>=1.2.1',    
     'matplotlib>=1.2.0',
     'astropy>=1.1.1',
     'astropy-healpix',
-    'lscsoft-glue',
     'python-dateutil',
     'mocpy',
     'astroquery',
     'astroplan',
     'pyephem',
     'pyyaml',
-    'VOEventLib'
+    'VOEventLib',
+    'joblib',
+    'ligo-segments',
+    'ligo.skymap',
+    'h5py',
+    'munkres',
+    'shapely'
 ]
 
 # test dependencies
 tests_require = [
     'pytest>=3.1',
+    'pytest-runner',
     'freezegun',
     'sqlparse',
     'bs4',

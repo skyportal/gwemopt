@@ -12,5 +12,9 @@ cls = [0.5,0.9]
 for cl in cls:
     outputDir = "../output/GRB180728/%.3f"%cl
     system_command = "python gwemopt_run --telescope ZTF --doSchedule --doSkymap --doPlots --skymap %s --gpstime %d -o %s --doTiles --doSingleExposure --powerlaw_cl %.3f"%(skymap,gpstime,outputDir,cl)
-    os.system(system_command)
+    #os.system(system_command)
 
+    outputDir = "../output/GRB180728/%.3f_ZTF_DECam"%cl
+    system_command = "python gwemopt_run --telescope ZTF,DECam --doSchedule --doSkymap --doPlots --skymap %s --gpstime %d -o %s --doTiles --doSingleExposure --powerlaw_cl %.3f --doCatalog"%(skymap,gpstime,outputDir,cl)
+    print(system_command)
+    #os.system(system_command)
