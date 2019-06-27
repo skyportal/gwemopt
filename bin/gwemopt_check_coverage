@@ -1,0 +1,137 @@
+#!/usr/bin/python
+
+# Copyright (C) 2017 Michael Coughlin
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 3 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+# Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+""".
+Gravitational-wave Electromagnetic Optimization
+
+This script generates an optimized list of pointings and content for
+reviewing gravitational-wave skymap likelihoods.
+
+Comments should be e-mailed to michael.coughlin@ligo.org.
+
+"""
+
+
+import os, sys, glob, optparse, shutil, warnings
+import numpy as np
+np.random.seed(0)
+
+from astropy.table import Table
+
+import healpy as hp
+
+import matplotlib
+#matplotlib.rc('text', usetex=True)
+matplotlib.use('Agg')
+matplotlib.rcParams.update({'font.size': 16})
+matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
+import matplotlib.pyplot as plt
+
+import gwemopt.utils, gwemopt.plotting
+
+__author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
+__version__ = 1.0
+__date__    = "6/17/2017"
+
+# =============================================================================
+#
+#                               DEFINITIONS
+#
+# =============================================================================
+
+def parse_commandline():
+    """@Parse the options given on the command-line.
+    """
+    parser = optparse.OptionParser(usage=__doc__,version=__version__)
+
+    parser.add_option("-s", "--skymap", help="GW skymap.", default='../data/S190510g/LALInference.fits.gz')
+    parser.add_option("-p", "--skymapplot", help="GW skymap plot.", default='../output/skymaps/GW190426_KMNet.pdf')
+
+    parser.add_option("-f", "--filename", help="GW coverage file.", default='../data/GW190426/KMNet.dat')
+
+    parser.add_option("-t", "--FOV_type", help="FOV type", default='square')
+    parser.add_option("--FOV",default=2.0,type=float)
+
+    parser.add_option("--nside",default=512,type=int)
+
+    parser.add_option("-v", "--verbose", action="store_true", default=False,
+                      help="Run verbosely. (Default: False)")
+
+    opts, args = parser.parse_args()
+
+    # show parameters
+    if opts.verbose:
+        print >> sys.stderr, ""
+        print >> sys.stderr, "running gwemopt_run..."
+        print >> sys.stderr, "version: %s"%__version__
+        print >> sys.stderr, ""
+        print >> sys.stderr, "***************** PARAMETERS ********************"
+        for o in opts.__dict__.items():
+          print >> sys.stderr, o[0]+":"
+          print >> sys.stderr, o[1]
+        print >> sys.stderr, ""
+
+    return opts
+
+def gen_coverage(healpix, ras, decs, FOV_type, FOV, nside):
+
+    ipixs = np.array([])
+    for ra, dec in zip(ras, decs):
+        if FOV_type == "square":
+            ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra,dec,FOV,nside)
+        elif FOV_type == "circle":
+            ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra,dec,FOV,nside)
+        ipixs = np.hstack((ipixs,ipix))
+    ipixs = np.unique(ipixs).astype(int)
+
+    pixarea = hp.nside2pixarea(nside)
+    pixarea_deg2 = hp.nside2pixarea(nside, degrees=True)
+    
+    cum_prob = np.sum(healpix[ipixs])
+    cum_area = len(ipixs) * pixarea_deg2
+
+    print('Total Cumulative Probability, Area: %.5f, %.5f' % (cum_prob,
+                                                              cum_area))
+
+    return  
+
+# =============================================================================
+#
+#                                    MAIN
+#
+# =============================================================================
+
+warnings.filterwarnings("ignore")
+
+# Parse command line
+opts = parse_commandline()
+
+healpix = hp.read_map(opts.skymap)
+healpix = hp.ud_grade(healpix,opts.nside,power=-2)
+healpix = healpix / np.sum(healpix)
+
+lines = [line.rstrip('\n') for line in open(opts.filename)]
+ras, decs = [], []
+for line in lines:
+    lineSplit = list(filter(None, line.split(" ")))
+    ras.append(float(lineSplit[3]))
+    decs.append(float(lineSplit[4]))
+
+gen_coverage(healpix, ras, decs, opts.FOV_type, opts.FOV, opts.nside)
+
+
