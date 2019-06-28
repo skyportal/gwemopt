@@ -1,0 +1,10 @@
+{
+  "output_dir": "./tmp",
+  "skymappath":"",
+  "vopath":"",
+  "Obsrequest": "Obs_request",
+  "OT": "OTs",
+  "evt_type": "",
+  "type_ser":"",
+  "trigid": ""
+}
