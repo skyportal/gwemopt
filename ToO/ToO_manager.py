@@ -1119,6 +1119,8 @@ def GW_treatment_alert(v, output_dic, file_log_s):
             GW_vo["voimportance"] = 2
         else:
             GW_vo["voimportance"] = 3
+    else:
+        GW_vo["voimportance"] = 3
 
     isotime = v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.Time.TimeInstant.ISOTime.text
 
@@ -1168,6 +1170,14 @@ def GW_treatment_alert(v, output_dic, file_log_s):
         print("Loading skymap...")
         # Function to read maps
         map_struct = gwemopt.utils.read_skymap(params, is3D=params["do3D"])
+
+        if GW_vo["voimportance"] == 1:
+            LISTE_TELESCOPE_TILING = ["OAJ","TRE","TCA","TCH"]
+            LISTE_TELESCOPE_GALAXY = ["Abastunami-T48","Abastunami-T70","Zadko","UBAI-T60S","UBAI-T60N","ShAO-T60","Makes-60","Lisnyky-AZT8","IRIS","TNT"]
+        else:
+            LISTE_TELESCOPE_TILING = ["TRE","TCA","TCH"]
+            LISTE_TELESCOPE_GALAXY = ["Abastunami-T48","Abastunami-T70","Zadko","UBAI-T60S","UBAI-T60N","ShAO-T60","Makes-60","Lisnyky-AZT8","IRIS","TNT"]
+        LISTE_TELESCOPE = LISTE_TELESCOPE_TILING + LISTE_TELESCOPE_GALAXY
 
         params["max_nb_tiles"] = -1*np.ones((len(LISTE_TELESCOPE_TILING),))
         aTables_tiling, galaxies_table = Observation_plan_multiple(LISTE_TELESCOPE_TILING, GW_vo, trigger_id, params, map_struct, 'Tiling')
@@ -2203,8 +2213,8 @@ letters = np.array(
      "x", "y", "z"])
 LOGFILE_receivedalerts = "LOG_ALERTS_RECEIVED.txt"
 LOGFILE_sendingalerts = "LOG_ALERTS_SENT.txt"
-LISTE_TELESCOPE_TILING = ["OAJ","TRE","TCA","TCH"]
-LISTE_TELESCOPE_GALAXY = ["Abastunami-T48","Abastunami-T70","Zadko","UBAI-T60S","UBAI-T60N","ShAO-T60","Makes-60","Lisnyky-AZT8","IRIS","TNT"]
+LISTE_TELESCOPE_TILING = []
+LISTE_TELESCOPE_GALAXY = []
 LISTE_TELESCOPE = LISTE_TELESCOPE_TILING + LISTE_TELESCOPE_GALAXY
 
 dic_grb = {}
