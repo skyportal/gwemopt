@@ -513,7 +513,9 @@ def coverage(params, map_struct, coverage_struct, catalog_struct=None):
     ax3.plot(tts, cum_areas, color='k', linestyle='--')
 
     if len(params["telescopes"]) > 3:
-        ax2.legend(loc=2,ncol=3,fontsize=8)
+        ax2.legend(loc=1,ncol=3,fontsize=10)
+        ax2.set_ylim([0,1])
+        ax3.set_ylim([0,2000])
     else:
         ax2.legend(loc=1)
     plt.show()
