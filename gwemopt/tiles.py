@@ -206,10 +206,10 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
     prob_indexes = np.argsort(prob_scaled)[::-1]
     prob_cumsum = np.cumsum(prob_sorted)
     index = np.argmin(np.abs(prob_cumsum - cl)) + 1
-    prob_scaled[prob_indexes[index:]] = 0.0
+    prob_scaled[prob_indexes[index:]] = 1e-10
     prob_scaled = prob_scaled**n
     prob_scaled = prob_scaled / np.nansum(prob_scaled)
-    
+   
     if params["tilesType"] == "galaxy":
         ranked_tile_probs = compute_tiles_map(params, tile_struct, prob_scaled, func='center')
     else:
@@ -220,7 +220,6 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
     ranked_tile_probs[ranked_tile_probs<=ranked_tile_probs_thresh] = 0.0
     ranked_tile_probs = ranked_tile_probs / np.nansum(ranked_tile_probs)
 
-    
     if "distmed" in map_struct:
         distmed = map_struct["distmed"]
         distmed[distmed<=0] = np.nan

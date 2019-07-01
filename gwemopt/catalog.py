@@ -164,22 +164,6 @@ def get_catalog(params, map_struct):
         r = distmpc * 1.0
         mag = magb * 1.0
 
-    L_nu = const * 10.**((mag + MAB0)/(-2.5))
-    L_nu = L_nu / np.nanmax(L_nu)
-    L_nu = L_nu**params["catalog_n"]
-    L_nu[L_nu < 0.001] = 0.001
-    L_nu[L_nu > 1.0] = 1.0
-    Slum = L_nu / np.sum(L_nu)
-
-    mlim, M_KNmin, M_KNmax = 22, -17, -12
-    L_KNmin = const * 10.**((M_KNmin + MAB0)/(-2.5))
-    L_KNmax = const * 10.**((M_KNmax + MAB0)/(-2.5))
-
-    Llim = 4. * np.pi * (r * 1e6 * pc_cm)**2. * 10.**((mlim + MAB0)/(-2.5))
-    Sdet = (L_KNmax-Llim)/(L_KNmax-L_KNmin)
-    Sdet[Sdet < 0.01] = 0.01
-    Sdet[Sdet > 1.0] = 1.0
-
     n, cl = params["powerlaw_n"], params["powerlaw_cl"]
     dist_exp = params["powerlaw_dist_exp"]
 
@@ -207,19 +191,36 @@ def get_catalog(params, map_struct):
             Sloc = prob_scaled[ipix] * (map_struct["distnorm"][ipix] *
                                         norm(map_struct["distmu"][ipix],
                                         map_struct["distsigma"][ipix]).pdf(r))**params["powerlaw_dist_exp"] / map_struct["pixarea"]
-            
-
+    
             #multiplie the Sloc by 1 or 0 according to the 3 sigma condistion
             Sloc = Sloc*mask
-
+            idx = np.where(condition_indexer)[0]
         else:
             Sloc = copy.copy(prob_scaled[ipix])
+            idx = np.arange(len(r)).astype(int)
     else:
         Sloc = copy.copy(prob_scaled[ipix])
+        idx = np.arange(len(r)).astype(int)
 
     # this happens when we are using a tiny catalog...
     if np.all(Sloc == 0.0):
         Sloc[:] = 1.0
+
+    L_nu = const * 10.**((mag + MAB0)/(-2.5))
+    L_nu = L_nu / np.nanmax(L_nu[idx])
+    L_nu = L_nu**params["catalog_n"]
+    L_nu[L_nu < 0.001] = 0.001
+    L_nu[L_nu > 1.0] = 1.0
+    Slum = L_nu / np.sum(L_nu)
+
+    mlim, M_KNmin, M_KNmax = 22, -17, -12
+    L_KNmin = const * 10.**((M_KNmin + MAB0)/(-2.5))
+    L_KNmax = const * 10.**((M_KNmax + MAB0)/(-2.5))
+
+    Llim = 4. * np.pi * (r * 1e6 * pc_cm)**2. * 10.**((mlim + MAB0)/(-2.5))
+    Sdet = (L_KNmax-Llim)/(L_KNmax-L_KNmin)
+    Sdet[Sdet < 0.01] = 0.01
+    Sdet[Sdet > 1.0] = 1.0
 
     # Set nan values to zero
     Sloc[np.isnan(Sloc)] = 0
@@ -233,9 +234,11 @@ def get_catalog(params, map_struct):
             prob[ipix[j]] += Sloc[j]
         grade = Sloc
     elif params["galaxy_grade"] == "S":
-        prob[ipix] = prob[ipix] + S
+        for j in range(len(ipix)):
+            prob[ipix[j]] += S[j]
         grade = S
 
+    prob[prob==0] = 1e-10
     prob = prob / np.sum(prob)
 
     map_struct['prob_catalog'] = prob

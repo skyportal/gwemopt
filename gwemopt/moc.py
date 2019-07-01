@@ -7,15 +7,20 @@ from joblib import Parallel, delayed
 import healpy as hp
 import numpy as np
 
+import shapely.geometry
+
 import gwemopt.utils
+import gwemopt.tiles
 import gwemopt.ztf_tiling
 
 def create_moc(params, map_struct=None):
 
     nside = params["nside"]
+    npix = hp.nside2npix(nside)
 
     if params["doMinimalTiling"]:
         prob = map_struct["prob"]
+
         n, cl, dist_exp = params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"]
         prob_scaled = copy.deepcopy(prob)
         prob_sorted = np.sort(prob_scaled)[::-1]
@@ -35,11 +40,10 @@ def create_moc(params, map_struct=None):
         tesselation = config_struct["tesselation"]
         moc_struct = {}
 
-        if params["doMinimalTiling"]:
+        if params["doMinimalTiling"] and (config_struct["FOV"] < 1.0):
             idxs = hp.pixelfunc.ang2pix(map_struct["nside"], tesselation[:,1], tesselation[:,2], lonlat=True)
             isin = np.isin(idxs, prob_indexes)
             
-            idxs = [i for i, x in enumerate(isin) if x]
             print("Keeping %d/%d tiles" % (len(idxs), len(tesselation)))
             tesselation = tesselation[idxs,:]
 
@@ -57,6 +61,29 @@ def create_moc(params, map_struct=None):
                     continue
                 index = index.astype(int)
                 moc_struct[index] = Fov2Moc(params, config_struct, telescope, ra, dec, nside)
+
+        if params["doMinimalTiling"]:
+            moc_struct_new = copy.deepcopy(moc_struct)
+            if params["tilesType"] == "galaxy":
+                tile_probs = gwemopt.tiles.compute_tiles_map(params, moc_struct_new, prob, func='center')
+            else:
+                tile_probs = gwemopt.tiles.compute_tiles_map(params, moc_struct_new, prob, func='np.sum(x)')
+
+            keys = moc_struct.keys()
+
+            sort_idx = np.argsort(tile_probs)[::-1]
+            csm = np.empty(len(tile_probs))
+            csm[sort_idx] = np.cumsum(tile_probs[sort_idx])
+            ipix_keep = np.where(csm <= cl)[0]
+
+            probs = []
+            moc_struct = {}
+            cnt = 0
+            for ii, key in enumerate(keys):
+                if ii in ipix_keep:
+                    moc_struct[cnt] = moc_struct_new[key]
+                    cnt = cnt + 1
+
         moc_structs[telescope] = moc_struct
 
     return moc_structs
