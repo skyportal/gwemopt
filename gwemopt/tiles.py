@@ -180,6 +180,11 @@ def hierarchical(params, map_struct):
 
 def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
+    keys = tile_struct.keys()
+    ntiles = len(keys)
+    if ntiles == 0:
+        return tile_struct
+
     tot_obs_time = config_struct["tot_obs_time"]
 
     if "observability" in map_struct:
@@ -414,7 +419,10 @@ def compute_tiles_map(params, tile_struct, skymap, func=None):
         if rat > params["maximumOverlap"]:
             vals[ii] = 0.0            
         else:
-            vals[ii] = f(prob[tile_struct[key]["ipix"]])
+            if len(prob[tile_struct[key]["ipix"]]) == 0:
+                vals[ii] = 0.0
+            else:
+                vals[ii] = f(prob[tile_struct[key]["ipix"]])
         prob[tile_struct[key]["ipix"]] = 0.0
 
     return vals
