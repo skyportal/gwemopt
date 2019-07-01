@@ -152,7 +152,10 @@ def skymap(params,map_struct):
     lats = np.zeros(lons.shape)
 
     plotName = os.path.join(params["outputDir"],'prob.pdf')
-    hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,min=np.percentile(map_struct["prob"],1),max=np.percentile(map_struct["prob"],99),cmap=cmap)
+    if np.percentile(map_struct["prob"],99) > 0:
+        hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,min=np.percentile(map_struct["prob"],1),max=np.percentile(map_struct["prob"],99),cmap=cmap)
+    else:
+        hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,min=np.percentile(map_struct["prob"],1),cmap=cmap)
     add_edges()
     plt.show()
     plt.savefig(plotName,dpi=200)
