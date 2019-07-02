@@ -471,7 +471,7 @@ def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
         vals = []
         for ra, dec in zip(ras, decs):
             moc_struct_temp = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
-            idx = np.where(map_struct_hold["prob"][moc_struct_temp["ipix"]] == 0)[0]
+            idx = np.where(map_struct_hold["prob"][moc_struct_temp["ipix"]] == -1)[0]
             if len(map_struct_hold["prob"][moc_struct_temp["ipix"]]) == 0:
                 rat = 0.0
             else:
@@ -479,13 +479,15 @@ def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
             if rat > params["maximumOverlap"]:
                 val = 0.0
             else:
-                val = np.sum(map_struct_hold["prob"][moc_struct_temp["ipix"]]) 
+                vals_to_sum = map_struct_hold["prob"][moc_struct_temp["ipix"]]
+                vals_to_sum[vals_to_sum < 0] = 0
+                val = np.sum(vals_to_sum) 
             vals.append(val)
         idx = np.argmax(vals)
         ra, dec = ras[idx], decs[idx]
         moc_struct[key] = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
 
-        map_struct_hold['prob'][moc_struct[key]["ipix"]] = 0.0
+        map_struct_hold['prob'][moc_struct[key]["ipix"]] = -1
 
     tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
     tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
@@ -494,9 +496,12 @@ def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
 
 def slice_map_tiles(params, map_struct, coverage_struct):
 
-    sort_idx = np.argsort(map_struct["prob"])[::-1]
-    csm = np.empty(len(map_struct["prob"]))
-    csm[sort_idx] = np.cumsum(map_struct["prob"][sort_idx])
+    prob = copy.deepcopy(map_struct["prob"])
+    prob[prob < 0] = 0.0
+
+    sort_idx = np.argsort(prob)[::-1]
+    csm = np.empty(len(prob))
+    csm[sort_idx] = np.cumsum(prob[sort_idx])
     ipix_keep = np.where(csm <= params["iterativeOverlap"])[0]
 
     for ii in range(len(coverage_struct["ipix"])):
@@ -511,7 +516,7 @@ def slice_map_tiles(params, map_struct, coverage_struct):
 
         ipix_slice = np.setdiff1d(ipix, ipix_keep)
         if len(ipix_slice) == 0: continue
-        map_struct["prob"][ipix_slice] = 0.0
+        map_struct["prob"][ipix_slice] = -1
 
     return map_struct
 
@@ -642,7 +647,7 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                 rat = np.array([float(len(overlap)) / float(len(ipix)),
                                 float(len(overlap)) / float(len(ipix2))])
         
-                if np.max(rat) < 0.5:
+                if np.max(rat) > params["maximumOverlap"]:
                     continue
  
                 if not 'epochs' in tile_struct[key]:

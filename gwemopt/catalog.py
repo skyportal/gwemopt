@@ -238,7 +238,7 @@ def get_catalog(params, map_struct):
             prob[ipix[j]] += S[j]
         grade = S
 
-    prob[prob==0] = 1e-10
+    #prob[prob==0] = 1e-10
     prob = prob / np.sum(prob)
 
     map_struct['prob_catalog'] = prob

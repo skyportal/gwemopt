@@ -219,7 +219,7 @@ def powerlaw(params, map_struct, tile_structs):
 
         if params["doIterativeTiling"]:
             map_struct_hold = gwemopt.utils.slice_map_tiles(params, map_struct_hold, coverage_struct)
-                
+               
     map_struct["prob"] = full_prob_map
     return tile_structs, combine_coverage_structs(coverage_structs)
 

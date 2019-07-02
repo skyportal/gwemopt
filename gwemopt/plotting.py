@@ -439,6 +439,7 @@ def coverage(params, map_struct, coverage_struct, catalog_struct=None):
                 if len(overlap) > 0:
                     for galaxy in galaxies:
                         if galaxy in cum_galaxies: continue
+                        if catalog_struct is None: continue
                         if params["galaxy_grade"] == "Sloc":
                             cum_prob = cum_prob + catalog_struct["Sloc"][galaxy]
                         elif params["galaxy_grade"] == "S":
@@ -494,6 +495,7 @@ def coverage(params, map_struct, coverage_struct, catalog_struct=None):
             if len(overlap) > 0:
                 for galaxy in galaxies:
                     if galaxy in cum_galaxies: continue
+                    if catalog_struct is None: continue
                     if params["galaxy_grade"] == "Sloc":
                         cum_prob = cum_prob + catalog_struct["Sloc"][galaxy]
                     elif params["galaxy_grade"] == "S":

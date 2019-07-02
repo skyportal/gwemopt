@@ -206,7 +206,8 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
     prob_indexes = np.argsort(prob_scaled)[::-1]
     prob_cumsum = np.cumsum(prob_sorted)
     index = np.argmin(np.abs(prob_cumsum - cl)) + 1
-    prob_scaled[prob_indexes[index:]] = 1e-10
+    #prob_scaled[prob_indexes[index:]] = 1e-10
+    prob_scaled[prob_indexes[index:]] = 0.0
     prob_scaled = prob_scaled**n
     prob_scaled = prob_scaled / np.nansum(prob_scaled)
    
@@ -410,7 +411,7 @@ def compute_tiles_map(params, tile_struct, skymap, func=None):
     ntiles = len(keys)
     vals = np.nan*np.ones((ntiles,))
     for ii,key in enumerate(tile_struct.keys()):
-        idx = np.where(prob[tile_struct[key]["ipix"]] == 0)[0]
+        idx = np.where(prob[tile_struct[key]["ipix"]] == -1)[0]
         if len(prob[tile_struct[key]["ipix"]]) == 0:
             rat = 0.0
         else:
@@ -421,8 +422,10 @@ def compute_tiles_map(params, tile_struct, skymap, func=None):
             if len(prob[tile_struct[key]["ipix"]]) == 0:
                 vals[ii] = 0.0
             else:
-                vals[ii] = f(prob[tile_struct[key]["ipix"]])
-        prob[tile_struct[key]["ipix"]] = 0.0
+                vals_to_sum = prob[tile_struct[key]["ipix"]]
+                vals_to_sum[vals_to_sum < 0] = 0
+                vals[ii] = f(vals_to_sum)
+        prob[tile_struct[key]["ipix"]] = -1
 
     return vals
 
