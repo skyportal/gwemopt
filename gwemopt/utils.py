@@ -515,19 +515,25 @@ def slice_map_tiles(params, map_struct, coverage_struct):
 
     return map_struct
 
-def slice_number_tiles(params, telescope, tile_struct):
+def slice_number_tiles(params, telescope, tile_struct, coverage_struct):
 
-    keys = tile_struct.keys()
-
-    prob = np.zeros((len(keys),))
-    for ii, key in enumerate(keys):
-        prob[ii] = prob[ii] + tile_struct[key]['prob']
-
-    sort_idx = np.argsort(prob)[::-1]
     idx = params["telescopes"].index(telescope)
     max_nb_tile = params["max_nb_tiles"][idx]
     if max_nb_tile < 0:
-        return tile_struct
+        return tile_struct, False
+
+    keys = tile_struct.keys()
+    keys_scheduled = np.unique(coverage_struct["data"][:,5])
+    
+    if len(keys_scheduled) <= max_nb_tile:
+        return tile_struct, False
+
+    prob = np.zeros((len(keys),))
+    for ii, key in enumerate(keys):
+        if key in keys_scheduled:
+            prob[ii] = prob[ii] + tile_struct[key]['prob']
+
+    sort_idx = np.argsort(prob)[::-1]
     idx_keep = sort_idx[:int(max_nb_tile)]
 
     for ii, key in enumerate(keys):
@@ -535,7 +541,7 @@ def slice_number_tiles(params, telescope, tile_struct):
         if ii in idx_keep: continue
         tile_struct[key]['prob'] = 0.0
 
-    return tile_struct        
+    return tile_struct, True        
 
 def slice_galaxy_tiles(params, tile_struct, coverage_struct):
 

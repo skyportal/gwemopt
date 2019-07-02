@@ -208,9 +208,11 @@ def powerlaw(params, map_struct, tile_structs):
             if not params["tilesType"] == "galaxy":
                 tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct)      
 
-            if params["doMaxTiles"]:
-                tile_struct = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct)
             coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
+            if params["doMaxTiles"]:
+                tile_struct, doReschedule = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct, coverage_struct)    
+                if doReschedule:
+                    coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
 
         tile_structs[telescope] = tile_struct
         coverage_structs.append(coverage_struct)
