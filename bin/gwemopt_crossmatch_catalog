@@ -1,0 +1,45 @@
+
+import numpy as np
+import h5py
+import astropy.io.fits
+from astropy.table import Table
+from astropy import units as u
+from astropy.coordinates import Angle
+from astropy.coordinates import SkyCoord
+
+catalogFile = '../catalogs/GLADE.hdf5'
+
+with h5py.File(catalogFile, 'r') as f:
+    ra, dec = f['ra'][:], f['dec'][:]
+    distmpc, z = f['distmpc'][:], f['z'][:]
+    magb, magk = f['magb'][:], f['magk'][:]
+    GWGC, PGC, _2MASS = f['GWGC'][:], f['PGC'][:], f['2MASS'][:]
+    HyperLEDA, SDSS = f['HyperLEDA'][:], f['SDSS'][:]
+    # Convert bytestring to unicode
+    GWGC = GWGC.astype('U')
+    PGC = PGC.astype('U')
+    HyperLEDA = HyperLEDA.astype('U')
+    _2MASS = _2MASS.astype('U')
+    SDSS = SDSS.astype('U')
+
+filename = "../data/GW190425/zadko.dat"
+lines = [line.rstrip('\n') for line in open(filename)]
+ras, decs = [], []
+for line in lines:
+    lineSplit = line.split(" ")
+    thisra  = Angle(lineSplit[0], unit=u.hour).deg
+    thisdec = Angle(lineSplit[1], unit=u.deg).deg
+
+    ras.append(thisra)
+    decs.append(thisdec)
+ras, decs = np.array(ras), np.array(decs)
+
+catalog1 = SkyCoord(ra=ra*u.degree,
+                    dec=dec*u.degree, frame='icrs')
+catalog2 = SkyCoord(ra=ras*u.degree,
+                    dec=decs*u.degree, frame='icrs')
+
+idx, d2d, d3d = catalog2.match_to_catalog_sky(catalog1)
+for jj in range(len(idx)):
+    print(lines[jj], GWGC[idx[jj]], PGC[idx[jj]], _2MASS[idx[jj]], HyperLEDA[idx[jj]], SDSS[idx[jj]])
+
