@@ -36,10 +36,16 @@ ras, decs = np.array(ras), np.array(decs)
 
 catalog1 = SkyCoord(ra=ra*u.degree,
                     dec=dec*u.degree, frame='icrs')
-catalog2 = SkyCoord(ra=ras*u.degree,
-                    dec=decs*u.degree, frame='icrs')
 
-idx, d2d, d3d = catalog2.match_to_catalog_sky(catalog1)
-for jj in range(len(idx)):
-    print(lines[jj], GWGC[idx[jj]], PGC[idx[jj]], _2MASS[idx[jj]], HyperLEDA[idx[jj]], SDSS[idx[jj]])
+for jj in range(len(ras)):
+    ra, dec = ras[jj], decs[jj]
+    print(lines[jj])
+
+    coord = SkyCoord(ra=ra*u.degree, dec=dec*u.degree, frame='icrs')
+    sep = coord.separation(catalog1)
+    sep = sep.deg
+    idx = np.where(sep <  0.3/2.0)[0]
+    for ii in range(len(idx)):
+        print(GWGC[idx[ii]], PGC[idx[ii]], _2MASS[idx[ii]], HyperLEDA[idx[ii]], SDSS[idx[ii]]) 
+    print(" ")
 
