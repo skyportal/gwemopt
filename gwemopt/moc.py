@@ -43,7 +43,8 @@ def create_moc(params, map_struct=None):
         if params["doMinimalTiling"] and (config_struct["FOV"] < 1.0):
             idxs = hp.pixelfunc.ang2pix(map_struct["nside"], tesselation[:,1], tesselation[:,2], lonlat=True)
             isin = np.isin(idxs, prob_indexes)
-            
+  
+            idxs = [i for i, x in enumerate(isin) if x] 
             print("Keeping %d/%d tiles" % (len(idxs), len(tesselation)))
             tesselation = tesselation[idxs,:]
 

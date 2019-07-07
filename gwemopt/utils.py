@@ -588,8 +588,14 @@ def slice_galaxy_tiles(params, tile_struct, coverage_struct):
             if s.deg > 1:
                 continue
             galaxies2 = coverage_struct["galaxies"][jj]
-            overlap = np.setdiff1d(galaxies, galaxies2)
+            overlap = np.intersect1d(galaxies, galaxies2)
             if len(overlap) == 0:
+                continue
+
+            rat = np.array([float(len(overlap)) / float(len(galaxies)),
+                            float(len(overlap)) / float(len(galaxies2))])
+
+            if np.max(rat) > params["maximumOverlap"]:
                 tile_struct[key]['prob'] = 0.0
                 break
 
@@ -647,9 +653,6 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                 rat = np.array([float(len(overlap)) / float(len(ipix)),
                                 float(len(overlap)) / float(len(ipix2))])
         
-                if np.max(rat) > params["maximumOverlap"]:
-                    continue
- 
                 if not 'epochs' in tile_struct[key]:
                     tile_struct[key]["epochs"] = np.empty((0,8))
                 tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
