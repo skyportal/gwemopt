@@ -95,6 +95,7 @@ def parse_commandline():
     parser.add_option("--doMinimalTiling",  action="store_true", default=False)
     parser.add_option("--doOverlappingScheduling",  action="store_true", default=False)
     parser.add_option("--doPerturbativeTiling",  action="store_true", default=False)
+    parser.add_option("--doOrderByObservability",  action="store_true", default=False)
 
     parser.add_option("--doCatalog",  action="store_true", default=False)
     parser.add_option("--doUseCatalog",  action="store_true", default=False)
@@ -305,6 +306,7 @@ def params_struct(opts):
     params["doMinimalTiling"] = opts.doMinimalTiling
     params["doOverlappingScheduling"] = opts.doOverlappingScheduling
     params["doPerturbativeTiling"] = opts.doPerturbativeTiling
+    params["doOrderByObservability"] = opts.doOrderByObservability
 
     params["doCatalog"] = opts.doCatalog
     params["catalog_n"] = opts.catalog_n
@@ -436,6 +438,23 @@ if opts.doTiles:
         print("Plotting tiles struct...")
         gwemopt.plotting.tiles(params, map_struct, tile_structs)
     
+if len(params["telescopes"]) > 1 and opts.doOrderByObservability:
+    observability = []
+    for telescope in params["telescopes"]:
+        config_struct = params["config"][telescope]
+        tiles_struct = tile_structs[telescope]
+        exposurelist = config_struct["exposurelist"]
+        observability_prob = 0.0
+        keys = tiles_struct.keys()
+        for jj, key in enumerate(keys):
+            tilesegmentlist = tiles_struct[key]["segmentlist"]
+            if tiles_struct[key]["prob"] == 0: continue
+            if tilesegmentlist.intersects_segment(exposurelist[0]):
+                observability_prob = observability_prob + tiles_struct[key]["prob"]
+        observability.append(observability_prob)
+    idx = np.argsort(observability)[::-1]
+    params["telescopes"] = [params["telescopes"][ii] for ii in idx]
+
 if opts.doSchedule:
     if opts.doTiles:
         print("Generating coverage...")
@@ -443,7 +462,6 @@ if opts.doSchedule:
     else:
         print("Need to enable --doTiles to use --doSchedule")
         exit(0)
-
 elif opts.doCoverage:
     print("Reading coverage from file...")
     coverage_struct = gwemopt.coverage.read_coverage_files(params)
