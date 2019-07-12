@@ -446,7 +446,7 @@ def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
     nside = params["nside"]
 
     if config_struct["FOV_type"] == "square":
-        width = config_struct["FOV"]/0.5
+        width = config_struct["FOV"]*0.5
     elif config_struct["FOV_type"] == "circle":
         width = config_struct["FOV"]*1.0
 
@@ -463,8 +463,8 @@ def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
         bounds = [[tile_struct[key]["ra"]-width, tile_struct[key]["ra"]+width],
                   [tile_struct[key]["dec"]-width, tile_struct[key]["dec"]+width]]
 
-        ras = np.linspace(tile_struct[key]["ra"]-width, tile_struct[key]["ra"]+width, 10)
-        decs = np.linspace(tile_struct[key]["dec"]-width, tile_struct[key]["dec"]+width, 10)
+        ras = np.linspace(tile_struct[key]["ra"]-width, tile_struct[key]["ra"]+width, 3)
+        decs = np.linspace(tile_struct[key]["dec"]-width, tile_struct[key]["dec"]+width, 3)
         RAs, DECs = np.meshgrid(ras, decs)
         ras, decs = RAs.flatten(), DECs.flatten()
 
