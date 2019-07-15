@@ -2,7 +2,6 @@
 import os, sys
 import time
 import copy
-
 import numpy as np
 import healpy as hp
 
@@ -11,8 +10,23 @@ import gwemopt.utils
 def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
 
     import pymultinest
-
-    Ntiles = params["Ntiles"]
+    
+    if params["doCalcTiles"]:
+        hpx = map_struct["prob"]
+        i = np.flipud(np.argsort(hpx)) #sort pixels by descending probability, cumsum then return to original order
+        sorted_credible_levels = np.cumsum(hpx[i])
+        credible_levels = np.empty_like(sorted_credible_levels)
+        credible_levels[i] = sorted_credible_levels
+        
+        if config_struct["FOV_type"] == "circle":
+            FOV = np.pi * config_struct["FOV"]**2
+        else:
+            FOV = config_struct["FOV"]**2
+        
+        sky_area = np.sum(credible_levels <= params["Ntiles_cr"])*map_struct["pixarea_deg2"] #calculate skyarea
+        Ntiles = int(np.ceil(sky_area/FOV))
+    else:
+        Ntiles = params["Ntiles"]
 
     map_struct_copy = copy.deepcopy(map_struct)
 
@@ -34,8 +48,8 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
         if prob == 0:
             prob = -np.inf
 
-        #if np.isfinite(prob):
-        #    print(ra, dec, prob)
+        if np.isfinite(prob):
+            print(ra, dec, prob)
 
         return prob
 

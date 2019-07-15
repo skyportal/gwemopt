@@ -90,7 +90,7 @@ def parse_commandline():
     parser.add_option("--doMovie",  action="store_true", default=False)
     parser.add_option("--doTiles",  action="store_true", default=False)
     parser.add_option("--tilesType", help="tiling type",default="moc")
-
+    
     parser.add_option("--doIterativeTiling",  action="store_true", default=False)
     parser.add_option("--doMinimalTiling",  action="store_true", default=False)
     parser.add_option("--doOverlappingScheduling",  action="store_true", default=False)
@@ -106,7 +106,6 @@ def parse_commandline():
                       type=str, default="S")
     parser.add_option("--writeCatalog",  action="store_true", default=False)
     parser.add_option("--catalog_n",default=1.0,type=float)
- 
     parser.add_option("--doObservability",  action="store_true", default=False)
     parser.add_option("--doSkybrightness",  action="store_true", default=False)
 
@@ -125,6 +124,8 @@ def parse_commandline():
                       default ="../lightcurves/Me2017_H4M050V20.dat")
     parser.add_option("--Ninj",default=1000,type=int)
     parser.add_option("--Ntiles",default=10,type=int)
+    parser.add_option("--doCalcTiles", action="store_true",default = False)
+    parser.add_option("--Ntiles_cr",default=0.70,type=float)
     parser.add_option("--Ndet",default=1,type=int)
     parser.add_option("--nside",default=256,type=int)
     parser.add_option("--DScale",default=1.0,type=float)
@@ -263,6 +264,7 @@ def params_struct(opts):
     params["Ninj"] = opts.Ninj
     params["Ndet"] = opts.Ndet
     params["Ntiles"] = opts.Ntiles
+    params["Ntiles_cr"] = opts.Ntiles_cr
     params["DScale"] = opts.DScale
     params["nside"] = opts.nside
     params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
@@ -270,13 +272,13 @@ def params_struct(opts):
     params["powerlaw_n"] = opts.powerlaw_n
     params["powerlaw_dist_exp"] = opts.powerlaw_dist_exp
     params["galaxies_FoV_sep"] = opts.galaxies_FoV_sep
-
+    
     params["doPlots"] = opts.doPlots
     params["doMovie"] = opts.doMovie
     params["doObservability"] = opts.doObservability
     params["do3D"] = opts.do3D
     params["doDatabase"] = opts.doDatabase
-
+    params["doCalcTiles"] = opts.doCalcTiles
     params["doFootprint"] = opts.doFootprint
     params["footprint_ra"] = opts.footprint_ra
     params["footprint_dec"] = opts.footprint_dec
@@ -385,6 +387,7 @@ if opts.doSamples:
         samples_struct = gwemopt.utils.samples_from_skymap(map_struct,is3D=True)
     else:
         samples_struct = gwemopt.utils.samples_from_skymap(map_struct,is3D=False)
+
 
 if opts.doSplit:
     print("Splitting skymap...")
