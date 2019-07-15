@@ -153,6 +153,13 @@ def powerlaw(params, map_struct, tile_structs):
         config_struct = params["config"][telescope]
         tile_struct = tile_structs[telescope]
 
+        # Try to load the minimum duration of time from telescope config file
+        # Otherwise set it to zero
+        try:   
+            min_obs_duration = config_struct["min_observability_duration"] / 24
+        except:
+            min_obs_duration = 0.0
+
         if "filt_change_time" in config_struct.keys(): filt_change_time = config_struct["filt_change_time"]
         else: filt_change_time = 0
 
@@ -207,6 +214,16 @@ def powerlaw(params, map_struct, tile_structs):
         else:
             if not params["tilesType"] == "galaxy":
                 tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct)      
+            else:
+                for key in tile_struct.keys():
+                    # Check that a given tile is observable a minimum amount of time
+                    # If not set the proba associated to the tile to zero
+                    if 'segmentlist' and 'prob' in tile_struct[key] and tile_struct[key]['segmentlist'] and min_obs_duration > 0.0:
+                        observability_duration = 0.0
+                        for counter in range(len(tile_struct[key]['segmentlist'])):
+                            observability_duration += tile_struct[key]['segmentlist'][counter][1] - tile_struct[key]['segmentlist'][counter][0]
+                        if tile_struct[key]['prob'] > 0.0 and observability_duration < min_obs_duration:
+                            tile_struct[key]['prob'] = 0.0
 
             coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
             if params["doMaxTiles"]:

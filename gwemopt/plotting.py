@@ -521,6 +521,18 @@ def coverage(params, map_struct, coverage_struct, catalog_struct=None):
         ax2.legend(loc=1,ncol=3,fontsize=10)
         ax2.set_ylim([0,1])
         ax3.set_ylim([0,2000])
+    elif "IRIS" in params["telescopes"]:
+        ax2.set_ylim([0,0.3])
+        ax3.set_ylim([0,1200])
+        ax2.legend(loc=1)     
+    elif "ZTF" in params["telescopes"]:
+        ax2.set_ylim([0,0.6])
+        ax3.set_ylim([0,6000])
+        ax2.legend(loc=1)
+    elif "PS1" in params["telescopes"]:
+        ax2.set_ylim([0,0.6])
+        ax3.set_ylim([0,6000])
+        ax2.legend(loc=1)
     else:
         ax2.legend(loc=1)
     plt.show()
