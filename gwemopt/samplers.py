@@ -43,13 +43,15 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
         if len(ipix) == 0:
             prob = -np.inf
         else:
-            prob = np.sum(map_struct_copy["prob"][ipix])
+            vals_to_sum = map_struct_copy["prob"][ipix]
+            vals_to_sum[vals_to_sum < 0] = 0
+            prob = np.sum(vals_to_sum)
 
         if prob == 0:
             prob = -np.inf
 
-        if np.isfinite(prob):
-            print(ra, dec, prob)
+        #if np.isfinite(prob):
+        #    print(ra, dec, prob)
 
         return prob
 
@@ -118,7 +120,7 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
         tile_struct[ii]["patch"] = patch
         tile_struct[ii]["area"] = area
 
-        map_struct_copy["prob"][ipix] = 0.0
+        map_struct_copy["prob"][ipix] = -1.0
         os.system("rm %s/*"%plotDir)
 
     return tile_struct
