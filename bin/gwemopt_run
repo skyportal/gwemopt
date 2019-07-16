@@ -407,13 +407,15 @@ if opts.doTiles:
     elif params["tilesType"] == "hierarchical":
         print("Generating hierarchical struct...")
         tile_structs = gwemopt.tiles.hierarchical(params, map_struct)
+        params["Ntiles"] = []
         for telescope in params["telescopes"]:
             params["config"][telescope]["tesselation"] = np.empty((0,3))
             tiles_struct = tile_structs[telescope]
             for index in tiles_struct.keys():
                 ra, dec = tiles_struct[index]["ra"], tiles_struct[index]["dec"]
                 params["config"][telescope]["tesselation"] = np.append(params["config"][telescope]["tesselation"],[[index,ra,dec]],axis=0)
-           
+            params["Ntiles"].append(len(tiles_struct.keys()))           
+
     elif params["tilesType"] == "greedy":
         print("Generating greedy struct...")
         tile_structs = gwemopt.tiles.greedy(params, map_struct)
