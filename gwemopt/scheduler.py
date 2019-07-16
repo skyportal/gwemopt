@@ -591,7 +591,7 @@ def summary(params, map_struct, coverage_struct):
     fid.write('%.5f %.5f\n'%(map_struct["pixarea_deg2"]*idx50,map_struct["pixarea_deg2"]*idx90))
     fid.close()
     filts = list(set(coverage_struct["filters"]))
-    for telescope in params["telescopes"]:
+    for jj, telescope in enumerate(params["telescopes"]):
 
         schedulefile = os.path.join(params["outputDir"],'schedule_%s.dat'%telescope)
         schedulexmlfile = os.path.join(params["outputDir"],'schedule_%s.xml'%telescope)
@@ -600,7 +600,7 @@ def summary(params, map_struct, coverage_struct):
         write_xml(schedulexmlfile,map_struct,coverage_struct,config_struct)
 
         if (params["tilesType"] == "hierarchical") or (params["tilesType"] == "greedy"):
-            fields = np.zeros((params["Ntiles"],len(filts)+2))
+            fields = np.zeros((params["Ntiles"][jj],len(filts)+2))
         else:
             fields = np.zeros((len(config_struct["tesselation"]),len(filts)+2))
 

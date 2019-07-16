@@ -90,11 +90,12 @@ def parse_commandline():
     parser.add_option("--doMovie",  action="store_true", default=False)
     parser.add_option("--doTiles",  action="store_true", default=False)
     parser.add_option("--tilesType", help="tiling type",default="moc")
-
+    
     parser.add_option("--doIterativeTiling",  action="store_true", default=False)
     parser.add_option("--doMinimalTiling",  action="store_true", default=False)
     parser.add_option("--doOverlappingScheduling",  action="store_true", default=False)
     parser.add_option("--doPerturbativeTiling",  action="store_true", default=False)
+    parser.add_option("--doOrderByObservability",  action="store_true", default=False)
 
     parser.add_option("--doCatalog",  action="store_true", default=False)
     parser.add_option("--doUseCatalog",  action="store_true", default=False)
@@ -105,7 +106,6 @@ def parse_commandline():
                       type=str, default="S")
     parser.add_option("--writeCatalog",  action="store_true", default=False)
     parser.add_option("--catalog_n",default=1.0,type=float)
- 
     parser.add_option("--doObservability",  action="store_true", default=False)
     parser.add_option("--doSkybrightness",  action="store_true", default=False)
 
@@ -124,6 +124,8 @@ def parse_commandline():
                       default ="../lightcurves/Me2017_H4M050V20.dat")
     parser.add_option("--Ninj",default=1000,type=int)
     parser.add_option("--Ntiles",default=10,type=int)
+    parser.add_option("--doCalcTiles", action="store_true",default = False)
+    parser.add_option("--Ntiles_cr",default=0.70,type=float)
     parser.add_option("--Ndet",default=1,type=int)
     parser.add_option("--nside",default=256,type=int)
     parser.add_option("--DScale",default=1.0,type=float)
@@ -262,6 +264,7 @@ def params_struct(opts):
     params["Ninj"] = opts.Ninj
     params["Ndet"] = opts.Ndet
     params["Ntiles"] = opts.Ntiles
+    params["Ntiles_cr"] = opts.Ntiles_cr
     params["DScale"] = opts.DScale
     params["nside"] = opts.nside
     params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
@@ -269,13 +272,13 @@ def params_struct(opts):
     params["powerlaw_n"] = opts.powerlaw_n
     params["powerlaw_dist_exp"] = opts.powerlaw_dist_exp
     params["galaxies_FoV_sep"] = opts.galaxies_FoV_sep
-
+    
     params["doPlots"] = opts.doPlots
     params["doMovie"] = opts.doMovie
     params["doObservability"] = opts.doObservability
     params["do3D"] = opts.do3D
     params["doDatabase"] = opts.doDatabase
-
+    params["doCalcTiles"] = opts.doCalcTiles
     params["doFootprint"] = opts.doFootprint
     params["footprint_ra"] = opts.footprint_ra
     params["footprint_dec"] = opts.footprint_dec
@@ -305,6 +308,7 @@ def params_struct(opts):
     params["doMinimalTiling"] = opts.doMinimalTiling
     params["doOverlappingScheduling"] = opts.doOverlappingScheduling
     params["doPerturbativeTiling"] = opts.doPerturbativeTiling
+    params["doOrderByObservability"] = opts.doOrderByObservability
 
     params["doCatalog"] = opts.doCatalog
     params["catalog_n"] = opts.catalog_n
@@ -384,6 +388,7 @@ if opts.doSamples:
     else:
         samples_struct = gwemopt.utils.samples_from_skymap(map_struct,is3D=False)
 
+
 if opts.doSplit:
     print("Splitting skymap...")
     map_struct["groups"] = gwemopt.mapsplit.similar_range(params, map_struct)
@@ -402,13 +407,15 @@ if opts.doTiles:
     elif params["tilesType"] == "hierarchical":
         print("Generating hierarchical struct...")
         tile_structs = gwemopt.tiles.hierarchical(params, map_struct)
+        params["Ntiles"] = []
         for telescope in params["telescopes"]:
             params["config"][telescope]["tesselation"] = np.empty((0,3))
             tiles_struct = tile_structs[telescope]
             for index in tiles_struct.keys():
                 ra, dec = tiles_struct[index]["ra"], tiles_struct[index]["dec"]
                 params["config"][telescope]["tesselation"] = np.append(params["config"][telescope]["tesselation"],[[index,ra,dec]],axis=0)
-           
+            params["Ntiles"].append(len(tiles_struct.keys()))           
+
     elif params["tilesType"] == "greedy":
         print("Generating greedy struct...")
         tile_structs = gwemopt.tiles.greedy(params, map_struct)
@@ -436,6 +443,23 @@ if opts.doTiles:
         print("Plotting tiles struct...")
         gwemopt.plotting.tiles(params, map_struct, tile_structs)
     
+if len(params["telescopes"]) > 1 and opts.doOrderByObservability:
+    observability = []
+    for telescope in params["telescopes"]:
+        config_struct = params["config"][telescope]
+        tiles_struct = tile_structs[telescope]
+        exposurelist = config_struct["exposurelist"]
+        observability_prob = 0.0
+        keys = tiles_struct.keys()
+        for jj, key in enumerate(keys):
+            tilesegmentlist = tiles_struct[key]["segmentlist"]
+            if tiles_struct[key]["prob"] == 0: continue
+            if tilesegmentlist.intersects_segment(exposurelist[0]):
+                observability_prob = observability_prob + tiles_struct[key]["prob"]
+        observability.append(observability_prob)
+    idx = np.argsort(observability)[::-1]
+    params["telescopes"] = [params["telescopes"][ii] for ii in idx]
+
 if opts.doSchedule:
     if opts.doTiles:
         print("Generating coverage...")
@@ -443,7 +467,6 @@ if opts.doSchedule:
     else:
         print("Need to enable --doTiles to use --doSchedule")
         exit(0)
-
 elif opts.doCoverage:
     print("Reading coverage from file...")
     coverage_struct = gwemopt.coverage.read_coverage_files(params)

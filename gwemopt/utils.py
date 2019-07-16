@@ -446,7 +446,7 @@ def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
     nside = params["nside"]
 
     if config_struct["FOV_type"] == "square":
-        width = config_struct["FOV"]/0.5
+        width = config_struct["FOV"]*0.5
     elif config_struct["FOV_type"] == "circle":
         width = config_struct["FOV"]*1.0
 
@@ -463,8 +463,8 @@ def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
         bounds = [[tile_struct[key]["ra"]-width, tile_struct[key]["ra"]+width],
                   [tile_struct[key]["dec"]-width, tile_struct[key]["dec"]+width]]
 
-        ras = np.linspace(tile_struct[key]["ra"]-width, tile_struct[key]["ra"]+width, 10)
-        decs = np.linspace(tile_struct[key]["dec"]-width, tile_struct[key]["dec"]+width, 10)
+        ras = np.linspace(tile_struct[key]["ra"]-width, tile_struct[key]["ra"]+width, 3)
+        decs = np.linspace(tile_struct[key]["dec"]-width, tile_struct[key]["dec"]+width, 3)
         RAs, DECs = np.meshgrid(ras, decs)
         ras, decs = RAs.flatten(), DECs.flatten()
 
@@ -588,8 +588,14 @@ def slice_galaxy_tiles(params, tile_struct, coverage_struct):
             if s.deg > 1:
                 continue
             galaxies2 = coverage_struct["galaxies"][jj]
-            overlap = np.setdiff1d(galaxies, galaxies2)
+            overlap = np.intersect1d(galaxies, galaxies2)
             if len(overlap) == 0:
+                continue
+
+            rat = np.array([float(len(overlap)) / float(len(galaxies)),
+                            float(len(overlap)) / float(len(galaxies2))])
+
+            if np.max(rat) > params["maximumOverlap"]:
                 tile_struct[key]['prob'] = 0.0
                 break
 
@@ -647,9 +653,6 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                 rat = np.array([float(len(overlap)) / float(len(ipix)),
                                 float(len(overlap)) / float(len(ipix2))])
         
-                if np.max(rat) > params["maximumOverlap"]:
-                    continue
- 
                 if not 'epochs' in tile_struct[key]:
                     tile_struct[key]["epochs"] = np.empty((0,8))
                 tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
