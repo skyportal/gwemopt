@@ -463,13 +463,17 @@ def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
         bounds = [[tile_struct[key]["ra"]-width, tile_struct[key]["ra"]+width],
                   [tile_struct[key]["dec"]-width, tile_struct[key]["dec"]+width]]
 
-        ras = np.linspace(tile_struct[key]["ra"]-width, tile_struct[key]["ra"]+width, 3)
-        decs = np.linspace(tile_struct[key]["dec"]-width, tile_struct[key]["dec"]+width, 3)
+        ras = np.linspace(tile_struct[key]["ra"]-width, tile_struct[key]["ra"]+width, 5)
+        decs = np.linspace(tile_struct[key]["dec"]-width, tile_struct[key]["dec"]+width, 5)
         RAs, DECs = np.meshgrid(ras, decs)
         ras, decs = RAs.flatten(), DECs.flatten()
 
         vals = []
         for ra, dec in zip(ras, decs):
+            if np.abs(dec) > 90:
+                vals.append(0)
+                continue
+
             moc_struct_temp = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
             idx = np.where(map_struct_hold["prob"][moc_struct_temp["ipix"]] == -1)[0]
             if len(map_struct_hold["prob"][moc_struct_temp["ipix"]]) == 0:
