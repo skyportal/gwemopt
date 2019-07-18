@@ -148,6 +148,7 @@ def read_skymap(params,is3D=False,map_struct=None):
     csm[sort_idx] = np.cumsum(map_struct["prob"][sort_idx])
 
     map_struct["cumprob"] = csm
+    map_struct["ipix_keep"] = np.where(csm <= params["iterativeOverlap"])[0]
 
     pixarea = hp.nside2pixarea(nside)
     pixarea_deg2 = hp.nside2pixarea(nside, degrees=True)
@@ -476,6 +477,7 @@ def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
 
             moc_struct_temp = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
             idx = np.where(map_struct_hold["prob"][moc_struct_temp["ipix"]] == -1)[0]
+            idx = np.setdiff1d(idx,map_struct_hold["ipix_keep"])
             if len(map_struct_hold["prob"][moc_struct_temp["ipix"]]) == 0:
                 rat = 0.0
             else:
