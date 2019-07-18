@@ -195,9 +195,9 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
     n, cl, dist_exp = params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"]
     
     if params["tilesType"] == "galaxy":
-        tile_probs = compute_tiles_map(params, tile_struct, prob, func='center')
+        tile_probs = compute_tiles_map(params, tile_struct, prob, func='center', ipix_keep=map_struct["ipix_keep"])
     else:
-        tile_probs = compute_tiles_map(params, tile_struct, prob, func='np.sum(x)')
+        tile_probs = compute_tiles_map(params, tile_struct, prob, func='np.sum(x)', ipix_keep=map_struct["ipix_keep"])
 
     tile_probs[tile_probs<np.max(tile_probs)*0.01] = 0.0
  
@@ -212,9 +212,9 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
     prob_scaled = prob_scaled / np.nansum(prob_scaled)
    
     if params["tilesType"] == "galaxy":
-        ranked_tile_probs = compute_tiles_map(params, tile_struct, prob_scaled, func='center')
+        ranked_tile_probs = compute_tiles_map(params, tile_struct, prob_scaled, func='center', ipix_keep=map_struct["ipix_keep"])
     else:
-        ranked_tile_probs = compute_tiles_map(params, tile_struct, prob_scaled, func='np.sum(x)')
+        ranked_tile_probs = compute_tiles_map(params, tile_struct, prob_scaled, func='np.sum(x)', ipix_keep=map_struct["ipix_keep"])
 
     ranked_tile_probs[np.isnan(ranked_tile_probs)] = 0.0
     ranked_tile_probs_thresh = np.max(ranked_tile_probs)*0.01
@@ -335,7 +335,7 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
     else:
         prob = map_struct["prob"]
 
-    ranked_tile_probs = compute_tiles_map(params, tile_struct, prob, func='np.sum(x)')
+    ranked_tile_probs = compute_tiles_map(params, tile_struct, prob, func='np.sum(x)', ipix_keep=map_struct["ipix_keep"])
     ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
 
     lim_mag = config_struct["magnitude"]
@@ -386,7 +386,7 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
     return tile_struct
 
-def compute_tiles_map(params, tile_struct, skymap, func=None):
+def compute_tiles_map(params, tile_struct, skymap, func=None, ipix_keep=[]):
 
     if func is None:
         f = lambda x: np.sum(x)
@@ -412,6 +412,7 @@ def compute_tiles_map(params, tile_struct, skymap, func=None):
     vals = np.nan*np.ones((ntiles,))
     for ii,key in enumerate(tile_struct.keys()):
         idx = np.where(prob[tile_struct[key]["ipix"]] == -1)[0]
+        idx = np.setdiff1d(idx,ipix_keep)
         if len(prob[tile_struct[key]["ipix"]]) == 0:
             rat = 0.0
         else:
