@@ -224,6 +224,16 @@ def powerlaw(params, map_struct, tile_structs):
                             observability_duration += tile_struct[key]['segmentlist'][counter][1] - tile_struct[key]['segmentlist'][counter][0]
                         if tile_struct[key]['prob'] > 0.0 and observability_duration < min_obs_duration:
                             tile_struct[key]['prob'] = 0.0
+            
+            if params["timeallocationType"] == "manual":
+                if params["observedTiles"]:
+                    for field_id in params["observedTiles"]:
+                        field_id = int(field_id)
+                        if field_id in tile_struct:
+                            tile_struct[field_id]['prob'] = 0.0
+            
+                else:
+                    raise ValueError("need to specify tiles that have been observed using --observedTiles")
 
             coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
             if params["doMaxTiles"]:
@@ -281,6 +291,11 @@ def timeallocation(params, map_struct, tile_structs):
             coverage_struct = gwemopt.coverage.waw(params, map_struct, tile_structs)
         else:
             raise ValueError("Need to enable --do3D for waw")
+
+    elif params["timeallocationType"] == "manual":
+        print("Generating manual schedule...")
+        tile_structs, coverage_struct = gwemopt.coverage.powerlaw(params, map_struct, tile_structs)
+
     elif params["timeallocationType"] == "pem":
         print("Generating PEM schedule...")
         coverage_struct = gwemopt.coverage.pem(params, map_struct, tile_structs)
