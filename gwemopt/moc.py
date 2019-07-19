@@ -63,12 +63,16 @@ def create_moc(params, map_struct=None):
                 index = index.astype(int)
                 moc_struct[index] = Fov2Moc(params, config_struct, telescope, ra, dec, nside)
 
+        if map_struct is not None:
+             ipix_keep = map_struct["ipix_keep"]
+        else:
+            ipix_keep = []
         if params["doMinimalTiling"]:
             moc_struct_new = copy.deepcopy(moc_struct)
             if params["tilesType"] == "galaxy":
-                tile_probs = gwemopt.tiles.compute_tiles_map(params, moc_struct_new, prob, func='center')
+                tile_probs = gwemopt.tiles.compute_tiles_map(params, moc_struct_new, prob, func='center', ipix_keep=ipix_keep)
             else:
-                tile_probs = gwemopt.tiles.compute_tiles_map(params, moc_struct_new, prob, func='np.sum(x)')
+                tile_probs = gwemopt.tiles.compute_tiles_map(params, moc_struct_new, prob, func='np.sum(x)', ipix_keep=ipix_keep)
 
             keys = moc_struct.keys()
 
