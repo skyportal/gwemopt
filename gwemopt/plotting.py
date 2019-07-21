@@ -43,7 +43,7 @@ def observability(params,map_struct):
         if not os.path.isdir(moviedir): os.mkdir(moviedir)
     
         for telescope in observability_struct.keys():
-            dts = observability_struct[telescope]["dts"].keys()
+            dts = len(observability_struct[telescope]["dts"].keys())
             dts = np.sort(dts)
             for ii,dt in enumerate(dts):
                 plotName = os.path.join(moviedir,'observability-%04d.png'%ii)
