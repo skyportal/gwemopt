@@ -86,7 +86,7 @@ def params_checker(params):
         params["telescopes"] = 'ATLAS'
 
     if type(params["telescopes"]) == str:
-        params["telescopes"].split(",")
+        params["telescopes"] = params["telescopes"].split(",")
 
     if "lightcurveFiles" not in params.keys():
         params["lightcurveFiles"] = "../lightcurves/Me2017_H4M050V20.dat"
