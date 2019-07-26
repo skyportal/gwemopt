@@ -5,6 +5,8 @@ import copy
 import numpy as np
 import healpy as hp
 import itertools
+import glob
+import astropy, astroplan
 
 from scipy.stats import norm
 from scipy.optimize import minimize
@@ -82,6 +84,9 @@ def params_checker(params):
 
     if "telescopes" not in params.keys():
         params["telescopes"] = 'ATLAS'
+
+    if type(params["telescopes"]) == str:
+        params["telescopes"].split(",")
 
     if "lightcurveFiles" not in params.keys():
         params["lightcurveFiles"] = "../lightcurves/Me2017_H4M050V20.dat"
@@ -179,18 +184,21 @@ def params_checker(params):
     if "Nregions" not in params.keys():
         params["Nregions"] = 768
 
+    if "configDirectory" not in params.keys():
+        params["configDirectory"] = "../config/"
+
     if "Ncores" not in params.keys():
         params["Ncores"] = 4
 
     if "config" not in params.keys():
         params["config"] = {}
-        configFiles = glob.glob("%s/*.config"%opts.configDirectory)
+        configFiles = glob.glob("%s/*.config"%params["configDirectory"])
         for configFile in configFiles:
             telescope = configFile.split("/")[-1].replace(".config","")
-            if not telescope in telescopes: continue
+            if not telescope in params["telescopes"]: continue
             params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
             params["config"][telescope]["telescope"] = telescope
-            if opts.doSingleExposure:
+            if params["doSingleExposure"]:
                 exposuretime = np.array(opts.exposuretimes.split(","),dtype=np.float)[0]
             
                 nmag = np.log(exposuretime/params["config"][telescope]["exposuretime"]) / np.log(2.5)
@@ -202,7 +210,7 @@ def params_checker(params):
                         gwemopt.tiles.tesselation_spiral(params["config"][telescope])
                     elif params["config"][telescope]["FOV_type"] == "square":
                         gwemopt.tiles.tesselation_packing(params["config"][telescope])
-                if opts.tilesType == "galaxy":
+                if params["tilesType"] == "galaxy":
                     params["config"][telescope]["tesselation"] = np.empty((3,))
                 else:
                     params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2),comments='%')
