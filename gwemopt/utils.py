@@ -51,6 +51,180 @@ def readParamsFromFile(file):
                         params[line_split[0]] = line_split[1]
     return params
 
+def params_checker(params):
+    #assigns defaults to params
+    do_Parameters = ["do3D","doEvent","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint"]
+ 
+    for parameter in do_Parameters:
+        if parameter not in params.keys():
+            params[parameter] = False
+
+    if "skymap" not in params.keys():
+        params["skymap"] = '../output/skymaps/G268556.fits'
+
+    if "gpstime" not in params.keys():
+        params["gpstime"] = 1167559936.0
+
+    if "outputDir" not in params.keys():
+        params["outputDir"] = "../output"
+
+    if "tilingDir" not in params.keys():
+        params["tilingDir"] = "../tiling"
+
+    if "catalogDir" not in params.keys():
+        params["catalogDir"] = "../catalogs"
+
+    if "event" not in params.keys():
+        params["event"] = "G268556"
+
+    if "coverageFiles" not in params.keys():
+        params["coverageFiles"] = "../data/ATLAS_GW170104.dat"
+
+    if "telescopes" not in params.keys():
+        params["telescopes"] = 'ATLAS'
+
+    if "lightcurveFiles" not in params.keys():
+        params["lightcurveFiles"] = "../lightcurves/Me2017_H4M050V20.dat"
+
+    if "tilesType" not in params.keys():
+        params["tilesType"] = "moc"
+
+    if "scheduleType" not in params.keys():
+        params["scheduleType"] = "greedy"
+
+    if "timeallocationType" not in params.keys():
+        params["timeallocationType"] = "powerlaw"
+
+    if "Ninj" not in params.keys():
+        params["Ninj"] = 1000
+
+    if "Ndet" not in params.keys():
+        params["Ndet"] = 1
+    
+    if "Ntiles" not in params.keys():
+        params["Ntiles"] = 10
+
+    if "Ntiles_cr" not in params.keys():
+        params["Ntiles_cr"] = 0.70
+
+    if "Dscale" not in params.keys():
+        params["Dscale"] = 1.0
+
+    if "nside" not in params.keys():
+        params["nside"] = 256
+
+    if "Tobs" not in params.keys():
+        params["Tobs"] = np.array([0.0,1.0])
+
+    if "powerlaw_c1" not in params.keys():
+        params["powerlaw_c1"] = 0.9
+
+    if "powerlaw_n" not in params.keys():
+        params["powerlaw_n"] = 1.0
+
+    if "powerlaw_dist_exp" not in params.keys():
+        params["powerlaw_dist_exp"] = 0
+
+    if "galaxies_FoV_sep" not in params.keys():
+        params["galaxies_FoV_sep"] = 1.0
+
+    if "footprint_ra" not in params.keys():
+        params["footprint_ra"] = 30.0
+
+    if "footprint_dec" not in params.keys():
+        params["footprint_dec"] = 60.0
+
+    if "footprint_radius" not in params.keys():
+        params["footprint_radius"] = 10.0
+
+    if "transientsFile" not in params.keys():
+        params["transientsFile"] = "../transients/ps1_objects.csv"
+
+    if "dt" not in params.keys():
+        params["dt"] = 14.0
+
+    if "galaxy_catalog" not in params.keys():
+        params["galaxy_catalog"] = "GLADE"
+    
+    if "filters" not in params.keys():
+        params["filters"] = ['r','g','r']
+
+    if "exposuretimes" not in params.keys():
+        params["exposuretimes"] = np.array([30.0,30.0,30.0])
+
+    if "max_nb_tiles" not in params.keys():
+        params["max_nb_tiles"] = np.array([-1,-1,-1])
+
+    if "mindiff" not in params.keys():
+        params["mindiff"] = 0.0
+
+    if "airmass" not in params.keys():
+        params["airmass"] = 2.5
+
+    if "iterativeOverlap" not in params.keys():
+        params["iterativeOverlap"] = 0.0
+
+    if "maximumOverlap" not in params.keys():
+        params["maximumOverlap"] = 1.0
+
+    if "catalog_n" not in params.keys():
+        params["catalog_n"] = 1.0
+
+    if "galaxy_grade" not in params.keys():
+        params["galaxy_grade"] = "S"
+
+    if "splitType" not in params.keys():
+        params["splitType"] = "regional"
+
+    if "Nregions" not in params.keys():
+        params["Nregions"] = 768
+
+    if "Ncores" not in params.keys():
+        params["Ncores"] = 4
+
+    if "config" not in params.keys():
+        params["config"] = {}
+        configFiles = glob.glob("%s/*.config"%opts.configDirectory)
+        for configFile in configFiles:
+            telescope = configFile.split("/")[-1].replace(".config","")
+            if not telescope in telescopes: continue
+            params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
+            params["config"][telescope]["telescope"] = telescope
+            if opts.doSingleExposure:
+                exposuretime = np.array(opts.exposuretimes.split(","),dtype=np.float)[0]
+            
+                nmag = np.log(exposuretime/params["config"][telescope]["exposuretime"]) / np.log(2.5)
+                params["config"][telescope]["magnitude"] = params["config"][telescope]["magnitude"] + nmag
+                params["config"][telescope]["exposuretime"] = exposuretime
+            if "tesselationFile" in params["config"][telescope]:
+                if not os.path.isfile(params["config"][telescope]["tesselationFile"]):
+                    if params["config"][telescope]["FOV_type"] == "circle":
+                        gwemopt.tiles.tesselation_spiral(params["config"][telescope])
+                    elif params["config"][telescope]["FOV_type"] == "square":
+                        gwemopt.tiles.tesselation_packing(params["config"][telescope])
+                if opts.tilesType == "galaxy":
+                    params["config"][telescope]["tesselation"] = np.empty((3,))
+                else:
+                    params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2),comments='%')
+
+            if "referenceFile" in params["config"][telescope]:
+                refs = table.unique(table.Table.read(
+                    params["config"][telescope]["referenceFile"],
+                    format='ascii', data_start=2, data_end=-1)['field', 'fid'])
+                reference_images =\
+                    {group[0]['field']: group['fid'].astype(int).tolist()
+                    for group in refs.group_by('field').groups}
+                reference_images_map = {1: 'g', 2: 'r', 3: 'i'}
+                for key in reference_images:
+                    reference_images[key] = [reference_images_map.get(n, n)
+                                             for n in reference_images[key]]
+                params["config"][telescope]["reference_images"] = reference_images
+                                                                     
+            location = astropy.coordinates.EarthLocation(params["config"][telescope]["longitude"],params["config"][telescope]["latitude"],params["config"][telescope]["elevation"])
+            observer = astroplan.Observer(location=location)
+            params["config"][telescope]["observer"] = observer
+
+
 def read_skymap(params,is3D=False,map_struct=None):
 
     if map_struct is None:
