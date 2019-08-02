@@ -55,7 +55,7 @@ def readParamsFromFile(file):
 
 def params_checker(params):
     #assigns defaults to params
-    do_Parameters = ["do3D","doEvent","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint"]
+    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint"]
  
     for parameter in do_Parameters:
         if parameter not in params.keys():
@@ -835,14 +835,20 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                     continue
                 ipix2 = coverage_struct["ipix"][jj]
                 overlap = np.intersect1d(ipix, ipix2)
-                if len(overlap) == 0:
-                    continue
-
+                
                 rat = np.array([float(len(overlap)) / float(len(ipix)),
                                 float(len(overlap)) / float(len(ipix2))])
-        
+                                
+                if params["doSuperSched"]:
+                    if np.max(rat) < 0.99:
+                        continue
+                elif len(overlap)==0:
+                        continue
+
                 if not 'epochs' in tile_struct[key]:
                     tile_struct[key]["epochs"] = np.empty((0,8))
+                    tile_struct[key]["epochs_telescope"] = np.empty((0,1))
                 tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
+                tile_struct[key]["epochs_telescope"] = np.append(tile_struct[key]["epochs_telescope"],np.atleast_2d(coverage_struct["telescope"][jj]),axis = 0)
 
     return tile_struct

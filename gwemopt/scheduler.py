@@ -615,12 +615,13 @@ def summary(params, map_struct, coverage_struct):
             patch = coverage_struct["patch"][ii]
             FOV = coverage_struct["FOV"][ii]
             area = coverage_struct["area"][ii]
-
+            rand = np.random.randint(2)
+            
             prob = np.sum(map_struct["prob"][ipix])
 
             ra, dec = data[0], data[1]
             observ_time, exposure_time, field_id, prob, airmass = data[2], data[4], data[5], data[6], data[7]
-            fid.write('%d %.5f %.5f %.5f %d %.5f %.5f %s\n'%(field_id,ra,dec,observ_time,exposure_time,prob,airmass,filt))
+            fid.write('%d %.5f %.5f %.5f %d %.5f %.5f %s %d\n'%(field_id,ra,dec,observ_time,exposure_time,prob,airmass,filt,rand))
 
             dist = angular_distance(data[0], data[1],
                                     config_struct["tesselation"][:,1],

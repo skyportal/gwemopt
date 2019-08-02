@@ -3,7 +3,7 @@ import os, sys
 import copy
 import numpy as np
 import healpy as hp
-
+import gwemopt.plotting
 from astropy.time import Time
 
 import gwemopt.utils
@@ -225,16 +225,19 @@ def powerlaw(params, map_struct, tile_structs):
                         if tile_struct[key]['prob'] > 0.0 and observability_duration < min_obs_duration:
                             tile_struct[key]['prob'] = 0.0
             
-            if params["timeallocationType"] == "manual":
-                if params["observedTiles"]:
+            if params["timeallocationType"] == "manual": #only works if using same telescope
+                try:
                     for field_id in params["observedTiles"]:
                         field_id = int(field_id)
                         if field_id in tile_struct:
                             tile_struct[field_id]['prob'] = 0.0
             
-                else:
+                except:
                     raise ValueError("need to specify tiles that have been observed using --observedTiles")
-
+                        
+            if params["doSuperSched"]:
+                tile_struct = erase_observed_tiles(params,tile_struct)
+            
             coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
             if params["doMaxTiles"]:
                 tile_struct, doReschedule = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct, coverage_struct)    
@@ -248,6 +251,10 @@ def powerlaw(params, map_struct, tile_structs):
             map_struct_hold = gwemopt.utils.slice_map_tiles(params, map_struct_hold, coverage_struct)
                
     map_struct["prob"] = full_prob_map
+
+    if params["doMovie_supersched"]:
+        gwemopt.plotting.doMovie_supersched(params,combine_coverage_structs(coverage_structs),tile_structs,map_struct)
+    
     return tile_structs, combine_coverage_structs(coverage_structs)
 
 def pem(params, map_struct, tile_structs):
@@ -279,6 +286,34 @@ def pem(params, map_struct, tile_structs):
             map_struct_hold = gwemopt.utils.slice_map_tiles(map_struct_hold, coverage_struct)
 
     return combine_coverage_structs(coverage_structs)
+
+def erase_observed_tiles(params,tile_struct):
+    Tobs = list(params["Tobs"])
+    Tobs = np.linspace(Tobs[0],Tobs[1],params["Tobs_split"]+1)
+
+    if f'{Tobs[0]:.2}_to_{Tobs[1]:.2}' in params["outputDir"]: #only proceeds if not first round of Tobs
+        return tile_struct
+    for ii,Tob in enumerate(Tobs[:-1]): #finds out which round function is being called in to figure out previous telescopes/coverage_structs
+        if f'{Tobs[ii]:.2}_to_{Tobs[ii+1]:.2}_Tobs' in params["outputDir"]:
+            break
+
+    while ii>0: #loops through all previous coverage structs + covered field ids to set tile probabilities to 0
+        ii-=1
+        prevtelescopes = params["alltelescopes"][ii].split(",")
+        coverage_struct = params["coverage_structs"][f'coverage_struct_{ii}']
+        tile_struct_hold = gwemopt.utils.check_overlapping_tiles(params,tile_struct,coverage_struct)
+        for prevtelescope in prevtelescopes:
+            for key in tile_struct.keys():
+                if 'epochs' in tile_struct_hold[key]:
+                    epochs = tile_struct_hold[key]["epochs"]
+                    for jj in range(len(epochs)):
+                        field_id = epochs[jj,5]
+                        telescope = tile_struct[key]["epochs_telescope"][jj]
+                        if field_id in params["covered_field_ids"][prevtelescope] and telescope == prevtelescope: #makes sure field id obtained from check_overlapping_tiles is for the correct telescope
+                            tile_struct[key]['prob'] = 0.0
+                            break
+
+    return tile_struct
 
 def timeallocation(params, map_struct, tile_structs):
 
