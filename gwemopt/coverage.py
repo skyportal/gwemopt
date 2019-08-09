@@ -136,7 +136,6 @@ def powerlaw(params, map_struct, tile_structs):
     coverage_structs = []
     n_scope = 0
     full_prob_map = map_struct["prob"]
-    filters, exposuretimes = params["filters"], params["exposuretimes"]
 
     for jj, telescope in enumerate(params["telescopes"]):
 
@@ -173,44 +172,18 @@ def powerlaw(params, map_struct, tile_structs):
             tile_struct = gwemopt.utils.check_overlapping_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))
 
         if params["doAlternatingFilters"]:
+            params_hold = copy.copy(params)
             tile_struct_hold = copy.copy(tile_struct)
-            coverage_structs_hold = []
-            maxidx = 0
-            for i in range(len(exposuretimes)):
-                params["filters"] = [filters[i]]
-                params["exposuretimes"] = [exposuretimes[i]]
-                config_struct["exposurelist"] = segments.segmentlist(config_struct["exposurelist"][maxidx:])
-                total_nexps  = len(config_struct["exposurelist"])
-
-                # if the duration of a single block is less than 30 min, shift by additional time to add up to 30 min
-                if i > 0:
-                    start = Time(coverage_struct_hold["data"][0][2], format='mjd')
-                    end =  Time(coverage_struct_hold["data"][-1][2], format='mjd')
-                    delta = end - start
-                    delta.format = 'sec'
-                    duration = delta.value + exposuretimes[i] + filt_change_time
-                    extra_time = (30 * 60) - duration
-                    if extra_time > 0: extra_time = extra_time + filt_change_time
-                    elif extra_time <= 0: extra_time = filt_change_time
-                    config_struct["exposurelist"] = config_struct["exposurelist"].shift(extra_time / 86400.)
-
-                if not params["tilesType"] == "galaxy":
-                    tile_struct_hold = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct_hold)
-
-                if params["doMaxTiles"]:
-                    tile_struct_hold = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct_hold) 
-                coverage_struct_hold = gwemopt.scheduler.scheduler(params, config_struct, tile_struct_hold)
-
-                if len(coverage_struct_hold["exposureused"]) > 0:
-                    maxidx = int(coverage_struct_hold["exposureused"][-1])
-                    deltaL = total_nexps - maxidx
-                elif len(coverage_struct_hold["exposureused"]) == 0: deltaL = 0
-
-                coverage_structs_hold.append(coverage_struct_hold)
-                if deltaL <= 1: break
-
-            coverage_struct = combine_coverage_structs(coverage_structs_hold)
-
+            coverage_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct, telescope, map_struct_hold, tile_struct_hold)
+            if params["doBalanceExposure"]:
+                cnt, ntrials = 0, 10
+                while cnt < ntrials:
+                    tile_struct_hold, doReschedule = gwemopt.utils.balance_tiles(params, telescope, tile_struct_hold, coverage_struct)
+                    if doReschedule:
+                        coverage_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct, telescope, map_struct_hold, tile_struct_hold)
+                        cnt = cnt + 1
+                    else:
+                        break
         else:
             if not params["tilesType"] == "galaxy":
                 tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct)      
