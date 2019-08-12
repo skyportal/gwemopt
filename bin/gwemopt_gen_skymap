@@ -76,6 +76,8 @@ def parse_commandline():
     parser.add_option("--radius_inner",default=8.242,type=float)
     parser.add_option("--radius_outer",default=2.398,type=float)
 
+    parser.add_option("--doGalactic",  action="store_true", default=False)
+
     parser.add_option("--doSquare",  action="store_true", default=False)
     #parser.add_option("--ras",default="290.010,290.186,265.423,264.736")
     #parser.add_option("--decs",default="48.528,48.912,43.214,42.455")
@@ -358,8 +360,11 @@ unit='Gravitational-wave probability'
 cbar=False
 
 plt.figure()
-hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix))
-gwemopt.plotting.add_edges()
+if opts.doGalactic:
+    hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix),coord=['C','G'])
+else:
+    hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix))
+    gwemopt.plotting.add_edges()
 if opts.doCandidate:
     hp.visufunc.projscatter(opts.ra_candidate, opts.dec_candidate, lonlat=True)
 plt.show()
