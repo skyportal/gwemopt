@@ -51,6 +51,7 @@ def parse_commandline():
     parser.add_option("--doSchedule",  action="store_true", default=False)
     parser.add_option("--doTiles",  action="store_true", default=False)
     parser.add_option("--iterativeOverlap",default=0.0,type=float)
+    parser.add_option("--doCalcTiles", action="store_true",default = False)
 
     parser.add_option("--doMovie_supersched",  action="store_true", default=False)
     parser.add_option("--powerlaw_cl",default=0.9,type=float)
@@ -60,6 +61,7 @@ def parse_commandline():
     parser.add_option("--Tobs_split",default=2,type=int)
     parser.add_option("--doSkymap",  action="store_true", default=False)
     parser.add_option("--doEfficiency",  action="store_true", default=False)
+    parser.add_option("--exposuretimes",default="30.0,30.0,30.0")
 
     parser.add_option("--doMinimalTiling",  action="store_true", default=False)
     parser.add_option("--doReferences",  action="store_true", default=False)
@@ -68,7 +70,8 @@ def parse_commandline():
                       default = 'ZTF+DECam')
     parser.add_option("--doChipGaps",  action="store_true", default=False)
     parser.add_option("--doParallel",action="store_true",default=False)
-                      
+    parser.add_option("--doSingleExposure",  action="store_true", default=False)
+
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                                         help="Run verbosely. (Default: False)")
                       
@@ -102,6 +105,12 @@ def params_struct(opts,schedround):
         if not telescope in telescopes: continue
         params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
         params["config"][telescope]["telescope"] = telescope
+        if opts.doSingleExposure:
+            exposuretime = np.array(opts.exposuretimes.split(","),dtype=np.float)[0]
+            
+            nmag = np.log(exposuretime/params["config"][telescope]["exposuretime"]) / np.log(2.5)
+            params["config"][telescope]["magnitude"] = params["config"][telescope]["magnitude"] + nmag
+            params["config"][telescope]["exposuretime"] = exposuretime
         if "tesselationFile" in params["config"][telescope]:
             if not os.path.isfile(params["config"][telescope]["tesselationFile"]):
                 if params["config"][telescope]["FOV_type"] == "circle":
@@ -155,9 +164,11 @@ def params_struct(opts,schedround):
     params["powerlaw_n"] = opts.powerlaw_n
     params["powerlaw_dist_exp"] = opts.powerlaw_dist_exp
     params["doChipGaps"] = opts.doChipGaps
-    params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
+    params["Tobs_all"] = np.array(opts.Tobs.split(","),dtype=np.float)
     params["doParallel"] = opts.doParallel
-    
+    params["doCalcTiles"] = opts.doCalcTiles
+    params["doSingleExposure"] = opts.doSingleExposure
+    params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
 
     return params
 
@@ -173,9 +184,8 @@ warnings.filterwarnings("ignore")
 opts = parse_commandline()
 alltelescopes = opts.alltelescopes.split("+")
 if not os.path.isdir(opts.outputDir): os.makedirs(opts.outputDir)
-Tobs = opts.Tobs.split(",")
-Tobs = [float(a) for a in Tobs]
 Tobs_split = opts.Tobs_split
+Tobs = np.array(opts.Tobs.split(","),dtype=np.float)
 Tobs = np.linspace(Tobs[0],Tobs[1],Tobs_split+1)
 
 if len(alltelescopes) != Tobs_split:
@@ -194,6 +204,7 @@ for ii,schedround in enumerate(alltelescopes):
     params["covered_field_ids"] = covered_field_ids_hold
     params["tile_structs"] = tile_structs_hold
     gwemopt.utils.params_checker(params)
+    params["Tobs"] = np.array([Tobs[ii],Tobs[ii+1]],dtype=np.float)
     parentdir = params["outputDir"]
     params["outputDir"] = os.path.join(parentdir,f'{Tobs[ii]:.2}_to_{Tobs[ii+1]:.2}_Tobs')
     if not os.path.isdir(params["outputDir"]): os.mkdir(params["outputDir"])
@@ -201,8 +212,10 @@ for ii,schedround in enumerate(alltelescopes):
     if opts.doSkymap:
         params["skymap"]
         params["gpstime"]
-    
-    params = gwemopt.segments.get_telescope_segments(params)
+    try:
+        params = gwemopt.segments.get_telescope_segments(params)
+    except:
+        raise ValueError(f'Could not get segments for telescope(s) during round number {ii}.')
     map_struct = gwemopt.utils.read_skymap(params, is3D=False)
 
     if opts.doPlots:
@@ -261,25 +274,24 @@ for ii,schedround in enumerate(alltelescopes):
 
     if ii>0: #reads in field ids of tiles that were covered in previous round and appends according to telescope
         
-        for telescope in params["telescopes"]:
-            #read in 0s and 1s
-            prevtelescopes = alltelescopes[ii-1].split(",")
-            prevfile = os.path.join(parentdir,f'{Tobs[ii-1]:.2}_to_{Tobs[ii]:.2}_Tobs')
-            if not os.path.isdir(prevfile): os.mkdir(prevfile)
-            for prevtelescope in prevtelescopes:
-                if prevtelescope not in params["covered_field_ids"]:
-                    params["covered_field_ids"][prevtelescope] = []
-                schedfile = f'schedule_{prevtelescope}.dat'
-                data_file = os.path.join(prevfile,schedfile)
-                try:
-                    with open(data_file, "r") as f: #read in field_ids and whether observed
-                        for line in f:
-                            data = list(line.split(' '))
-                            field_id = int(data[0])
-                            if int(data[8]) == 1:
-                                params["covered_field_ids"][prevtelescope].append(field_id) #get list of observed tiles
-                except IOError:
-                    print("sched file could not be opened")
+        prevtelescopes = alltelescopes[ii-1].split(",")
+        prevfile = os.path.join(parentdir,f'{Tobs[ii-1]:.2}_to_{Tobs[ii]:.2}_Tobs')
+        if not os.path.isdir(prevfile): os.mkdir(prevfile)
+        for prevtelescope in prevtelescopes:
+            if prevtelescope not in params["covered_field_ids"]:
+                params["covered_field_ids"][prevtelescope]=[]
+            schedfile = f'schedule_{prevtelescope}.dat'
+            data_file = os.path.join(prevfile,schedfile)
+            try:
+                with open(data_file, "r") as f: #read in field_ids and whether observed
+                    for line in f:
+                        data = list(line.split(' '))
+                        field_id = int(data[0])
+                        if int(data[8]) == 1:
+                            params["covered_field_ids"][prevtelescope].append(field_id) #get list of observed tiles
+
+            except IOError:
+                print("sched file could not be opened")
 
     if opts.doSchedule:
         if opts.doTiles:
@@ -298,6 +310,29 @@ for ii,schedround in enumerate(alltelescopes):
             gwemopt.plotting.coverage(params, map_struct, params["coverage_structs"][f'coverage_struct_{ii}'])
 
     params["tile_structs"][f'tile_structs_{ii}'] = tile_structs
+
+#gets covered field ids for last round
+
+prevtelescopes = alltelescopes[-1].split(",")
+prevfile = os.path.join(parentdir,f'{Tobs[-2]:.2}_to_{Tobs[-1]:.2}_Tobs')
+if not os.path.isdir(prevfile): os.mkdir(prevfile)
+for prevtelescope in prevtelescopes:
+    if prevtelescope not in params["covered_field_ids"]:
+        params["covered_field_ids"][prevtelescope]=[]
+    schedfile = f'schedule_{prevtelescope}.dat'
+    data_file = os.path.join(prevfile,schedfile)
+    try:
+        with open(data_file, "r") as f: #read in field_ids and whether observed
+            for line in f:
+                data = list(line.split(' '))
+                field_id = int(data[0])
+                if int(data[8]) == 1:
+                    params["covered_field_ids"][prevtelescope].append(field_id) #get list of observed tiles
+            
+    except IOError:
+        print("sched file could not be opened")
+
+
 
 if params["doMovie_supersched"]:
 

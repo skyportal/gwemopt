@@ -689,7 +689,10 @@ def doMovie_supersched(params,coverage_structs,tile_structs,map_struct):
     cbar=False
     
     idx = np.isfinite(coverage_structs["data"][:,2])
-    mjd_min = np.min(coverage_structs["data"][idx,2])
+    try:
+        mjd_min = np.min(coverage_structs["data"][idx,2])
+    except:
+        raise ValueError("Not enough scheduled tiles during observation round to make movie.")
     mjd_max = np.max(coverage_structs["data"][idx,2])
     mjd_N = 100
     
@@ -743,7 +746,7 @@ def doMovie_supersched(params,coverage_structs,tile_structs,map_struct):
             hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
         #tiles.plot()
 
-        Tobs = list(params["Tobs"])
+        Tobs = list(params["Tobs_all"])
         Tobs = np.linspace(Tobs[0],Tobs[1],params["Tobs_split"]+1)
 
         if f'{Tobs[0]:.2}_to_{Tobs[1]:.2}' not in params["outputDir"]: #only proceeds if not first round of Tobs

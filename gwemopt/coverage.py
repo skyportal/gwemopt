@@ -288,7 +288,7 @@ def pem(params, map_struct, tile_structs):
     return combine_coverage_structs(coverage_structs)
 
 def erase_observed_tiles(params,tile_struct):
-    Tobs = list(params["Tobs"])
+    Tobs = list(params["Tobs_all"])
     Tobs = np.linspace(Tobs[0],Tobs[1],params["Tobs_split"]+1)
 
     if f'{Tobs[0]:.2}_to_{Tobs[1]:.2}' in params["outputDir"]: #only proceeds if not first round of Tobs
