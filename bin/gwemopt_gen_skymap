@@ -76,6 +76,8 @@ def parse_commandline():
     parser.add_option("--radius_inner",default=8.242,type=float)
     parser.add_option("--radius_outer",default=2.398,type=float)
 
+    parser.add_option("--doGalactic",  action="store_true", default=False)
+
     parser.add_option("--doSquare",  action="store_true", default=False)
     #parser.add_option("--ras",default="290.010,290.186,265.423,264.736")
     #parser.add_option("--decs",default="48.528,48.912,43.214,42.455")
@@ -90,8 +92,12 @@ def parse_commandline():
     parser.add_option("-o", "--original_skymap", help="GW skymap.", default='../data/GW190425/LALInference.fits')
 
     parser.add_option("--doCandidate",  action="store_true", default=False)
-    parser.add_option("--ra_candidate",default=255.326375)
-    parser.add_option("--dec_candidate",default=-7.002889)
+    parser.add_option("--ra_candidate",default=255.326375,type=float)
+    parser.add_option("--dec_candidate",default=-7.002889,type=float)
+
+    parser.add_option("--doLongitudeCut",  action="store_true", default=False)
+    parser.add_option("--longitude_low",default=12.0,type=float)
+    parser.add_option("--longitude_high",default=16.0,type=float)
 
     parser.add_option("--doGetFields",  action="store_true", default=False)
     parser.add_option("--fields_type", default='circle')
@@ -141,6 +147,19 @@ def tesselation_spiral(FOV, scale=0.80):
 def do_excise(healpix,excise_file):
 
     ipix = np.loadtxt(excise_file).astype(int)
+    healpix[ipix] = 0.0
+    healpix = healpix / np.sum(healpix)
+
+    return healpix
+
+def get_longitudecut(healpix, nside, longitude_low, longitude_high):
+
+    npix = hp.nside2npix(nside)
+    theta, phi = hp.pix2ang(nside, np.arange(npix))
+    ra = np.rad2deg(phi)
+    dec = np.rad2deg(0.5*np.pi - theta)
+
+    ipix = np.where((longitude_high*360.0/24.0 < ra) | (longitude_low*360.0/24.0 > ra))[0]
     healpix[ipix] = 0.0
     healpix = healpix / np.sum(healpix)
 
@@ -319,6 +338,9 @@ else:
 if opts.doIntersect:
     healpix = get_intersect(healpix,opts.original_skymap,opts.nside)
 
+if opts.doLongitudeCut:
+    healpix = get_longitudecut(healpix, opts.nside, opts.longitude_low, opts.longitude_high)
+
 if opts.doExcise:
     healpix = do_excise(healpix,opts.excise_file)
 
@@ -338,8 +360,11 @@ unit='Gravitational-wave probability'
 cbar=False
 
 plt.figure()
-hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix))
-gwemopt.plotting.add_edges()
+if opts.doGalactic:
+    hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix),coord=['C','G'])
+else:
+    hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix))
+    gwemopt.plotting.add_edges()
 if opts.doCandidate:
     hp.visufunc.projscatter(opts.ra_candidate, opts.dec_candidate, lonlat=True)
 plt.show()

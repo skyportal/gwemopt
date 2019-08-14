@@ -736,6 +736,31 @@ def slice_number_tiles(params, telescope, tile_struct, coverage_struct):
 
     return tile_struct, True        
 
+def balance_tiles(params, telescope, tile_struct, coverage_struct):
+
+    filters, exposuretimes = params["filters"], params["exposuretimes"]
+
+    keys = list(tile_struct.keys())
+    keys_scheduled = coverage_struct["data"][:,5]
+    filts = coverage_struct["filters"]
+
+    nobs = np.zeros((len(keys),len(filters)))
+    idy = 0
+    for ii, (key,filt) in enumerate(zip(keys_scheduled,filts)):
+        idx = np.where(key == keys)[0]
+        if (ii > 0) and (not filts[ii] == filts[ii-1]):
+            idy = idy + 1
+        nobs[idx,idy] = 1
+
+    doReschedule = False
+    for ii, key in enumerate(keys):
+        # in the golden tile set
+        if (nobs[ii,0] == 1) and not (np.sum(nobs[ii,:]) == len(filters)):
+            tile_struct[key]['prob'] = 0.0
+            doReschedule = True
+
+    return tile_struct, doReschedule
+
 def slice_galaxy_tiles(params, tile_struct, coverage_struct):
 
     coverage_ras = coverage_struct["data"][:,0]

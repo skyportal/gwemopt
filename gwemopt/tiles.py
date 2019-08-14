@@ -426,7 +426,9 @@ def compute_tiles_map(params, tile_struct, skymap, func=None, ipix_keep=[]):
                 vals_to_sum = prob[tile_struct[key]["ipix"]]
                 vals_to_sum[vals_to_sum < 0] = 0
                 vals[ii] = f(vals_to_sum)
-        prob[tile_struct[key]["ipix"]] = -1
+        ipix_slice = np.setdiff1d(tile_struct[key]["ipix"],ipix_keep)
+        if len(ipix_slice) > 0:
+            prob[ipix_slice] = -1
 
     return vals
 

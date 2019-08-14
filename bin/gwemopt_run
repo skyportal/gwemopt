@@ -157,6 +157,7 @@ def parse_commandline():
     parser.add_option("--doAlternatingFilters",  action="store_true", default=False)
     parser.add_option("--iterativeOverlap",default=0.0,type=float)
     parser.add_option("--maximumOverlap",default=1.0,type=float)
+    parser.add_option("--doBalanceExposure",  action="store_true", default=False)
 
     parser.add_option("--exposuretimes",default="30.0,30.0,30.0")
 
@@ -293,6 +294,7 @@ def params_struct(opts):
     params["galaxy_catalog"] = opts.galaxy_catalog
 
     params["doSingleExposure"] = opts.doSingleExposure
+    params["doBalanceExposure"] = opts.doBalanceExposure
     params["filters"] = opts.filters.split(",")
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
     params["doMovie_supersched"] = False
