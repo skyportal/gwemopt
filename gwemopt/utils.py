@@ -232,6 +232,7 @@ def params_checker(params):
             observer = astroplan.Observer(location=location)
             params["config"][telescope]["observer"] = observer
 
+    return params
 
 def read_skymap(params,is3D=False,map_struct=None):
 
