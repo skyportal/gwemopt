@@ -60,7 +60,7 @@ install_requires = [
     'mocpy',
     'astroquery',
     'astroplan',
-    'pyephem',
+    'ephem',
     'pyyaml',
     'VOEventLib',
     'joblib',
