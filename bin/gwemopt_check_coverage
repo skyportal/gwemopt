@@ -60,12 +60,12 @@ def parse_commandline():
     parser = optparse.OptionParser(usage=__doc__,version=__version__)
 
     parser.add_option("-s", "--skymap", help="GW skymap.", default='../data/S190510g/LALInference.fits.gz')
-    parser.add_option("-p", "--skymapplot", help="GW skymap plot.", default='../output/skymaps/GW190426_KMNet.pdf')
-
     parser.add_option("-f", "--filename", help="GW coverage file.", default='../data/GW190426/KMNet.dat')
 
     parser.add_option("-t", "--FOV_type", help="FOV type", default='square')
     parser.add_option("--FOV",default=2.0,type=float)
+    parser.add_option("--FOV_ra",default=2.0,type=float)
+    parser.add_option("--FOV_dec",default=4.0,type=float)
 
     parser.add_option("--nside",default=512,type=int)
 
@@ -96,6 +96,8 @@ def gen_coverage(healpix, ras, decs, FOV_type, FOV, nside):
             ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra,dec,FOV,nside)
         elif FOV_type == "circle":
             ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra,dec,FOV,nside)
+        elif FOV_type == "rectangle":
+            ipix, radecs, patch, area = gwemopt.utils.getRectanglePixels(ra,dec,FOV[0],FOV[1],nside)
         ipixs = np.hstack((ipixs,ipix))
     ipixs = np.unique(ipixs).astype(int)
 
@@ -132,6 +134,11 @@ for line in lines:
     ras.append(float(lineSplit[3]))
     decs.append(float(lineSplit[4]))
 
-gen_coverage(healpix, ras, decs, opts.FOV_type, opts.FOV, opts.nside)
+if opts.FOV_type == "rectangle":
+    FOV = [opts.FOV_ra,opts.FOV_dec]
+else:
+    FOV = opts.FOV
+
+gen_coverage(healpix, ras, decs, opts.FOV_type, FOV, opts.nside)
 
 
