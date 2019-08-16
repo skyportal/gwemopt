@@ -203,10 +203,14 @@ def get_catalog(params, map_struct):
         idx = np.arange(len(r)).astype(int)
 
     # this happens when we are using a tiny catalog...
+    if len(idx) == 0:
+        idx = np.arange(len(r)).astype(int)
     if np.all(Sloc == 0.0):
         Sloc[:] = 1.0
 
     L_nu = const * 10.**((mag + MAB0)/(-2.5))
+    idx2 = np.where(~np.isfinite(L_nu))[0]
+    L_nu[idx2] = 0.0
     L_nu = L_nu / np.nanmax(L_nu[idx])
     L_nu = L_nu**params["catalog_n"]
     L_nu[L_nu < 0.001] = 0.001
