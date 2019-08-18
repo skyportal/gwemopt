@@ -34,6 +34,9 @@ np.random.seed(0)
 
 import healpy as hp
 from astropy import table
+from astropy import units as u
+from astropy import cosmology
+from astropy.coordinates import Distance
 
 import matplotlib
 #matplotlib.rc('text', usetex=True)
@@ -42,6 +45,8 @@ matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
 from matplotlib import cm
+
+import ligo.skymap.distance as ligodist
 
 import gwemopt.utils, gwemopt.plotting
 import gwemopt.moc, gwemopt.tiles 
@@ -136,15 +141,34 @@ params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"] = 0.0, 
 params["gpstime"] = 1000000000
 params["Tobs"] = np.array([0.0,1.0])
 params["exposuretimes"] = [30.0]
-params = gwemopt.segments.get_telescope_segments(params)
 params["rotation"] = [opts.rotation,0,0]
+
+params = gwemopt.utils.params_checker(params)
+params = gwemopt.segments.get_telescope_segments(params)
 
 moc_structs = gwemopt.moc.create_moc(params)
 
 map_struct = {}
-healpix = hp.read_map(opts.skymap)
-map_struct["prob"] = healpix
-map_struct["prob"] = hp.ud_grade(map_struct["prob"],opts.nside,power=-2)
+healpix_data = hp.read_map(opts.skymap, field=(0,1,2,3), verbose=False)
+
+distmu_data = healpix_data[1]
+distsigma_data = healpix_data[2]
+prob_data = healpix_data[0]
+norm_data = healpix_data[3]
+
+map_struct["distmu"] = distmu_data
+map_struct["distsigma"] = distsigma_data
+map_struct["prob"] = prob_data
+map_struct["distnorm"] = norm_data
+
+map_struct["prob"], map_struct["distmu"],map_struct["distsigma"], map_struct["distnorm"] = ligodist.ud_grade(map_struct["prob"],map_struct["distmu"],map_struct["distsigma"],opts.nside)
+
+for transient in transients:
+    idx = hp.ang2pix(opts.nside, transient["ra"],
+                     transient["dec"], lonlat=True)
+    d = Distance(map_struct["distmu"][idx], u.Mpc)
+    d1, d2 = Distance(map_struct["distmu"][idx]-map_struct["distsigma"][idx], u.Mpc), Distance(map_struct["distmu"][idx]+map_struct["distsigma"][idx], u.Mpc)
+    print('%s: %.0f +- %.0f, %.3f +- %.3f' % (transient["name"], map_struct["distmu"][idx], map_struct["distsigma"][idx],d.z,np.mean(np.abs([d.z-d1.z,d.z-d2.z]))))
 
 tiles_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
 
