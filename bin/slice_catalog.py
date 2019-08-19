@@ -7,7 +7,7 @@ from astropy import units as u
 filename = '../catalog/CLU_20170106_galexwise_DaveUpdate.fits'
 filename = '../catalog/CLU_20181213V2.fits'
 filename = '../catalog/CLU_20190406_filled.hdf5'
-filename = '../catalog/CLU_20190708.hdf5'
+filename = '../catalog/CLU_20190708_marshalFormat.hdf5'
 
 t = Table.read(filename)
 columns = ['name', 'ra', 'dec', 'distmpc', 'sfr_fuv', 'mstar',

@@ -37,6 +37,7 @@ from astropy import table
 from astropy import units as u
 from astropy import cosmology
 from astropy.coordinates import Distance
+from astropy.coordinates import SkyCoord
 
 import matplotlib
 #matplotlib.rc('text', usetex=True)
@@ -78,6 +79,8 @@ def parse_commandline():
     parser.add_option("-f","--filter",default="1,2")
     parser.add_option("--rotation",default=240.0,type=float)
 
+    parser.add_option("--catalogFile", default="../catalogs/CLU.hdf5")
+
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
 
@@ -108,6 +111,19 @@ warnings.filterwarnings("ignore")
 # Parse command line
 opts = parse_commandline()
 filters = [int(x) for x in opts.filter.split(",")]
+
+t = table.Table.read(opts.catalogFile)
+name = t["name"]
+ra, dec = t["ra"], t["dec"]
+sfr_fuv, mstar = t["sfr_fuv"], t["mstar"]
+distmpc, magb = t["distmpc"], t["magb"]
+a, b2a, pa = t["a"], t["b2a"], t["pa"]
+btc = t["btc"]
+
+catalog = SkyCoord(ra=ra,
+                   dec=dec, 
+                   distance=distmpc*u.Mpc,
+                   frame='icrs')
 
 params = {}
 params["config"] = {}
@@ -164,11 +180,32 @@ map_struct["distnorm"] = norm_data
 map_struct["prob"], map_struct["distmu"],map_struct["distsigma"], map_struct["distnorm"] = ligodist.ud_grade(map_struct["prob"],map_struct["distmu"],map_struct["distsigma"],opts.nside)
 
 for transient in transients:
+    print(transient["name"])
     idx = hp.ang2pix(opts.nside, transient["ra"],
                      transient["dec"], lonlat=True)
     d = Distance(map_struct["distmu"][idx], u.Mpc)
+    if map_struct["distsigma"][idx] > map_struct["distmu"][idx]:
+        map_struct["distsigma"][idx] = map_struct["distmu"][idx]-1
+        print('error greater than mean, setting close to equal')
     d1, d2 = Distance(map_struct["distmu"][idx]-map_struct["distsigma"][idx], u.Mpc), Distance(map_struct["distmu"][idx]+map_struct["distsigma"][idx], u.Mpc)
-    print('%s: %.0f +- %.0f, %.3f +- %.3f' % (transient["name"], map_struct["distmu"][idx], map_struct["distsigma"][idx],d.z,np.mean(np.abs([d.z-d1.z,d.z-d2.z]))))
+    print('Distance: %.0f +- %.0f, %.3f +- %.3f' % (map_struct["distmu"][idx], map_struct["distsigma"][idx],d.z,np.mean(np.abs([d.z-d1.z,d.z-d2.z]))))
+
+    transient_coord = SkyCoord(ra=transient["ra"]*u.degree,
+                               dec=transient["dec"]*u.degree,
+                               frame='icrs')
+    sep = catalog.separation(transient_coord).arcsec
+    idx2 = np.argsort(sep)
+    print('Galaxies')
+    for ii in range(5):
+        idy = idx2[ii]
+        if sep[idy] > 100: continue
+        dg = Distance(distmpc[idy], u.Mpc)
+        print('%s %.5f %.5f %.5f %.5f %.5f' % (name[idy], ra[idy], dec[idy],
+                                               sep[idy], distmpc[idy], dg.z))  
+
+    print(' ')
+  
+print(stop)
 
 tiles_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
 
