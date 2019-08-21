@@ -180,6 +180,7 @@ def powerlaw(params, map_struct, tile_structs):
                 while cnt < ntrials:
                     tile_struct_hold, doReschedule = gwemopt.utils.balance_tiles(params, telescope, tile_struct_hold, coverage_struct)
                     if doReschedule:
+                        params_hold = copy.copy(params)
                         coverage_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct, telescope, map_struct_hold, tile_struct_hold)
                         cnt = cnt + 1
                     else:
