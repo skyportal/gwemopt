@@ -264,17 +264,17 @@ def init_observation_plan(VO_dic, skymappath, dirpath="", filename=""):
     params["doSchedule"] = False
     params["doMinimalTiling"] = True
     params["doIterativeTiling"] = True
-    params["doMaxTiles"] = False
-    params["iterativeOverlap"] = 0.10
-    params["maximumOverlap"] = 0.20
+    params["doMaxTiles"] = True
+    params["iterativeOverlap"] = 0.2
+    params["maximumOverlap"] = 0.2
 
     params["catalog_n"] = 1.0
     params["doUseCatalog"] = False
     params["catalogDir"] = "../catalogs"
     params["galaxy_catalog"] = "GLADE"
-    params["doCatalog"] = True
+    params["doCatalog"] = False
     params["galaxy_grade"] = 'Sloc'
-    params["writeCatalog"] = True
+    params["writeCatalog"] = False
     params["doParallel"] = False
     params["Ncores"] = 2
     params["doAlternatingFilters"] = False
@@ -294,14 +294,15 @@ def init_observation_plan(VO_dic, skymappath, dirpath="", filename=""):
     params["nside"] = skymap_header['NSIDE']
     params["DISTMEAN"] = skymap_header['DISTMEAN']
     params["DISTSTD"] = skymap_header['DISTSTD']
-    
-    #if the  mean distance(+error) of the skymap is more than 200Mpc we don't want to use galaxies informations
-    if params["DISTMEAN"]+params["DISTSTD"]>=300:
-        
-        params["doUseCatalog"] = False
-        params["doCatalog"] = False
-        params["writeCatalog"] = False
-        
+
+    # Use galaxies to compute the grade, both for tiling and galaxy targeting, only when dist_mean + dist_std < 300Mpc
+    if params["DISTMEAN"]+params["DISTSTD"]<=300:
+        params["doUseCatalog"] = True
+        params["doCatalog"] = True
+        params["writeCatalog"] = True
+
+    params = gwemopt.utils.params_checker(params)
+
     return params
 
 def Observation_plan_multiple(telescopes, VO_dic, trigger_id, params, map_struct_input, obs_mode):
@@ -1115,12 +1116,11 @@ def GW_treatment_alert(v, output_dic, file_log_s):
 
     if HasRemnant > 0.9:
         GW_vo["voimportance"] = 1
+    else:
         if (len(GW_vo["inst"].split(","))) > 2:
             GW_vo["voimportance"] = 2
         else:
             GW_vo["voimportance"] = 3
-    else:
-        GW_vo["voimportance"] = 3
 
     isotime = v.WhereWhen.ObsDataLocation.ObservationLocation.AstroCoords.Time.TimeInstant.ISOTime.text
 
@@ -1159,78 +1159,66 @@ def GW_treatment_alert(v, output_dic, file_log_s):
         s90cr = 0.0
         GW_dic["lum"] = str(lumin)
         GW_dic["errlum"] = str(errorlumin)
-        GW_dic["50cr"] = str(s50cr)
-        GW_dic["90cr"] = str(s90cr)
-        lalid = name_lalid(v, file_log_s, name_dic, GW_vo["letup"], "_DB")
-        create_GRANDMAvoevent(lalid, GW_dic, GW_vo, "", output_dic, send2DB=Db_use)
-        file_log_s.write(lalid + " " + str(trigger_id) + "\n")
 
         # Load params dictionary for gwemopt
         params = init_observation_plan(GW_vo, output_dic["skymappath"])
         print("Loading skymap...")
         # Function to read maps
         map_struct = gwemopt.utils.read_skymap(params, is3D=params["do3D"])
+        # Compute 50% and 90% CR skymap area
+        idx50 = map_struct["cumprob"] <= 0.50
+        cr50 = len(map_struct["cumprob"][idx50])
+        idx90 = map_struct["cumprob"] <= 0.90
+        cr90 = len(map_struct["cumprob"][idx90])
+        GW_dic["50cr"] = "{:.2f}".format(map_struct["pixarea_deg2"] * cr50)
+        GW_dic["90cr"] = "{:.2f}".format(map_struct["pixarea_deg2"] * cr90)
+
+        lalid = name_lalid(v, file_log_s, name_dic, GW_vo["letup"], "_DB")
+        create_GRANDMAvoevent(lalid, GW_dic, GW_vo, "", output_dic, send2DB=Db_use)
+        file_log_s.write(lalid + " " + str(trigger_id) + "\n")
 
         if GW_vo["voimportance"] == 1:
-            LISTE_TELESCOPE_TILING = ["OAJ","TRE","TCA","TCH"]
-            LISTE_TELESCOPE_GALAXY = ["Abastunami-T48","Abastunami-T70","Zadko","UBAI-T60S","UBAI-T60N","ShAO-T60","Makes-60","Lisnyky-AZT8","IRIS","TNT"]
+            LISTE_TELESCOPE_TILING = ["OAJ", "TRE", 'TCH', 'TCA']
+            max_nb_tiles_tiling = np.array([60, 50, 50, 50])
+            #max_nb_tiles_tiling = -1 * np.ones(len(LISTE_TELESCOPE_TILING))
+            LISTE_TELESCOPE_GALAXY = ["Makes-60","Lisnyky-AZT8","Zadko","TNT","UBAI-T60N","ShAO-T60","Abastunami-T70","UBAI-T60S","Abastunami-T48","IRIS"]
+            max_nb_tiles_galaxy = np.array([50]*len(LISTE_TELESCOPE_GALAXY))
+            #max_nb_tiles_galaxy = -1 * np.ones(len(LISTE_TELESCOPE_GALAXY))
         else:
-            LISTE_TELESCOPE_TILING = ["TRE","TCA","TCH"]
-            LISTE_TELESCOPE_GALAXY = ["Abastunami-T48","Abastunami-T70","Zadko","UBAI-T60S","UBAI-T60N","ShAO-T60","Makes-60","Lisnyky-AZT8","IRIS","TNT"]
-        LISTE_TELESCOPE = LISTE_TELESCOPE_TILING + LISTE_TELESCOPE_GALAXY
+            LISTE_TELESCOPE_TILING = ["TRE", "TCH", "TCA"]
+            max_nb_tiles_tiling = np.array([50, 50, 50])
+            #max_nb_tiles_tiling = -1 * np.ones(len(LISTE_TELESCOPE_TILING))
+            LISTE_TELESCOPE_GALAXY = ["Makes-60","Lisnyky-AZT8","Zadko","TNT","UBAI-T60N","ShAO-T60","Abastunami-T70","UBAI-T60S","Abastunami-T48","IRIS"]
+            max_nb_tiles_galaxy = np.array([50]*len(LISTE_TELESCOPE_GALAXY))
+            #max_nb_tiles_galaxy = -1 * np.ones(len(LISTE_TELESCOPE_GALAXY))
 
-        params["max_nb_tiles"] = -1*np.ones((len(LISTE_TELESCOPE_TILING),))
+        ### TILING ###
+        params["max_nb_tiles"] = max_nb_tiles_tiling
+        # Adapt percentage of golden tiles with the 90% skymap size. Arbitrary, needs to be optimised!!!
+        if float(GW_dic["90cr"]) < 60:
+            params["iterativeOverlap"] = 0.8
+            params["doIterativeTiling"] = False
+            params["doPerturbativeTiling"] = False
+        else:
+            params["iterativeOverlap"] = 0.2
+            params["doIterativeTiling"] = True
+            params["doPerturbativeTiling"] = True
+        print (GW_dic["90cr"], GW_dic["50cr"])
+        print ('ITERATIVE OVERLAP: ', params["iterativeOverlap"])
+        #params["galaxy_grade"] = 'Sloc'
+
         aTables_tiling, galaxies_table = Observation_plan_multiple(LISTE_TELESCOPE_TILING, GW_vo, trigger_id, params, map_struct, 'Tiling')
-        params["max_nb_tiles"] = -1*np.ones((len(LISTE_TELESCOPE_GALAXY),))
-        aTables_galaxy, galaxies_table = Observation_plan_multiple(LISTE_TELESCOPE_GALAXY, GW_vo, trigger_id, params, map_struct, 'Galaxy targeting')
-        aTables = {**aTables_galaxy, **aTables_tiling}
+        # Send data to DB and send xml files to telescopes through broker for tiling
+        send_data(LISTE_TELESCOPE_TILING, params, aTables_tiling, galaxies_table, GW_vo, GW_dic, trigger_id, v, file_log_s, path_config, output_dic, message_obs, name_dic, Db_use=Db_use, gal2DB=False)
 
-        for i_tel, telescope in enumerate(LISTE_TELESCOPE):
-            
-            if telescope not in ["GWAC", "TRE", "TCA", "TCH", "OAJ"]:
-   
-                if not params["doUseCatalog"]:
-                    print("Observation plan for {} is not computed as we don't use the galaxies catalog at this distance".format(telescope))
-                    continue
-                
-            Tel_dic = Tel_dicf()
-            Tel_dic["Name"] = telescope
-            message_obs = message_obs + " " + telescope
-
-            # Store galaxies only once in DB. Need to change if we do not use galaxies for some telescopes
-            if i_tel == 0 and params["doUseCatalog"]:
-                storeGal = True
-            else:
-                storeGal = False
-
-            aTable = aTables[telescope]            
-            
-            if aTable is None:
-                Tel_dic["OS"] = np.array([[], [], [], []])
-            else:
-                Tel_dic["OS"] = np.transpose(np.array([aTable['rank_id'], aTable['RA'], aTable['DEC'], aTable['Prob']]))
-                if Db_use :
-                    print ('Sending observation plan and tiles to database.')
-                    send_ObsPlan_to_DB(aTable.meta, GW_vo["eventstatus"], GW_vo["iter_statut"])
-                    send_ObsPlan_tiles_to_DB(aTable, GW_vo["eventstatus"], GW_vo["iter_statut"], output_dic["skymappath"], str(GW_vo["locpix"].split("/")[-1]))
-            if Db_use and galaxies_table is not None:
-                if storeGal: 
-                    print ('Sending list of galaxies to database. This can take some time. (done only once per event)')
-                    send_ObsPlan_galaxies_to_DB(galaxies_table, trigger_id, GW_vo["eventstatus"], GW_vo["iter_statut"])
-                if aTable is not None:
-                    print ('Linking each galaxy to a tile and store information in database.')
-                    send_link_galaxies_tiles_to_DB(aTable, galaxies_table, trigger_id, GW_vo["eventstatus"], GW_vo["iter_statut"])
-
-            lalid = name_lalid(v, file_log_s, name_dic, GW_vo["letup"], "_" + Tel_dic["Name"])
-            filename_vo = create_GRANDMAvoevent(lalid, GW_dic, GW_vo, Tel_dic, output_dic)
-
-            #only send plan if this is the first one
-            #I can see here a problem : if the first alert has not the skymap, we will not send the plan at all
-            # may be need to retreive info if the alert has already been received and send from DB
-            if GW_vo["letup"] == 'a':
-                send_voevent(path_config + '/broker.json', filename_vo)
-
-            file_log_s.write(lalid + " " + str(trigger_id) + "\n")
+        ### Galaxy targeting ###
+        #if the  mean distance(+error) of the skymap is less than 300Mpc we perform galaxy targeting
+        if params["DISTMEAN"]+params["DISTSTD"]<=300:
+            #params["galaxy_grade"] = 'Sloc'
+            params["max_nb_tiles"] = max_nb_tiles_galaxy
+            aTables_galaxy, galaxies_table = Observation_plan_multiple(LISTE_TELESCOPE_GALAXY, GW_vo, trigger_id, params, map_struct, 'Galaxy targeting')
+            # Send data to DB and send xml files to telescopes through broker for galaxy targeting
+            send_data(LISTE_TELESCOPE_GALAXY, params, aTables_galaxy, galaxies_table, GW_vo, GW_dic, trigger_id, v, file_log_s, path_config, output_dic, message_obs, name_dic, Db_use=Db_use, gal2DB=True)
 
     else:
         lalid = name_lalid(v, file_log_s, name_dic, GW_vo["letup"], "_DB")
@@ -1991,6 +1979,81 @@ def slack_message(slack_channel, text_mes):
         channel=slack_channel,
         text=text_mes
     )
+
+
+def send_data(telescope_list, params, aTables, galaxies_table, GW_vo, GW_dic, trigger_id, v, file_log_s, path_config, output_dic, message_obs, name_dic, Db_use=False, gal2DB=False):
+    """ Send observation plans to DB and send xml files to broker """
+
+    for i_tel, telescope in enumerate(telescope_list):
+        print (telescope) 
+        if telescope not in ["GWAC", "TRE", "TCA", "TCH", "OAJ"]:
+   
+            if not params["doUseCatalog"]:
+                print("Observation plan for {} is not computed as we don't use the galaxies catalog at this distance".format(telescope))
+                continue
+                
+        Tel_dic = Tel_dicf()
+        Tel_dic["Name"] = telescope
+        message_obs = message_obs + " " + telescope
+
+        # Store galaxies only once in DB. Need to change if we do not use galaxies for some telescopes
+        if i_tel == 0 and params["doUseCatalog"] and gal2DB:
+            storeGal = True
+        else:
+            storeGal = False
+
+        aTable = aTables[telescope]            
+           
+        if aTable is None:
+            Tel_dic["OS"] = np.array([[], [], [], []])
+        elif telescope == 'F60':
+            gal_id = []
+            for gal in galaxies_table:
+                if (gal['GWGC'] != '---') and (gal['GWGC']):
+                    gal_name = gal['GWGC']
+                    gal_catalog = 'GWGC'
+                #elif (gal['PGC'] != '--') and (gal['PGC']):
+                #    gal_name = gal['PGC']
+                #    gal_catalog = 'PGC'
+                elif (gal['HyperLEDA'] != '---') and (gal['HyperLEDA']):
+                    gal_name = gal['HyperLEDA']
+                    gal_catalog = 'HyperLEDA'
+                elif (gal['2MASS'] != '---') and (gal['2MASS']):
+                    gal_name = gal['2MASS']
+                    gal_catalog = '2MASS'
+                elif (gal['SDSS'] != '---') and (gal['SDSS']):
+                    gal_name = gal['SDSS']
+                    gal_catalog = 'SDSS-DR12'
+                
+                gal_id.append(gal_name)
+                
+            Tel_dic["OS"] = np.transpose(np.array([gal_id, galaxies_table['RAJ2000'], galaxies_table['DEJ2000'], galaxies_table['S']]))
+        else:
+            Tel_dic["OS"] = np.transpose(np.array([aTable['rank_id'], aTable['RA'], aTable['DEC'], aTable['Prob']]))
+            if Db_use :
+                print ('Sending observation plan and tiles to database.')
+                send_ObsPlan_to_DB(aTable.meta, GW_vo["eventstatus"], GW_vo["iter_statut"])
+                send_ObsPlan_tiles_to_DB(aTable, GW_vo["eventstatus"], GW_vo["iter_statut"], output_dic["skymappath"], str(GW_vo["locpix"].split("/")[-1]))
+        if Db_use and galaxies_table is not None:
+            if storeGal: 
+                print ('Sending list of galaxies to database. This can take some time. (done only once per event)')
+                send_ObsPlan_galaxies_to_DB(galaxies_table, trigger_id, GW_vo["eventstatus"], GW_vo["iter_statut"])
+            if aTable is not None:
+                print ('Linking each galaxy to a tile and store information in database.')
+                send_link_galaxies_tiles_to_DB(aTable, galaxies_table, trigger_id, GW_vo["eventstatus"], GW_vo["iter_statut"])
+
+        lalid = name_lalid(v, file_log_s, name_dic, GW_vo["letup"], "_" + Tel_dic["Name"])
+        filename_vo = create_GRANDMAvoevent(lalid, GW_dic, GW_vo, Tel_dic, output_dic)
+
+        #only send plan if this is the first one
+        #I can see here a problem : if the first LVC notice does not have any skymap, we will not send the plan at all
+        # may be need to retreive info if the alert has already been received and send from DB
+        if GW_vo["letup"] == 'a':
+            send_voevent(path_config + '/broker.json', filename_vo)
+
+        file_log_s.write(lalid + " " + str(trigger_id) + "\n")
+
+
 
 
 def send_VOE_alert_to_DB(VOE_alert, path_skymap, filename_skymap, proba=90, isfile=False):

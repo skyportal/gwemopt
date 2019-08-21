@@ -55,7 +55,7 @@ def readParamsFromFile(file):
 
 def params_checker(params):
     #assigns defaults to params
-    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint"]
+    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure"]
  
     for parameter in do_Parameters:
         if parameter not in params.keys():
@@ -232,6 +232,7 @@ def params_checker(params):
             observer = astroplan.Observer(location=location)
             params["config"][telescope]["observer"] = observer
 
+    return params
 
 def read_skymap(params,is3D=False,map_struct=None):
 
@@ -447,6 +448,72 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='
     patch = matplotlib.patches.PathPatch(path, alpha=alpha, color=color, fill=True, zorder=3, edgecolor=edgecolor)
 
     area = np.pi * radius**2
+
+    return ipix, radecs, patch, area
+
+def getRectanglePixels(ra_pointing, dec_pointing, raSide, decSide, nside, alpha = 0.4, color='k', edgecolor='k', rotation=None):
+
+    area = raSide*decSide
+
+    decCorners = (dec_pointing - decSide / 2.0, dec_pointing + decSide / 2.0)
+
+    #security for the periodic limit conditions 
+    radecs = []
+    for d in decCorners:
+        if d > 90.:
+            d = 180. - d
+        elif d < -90.:
+            d = -180 - d
+
+        raCorners = (ra_pointing - (raSide / 2.0) / np.cos(np.deg2rad(d)) , ra_pointing + (raSide / 2.0) / np.cos(np.deg2rad(d)))
+        #security for the periodic limit conditions 
+        for r in raCorners:
+            if r > 360.:
+                r = r - 360.
+            elif r < 0.:
+                r = 360. + r
+            radecs.append([r,d])
+
+    radecs = np.array(radecs)
+    idx1 = np.where(radecs[:,0]>=180.0)[0]
+    idx2 = np.where(radecs[:,0]<180.0)[0]
+    idx3 = np.where(radecs[:,0]>300.0)[0]
+    idx4 = np.where(radecs[:,0]<60.0)[0]
+    if (len(idx1)>0 and len(idx2)>0) and not (len(idx3)>0 and len(idx4)>0):
+        alpha = 0.0
+
+    idx1 = np.where(np.abs(radecs[:,1])>=87.0)[0]
+    if len(idx1) == 4:
+        return [], [], [], []
+
+    idx1 = np.where((radecs[:,1]>=87.0) | (radecs[:,1]<=-87.0))[0]
+    if len(idx1)>0:
+        radecs = np.delete(radecs, idx1[0], 0)
+
+    xyz = []
+    for r, d in radecs:
+        xyz.append(hp.ang2vec(r, d, lonlat=True))
+
+    npts, junk = radecs.shape
+    if npts == 4:
+        xyz = [xyz[0], xyz[1],xyz[3], xyz[2]]
+        ipix = hp.query_polygon(nside, np.array(xyz))
+    else:
+        ipix = hp.query_polygon(nside, np.array(xyz))
+
+    #idx1 = np.where((radecs[:,1]>=70.0) | (radecs[:,1]<=-70.0))[0]
+    #idx2 = np.where((radecs[:,0]>300.0) | (radecs[:,0]<60.0))[0]
+    #if (len(idx1) == 0) or (len(idx2) > 0):
+    #    return [], [], [], []
+
+    xyz = np.array(xyz)
+    proj = hp.projector.MollweideProj(rot=rotation, coord=None)
+    x,y = proj.vec2xy(xyz[:,0],xyz[:,1],xyz[:,2])
+    xy = np.zeros(radecs.shape)
+    xy[:,0] = x
+    xy[:,1] = y
+    path = matplotlib.path.Path(xy)
+    patch = matplotlib.patches.PathPatch(path, alpha=alpha, color=color, fill=True, zorder=3, edgecolor=edgecolor)
 
     return ipix, radecs, patch, area
 

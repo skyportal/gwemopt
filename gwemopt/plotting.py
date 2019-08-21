@@ -540,6 +540,12 @@ def coverage(params, map_struct, coverage_struct, catalog_struct=None):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
+    filename = os.path.join(params["outputDir"],'tiles_coverage_int.dat')
+    fid = open(filename, 'w')
+    for ii in range(len(tts)):
+        fid.write('%.10f %.10e %.10f\n' % (tts[ii], cum_probs[ii], cum_areas[ii]))
+    fid.close()
+
     print('Total Cumulative Probability, Area: %.5f, %.5f' % (cum_probs[-1],
                                                               cum_areas[-1]))
 

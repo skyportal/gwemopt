@@ -753,5 +753,6 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
 
         coverage_structs.append(coverage_struct)
         if deltaL <= 1: break
+    params["filters"], params["exposuretimes"] = filters, exposuretimes
 
     return gwemopt.coverage.combine_coverage_structs(coverage_structs)

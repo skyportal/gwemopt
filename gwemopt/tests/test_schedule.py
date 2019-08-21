@@ -145,6 +145,8 @@ def params_struct(skymap, gpstime, tobs=None, filt=['r'],
     params["doMinimalTiling"] = False
     params["doOverlappingScheduling"] = False
 
+    params = gwemopt.utils.params_checker(params)
+
     if params["doEvent"]:
         params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)
         params["gpstime"] = eventinfo["gpstime"]

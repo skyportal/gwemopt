@@ -6,11 +6,26 @@ from astropy import units as u
 
 filename = '../catalog/CLU_20170106_galexwise_DaveUpdate.fits'
 filename = '../catalog/CLU_20181213V2.fits'
+filename = '../catalog/CLU_20190406_filled.hdf5'
+filename = '../catalog/CLU_20190708_marshalFormat.hdf5'
 
-hdul = astropy.io.fits.open(filename)
-data = hdul[1].data
-columns = ['name', 'ra', 'dec', 'sfr_fuv', 'mstar',
-           'distmpc', 'magb', 'a', 'b2a', 'pa', 'btc']
+t = Table.read(filename)
+columns = ['name', 'ra', 'dec', 'distmpc', 'sfr_fuv', 'mstar',
+           'magb', 'a', 'b2a', 'pa', 'btc']
+t.keep_columns(columns)
+
+t['ra'].unit = u.deg
+t['dec'].unit = u.deg
+t['distmpc'].unit = u.Mpc
+
+t.write('../catalog/CLU.hdf5', path='/data', format='hdf5', serialize_meta=True, overwrite=True)
+
+t2 = t[:10]
+
+t2.write('../catalog/CLU_mini.hdf5', path='/data', format='hdf5', serialize_meta=True, overwrite=True)
+
+print(t2)
+print(stop)
 
 hdul[1].data = hdul[1].data[:10]
 
