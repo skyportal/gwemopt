@@ -212,6 +212,16 @@ def powerlaw(params, map_struct, tile_structs):
                 tile_struct = erase_observed_tiles(params,tile_struct)
             
             coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
+
+            if params["doBalanceExposure"]:
+                cnt,ntrials = 0,10
+                while cnt < ntrials:
+                    tile_struct, doReschedule = gwemopt.utils.balance_tiles(params, telescope, tile_struct, coverage_struct)
+                    if doReschedule:
+                        coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
+                        cnt = cnt+1
+                    else: break
+
             if params["doMaxTiles"]:
                 tile_struct, doReschedule = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct, coverage_struct)    
                 if doReschedule:
