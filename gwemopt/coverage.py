@@ -174,14 +174,17 @@ def powerlaw(params, map_struct, tile_structs):
         if params["doAlternatingFilters"]:
             params_hold = copy.copy(params)
             tile_struct_hold = copy.copy(tile_struct)
-            coverage_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct, telescope, map_struct_hold, tile_struct_hold)
+            config_struct_hold = copy.copy(config_struct)
+            coverage_struct,tile_struct_hold = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct_hold)
+
             if params["doBalanceExposure"]:
                 cnt, ntrials = 0, 10
                 while cnt < ntrials:
+                    params_hold = copy.copy(params)
+                    config_struct_hold = copy.copy(config_struct)
                     tile_struct_hold, doReschedule = gwemopt.utils.balance_tiles(params, telescope, tile_struct_hold, coverage_struct)
                     if doReschedule:
-                        params_hold = copy.copy(params)
-                        coverage_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct, telescope, map_struct_hold, tile_struct_hold)
+                        coverage_struct,tile_struct_hold = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct_hold)
                         cnt = cnt + 1
                     else:
                         break
