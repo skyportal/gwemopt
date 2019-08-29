@@ -739,7 +739,6 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
             elif extra_time <= 0: extra_time = filt_change_time
             config_struct["exposurelist"] = config_struct["exposurelist"].shift(extra_time / 86400.)
     
-        keys = list(tile_struct.keys())
         prob = {}
         for key in tile_struct.keys():
             if tile_struct[key]['prob']==0.0:
