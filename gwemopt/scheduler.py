@@ -741,13 +741,16 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
     
         keys = list(tile_struct.keys())
         prob = {}
-        for key in keys:
-            prob[key] = tile_struct[key]['prob']
+        for key in tile_struct.keys():
+            if tile_struct[key]['prob']==0.0:
+                prob[key]=0.0
         
         if not params["tilesType"] == "galaxy":
             tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
-        for key in keys:
-            tile_struct[key]['prob'] = prob[key]
+        
+        if params["doBalanceExposure"]:
+            for key in prob: #re-assigns 0 prob to tiles w/ unbalanced observations in case they were overwritten
+                tile_struct[key]['prob'] = 0.0
 
         coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
         if params["doMaxTiles"]:
