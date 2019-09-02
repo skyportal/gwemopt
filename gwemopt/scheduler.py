@@ -738,13 +738,24 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
             if extra_time > 0: extra_time = extra_time + filt_change_time
             elif extra_time <= 0: extra_time = filt_change_time
             config_struct["exposurelist"] = config_struct["exposurelist"].shift(extra_time / 86400.)
-
+    
+        prob = {}
+        for key in tile_struct.keys():
+            if tile_struct[key]['prob']==0.0:
+                prob[key]=0.0
+        
         if not params["tilesType"] == "galaxy":
             tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
+        
+        if params["doBalanceExposure"]:
+            for key in prob: #re-assigns 0 prob to tiles w/ unbalanced observations in case they were overwritten
+                tile_struct[key]['prob'] = 0.0
 
-        if params["doMaxTiles"]:
-            tile_struct = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct)
         coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
+        if params["doMaxTiles"]:
+            tile_struct,doReschedule = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct, coverage_struct)
+            if doReschedule:
+                coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
 
         if len(coverage_struct["exposureused"]) > 0:
             maxidx = int(coverage_struct["exposureused"][-1])
@@ -755,4 +766,4 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
         if deltaL <= 1: break
     params["filters"], params["exposuretimes"] = filters, exposuretimes
 
-    return gwemopt.coverage.combine_coverage_structs(coverage_structs)
+    return gwemopt.coverage.combine_coverage_structs(coverage_structs),tile_struct

@@ -807,22 +807,16 @@ def balance_tiles(params, telescope, tile_struct, coverage_struct):
 
     filters, exposuretimes = params["filters"], params["exposuretimes"]
 
-    keys = list(tile_struct.keys())
     keys_scheduled = coverage_struct["data"][:,5]
     filts = coverage_struct["filters"]
+    filts_used = {key: [] for key in keys_scheduled} #dictionary of scheduled filters for each key
 
-    nobs = np.zeros((len(keys),len(filters)))
-    idy = 0
-    for ii, (key,filt) in enumerate(zip(keys_scheduled,filts)):
-        idx = np.where(key == keys)[0]
-        if (ii > 0) and (not filts[ii] == filts[ii-1]):
-            idy = idy + 1
-        nobs[idx,idy] = 1
+    for (key,filt) in zip(keys_scheduled,filts):
+        filts_used[key].append(filt)
 
     doReschedule = False
-    for ii, key in enumerate(keys):
-        # in the golden tile set
-        if (nobs[ii,0] == 1) and not (np.sum(nobs[ii,:]) == len(filters)):
+    for key in keys_scheduled:
+        if len(filts_used[key]) != len(filters):
             tile_struct[key]['prob'] = 0.0
             doReschedule = True
 
