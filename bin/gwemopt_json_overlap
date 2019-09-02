@@ -1,0 +1,114 @@
+#!/usr/bin/python
+
+# Copyright (C) 2017 Michael Coughlin
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 3 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+# Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+""".
+Gravitational-wave Electromagnetic Optimization
+
+This script generates an optimized list of pointings and content for
+reviewing gravitational-wave skymap likelihoods.
+
+Comments should be e-mailed to michael.coughlin@ligo.org.
+
+"""
+
+
+import os, sys, glob, optparse, shutil, warnings
+import json
+import numpy as np
+np.random.seed(0)
+
+from astropy.table import Table
+
+import healpy as hp
+
+import matplotlib
+#matplotlib.rc('text', usetex=True)
+matplotlib.use('Agg')
+matplotlib.rcParams.update({'font.size': 16})
+matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
+import matplotlib.pyplot as plt
+
+import gwemopt.utils, gwemopt.plotting
+
+__author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
+__version__ = 1.0
+__date__    = "6/17/2017"
+
+# =============================================================================
+#
+#                               DEFINITIONS
+#
+# =============================================================================
+
+def parse_commandline():
+    """@Parse the options given on the command-line.
+    """
+    parser = optparse.OptionParser(usage=__doc__,version=__version__)
+
+    parser.add_option("--json1", help="json 1.", default='/Users/mcoughlin/Downloads/ZTF_g_30s_block1of4_65p_2UT_5UT.json')
+    parser.add_option("--json2", help="json 2.", default='/Users/mcoughlin/Downloads/ZTF_r_30s_block2of4_65p_5UT_9UT.json')
+
+    parser.add_option("-v", "--verbose", action="store_true", default=False,
+                      help="Run verbosely. (Default: False)")
+
+    opts, args = parser.parse_args()
+
+    # show parameters
+    if opts.verbose:
+        print >> sys.stderr, ""
+        print >> sys.stderr, "running gwemopt_run..."
+        print >> sys.stderr, "version: %s"%__version__
+        print >> sys.stderr, ""
+        print >> sys.stderr, "***************** PARAMETERS ********************"
+        for o in opts.__dict__.items():
+          print >> sys.stderr, o[0]+":"
+          print >> sys.stderr, o[1]
+        print >> sys.stderr, ""
+
+    return opts
+
+# =============================================================================
+#
+#                                    MAIN
+#
+# =============================================================================
+
+warnings.filterwarnings("ignore")
+
+# Parse command line
+opts = parse_commandline()
+
+with open(opts.json1) as json_file:
+    data1 = json.load(json_file)
+with open(opts.json2) as json_file:
+    data2 = json.load(json_file)
+
+data1, data2 = data1["targets"], data2["targets"]
+field_1, field_2 = [], []
+for dat1 in data1:
+    field_1.append(dat1["field_id"])
+for dat2 in data2:
+    field_2.append(dat2["field_id"])
+
+print('Plan: %s' % opts.json1)
+print('# of fields: %d' % len(field_1))
+print('Plan: %s' % opts.json2)
+print('# of fields: %d' % len(field_2))
+print('Intersection')
+print('# of fields: %d' % len(np.intersect1d(field_1,field_2)))
+
