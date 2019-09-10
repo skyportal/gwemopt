@@ -815,7 +815,7 @@ def balance_tiles(params, telescope, tile_struct, coverage_struct):
         filts_used[key].append(filt)
 
     doReschedule = False
-    for key in keys_scheduled:
+    for key in filts_used:
         if len(filts_used[key]) != len(filters):
             tile_struct[key]['prob'] = 0.0
             doReschedule = True
