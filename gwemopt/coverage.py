@@ -260,7 +260,7 @@ def powerlaw(params, map_struct, tile_structs):
                 optimized_max_prev=optimized_max
                 #another for loop for more accurate estimation, iff optimized_max is below a certain number (to save runtime)
                 if optimized_max<=50:
-                    max_trials=np.linspace(optimized_max_3-1,optimized_max_3+1,3)
+                    max_trials=np.linspace(optimized_max-1,optimized_max+1,3)
                     countervals=[]
                     for ii,max_trial in enumerate(max_trials):
                         if optimized_max==-1: break #breaks if no max tiles restriction should be imposed
