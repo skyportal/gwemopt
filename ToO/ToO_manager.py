@@ -295,6 +295,8 @@ def init_observation_plan(VO_dic, skymappath, dirpath="", filename=""):
     params["DISTMEAN"] = skymap_header['DISTMEAN']
     params["DISTSTD"] = skymap_header['DISTSTD']
 
+    params["DISTMEAN"], params["DISTSTD"] = 100.0, 50.0
+
     # Use galaxies to compute the grade, both for tiling and galaxy targeting, only when dist_mean + dist_std < 300Mpc
     if params["DISTMEAN"]+params["DISTSTD"]<=300:
         params["doUseCatalog"] = True
@@ -1162,6 +1164,7 @@ def GW_treatment_alert(v, output_dic, file_log_s):
 
         # Load params dictionary for gwemopt
         params = init_observation_plan(GW_vo, output_dic["skymappath"])
+
         print("Loading skymap...")
         # Function to read maps
         map_struct = gwemopt.utils.read_skymap(params, is3D=params["do3D"])
@@ -1192,6 +1195,11 @@ def GW_treatment_alert(v, output_dic, file_log_s):
             max_nb_tiles_galaxy = np.array([50]*len(LISTE_TELESCOPE_GALAXY))
             #max_nb_tiles_galaxy = -1 * np.ones(len(LISTE_TELESCOPE_GALAXY))
 
+        LISTE_TELESCOPE_TILING = []
+        max_nb_tiles_tiling = np.array([])
+        LISTE_TELESCOPE_GALAXY = ["Makes-60"]
+        max_nb_tiles_galaxy = np.array([50]*len(LISTE_TELESCOPE_GALAXY))
+
         ### TILING ###
         params["max_nb_tiles"] = max_nb_tiles_tiling
         # Adapt percentage of golden tiles with the 90% skymap size. Arbitrary, needs to be optimised!!!
@@ -1216,6 +1224,7 @@ def GW_treatment_alert(v, output_dic, file_log_s):
         if params["DISTMEAN"]+params["DISTSTD"]<=300:
             #params["galaxy_grade"] = 'Sloc'
             params["max_nb_tiles"] = max_nb_tiles_galaxy
+            params["doPerturbativeTiling"] = True
             aTables_galaxy, galaxies_table = Observation_plan_multiple(LISTE_TELESCOPE_GALAXY, GW_vo, trigger_id, params, map_struct, 'Galaxy targeting')
             # Send data to DB and send xml files to telescopes through broker for galaxy targeting
             send_data(LISTE_TELESCOPE_GALAXY, params, aTables_galaxy, galaxies_table, GW_vo, GW_dic, trigger_id, v, file_log_s, path_config, output_dic, message_obs, name_dic, Db_use=Db_use, gal2DB=True)
