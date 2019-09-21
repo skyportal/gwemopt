@@ -86,7 +86,7 @@ def create_moc(params, map_struct=None):
             cnt = 0
             for ii, key in enumerate(keys):
                 if ii in ipix_keep:
-                    moc_struct[cnt] = moc_struct_new[key]
+                    moc_struct[key] = moc_struct_new[key]
                     cnt = cnt + 1
 
         moc_structs[telescope] = moc_struct
