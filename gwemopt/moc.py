@@ -68,7 +68,7 @@ def create_moc(params, map_struct=None):
         else:
             ipix_keep = []
         if params["doMinimalTiling"]:
-            moc_struct_new = copy.deepcopy(moc_struct)
+            moc_struct_new = copy.copy(moc_struct)
             if params["tilesType"] == "galaxy":
                 tile_probs = gwemopt.tiles.compute_tiles_map(params, moc_struct_new, prob, func='center', ipix_keep=ipix_keep)
             else:
