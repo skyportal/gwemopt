@@ -12,6 +12,7 @@ import shapely.geometry
 import gwemopt.utils
 import gwemopt.tiles
 import gwemopt.ztf_tiling
+import gwemopt.decam_tiling
 
 def create_moc(params, map_struct=None):
 
@@ -120,6 +121,9 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
     if params["doChipGaps"]:
         if telescope == "ZTF":
             ipixs = gwemopt.ztf_tiling.get_quadrant_ipix(nside, ra_pointing, dec_pointing)
+            ipix = list({y for x in ipixs for y in x})
+        elif telescope == "DECam":
+            ipixs = gwemopt.decam_tiling.get_quadrant_ipix(nside, ra_pointing, dec_pointing)
             ipix = list({y for x in ipixs for y in x})
         #else:
         #    print("Requested chip gaps with non-ZTF detector, will use moc.")
