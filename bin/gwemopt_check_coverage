@@ -59,15 +59,17 @@ def parse_commandline():
     """
     parser = optparse.OptionParser(usage=__doc__,version=__version__)
 
-    parser.add_option("-s", "--skymap", help="GW skymap.", default='../data/S190510g/LALInference.fits.gz')
-    parser.add_option("-f", "--filename", help="GW coverage file.", default='../data/GW190426/KMNet.dat')
+    parser.add_option("-s", "--skymap", help="GW skymap.", default='../data/GW190930t/bayestar.fits.gz')
+    parser.add_option("-f", "--filename", help="GW coverage file.", default='../data/GW190930t/fields.dat')
 
     parser.add_option("-t", "--FOV_type", help="FOV type", default='square')
-    parser.add_option("--FOV",default=2.0,type=float)
+    parser.add_option("--FOV",default=6.86,type=float)
     parser.add_option("--FOV_ra",default=2.0,type=float)
     parser.add_option("--FOV_dec",default=4.0,type=float)
 
     parser.add_option("--nside",default=512,type=int)
+
+    parser.add_option("--doZTF",  action="store_true", default=False)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -129,10 +131,25 @@ healpix = healpix / np.sum(healpix)
 
 lines = [line.rstrip('\n') for line in open(opts.filename)]
 ras, decs = [], []
-for line in lines:
-    lineSplit = list(filter(None, line.split(" ")))
-    ras.append(float(lineSplit[3]))
-    decs.append(float(lineSplit[4]))
+
+if opts.doZTF:
+    tess = np.loadtxt('../input/ZTF.tess')
+    fields = []
+    for line in lines:
+        lineSplit = list(filter(None,line.split(',')))
+        for field in lineSplit:
+            fields.append(int(field))
+
+    for field in fields:
+        idx = np.where(field == tess[:,0])[0]
+        ra, dec = tess[idx,1], tess[idx,2]
+        ras.append(ra[0])
+        decs.append(dec[0])
+else:
+    for line in lines:
+        lineSplit = list(filter(None, line.split(" ")))
+        ras.append(float(lineSplit[3]))
+        decs.append(float(lineSplit[4]))
 
 if opts.FOV_type == "rectangle":
     FOV = [opts.FOV_ra,opts.FOV_dec]
