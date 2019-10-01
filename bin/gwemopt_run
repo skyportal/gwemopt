@@ -175,6 +175,9 @@ def parse_commandline():
     parser.add_option("--doParallel",action="store_true",default=False)
     parser.add_option("--Ncores",default=4,type=int)
 
+    parser.add_option("--doBlocks",action="store_true",default=False)
+    parser.add_option("--Nblocks",default=4,type=int)
+
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
 
@@ -332,6 +335,9 @@ def params_struct(opts):
 
     params["doParallel"] = opts.doParallel
     params["Ncores"] = opts.Ncores
+
+    params["doBlocks"] = opts.doBlocks
+    params["Nblocks"] = opts.Nblocks
 
     return params
 

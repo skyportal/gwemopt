@@ -316,8 +316,7 @@ def powerlaw(params, map_struct, tile_structs):
                         break
                 if not equal_filts:
                     filters = ','.join(filters)
-                    raise Exception(f'No fields were found with observations in filters {filters}')
-
+                    print('No fields were found with observations in filters %s ' % filters)
 
         else:
             if not params["tilesType"] == "galaxy":
@@ -437,7 +436,32 @@ def timeallocation(params, map_struct, tile_structs):
 
     if params["timeallocationType"] == "powerlaw":
         print("Generating powerlaw schedule...")
-        tile_structs, coverage_struct = gwemopt.coverage.powerlaw(params, map_struct, tile_structs)
+        if params["doBlocks"]:
+            exposurelists = {}
+            for jj, telescope in enumerate(params["telescopes"]):
+                config_struct = params["config"][telescope]
+                exposurelist_split = np.array_split(config_struct["exposurelist"], params["Nblocks"])
+                exposurelists[telescope] = exposurelist_split            
+
+            tile_structs_hold = copy.copy(tile_structs)
+            coverage_structs = []
+            for ii in range(params["Nblocks"]):
+                params_hold = copy.copy(params)
+                for jj, telescope in enumerate(params["telescopes"]):
+                    exposurelist = segments.segmentlist()
+                    for seg in exposurelists[telescope][ii]:
+                        exposurelist.append(segments.segment(seg[0],seg[1]))
+                    params_hold["config"][telescope]["exposurelist"] = exposurelist
+                tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(params_hold, map_struct, tile_structs)
+                coverage_structs.append(coverage_struct)
+
+                for jj, telescope in enumerate(params["telescopes"]):
+                    tile_struct_hold = tile_structs_hold[telescope]
+                    tile_struct_hold, doReschedule = gwemopt.utils.balance_tiles(params_hold, telescope, tile_struct_hold, combine_coverage_structs(coverage_structs))
+
+            coverage_struct = combine_coverage_structs(coverage_structs)
+        else:
+            tile_structs, coverage_struct = gwemopt.coverage.powerlaw(params, map_struct, tile_structs)
     elif params["timeallocationType"] == "waw":
         if params["do3D"]:
             print("Generating WAW schedule...")
