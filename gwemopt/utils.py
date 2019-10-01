@@ -806,6 +806,18 @@ def slice_number_tiles(params, telescope, tile_struct, coverage_struct):
 
     return tile_struct, True        
 
+def eject_tiles(params, telescope, tile_struct, coverage_struct):
+
+    filters, exposuretimes = params["filters"], params["exposuretimes"]
+
+    keys_scheduled = coverage_struct["data"][:,5]
+    doReschedule = False
+    for key in keys_scheduled:
+        tile_struct[key]['prob'] = 0.0
+        doReschedule = True
+
+    return tile_struct, doReschedule
+
 def balance_tiles(params, telescope, tile_struct, coverage_struct):
 
     filters, exposuretimes = params["filters"], params["exposuretimes"]

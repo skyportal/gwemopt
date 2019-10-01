@@ -452,12 +452,11 @@ def timeallocation(params, map_struct, tile_structs):
                     for seg in exposurelists[telescope][ii]:
                         exposurelist.append(segments.segment(seg[0],seg[1]))
                     params_hold["config"][telescope]["exposurelist"] = exposurelist
-                tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(params_hold, map_struct, tile_structs)
+                tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(params_hold, map_struct, tile_structs_hold)
                 coverage_structs.append(coverage_struct)
 
                 for jj, telescope in enumerate(params["telescopes"]):
-                    tile_struct_hold = tile_structs_hold[telescope]
-                    tile_struct_hold, doReschedule = gwemopt.utils.balance_tiles(params_hold, telescope, tile_struct_hold, combine_coverage_structs(coverage_structs))
+                    tile_structs_hold[telescope], doReschedule = gwemopt.utils.eject_tiles(params_hold, telescope, tile_structs_hold[telescope], combine_coverage_structs(coverage_structs))
 
             coverage_struct = combine_coverage_structs(coverage_structs)
         else:
