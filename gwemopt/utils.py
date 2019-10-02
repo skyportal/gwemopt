@@ -804,9 +804,16 @@ def slice_number_tiles(params, telescope, tile_struct, coverage_struct):
         if ii in idx_keep: continue
         tile_struct[key]['prob'] = 0.0
 
-    return tile_struct, True        
+    return tile_struct, True
 
-def balance_tiles(params, telescope, tile_struct, coverage_struct):
+def eject_tiles(params, telescope, tile_struct):
+    
+    for field_id in params["scheduled_fields"][telescope]:
+        tile_struct[field_id]['prob'] = 0.0
+    
+    return tile_struct
+
+def balance_tiles(params, tile_struct, coverage_struct):
 
     filters, exposuretimes = params["filters"], params["exposuretimes"]
 
