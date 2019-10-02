@@ -247,7 +247,7 @@ def get_ztf_quadrants():
         for quadrant_id in range(64)])
     return np.transpose(offsets, (2, 0, 1))
 
-def get_quadrant_ipix(nside, ra, dec):
+def get_quadrant_ipix(nside, ra, dec, subfield_ids=None):
 
     quadrant_coords = get_ztf_quadrants()
 
@@ -263,6 +263,9 @@ def get_quadrant_ipix(nside, ra, dec):
 
     ipixs = []
     for subfield_id, xyz in enumerate(quadrant_xyz):
+        if not subfield_ids is None:
+            if not subfield_id in subfield_ids:
+                continue
         ipix = hp.query_polygon(nside, xyz)
         ipixs.append(ipix.tolist())
     return ipixs
