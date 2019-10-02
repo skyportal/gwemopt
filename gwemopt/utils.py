@@ -813,6 +813,7 @@ def eject_tiles(params, telescope, tile_struct, coverage_struct):
     keys_scheduled = coverage_struct["data"][:,5]
     doReschedule = False
     for key in keys_scheduled:
+        print(tile_struct[key]['prob'])
         tile_struct[key]['prob'] = 0.0
         doReschedule = True
 
