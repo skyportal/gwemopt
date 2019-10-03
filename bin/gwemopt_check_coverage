@@ -36,7 +36,7 @@ from astropy.table import Table
 from astropy import units as u
 from astropy.coordinates import Angle
 from astropy.coordinates import SkyCoord
-
+import ligo.skymap.plot
 import healpy as hp
 
 import matplotlib
@@ -44,7 +44,9 @@ import matplotlib
 matplotlib.use('Agg')
 matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
+from matplotlib import patches
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import cm
 
 import gwemopt.utils
 
@@ -69,7 +71,7 @@ def parse_commandline():
     parser.add_option("-d", "--dataDir", help="data directory.", default ="../data/GW190510")
     parser.add_option("-o", "--outputDir", help="output directory.", default ="../output/GW190510")
 
-    parser.add_option("-t", "--telescopes", help="telescopes.", default ="MASTER_un,MASTER_coadd")
+    parser.add_option("-t", "--telescopes", help="telescopes.", default ="MASTER_un,MASTER_coadd,TCH")
 
     parser.add_option("--nside",default=512,type=int)
 
@@ -101,26 +103,33 @@ def gen_coverage_one(healpix, ras, decs, FOV_type, FOV, nside):
     pixarea = hp.nside2pixarea(nside)
     pixarea_deg2 = hp.nside2pixarea(nside, degrees=True)
 
-    patches = []
+    radecs_list = []
     print(FOV_type)
     ipixs = np.array([])
     for ra, dec in zip(ras, decs):
         if FOV_type == "square":
             ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra,dec,FOV,nside)
+            if len(radecs) == 4:
+                idx = [0, 1, 3, 2]
+                radecs = radecs[idx,:]
         elif FOV_type == "circle":
             ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra,dec,FOV,nside)
         elif FOV_type == "rectangle":
             ipix, radecs, patch, area = gwemopt.utils.getRectanglePixels(ra,dec,FOV[0],FOV[1],nside)
-        
+            if len(radecs) == 4:
+                idx = [0, 1, 3, 2]
+                radecs = radecs[idx,:]       
+                radecs = np.vstack((radecs,radecs[0,:]))
+
         singlecum_prob = np.sum(healpix[ipix])
         singlecum_area = len(ipix) * pixarea_deg2
         print('  probability, Area in tile ('+str(np.round(ra,3))+' , '+str(np.round(dec,3))+') : '+str(np.round(singlecum_prob*100.,3))+' '+str(np.round(singlecum_area,1)))
 
         ipixs = np.hstack((ipixs,ipix))
-        patches.append(patch)
+        radecs_list.append(radecs)
 
     ipixs = np.unique(ipixs).astype(int)
-    return ipixs, patches
+    return ipixs, radecs_list
     
 def gen_coverage_multiple(healpix,OBS,nside,outputDir):
 
@@ -129,17 +138,27 @@ def gen_coverage_multiple(healpix,OBS,nside,outputDir):
     cbar=False
     cmap = plt.get_cmap('PuBuGn')
 
+    center2 = SkyCoord('6h', -33.5, unit=['hourangle','deg'])
+
     plotName = os.path.join(outputDir,'tiles.pdf')
-    plt.figure()
-    hp.mollview(healpix,title='',unit=unit,cbar=cbar,
-                rot=[0,0,0],cmap=cmap)
+    fig = plt.figure()
+    ax = plt.axes([0.1, 0.1, 0.8, 0.8],
+        projection='astro zoom',
+        center=center2,
+        radius=50*u.deg)
+
+    #hp.mollview(healpix,title='',unit=unit,cbar=cbar,
+    #            rot=[0,0,0],cmap=cmap)
+    ax.imshow_hpx(healpix, cmap='cylon')
     ax = plt.gca()
 
     ipixs = np.array([])
 
     pixarea = hp.nside2pixarea(nside)
     pixarea_deg2 = hp.nside2pixarea(nside, degrees=True)
-        
+       
+    colors=cm.rainbow(np.linspace(0,1,len(OBS)))
+ 
     for i in np.arange(len(OBS)):
     
         tel_name=OBS[i][0]
@@ -149,43 +168,22 @@ def gen_coverage_multiple(healpix,OBS,nside,outputDir):
         FOV_type=OBS[i][3]
         FOV=OBS[i][4]
         
-        single_ipixs, patches =gen_coverage_one(healpix, ras, decs, FOV_type, FOV, nside)
+        single_ipixs, radecs_list =gen_coverage_one(healpix, ras, decs, FOV_type, FOV, nside)
         ipixs = np.hstack((ipixs,single_ipixs))
         single_ipixs=np.unique(np.array(single_ipixs).astype(int))
         singlecum_prob = np.sum(healpix[single_ipixs])
         singlecum_area = len(single_ipixs) * pixarea_deg2
 
-        for patch in patches:
-            patch_cpy = copy.copy(patch)
-            patch_cpy.axes = None
-            patch_cpy.figure = None
-            patch_cpy.set_transform(ax.transData)
-            current_alpha = patch_cpy.get_alpha()
-    
-            if current_alpha > 0.0:
-                alpha = 1.0
-                if alpha >= 1:
-                    alpha = 0.5
-                patch_cpy.set_alpha(alpha)
-            #if np.isin(index,fieldIDs):
-            #    patch_cpy.set_color('black')
-            #hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
-            ax.add_patch(patch_cpy)
+        for radecs in radecs_list:
+            coords = SkyCoord(np.squeeze(radecs), unit='deg')
+            ax.plot(coords.ra, coords.dec, color=colors[i], transform=ax.get_transform('world'), zorder=1)
+
+            poly = patches.Polygon(radecs, transform=ax.get_transform('world'), alpha=0.5, color=colors[i])
+            ax.add_patch(poly)
 
         print(tel_name+'  Total Cumulative Probability, Area '+str(np.round(singlecum_prob*100.,2))+' '+str(np.round(singlecum_area,1)))
         print("********************")
-
-    hp.graticule(verbose=False)
-    plt.grid(True)
-    lons = np.arange(-150.0,180,30.0)
-    lats = np.zeros(lons.shape)
-    for lon, lat in zip(lons,lats):
-        hp.projtext(lon,lat,"%.0f"%lon,lonlat=True,color='k')
-    lats = np.arange(-60.0,90,30.0)
-    lons = np.zeros(lons.shape)
-    for lon, lat in zip(lons,lats):
-        hp.projtext(lon,lat,"%.0f"%lat,lonlat=True,color='k')
-    
+    ax.grid()
     plt.show()
     plt.savefig(plotName,dpi=200)
     plt.close('all')    
