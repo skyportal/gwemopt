@@ -28,10 +28,14 @@ Comments should be e-mailed to michael.coughlin@ligo.org.
 
 
 import os, sys, glob, optparse, shutil, warnings
+import copy
 import numpy as np
 np.random.seed(0)
 
 from astropy.table import Table
+from astropy import units as u
+from astropy.coordinates import Angle
+from astropy.coordinates import SkyCoord
 
 import healpy as hp
 
@@ -42,7 +46,7 @@ matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
 
-import gwemopt.utils, gwemopt.plotting
+import gwemopt.utils
 
 __author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
 __version__ = 1.0
@@ -59,13 +63,13 @@ def parse_commandline():
     """
     parser = optparse.OptionParser(usage=__doc__,version=__version__)
 
-    parser.add_option("-s", "--skymap", help="GW skymap.", default='../data/GW190930t/bayestar.fits.gz')
-    parser.add_option("-f", "--filename", help="GW coverage file.", default='../data/GW190930t/fields.dat')
+    parser.add_option("-s", "--skymap", help="GW skymap.", default='../data/GW190510/LALInference.fits.gz')
+    #parser.add_option("-s", "--skymap", help="GW skymap.", default='../data/GW190426/bayestar190426.fits.gz')
 
-    parser.add_option("-t", "--FOV_type", help="FOV type", default='square')
-    parser.add_option("--FOV",default=6.86,type=float)
-    parser.add_option("--FOV_ra",default=2.0,type=float)
-    parser.add_option("--FOV_dec",default=4.0,type=float)
+    parser.add_option("-d", "--dataDir", help="data directory.", default ="../data/GW190510")
+    parser.add_option("-o", "--outputDir", help="output directory.", default ="../output/GW190510")
+
+    parser.add_option("-t", "--telescopes", help="telescopes.", default ="MASTER_un,MASTER_coadd")
 
     parser.add_option("--nside",default=512,type=int)
 
@@ -89,9 +93,16 @@ def parse_commandline():
         print >> sys.stderr, ""
 
     return opts
+    
+    
 
-def gen_coverage(healpix, ras, decs, FOV_type, FOV, nside):
+def gen_coverage_one(healpix, ras, decs, FOV_type, FOV, nside):
+    
+    pixarea = hp.nside2pixarea(nside)
+    pixarea_deg2 = hp.nside2pixarea(nside, degrees=True)
 
+    patches = []
+    print(FOV_type)
     ipixs = np.array([])
     for ra, dec in zip(ras, decs):
         if FOV_type == "square":
@@ -100,17 +111,92 @@ def gen_coverage(healpix, ras, decs, FOV_type, FOV, nside):
             ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra,dec,FOV,nside)
         elif FOV_type == "rectangle":
             ipix, radecs, patch, area = gwemopt.utils.getRectanglePixels(ra,dec,FOV[0],FOV[1],nside)
+        
+        singlecum_prob = np.sum(healpix[ipix])
+        singlecum_area = len(ipix) * pixarea_deg2
+        print('  probability, Area in tile ('+str(np.round(ra,3))+' , '+str(np.round(dec,3))+') : '+str(np.round(singlecum_prob*100.,3))+' '+str(np.round(singlecum_area,1)))
+
         ipixs = np.hstack((ipixs,ipix))
+        patches.append(patch)
+
     ipixs = np.unique(ipixs).astype(int)
+    return ipixs, patches
+    
+def gen_coverage_multiple(healpix,OBS,nside,outputDir):
+
+    rotation = 90
+    unit='Gravitational-wave probability'
+    cbar=False
+    cmap = plt.get_cmap('PuBuGn')
+
+    plotName = os.path.join(outputDir,'tiles.pdf')
+    plt.figure()
+    hp.mollview(healpix,title='',unit=unit,cbar=cbar,
+                rot=[0,0,0],cmap=cmap)
+    ax = plt.gca()
+
+    ipixs = np.array([])
 
     pixarea = hp.nside2pixarea(nside)
     pixarea_deg2 = hp.nside2pixarea(nside, degrees=True)
+        
+    for i in np.arange(len(OBS)):
     
-    cum_prob = np.sum(healpix[ipixs])
-    cum_area = len(ipixs) * pixarea_deg2
+        tel_name=OBS[i][0]
+        print(tel_name)
+        ras=OBS[i][1]
+        decs=OBS[i][2]
+        FOV_type=OBS[i][3]
+        FOV=OBS[i][4]
+        
+        single_ipixs, patches =gen_coverage_one(healpix, ras, decs, FOV_type, FOV, nside)
+        ipixs = np.hstack((ipixs,single_ipixs))
+        single_ipixs=np.unique(np.array(single_ipixs).astype(int))
+        singlecum_prob = np.sum(healpix[single_ipixs])
+        singlecum_area = len(single_ipixs) * pixarea_deg2
 
-    print('Total Cumulative Probability, Area: %.5f, %.5f' % (cum_prob,
-                                                              cum_area))
+        for patch in patches:
+            patch_cpy = copy.copy(patch)
+            patch_cpy.axes = None
+            patch_cpy.figure = None
+            patch_cpy.set_transform(ax.transData)
+            current_alpha = patch_cpy.get_alpha()
+    
+            if current_alpha > 0.0:
+                alpha = 1.0
+                if alpha >= 1:
+                    alpha = 0.5
+                patch_cpy.set_alpha(alpha)
+            #if np.isin(index,fieldIDs):
+            #    patch_cpy.set_color('black')
+            #hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
+            ax.add_patch(patch_cpy)
+
+        print(tel_name+'  Total Cumulative Probability, Area '+str(np.round(singlecum_prob*100.,2))+' '+str(np.round(singlecum_area,1)))
+        print("********************")
+
+    hp.graticule(verbose=False)
+    plt.grid(True)
+    lons = np.arange(-150.0,180,30.0)
+    lats = np.zeros(lons.shape)
+    for lon, lat in zip(lons,lats):
+        hp.projtext(lon,lat,"%.0f"%lon,lonlat=True,color='k')
+    lats = np.arange(-60.0,90,30.0)
+    lons = np.zeros(lons.shape)
+    for lon, lat in zip(lons,lats):
+        hp.projtext(lon,lat,"%.0f"%lat,lonlat=True,color='k')
+    
+    plt.show()
+    plt.savefig(plotName,dpi=200)
+    plt.close('all')    
+                                                                      
+    ipixs=np.unique(np.array(ipixs).astype(int))
+    cum_prob = np.sum(healpix[ipixs])
+    cum_area = len(ipixs) * pixarea_deg2 
+    print("********************")  
+    print('Total Cumulative Probability, Area '+str(np.round(cum_prob*100.,3))+' '+str(np.round(cum_area,1)))
+    #print('Total Cumulative Probability, Area : %.5f, %.5f' % (cum_prob,
+                                                              #cum_area))                                                     
 
     return  
 
@@ -124,38 +210,210 @@ warnings.filterwarnings("ignore")
 
 # Parse command line
 opts = parse_commandline()
+nside = opts.nside
+
+outputDir = opts.outputDir
+if not os.path.isdir(outputDir):
+    os.makedirs(outputDir)
+
+TEL=opts.telescopes.split(",")
+Ra_indice=0
+Dec_indice=0
+
+OBS=[]
 
 healpix = hp.read_map(opts.skymap)
 healpix = hp.ud_grade(healpix,opts.nside,power=-2)
 healpix = healpix / np.sum(healpix)
 
-lines = [line.rstrip('\n') for line in open(opts.filename)]
-ras, decs = [], []
+for tel_name in TEL:
+    filename = os.path.join(opts.dataDir,'%s.dat' % tel_name)
+    if tel_name=="TCA":
+        Ra_indice=3
+        Dec_indice=4
+        FOV_type="square"
+        FOV=1.9
+        
+    if tel_name=="OAJ":
+        Ra_indice=3
+        Dec_indice=4
+        FOV_type="square"
+        FOV=1.4
 
-if opts.doZTF:
-    tess = np.loadtxt('../input/ZTF.tess')
-    fields = []
-    for line in lines:
-        lineSplit = list(filter(None,line.split(',')))
-        for field in lineSplit:
-            fields.append(int(field))
+    if tel_name=="TCH":
+        Ra_indice=3
+        Dec_indice=4
+        FOV_type="square"
+        FOV=1.9
 
-    for field in fields:
-        idx = np.where(field == tess[:,0])[0]
-        ra, dec = tess[idx,1], tess[idx,2]
-        ras.append(ra[0])
-        decs.append(dec[0])
-else:
-    for line in lines:
-        lineSplit = list(filter(None, line.split(" ")))
-        ras.append(float(lineSplit[3]))
-        decs.append(float(lineSplit[4]))
+    if tel_name=="LesMakes":
+        Ra_indice=4
+        Dec_indice=5
+        FOV_type="rectangle"
+        FOV_ra=0.42
+        FOV_dec=0.27
 
-if opts.FOV_type == "rectangle":
-    FOV = [opts.FOV_ra,opts.FOV_dec]
-else:
-    FOV = opts.FOV
+    if tel_name=="TRE":
+        Ra_indice=3
+        Dec_indice=4
+        FOV_type="square"
+        FOV=4.2
 
-gen_coverage(healpix, ras, decs, opts.FOV_type, FOV, opts.nside)
+    if tel_name=="CNEOST":
+        filename='../data/'+alert+"/"+tel_name+'.dat'
+        Ra_indice=1
+        Dec_indice=2
+        FOV_type="square"
+        FOV=3.0
+        
+    if tel_name=="Xinglong":
+        Ra_indice=0
+        Dec_indice=1
+        FOV_type="square"
+        FOV=1.5
+        lines = [line.rstrip('\n') for line in open(filename)]
+        ras, decs = [], []
+        for line in lines:
+            lineSplit = line.split(" ")
+            thisra  = Angle(lineSplit[0], unit=u.hour).deg
+            thisdec = Angle(lineSplit[1], unit=u.deg).deg
+            ras.append(thisra)
+            decs.append(thisdec)
+        ras, decs = np.array(ras), np.array(decs)
+        
+    if tel_name=="MASTER_un":
+        filename = filename.replace("MASTER_un","MASTER")
+        Ra_indice=3
+        Dec_indice=4
+        FOV_type="rectangle"
+        FOV_ra=2.05
+        FOV_dec=4.1
+        lines = [line.rstrip('\n') for line in open(filename)]
+        ras, decs = [], []
+        for line in lines:
+            lineSplit = line.split("|")
+            thisra  = Angle(lineSplit[Ra_indice], unit=u.hour).deg
+            thisdec = Angle(lineSplit[Dec_indice], unit=u.deg).deg
+            if lineSplit[8]!="Coadd":
+                ras.append(thisra)
+                decs.append(thisdec)
+        ras, decs = np.array(ras), np.array(decs)
+    
+    if tel_name=="MASTER_coadd":
+        filename = filename.replace("MASTER_coadd","MASTER")
+        Ra_indice=3
+        Dec_indice=4
+        FOV_type="rectangle"
+        FOV_ra=2.05
+        FOV_dec=2.05
+        lines = [line.rstrip('\n') for line in open(filename)]
+        ras, decs = [], []
+        for line in lines:
+            lineSplit = line.split("|")
+            thisra  = Angle(lineSplit[Ra_indice], unit=u.hour).deg
+            thisdec = Angle(lineSplit[Dec_indice], unit=u.deg).deg
+            print(lineSplit[8])
+            if "Coadd" in lineSplit[8]:
+                ras.append(thisra)
+                decs.append(thisdec)
+        ras, decs = np.array(ras), np.array(decs)
+    
+        
+    if tel_name=="HMT":
+        Ra_indice=0
+        Dec_indice=1
+        FOV_type="square"
+        FOV=0.75
+        lines = [line.rstrip('\n') for line in open(filename)]
+        ras, decs = [], []
+        for line in lines:
+            lineSplit = line.split(" ")
+            thisra  = Angle(lineSplit[0], unit=u.hour).deg
+            thisdec = Angle(lineSplit[1], unit=u.deg).deg
+            ras.append(thisra)
+            decs.append(thisdec)
+        ras, decs = np.array(ras), np.array(decs)
+        
+    if tel_name=="HSC":
+        Ra_indice=0
+        Dec_indice=1
+        FOV_type="circle"
+        FOV=0.7
+        lines = [line.rstrip('\n') for line in open(filename)]
+        ras, decs = [], []
+        for line in lines:
+            lineSplit = line.split(" ")
+            thisra  = Angle(lineSplit[1], unit=u.hour).deg
+            thisdec = Angle(lineSplit[2], unit=u.deg).deg
+            ras.append(thisra)
+            decs.append(thisdec)
+        ras, decs = np.array(ras), np.array(decs)
+        
+    if tel_name=="DDOTI":
+        Ra_indice=0
+        Dec_indice=1
+        FOV_type="square"
+        FOV=7.0
+        lines = [line.rstrip('\n') for line in open(filename)]
+        ras, decs = [], []
+        for line in lines:
+            lineSplit = line.split(" ")
+            thisra  = Angle(lineSplit[0], unit=u.hour).deg
+            thisdec = Angle(lineSplit[1], unit=u.deg).deg
+            ras.append(thisra)
+            decs.append(thisdec)
+        ras, decs = np.array(ras), np.array(decs)
+        
+    if tel_name=="SOAR":
+        Ra_indice=0
+        Dec_indice=1
+        FOV_type="circle"
+        FOV=0.06
+        lines = [line.rstrip('\n') for line in open(filename)]
+        ras, decs = [], []
+        for line in lines:
+            lineSplit = line.split()
+            thisra  = Angle(lineSplit[0], unit=u.hour).deg
+            thisdec = Angle(lineSplit[1], unit=u.deg).deg
+            ras.append(thisra)
+            decs.append(thisdec)
+        ras, decs = np.array(ras), np.array(decs)
+        
+    if tel_name=="KMTNet":
+        Ra_indice=0
+        Dec_indice=1
+        FOV_type="square"
+        FOV=2.0
+        lines = [line.rstrip('\n') for line in open(filename)]
+        ras, decs = [], []
+        for line in lines:
+            lineSplit = line.split()
+            thisra  = Angle(lineSplit[1], unit=u.hour).deg
+            thisdec = Angle(lineSplit[2], unit=u.deg).deg
+            ras.append(thisra)
+            decs.append(thisdec)
+        ras, decs = np.array(ras), np.array(decs)
+
+    if tel_name not in ["Xinglong","DDOTI","HMT","HSC","SOAR","KMTNet","MASTER_coadd","MASTER_un"]:
+        lines = [line.rstrip('\n') for line in open(filename)]
+        ras, decs = [], []
+        for line in lines:
+            lineSplit = list(filter(None, line.split(" ")))
+            ras.append(float(lineSplit[Ra_indice]))
+            decs.append(float(lineSplit[Dec_indice]))
+
+            #print(ras,decs)
+
+    #print(FOV_type)
+    if FOV_type == "rectangle":
+        FOV = [FOV_ra,FOV_dec]
+    else:
+        FOV = FOV
+        
+    OBS.append([tel_name,ras,decs,FOV_type, FOV])
+    
+gen_coverage_multiple(healpix,OBS,nside,outputDir)
+
+#gen_coverage(healpix, ras, decs, FOV_type, FOV, )
 
 
