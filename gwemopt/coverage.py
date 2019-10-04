@@ -201,18 +201,15 @@ def powerlaw(params, map_struct, tile_structs):
 
                 params["doMaxTiles"] = True
                 countervals=[]
+                
                 coarse_bool = False
-                if config_struct["FOV_type"] == "circle":
-                    if config_struct["FOV"] <= 2.0:
+                if config_struct["FOV_type"] == "circle" and config_struct["FOV"] <= 2.0:
                         max_trials = np.linspace(10,210,9)
                         coarse_bool = True
-                    else:
-                        max_trials = np.linspace(10,200,20)
+                elif config_struct["FOV_type"] == "square" and config_struct["FOV"] <= 4.0:
+                        max_trials = np.linspace(10,210,9)
+                        coarse_bool = True
                 else:
-                    if config_struct["FOV"] <= 4.0:
-                        max_trials = np.linspace(10,210,9)
-                        coarse_bool = True
-                    else:
                         max_trials = np.linspace(10,200,20)
 
                 for ii,max_trial in enumerate(max_trials):
@@ -222,7 +219,6 @@ def powerlaw(params, map_struct, tile_structs):
 
                     config_struct_hold = copy.copy(config_struct)
                     coverage_struct_hold,tile_struct_hold = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct_hold)
-
                     keys_scheduled = coverage_struct_hold["data"][:,5]
                     filts_used = {key:[] for key in keys_scheduled}
                     filts = coverage_struct_hold["filters"]
@@ -231,7 +227,6 @@ def powerlaw(params, map_struct, tile_structs):
                         filts_used[key].append(filt)
                         if len(filts_used[key]) == len(params["filters"]):
                             counter+=1
-
                     countervals.append(counter)
                     if counter>=n_equal:
                         n_equal,optimized_max = counter,max_trial
@@ -258,7 +253,6 @@ def powerlaw(params, map_struct, tile_structs):
                     keys_scheduled = coverage_struct_hold["data"][:,5]
                     filts_used = {key:[] for key in keys_scheduled}
                     filts = coverage_struct_hold["filters"]
-
                     counter=0
                     for (key,filt) in zip(keys_scheduled,filts):
                         filts_used[key].append(filt)
@@ -291,7 +285,6 @@ def powerlaw(params, map_struct, tile_structs):
                         keys_scheduled = coverage_struct_hold["data"][:,5]
                         filts_used = {key:[] for key in keys_scheduled}
                         filts = coverage_struct_hold["filters"]
-                    
                         counter=0
                         for (key,filt) in zip(keys_scheduled,filts):
                             filts_used[key].append(filt)
