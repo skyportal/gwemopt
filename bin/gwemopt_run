@@ -302,7 +302,7 @@ def params_struct(opts):
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
     params["doMovie_supersched"] = False
     params["doSuperSched"] = False
-
+    params["doUpdateScheduler"] = False
     params["doMaxTiles"] = opts.doMaxTiles
     params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","),dtype=np.float)
     params["mindiff"] = opts.mindiff

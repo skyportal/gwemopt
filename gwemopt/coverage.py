@@ -129,7 +129,7 @@ def waw(params, map_struct, tile_structs):
 
     return combine_coverage_structs(coverage_structs)
 
-def powerlaw(params, map_struct, tile_structs):
+def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
 
     map_struct_hold = copy.deepcopy(map_struct)
 
@@ -174,7 +174,10 @@ def powerlaw(params, map_struct, tile_structs):
         if params["doAlternatingFilters"]:
             if params["doBlocks"]:
                 tile_struct = gwemopt.utils.eject_tiles(params,telescope,tile_struct)
-
+                   
+            if params["doUpdateScheduler"] and previous_coverage_struct: #erases tiles from a previous round
+                tile_struct = update_observed_tiles(params,tile_struct,previous_coverage_struct)
+            
             params_hold = copy.copy(params)
             config_struct_hold = copy.copy(config_struct)
             coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct)
@@ -347,7 +350,10 @@ def powerlaw(params, map_struct, tile_structs):
             
                 except:
                     raise ValueError("need to specify tiles that have been observed using --observedTiles")
-                        
+        
+            if params["doUpdateScheduler"] and previous_coverage_struct:
+                tile_struct = update_observed_tiles(params,tile_struct,previous_coverage_struct) #coverage_struct of the previous round
+
             if params["doSuperSched"]:
                 tile_struct = erase_observed_tiles(params,tile_struct)
             
@@ -438,7 +444,17 @@ def erase_observed_tiles(params,tile_struct):
 
     return tile_struct
 
-def timeallocation(params, map_struct, tile_structs):
+def update_observed_tiles(params,tile_struct,previous_coverage_struct):
+    
+    tile_struct_hold = gwemopt.utils.check_overlapping_tiles(params,tile_struct,previous_coverage_struct) #maps field ids to tile_struct
+    
+    for key in tile_struct.keys(): #sets tile to 0 if previously observed
+        if 'epochs' in tile_struct_hold[key] and tile_struct_hold[key]["epochs"].size > 0:
+            tile_struct[key]['prob']=0.0
+
+return tile_struct
+
+def timeallocation(params, map_struct, tile_structs,previous_coverage_struct=None):
 
     if params["timeallocationType"] == "powerlaw":
         print("Generating powerlaw schedule...")
@@ -462,8 +478,12 @@ def timeallocation(params, map_struct, tile_structs):
                         exposurelist.append(segments.segment(seg[0],seg[1]))
                     params_hold["config"][telescope]["exposurelist"] = exposurelist
                     tile_structs_hold[telescope] = gwemopt.tiles.powerlaw_tiles_struct(params_hold, config_struct, telescope, map_struct, tile_structs_hold[telescope])
-            
-                tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(params_hold, map_struct, tile_structs_hold)
+                if params["doUpdateScheduler"]:
+                    if previous_coverage_struct is None: raise ValueError("Previous round's coverage struct was not provided")
+                    tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(params_hold, map_struct, tile_structs_hold,previous_coverage_struct)
+                else:
+                    tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(params_hold, map_struct, tile_structs_hold,previous_coverage_struct)
+
                 coverage_structs.append(coverage_struct)
                 for ii in range(len(coverage_struct["ipix"])):
                     telescope = coverage_struct["telescope"][ii]
@@ -471,7 +491,12 @@ def timeallocation(params, map_struct, tile_structs):
 
             coverage_struct = combine_coverage_structs(coverage_structs)
         else:
-            tile_structs, coverage_struct = gwemopt.coverage.powerlaw(params, map_struct, tile_structs)
+            if params["doUpdateScheduler"]:
+                if previous_coverage_struct is None: raise ValueError("Previous round's coverage struct was not provided")
+                tile_structs, coverage_struct = gwemopt.coverage.powerlaw(params, map_struct, tile_structs,previous_coverage_struct)
+            else:
+                tile_structs, coverage_struct = gwemopt.coverage.powerlaw(params, map_struct, tile_structs)
+
     elif params["timeallocationType"] == "waw":
         if params["do3D"]:
             print("Generating WAW schedule...")

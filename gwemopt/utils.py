@@ -55,7 +55,7 @@ def readParamsFromFile(file):
 
 def params_checker(params):
     #assigns defaults to params
-    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure","doBlocks"]
+    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure","doBlocks","doUpdateScheduler"]
  
     for parameter in do_Parameters:
         if parameter not in params.keys():
@@ -889,7 +889,7 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
 
     coverage_ras = coverage_struct["data"][:,0]
     coverage_decs = coverage_struct["data"][:,1]
-    coverage_mjds = coverage_struct["data"][:,2]
+#   coverage_mjds = coverage_struct["data"][:,2]
     coverage_ipixs = coverage_struct["ipix"]
     if len(coverage_ras) == 0:
         return tile_struct
@@ -935,16 +935,22 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                 rat = np.array([float(len(overlap)) / float(len(ipix)),
                                 float(len(overlap)) / float(len(ipix2))])
                                 
-                if params["doSuperSched"]:
-                    if np.max(rat) < 0.99:
+                if params["doSuperSched"] or params["doUpdateScheduler"]:
+                    if np.max(rat) < 0.50:
                         continue
                 elif len(overlap)==0:
                         continue
 
                 if not 'epochs' in tile_struct[key]:
-                    tile_struct[key]["epochs"] = np.empty((0,8))
-                    tile_struct[key]["epochs_telescope"] = np.empty((0,1))
+                    col = coverage_struct["data"].shape[1]
+                    tile_struct[key]["epochs"] = np.empty((0,col))
+                
                 tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
-                tile_struct[key]["epochs_telescope"] = np.append(tile_struct[key]["epochs_telescope"],np.atleast_2d(coverage_struct["telescope"][jj]),axis = 0)
+
+                if params["doSuperSched"]:
+                    if not 'epochs_telescope' in tile_struct[key]:
+                        tile_struct[key]["epochs_telescope"] = np.empty((0,1))
+                    tile_struct[key]["epochs_telescope"] = np.append(tile_struct[key]["epochs_telescope"],np.atleast_2d(coverage_struct["telescope"][jj]),axis = 0)
+
 
     return tile_struct
