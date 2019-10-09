@@ -181,10 +181,6 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
             params_hold = copy.copy(params)
             config_struct_hold = copy.copy(config_struct)
             coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct)
-            
-#            if params["doSuperSched"]:
-#                tile_struct = erase_observed_tiles(params,tile_struct)
-
             if params["doBalanceExposure"]:
                 prob={}
                 for key in tile_struct.keys():
@@ -355,8 +351,8 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
                 tile_struct = update_observed_tiles(params,tile_struct,previous_coverage_struct) #coverage_struct of the previous round
 
             if params["doSuperSched"]:
-                tile_struct = erase_observed_tiles(params,tile_struct)
-            
+                tile_struct = erase_observed_tiles(params,tile_struct,telescope)
+
             coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
 
             if params["doBalanceExposure"]:
@@ -416,43 +412,49 @@ def pem(params, map_struct, tile_structs):
 
     return combine_coverage_structs(coverage_structs)
 
-def erase_observed_tiles(params,tile_struct):
-    Tobs = list(params["Tobs_all"])
-    Tobs = np.linspace(Tobs[0],Tobs[1],params["Tobs_split"]+1)
+def erase_observed_tiles(params,tile_struct,telescope): #only for run_gwemopt_superscheduler
+    done_telescopes = []
 
-    if f'{Tobs[0]:.2}_to_{Tobs[1]:.2}' in params["outputDir"]: #only proceeds if not first round of Tobs
-        return tile_struct
-    for ii,Tob in enumerate(Tobs[:-1]): #finds out which round function is being called in to figure out previous telescopes/coverage_structs
-        if f'{Tobs[ii]:.2}_to_{Tobs[ii+1]:.2}_Tobs' in params["outputDir"]:
-            break
+    if len(params["coverage_structs"]) == 1: return tile_struct
+    else:
+        ii = len(params["coverage_structs"])-1 #finds out which round we are in
 
     while ii>0: #loops through all previous coverage structs + covered field ids to set tile probabilities to 0
         ii-=1
         prevtelescopes = params["alltelescopes"][ii].split(",")
         coverage_struct = params["coverage_structs"][f'coverage_struct_{ii}']
+        if not coverage_struct: continue
         tile_struct_hold = gwemopt.utils.check_overlapping_tiles(params,tile_struct,coverage_struct)
-        for prevtelescope in prevtelescopes:
-            for key in tile_struct.keys():
-                if 'epochs' in tile_struct_hold[key]:
-                    epochs = tile_struct_hold[key]["epochs"]
-                    for jj in range(len(epochs)):
-                        field_id = epochs[jj,5]
-                        telescope = tile_struct[key]["epochs_telescope"][jj]
-                        if field_id in params["covered_field_ids"][prevtelescope] and telescope == prevtelescope: #makes sure field id obtained from check_overlapping_tiles is for the correct telescope
-                            tile_struct[key]['prob'] = 0.0
-                            break
 
+        for prevtelescope in prevtelescopes:
+            if prevtelescope in done_telescopes: continue #to prevent setting tiles to 0 redundantly
+            done_telescopes.append(prevtelescope)
+
+            if prevtelescope == telescope:
+                for field_id in params["covered_field_ids"][prevtelescope][ii]:
+                    tile_struct[field_id]['prob'] = 0.0
+                continue
+
+            for key in tile_struct.keys(): #maps field ids to tile_struct if not for the same telesocpe
+                if not 'epochs' in tile_struct_hold[key]: continue
+                epochs = tile_struct_hold[key]["epochs"]
+                for jj in range(len(epochs)):
+                    field_id = epochs[jj,5]
+                    coverage_telescope = tile_struct[key]["epochs_telescope"][jj]
+                    if field_id in params["covered_field_ids"][prevtelescope][ii] and coverage_telescope == prevtelescope: #makes sure field id obtained from check_overlapping_tiles is for the correct telescope
+                        tile_struct[key]['prob'] = 0.0
+
+                        break
     return tile_struct
 
 def update_observed_tiles(params,tile_struct,previous_coverage_struct):
-    
     tile_struct_hold = gwemopt.utils.check_overlapping_tiles(params,tile_struct,previous_coverage_struct) #maps field ids to tile_struct
     
     for key in tile_struct.keys(): #sets tile to 0 if previously observed
         if 'epochs' in tile_struct_hold[key] and tile_struct_hold[key]["epochs"].size > 0:
             tile_struct[key]['prob']=0.0
 
-return tile_struct
+    return tile_struct
 
 def timeallocation(params, map_struct, tile_structs,previous_coverage_struct=None):
 
