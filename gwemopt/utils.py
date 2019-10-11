@@ -935,11 +935,10 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                 rat = np.array([float(len(overlap)) / float(len(ipix)),
                                 float(len(overlap)) / float(len(ipix2))])
                                 
-                if params["doSuperSched"] or params["doUpdateScheduler"]:
-                    if np.max(rat) < 0.50:
-                        continue
+                if (params["doSuperSched"] or params["doUpdateScheduler"]) and np.max(rat)<0.50:
+                    continue
                 elif len(overlap)==0:
-                        continue
+                    continue
 
                 if not 'epochs' in tile_struct[key]:
                     col = coverage_struct["data"].shape[1]
