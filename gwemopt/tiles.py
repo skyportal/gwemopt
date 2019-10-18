@@ -58,6 +58,11 @@ def galaxy(params, map_struct, catalog_struct):
         # less than FoV * params['galaxies_FoV_sep']
         # Take galaxy with highest proba at the center of new pointing
         FoV = params["config"][telescope]['FOV'] * params['galaxies_FoV_sep']
+        if 'FOV_center' in params["config"][telescope]:
+            FoV_center = params["config"][telescope]['FOV_center'] * params['galaxies_FoV_sep']
+        else:
+            FoV_center = params["config"][telescope]['FOV'] * params['galaxies_FoV_sep']
+
         new_ra = []
         new_dec = []
         new_Sloc = []
@@ -85,8 +90,15 @@ def galaxy(params, map_struct, catalog_struct):
                     idx1 = np.where((catalog_struct["ra"][idxRem]>=raCorners[0]) & (catalog_struct["ra"][idxRem]<=raCorners[1]))[0]
                     idx2 = np.where((catalog_struct["dec"][idxRem]>=decCorners[0]) & (catalog_struct["dec"][idxRem]<=decCorners[1]))[0]
                     mask2 = np.intersect1d(idx1,idx2)
+
+                    decCorners = (dec_center - FoV_center/2.0, dec_center + FoV_center/2.0)
+                    raCorners = (ra_center - FoV_center/(2.0*np.cos(np.deg2rad(dec))) , ra_center + FoV_center/(2.0*np.cos(np.deg2rad(dec))))
+                    idx1 = np.where((catalog_struct["ra"][idxRem]>=raCorners[0]) & (catalog_struct["ra"][idxRem]<=raCorners[1]))[0]
+                    idx2 = np.where((catalog_struct["dec"][idxRem]>=decCorners[0]) & (catalog_struct["dec"][idxRem]<=decCorners[1]))[0]
+                    mask3 = np.intersect1d(idx1,idx2)
+
                     # did the optimization help?
-                    if len(mask2) > 2:
+                    if (len(mask2) > 2) and (len(mask3) > 0):
                         mask = mask2
                 else:
                     ra_center, dec_center = np.mean(catalog_struct["ra"][idxRem][mask]), np.mean(catalog_struct["dec"][idxRem][mask])
