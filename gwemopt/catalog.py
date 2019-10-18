@@ -138,13 +138,13 @@ def get_catalog(params, map_struct):
         if not os.path.isfile(catalogFile):
             raise ValueError("Please add %s." % catalogFile)
 
-        with h5py.File(catalogFile, 'r') as f:
-            name = f['name'][:]
-            ra, dec = f['ra'][:], f['dec'][:]
-            sfr_fuv, mstar = f['sfr_fuv'][:], f['mstar'][:]
-            distmpc, magb = f['distmpc'][:], f['magb'][:]
-            a, b2a, pa = f['a'][:], f['b2a'][:], f['pa'][:]
-            btc = f['btc'][:]
+        t = Table.read(catalogFile)
+        name = t["name"]
+        ra, dec = t["ra"], t["dec"]
+        sfr_fuv, mstar = t["sfr_fuv"], t["mstar"]
+        distmpc, magb = t["distmpc"], t["magb"]
+        a, b2a, pa = t["a"], t["b2a"], t["pa"]
+        btc = t["btc"]
 
         idx = np.where(distmpc >= 0)[0]
         ra, dec = ra[idx], dec[idx]
@@ -203,10 +203,14 @@ def get_catalog(params, map_struct):
         idx = np.arange(len(r)).astype(int)
 
     # this happens when we are using a tiny catalog...
+    if len(idx) == 0:
+        idx = np.arange(len(r)).astype(int)
     if np.all(Sloc == 0.0):
         Sloc[:] = 1.0
 
     L_nu = const * 10.**((mag + MAB0)/(-2.5))
+    idx2 = np.where(~np.isfinite(L_nu))[0]
+    L_nu[idx2] = 0.0
     L_nu = L_nu / np.nanmax(L_nu[idx])
     L_nu = L_nu**params["catalog_n"]
     L_nu[L_nu < 0.001] = 0.001

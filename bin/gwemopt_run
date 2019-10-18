@@ -122,6 +122,7 @@ def parse_commandline():
                       default ="../data/ATLAS_GW170104.dat")
     parser.add_option("-l", "--lightcurveFiles", help="Lightcurve files.",
                       default ="../lightcurves/Me2017_H4M050V20.dat")
+    parser.add_option("--observedTiles", help="Tiles that have already been observed.", default = "")
     parser.add_option("--Ninj",default=1000,type=int)
     parser.add_option("--Ntiles",default=10,type=int)
     parser.add_option("--doCalcTiles", action="store_true",default = False)
@@ -133,7 +134,7 @@ def parse_commandline():
     parser.add_option("--Tobs",default="0.0,1.0")
 
     parser.add_option("--mindiff",default=0.0,type=float)
-
+    
     parser.add_option("--powerlaw_cl",default=0.9,type=float)
     parser.add_option("--powerlaw_n",default=1.0,type=float)
     parser.add_option("--powerlaw_dist_exp",default=0,type=float)
@@ -156,6 +157,7 @@ def parse_commandline():
     parser.add_option("--doAlternatingFilters",  action="store_true", default=False)
     parser.add_option("--iterativeOverlap",default=0.0,type=float)
     parser.add_option("--maximumOverlap",default=1.0,type=float)
+    parser.add_option("--doBalanceExposure",  action="store_true", default=False)
 
     parser.add_option("--exposuretimes",default="30.0,30.0,30.0")
 
@@ -172,6 +174,9 @@ def parse_commandline():
 
     parser.add_option("--doParallel",action="store_true",default=False)
     parser.add_option("--Ncores",default=4,type=int)
+
+    parser.add_option("--doBlocks",action="store_true",default=False)
+    parser.add_option("--Nblocks",default=4,type=int)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -198,7 +203,8 @@ def params_struct(opts):
         gwemopt command line options
     """
 
-    telescopes = opts.telescopes.split(",") 
+    telescopes = opts.telescopes.split(",")
+    
 
     params = {}
     params["config"] = {}
@@ -272,7 +278,7 @@ def params_struct(opts):
     params["powerlaw_n"] = opts.powerlaw_n
     params["powerlaw_dist_exp"] = opts.powerlaw_dist_exp
     params["galaxies_FoV_sep"] = opts.galaxies_FoV_sep
-    
+    params["observedTiles"] = opts.observedTiles.split(",")
     params["doPlots"] = opts.doPlots
     params["doMovie"] = opts.doMovie
     params["doObservability"] = opts.doObservability
@@ -291,9 +297,12 @@ def params_struct(opts):
     params["galaxy_catalog"] = opts.galaxy_catalog
 
     params["doSingleExposure"] = opts.doSingleExposure
+    params["doBalanceExposure"] = opts.doBalanceExposure
     params["filters"] = opts.filters.split(",")
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
-
+    params["doMovie_supersched"] = False
+    params["doSuperSched"] = False
+    params["doUpdateScheduler"] = False
     params["doMaxTiles"] = opts.doMaxTiles
     params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","),dtype=np.float)
     params["mindiff"] = opts.mindiff
@@ -326,6 +335,9 @@ def params_struct(opts):
 
     params["doParallel"] = opts.doParallel
     params["Ncores"] = opts.Ncores
+
+    params["doBlocks"] = opts.doBlocks
+    params["Nblocks"] = opts.Nblocks
 
     return params
 

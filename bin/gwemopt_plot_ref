@@ -1,0 +1,200 @@
+#!/usr/bin/python
+
+# Copyright (C) 2017 Michael Coughlin
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 3 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+# Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+""".
+Gravitational-wave Electromagnetic Optimization
+
+This script generates an optimized list of pointings and content for
+reviewing gravitational-wave skymap likelihoods.
+
+Comments should be e-mailed to michael.coughlin@ligo.org.
+
+"""
+
+
+import os, sys, glob, optparse, shutil, warnings
+import copy
+import numpy as np
+np.random.seed(0)
+
+import healpy as hp
+from astropy import table
+from astropy import units as u
+from astropy import cosmology
+from astropy.coordinates import Distance
+from astropy.coordinates import SkyCoord
+
+import matplotlib
+#matplotlib.rc('text', usetex=True)
+matplotlib.use('Agg')
+matplotlib.rcParams.update({'font.size': 16})
+matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
+import matplotlib.pyplot as plt
+from matplotlib import cm
+
+import ligo.skymap.distance as ligodist
+
+import gwemopt.utils, gwemopt.plotting
+import gwemopt.moc, gwemopt.tiles 
+import gwemopt.ztf_tiling
+
+__author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
+__version__ = 1.0
+__date__    = "6/17/2017"
+
+# =============================================================================
+#
+#                               DEFINITIONS
+#
+# =============================================================================
+
+def parse_commandline():
+    """@Parse the options given on the command-line.
+    """
+    parser = optparse.OptionParser(usage=__doc__,version=__version__)
+
+    parser.add_option("--fields", help="Observed fields.", default='/Users/mcoughlin/Code/LIGO/gwemopt/data/ref/suspectrefs_fid1.txt')
+    parser.add_option("-c", "--configDirectory", help="GW-EM config file directory.", default ="../config/")
+    parser.add_option("-o", "--outputDir", help="output directory",default="../output/refs")
+
+    parser.add_option("-t", "--telescope", help="Telescope.", default ="ZTF")
+    parser.add_option("--nside",default=1024,type=int)
+    parser.add_option("--rotation",default=240.0,type=float)
+
+    parser.add_option("-v", "--verbose", action="store_true", default=False,
+                      help="Run verbosely. (Default: False)")
+
+    opts, args = parser.parse_args()
+
+    # show parameters
+    if opts.verbose:
+        print >> sys.stderr, ""
+        print >> sys.stderr, "running gwemopt_run..."
+        print >> sys.stderr, "version: %s"%__version__
+        print >> sys.stderr, ""
+        print >> sys.stderr, "***************** PARAMETERS ********************"
+        for o in opts.__dict__.items():
+          print >> sys.stderr, o[0]+":"
+          print >> sys.stderr, o[1]
+        print >> sys.stderr, ""
+
+    return opts
+
+# =============================================================================
+#
+#                                    MAIN
+#
+# =============================================================================
+
+warnings.filterwarnings("ignore")
+
+# Parse command line
+opts = parse_commandline()
+
+refs = table.Table.read(opts.fields, format="ascii",
+                        names=("path","maxmindiff","goalrms"))
+fields, quadrants = [], []
+for ref in refs:
+    path = ref["path"]
+    pathSplit = path.split("/")
+    field = int(pathSplit[5].replace("field",""))
+    fields.append(field)
+    ccd = int(pathSplit[7].replace("ccd",""))
+    quad = int(pathSplit[8].replace("q",""))
+    quadrants.append(((ccd-1)*4)+quad)
+fields, quadrants = np.array(fields), np.array(quadrants)
+
+params = {}
+params["config"] = {}
+configFiles = glob.glob("%s/*.config"%opts.configDirectory)
+for configFile in configFiles:
+    telescope = configFile.split("/")[-1].replace(".config","")
+    if not opts.telescope == telescope: continue
+    params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
+    params["config"][telescope]["telescope"] = telescope
+    params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2),comments='%')
+    params["config"][telescope]["tot_obs_time"] = 1.0
+
+ipixs = []
+tess = params["config"][opts.telescope]["tesselation"]
+for field in np.unique(fields):
+    idx = np.where(tess[:,0] == field)[0]
+    print(field)
+    if len(idx) == 0:
+        continue
+    row = tess[idx[0],:]
+    ra, dec = row[1], row[2]
+    idx = np.where(field == fields)[0]
+    quads = quadrants[idx]
+    ipix = gwemopt.ztf_tiling.get_quadrant_ipix(opts.nside, ra, dec,
+                                                subfield_ids=quads)
+    if len(ipix) == 0: continue
+    ipixs.append(list({y for x in ipix for y in x}))
+ipix = np.array(list({y for x in ipixs for y in x}))
+
+params["outputDir"] = opts.outputDir
+
+if not os.path.isdir(params["outputDir"]):
+    os.makedirs(params["outputDir"])
+
+params["tilesType"] = "moc"
+params["doMinimalTiling"] = False
+params["doParallel"] = False
+params["telescopes"] = [opts.telescope]
+params["nside"] = opts.nside
+params["doChipGaps"] = False
+params["doSingleExposure"] = False
+params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"] = 0.0, 0.9, 0.0
+params["gpstime"] = 1000000000
+params["Tobs"] = np.array([0.0,1.0])
+params["exposuretimes"] = [30.0]
+params["rotation"] = [opts.rotation,0,0]
+
+params = gwemopt.utils.params_checker(params)
+params = gwemopt.segments.get_telescope_segments(params)
+
+moc_structs = gwemopt.moc.create_moc(params)
+
+npix = hp.nside2npix(opts.nside)
+prob = np.zeros((npix,))
+prob[ipix] = 1.0
+
+unit='Gravitational-wave probability'
+cbar=False
+cmap = plt.get_cmap('PuBuGn')
+
+plotName = os.path.join(params["outputDir"],'tiles.pdf')
+plt.figure()
+hp.mollview(prob,title='',unit=unit,cbar=cbar,rot=[opts.rotation,0,0],cmap=cmap)
+hp.graticule(verbose=False)
+plt.grid(True)
+lons = np.arange(0.0,360,30.0)
+lats = np.zeros(lons.shape)
+for lon, lat in zip(lons,lats):
+    hp.projtext(lon,lat,"%.0f"%lon,lonlat=True,color='k')
+lats = np.arange(-60.0,90,30.0)
+lons = np.zeros(lons.shape)
+for lon, lat in zip(lons,lats):
+    hp.projtext(lon,lat,"%.0f"%lat,lonlat=True,color='k')
+
+#gwemopt.plotting.add_edges()
+plt.show()
+plt.savefig(plotName,dpi=200)
+plt.close('all')
+
+

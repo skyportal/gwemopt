@@ -1,13 +1,73 @@
 
+import os
 import numpy as np
+import optparse
 import h5py
+import warnings
 import astropy.io.fits
 from astropy.table import Table
 from astropy import units as u
 from astropy.coordinates import Angle
 from astropy.coordinates import SkyCoord
 
-catalogFile = '../catalogs/GLADE.hdf5'
+__author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
+__version__ = 1.0
+__date__    = "6/17/2017"
+
+def parse_commandline():
+    """@Parse the options given on the command-line.
+    """
+    parser = optparse.OptionParser(usage=__doc__,version=__version__)
+
+    parser.add_option("-c", "--configDirectory", help="GW-EM config file directory.", default ="../config/")
+    parser.add_option("--catalogDir", help="catalog directory",default="../catalogs")
+    parser.add_option("--galaxy_catalog", help="Source catalog",default="GLADE")
+
+    parser.add_option("-f", "--filename", help="GW coverage file.", default='../data/GW190425/zadko.dat')
+
+    parser.add_option("-t", "--FOV_type", help="FOV type", default='square')
+    parser.add_option("--FOV",default=2.0,type=float)
+    parser.add_option("--FOV_ra",default=2.0,type=float)
+    parser.add_option("--FOV_dec",default=4.0,type=float)
+
+    parser.add_option("--distance_mean",default=156.0,type=float)
+    parser.add_option("--distance_std",default=41.0,type=float)
+
+    parser.add_option("-v", "--verbose", action="store_true", default=False,
+                      help="Run verbosely. (Default: False)")
+
+    opts, args = parser.parse_args()
+
+    # show parameters
+    if opts.verbose:
+        print >> sys.stderr, ""
+        print >> sys.stderr, "running gwemopt_run..."
+        print >> sys.stderr, "version: %s"%__version__
+        print >> sys.stderr, ""
+        print >> sys.stderr, "***************** PARAMETERS ********************"
+        for o in opts.__dict__.items():
+          print >> sys.stderr, o[0]+":"
+          print >> sys.stderr, o[1]
+        print >> sys.stderr, ""
+
+    return opts
+
+# =============================================================================
+#
+#                                    MAIN
+#
+# =============================================================================
+
+warnings.filterwarnings("ignore")
+
+# Parse command line
+opts = parse_commandline()
+
+if not opts.galaxy_catalog == "GLADE":
+    print('That catalog is not implemented...')
+    exit(0)
+
+catalogFile = os.path.join(opts.catalogDir, '%s.hdf5' % opts.galaxy_catalog)
 
 with h5py.File(catalogFile, 'r') as f:
     ra, dec = f['ra'][:], f['dec'][:]
@@ -22,8 +82,7 @@ with h5py.File(catalogFile, 'r') as f:
     _2MASS = _2MASS.astype('U')
     SDSS = SDSS.astype('U')
 
-filename = "../data/GW190425/zadko.dat"
-lines = [line.rstrip('\n') for line in open(filename)]
+lines = [line.rstrip('\n') for line in open(opts.filename)]
 ras, decs = [], []
 for line in lines:
     lineSplit = line.split(" ")
@@ -34,8 +93,8 @@ for line in lines:
     decs.append(thisdec)
 ras, decs = np.array(ras), np.array(decs)
 
-dist_mean = 156
-dist_std = 41
+dist_mean = opts.distance_mean
+dist_std = opts.distance_std
 distance_min = dist_mean - 2*dist_std
 distance_max = dist_mean + 2*dist_std
 
@@ -53,9 +112,20 @@ for jj in range(len(ras)):
     print(lines[jj])
 
     coord = SkyCoord(ra=thisra*u.degree, dec=thisdec*u.degree, frame='icrs')
-    sep = coord.separation(catalog1)
-    sep = sep.deg
-    idx = np.where(sep <  0.3/2.0)[0]
+
+    if opts.FOV_type == "circle":
+        sep = coord.separation(catalog1)
+        sep = sep.deg
+        idx = np.where(sep <  opts.FOV)[0]
+    elif opts.FOV_type == "square":
+        idx1 = np.where((ra >= thisra-opts.FOV/2.0) & (ra <= thisra+opts.FOV/2.0))[0]
+        idx2 = np.where((dec >= thisdec-opts.FOV/2.0) & (dec <= thisdec+opts.FOV/2.0))[0]
+        idx = np.intersect1d(idx1,idx2)
+    elif opts.FOV_type == "rectangle":
+        idx1 = np.where((ra >= thisra-opts.FOV_ra/2.0) & (ra <= thisra+opts.FOV_ra/2.0))[0]
+        idx2 = np.where((dec >= thisdec-opts.FOV_dec/2.0) & (dec <= thisdec+opts.FOV_dec/2.0))[0]
+        idx = np.intersect1d(idx1,idx2)
+
     for ii in range(len(idx)):
         print(ra[idx[ii]], dec[idx[ii]], distmpc[idx[ii]], GWGC[idx[ii]], PGC[idx[ii]], _2MASS[idx[ii]], HyperLEDA[idx[ii]], SDSS[idx[ii]]) 
     print(" ")

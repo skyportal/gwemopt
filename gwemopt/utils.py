@@ -5,6 +5,8 @@ import copy
 import numpy as np
 import healpy as hp
 import itertools
+import glob
+import astropy, astroplan
 
 from scipy.stats import norm
 from scipy.optimize import minimize
@@ -49,6 +51,190 @@ def readParamsFromFile(file):
                         params[line_split[0]] = float(line_split[1])
                     except:
                         params[line_split[0]] = line_split[1]
+    return params
+
+def params_checker(params):
+    #assigns defaults to params
+    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure","doBlocks","doUpdateScheduler"]
+ 
+    for parameter in do_Parameters:
+        if parameter not in params.keys():
+            params[parameter] = False
+
+    if "skymap" not in params.keys():
+        params["skymap"] = '../output/skymaps/G268556.fits'
+
+    if "gpstime" not in params.keys():
+        params["gpstime"] = 1167559936.0
+
+    if "outputDir" not in params.keys():
+        params["outputDir"] = "../output"
+
+    if "tilingDir" not in params.keys():
+        params["tilingDir"] = "../tiling"
+
+    if "catalogDir" not in params.keys():
+        params["catalogDir"] = "../catalogs"
+
+    if "event" not in params.keys():
+        params["event"] = "G268556"
+
+    if "coverageFiles" not in params.keys():
+        params["coverageFiles"] = "../data/ATLAS_GW170104.dat"
+
+    if "telescopes" not in params.keys():
+        params["telescopes"] = 'ATLAS'
+
+    if type(params["telescopes"]) == str:
+        params["telescopes"] = params["telescopes"].split(",")
+
+    if "lightcurveFiles" not in params.keys():
+        params["lightcurveFiles"] = "../lightcurves/Me2017_H4M050V20.dat"
+
+    if "tilesType" not in params.keys():
+        params["tilesType"] = "moc"
+
+    if "scheduleType" not in params.keys():
+        params["scheduleType"] = "greedy"
+
+    if "timeallocationType" not in params.keys():
+        params["timeallocationType"] = "powerlaw"
+
+    if "Ninj" not in params.keys():
+        params["Ninj"] = 1000
+
+    if "Ndet" not in params.keys():
+        params["Ndet"] = 1
+    
+    if "Ntiles" not in params.keys():
+        params["Ntiles"] = 10
+
+    if "Ntiles_cr" not in params.keys():
+        params["Ntiles_cr"] = 0.70
+
+    if "Dscale" not in params.keys():
+        params["Dscale"] = 1.0
+
+    if "nside" not in params.keys():
+        params["nside"] = 256
+
+    if "Tobs" not in params.keys():
+        params["Tobs"] = np.array([0.0,1.0])
+
+    if "powerlaw_c1" not in params.keys():
+        params["powerlaw_c1"] = 0.9
+
+    if "powerlaw_n" not in params.keys():
+        params["powerlaw_n"] = 1.0
+
+    if "powerlaw_dist_exp" not in params.keys():
+        params["powerlaw_dist_exp"] = 0
+
+    if "galaxies_FoV_sep" not in params.keys():
+        params["galaxies_FoV_sep"] = 1.0
+
+    if "footprint_ra" not in params.keys():
+        params["footprint_ra"] = 30.0
+
+    if "footprint_dec" not in params.keys():
+        params["footprint_dec"] = 60.0
+
+    if "footprint_radius" not in params.keys():
+        params["footprint_radius"] = 10.0
+
+    if "transientsFile" not in params.keys():
+        params["transientsFile"] = "../transients/ps1_objects.csv"
+
+    if "dt" not in params.keys():
+        params["dt"] = 14.0
+
+    if "galaxy_catalog" not in params.keys():
+        params["galaxy_catalog"] = "GLADE"
+    
+    if "filters" not in params.keys():
+        params["filters"] = ['r','g','r']
+
+    if "exposuretimes" not in params.keys():
+        params["exposuretimes"] = np.array([30.0,30.0,30.0])
+
+    if "max_nb_tiles" not in params.keys():
+        params["max_nb_tiles"] = np.array([-1,-1,-1])
+
+    if "mindiff" not in params.keys():
+        params["mindiff"] = 0.0
+
+    if "airmass" not in params.keys():
+        params["airmass"] = 2.5
+
+    if "iterativeOverlap" not in params.keys():
+        params["iterativeOverlap"] = 0.0
+
+    if "maximumOverlap" not in params.keys():
+        params["maximumOverlap"] = 1.0
+
+    if "catalog_n" not in params.keys():
+        params["catalog_n"] = 1.0
+
+    if "galaxy_grade" not in params.keys():
+        params["galaxy_grade"] = "S"
+
+    if "splitType" not in params.keys():
+        params["splitType"] = "regional"
+
+    if "Nregions" not in params.keys():
+        params["Nregions"] = 768
+
+    if "configDirectory" not in params.keys():
+        params["configDirectory"] = "../config/"
+
+    if "Ncores" not in params.keys():
+        params["Ncores"] = 4
+
+    if "Nblocks" not in params.keys():
+        params["Nblocks"] = 4
+
+    if "config" not in params.keys():
+        params["config"] = {}
+        configFiles = glob.glob("%s/*.config"%params["configDirectory"])
+        for configFile in configFiles:
+            telescope = configFile.split("/")[-1].replace(".config","")
+            if not telescope in params["telescopes"]: continue
+            params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
+            params["config"][telescope]["telescope"] = telescope
+            if params["doSingleExposure"]:
+                exposuretime = np.array(opts.exposuretimes.split(","),dtype=np.float)[0]
+            
+                nmag = np.log(exposuretime/params["config"][telescope]["exposuretime"]) / np.log(2.5)
+                params["config"][telescope]["magnitude"] = params["config"][telescope]["magnitude"] + nmag
+                params["config"][telescope]["exposuretime"] = exposuretime
+            if "tesselationFile" in params["config"][telescope]:
+                if not os.path.isfile(params["config"][telescope]["tesselationFile"]):
+                    if params["config"][telescope]["FOV_type"] == "circle":
+                        gwemopt.tiles.tesselation_spiral(params["config"][telescope])
+                    elif params["config"][telescope]["FOV_type"] == "square":
+                        gwemopt.tiles.tesselation_packing(params["config"][telescope])
+                if params["tilesType"] == "galaxy":
+                    params["config"][telescope]["tesselation"] = np.empty((3,))
+                else:
+                    params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2),comments='%')
+
+            if "referenceFile" in params["config"][telescope]:
+                refs = table.unique(table.Table.read(
+                    params["config"][telescope]["referenceFile"],
+                    format='ascii', data_start=2, data_end=-1)['field', 'fid'])
+                reference_images =\
+                    {group[0]['field']: group['fid'].astype(int).tolist()
+                    for group in refs.group_by('field').groups}
+                reference_images_map = {1: 'g', 2: 'r', 3: 'i'}
+                for key in reference_images:
+                    reference_images[key] = [reference_images_map.get(n, n)
+                                             for n in reference_images[key]]
+                params["config"][telescope]["reference_images"] = reference_images
+                                                                     
+            location = astropy.coordinates.EarthLocation(params["config"][telescope]["longitude"],params["config"][telescope]["latitude"],params["config"][telescope]["elevation"])
+            observer = astroplan.Observer(location=location)
+            params["config"][telescope]["observer"] = observer
+
     return params
 
 def read_skymap(params,is3D=False,map_struct=None):
@@ -265,6 +451,72 @@ def getCirclePixels(ra_pointing, dec_pointing, radius, nside, alpha=0.4, color='
     patch = matplotlib.patches.PathPatch(path, alpha=alpha, color=color, fill=True, zorder=3, edgecolor=edgecolor)
 
     area = np.pi * radius**2
+
+    return ipix, radecs, patch, area
+
+def getRectanglePixels(ra_pointing, dec_pointing, raSide, decSide, nside, alpha = 0.4, color='k', edgecolor='k', rotation=None):
+
+    area = raSide*decSide
+
+    decCorners = (dec_pointing - decSide / 2.0, dec_pointing + decSide / 2.0)
+
+    #security for the periodic limit conditions 
+    radecs = []
+    for d in decCorners:
+        if d > 90.:
+            d = 180. - d
+        elif d < -90.:
+            d = -180 - d
+
+        raCorners = (ra_pointing - (raSide / 2.0) / np.cos(np.deg2rad(d)) , ra_pointing + (raSide / 2.0) / np.cos(np.deg2rad(d)))
+        #security for the periodic limit conditions 
+        for r in raCorners:
+            if r > 360.:
+                r = r - 360.
+            elif r < 0.:
+                r = 360. + r
+            radecs.append([r,d])
+
+    radecs = np.array(radecs)
+    idx1 = np.where(radecs[:,0]>=180.0)[0]
+    idx2 = np.where(radecs[:,0]<180.0)[0]
+    idx3 = np.where(radecs[:,0]>300.0)[0]
+    idx4 = np.where(radecs[:,0]<60.0)[0]
+    if (len(idx1)>0 and len(idx2)>0) and not (len(idx3)>0 and len(idx4)>0):
+        alpha = 0.0
+
+    idx1 = np.where(np.abs(radecs[:,1])>=87.0)[0]
+    if len(idx1) == 4:
+        return [], [], [], []
+
+    idx1 = np.where((radecs[:,1]>=87.0) | (radecs[:,1]<=-87.0))[0]
+    if len(idx1)>0:
+        radecs = np.delete(radecs, idx1[0], 0)
+
+    xyz = []
+    for r, d in radecs:
+        xyz.append(hp.ang2vec(r, d, lonlat=True))
+
+    npts, junk = radecs.shape
+    if npts == 4:
+        xyz = [xyz[0], xyz[1],xyz[3], xyz[2]]
+        ipix = hp.query_polygon(nside, np.array(xyz))
+    else:
+        ipix = hp.query_polygon(nside, np.array(xyz))
+
+    #idx1 = np.where((radecs[:,1]>=70.0) | (radecs[:,1]<=-70.0))[0]
+    #idx2 = np.where((radecs[:,0]>300.0) | (radecs[:,0]<60.0))[0]
+    #if (len(idx1) == 0) or (len(idx2) > 0):
+    #    return [], [], [], []
+
+    xyz = np.array(xyz)
+    proj = hp.projector.MollweideProj(rot=rotation, coord=None)
+    x,y = proj.vec2xy(xyz[:,0],xyz[:,1],xyz[:,2])
+    xy = np.zeros(radecs.shape)
+    xy[:,0] = x
+    xy[:,1] = y
+    path = matplotlib.path.Path(xy)
+    patch = matplotlib.patches.PathPatch(path, alpha=alpha, color=color, fill=True, zorder=3, edgecolor=edgecolor)
 
     return ipix, radecs, patch, area
 
@@ -552,7 +804,33 @@ def slice_number_tiles(params, telescope, tile_struct, coverage_struct):
         if ii in idx_keep: continue
         tile_struct[key]['prob'] = 0.0
 
-    return tile_struct, True        
+    return tile_struct, True
+
+def eject_tiles(params, telescope, tile_struct):
+    
+    for field_id in params["scheduled_fields"][telescope]:
+        tile_struct[field_id]['prob'] = 0.0
+    
+    return tile_struct
+
+def balance_tiles(params, tile_struct, coverage_struct):
+
+    filters, exposuretimes = params["filters"], params["exposuretimes"]
+
+    keys_scheduled = coverage_struct["data"][:,5]
+    filts = coverage_struct["filters"]
+    filts_used = {key: [] for key in keys_scheduled} #dictionary of scheduled filters for each key
+
+    for (key,filt) in zip(keys_scheduled,filts):
+        filts_used[key].append(filt)
+
+    doReschedule = False
+    for key in filts_used:
+        if len(filts_used[key]) != len(filters):
+            tile_struct[key]['prob'] = 0.0
+            doReschedule = True
+
+    return tile_struct, doReschedule
 
 def slice_galaxy_tiles(params, tile_struct, coverage_struct):
 
@@ -611,7 +889,7 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
 
     coverage_ras = coverage_struct["data"][:,0]
     coverage_decs = coverage_struct["data"][:,1]
-    coverage_mjds = coverage_struct["data"][:,2]
+#   coverage_mjds = coverage_struct["data"][:,2]
     coverage_ipixs = coverage_struct["ipix"]
     if len(coverage_ras) == 0:
         return tile_struct
@@ -653,14 +931,25 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                     continue
                 ipix2 = coverage_struct["ipix"][jj]
                 overlap = np.intersect1d(ipix, ipix2)
-                if len(overlap) == 0:
-                    continue
-
+                
                 rat = np.array([float(len(overlap)) / float(len(ipix)),
                                 float(len(overlap)) / float(len(ipix2))])
-        
+                                
+                if (params["doSuperSched"] or params["doUpdateScheduler"]) and np.max(rat)<0.50:
+                    continue
+                elif len(overlap)==0:
+                    continue
+
                 if not 'epochs' in tile_struct[key]:
-                    tile_struct[key]["epochs"] = np.empty((0,8))
+                    col = coverage_struct["data"].shape[1]
+                    tile_struct[key]["epochs"] = np.empty((0,col))
+                
                 tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
+
+                if params["doSuperSched"]:
+                    if not 'epochs_telescope' in tile_struct[key]:
+                        tile_struct[key]["epochs_telescope"] = np.empty((0,1))
+                    tile_struct[key]["epochs_telescope"] = np.append(tile_struct[key]["epochs_telescope"],np.atleast_2d(coverage_struct["telescope"][jj]),axis = 0)
+
 
     return tile_struct
