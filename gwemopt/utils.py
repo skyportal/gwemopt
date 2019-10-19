@@ -31,6 +31,7 @@ import ligo.skymap.distance as ligodist
 import gwemopt.moc
 import gwemopt.tiles
 import gwemopt.segments
+import gwemopt.scheduler
 
 def readParamsFromFile(file):
     """@read gwemopt params file
