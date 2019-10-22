@@ -333,17 +333,19 @@ def erase_observed_tiles(params,tile_struct,telescope): #only for run_gwemopt_su
     return tile_struct
 
 def update_observed_tiles(params,tile_struct,previous_coverage_struct):
-    tile_struct_hold = gwemopt.utils.check_overlapping_tiles(params,tile_struct,previous_coverage_struct) #maps field ids to tile_struct
     
+    if params["doAlternatingFilters"]:
+        tile_struct_hold = copy.copy(tile_struct)
+    else:
+        tile_struct_hold = gwemopt.utils.check_overlapping_tiles(params,tile_struct,previous_coverage_struct) #maps field ids to tile_struct
+
     for key in tile_struct.keys(): #sets tile to 0 if previously observed
         if not 'epochs' in tile_struct_hold[key]: continue
         epochs = tile_struct_hold[key]["epochs"]
         
         if params["doAlternatingFilters"]: #only sets to 0 if filters match for that particular block
-            for jj in range(len(epochs)):
-                if np.any(params["filters"][0] in tile_struct[key]["epochs_filters"][jj]):
-                    tile_struct[key]['prob']=0.0
-                    break
+            if np.any(params["filters"][0] in tile_struct[key]["epochs_filters"]):
+                tile_struct[key]['prob']=0.0
         
         else: #simply sets to 0 if there are overlapping fields found
             tile_struct[key]['prob']=0.0
