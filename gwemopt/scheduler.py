@@ -127,7 +127,8 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
             tilesegmentlist = tilesegmentlists[jj]
             if tile_struct[key]["prob"] == 0: continue
             if "dec_constraint" in config_struct:
-                if (tile_struct[key]["dec"] < dec_min) or (tile_struct[key]["dec"] > dec_max): continue
+                if (tile_struct[key]["dec"] < dec_min) or (tile_struct[key]["dec"] > dec_max):
+                    continue
             if "epochs" in tile_struct[key]:
                 if np.any(np.abs(exposurelist[ii][0]-tile_struct[key]["epochs"][:,2]) < params["mindiff"]/86400.0):
                     continue
@@ -190,8 +191,6 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
             airmass_weight = 10 ** (0.4 * 0.1 * (airmass - 1) )
             tilematrix[ii, :] = np.array(probs/airmass_weight)
             probmatrix[ii, :] = np.array(probs * (True^horizon_mask))
-
-
 
     if params["scheduleType"] == "greedy":
         for ii in np.arange(len(exposurelist)): 
