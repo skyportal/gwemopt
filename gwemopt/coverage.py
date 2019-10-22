@@ -175,12 +175,10 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
             if params["doBlocks"]:
                 tile_struct = gwemopt.utils.eject_tiles(params,telescope,tile_struct)
                    
-            if params["doUpdateScheduler"] and previous_coverage_struct: #erases tiles from a previous round
-                tile_struct = update_observed_tiles(params,tile_struct,previous_coverage_struct)
-            
             params_hold = copy.copy(params)
             config_struct_hold = copy.copy(config_struct)
-            coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct)
+            
+            coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
 
             if params["doBalanceExposure"]:
                 optimized_max = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_hold)
@@ -188,13 +186,13 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
 
                 params_hold = copy.copy(params)
                 config_struct_hold = copy.copy(config_struct)
-                coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct)
+                coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
 
                 tile_struct, doReschedule = gwemopt.utils.balance_tiles(params_hold, tile_struct, coverage_struct)
                 config_struct_hold = copy.copy(config_struct)
 
                 if doReschedule:
-                    coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct)
+                    coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
                 
                 keys_scheduled,filts = coverage_struct["data"][:,5], coverage_struct["filters"]
                 filts_used = {key:[] for key in keys_scheduled}
@@ -338,7 +336,16 @@ def update_observed_tiles(params,tile_struct,previous_coverage_struct):
     tile_struct_hold = gwemopt.utils.check_overlapping_tiles(params,tile_struct,previous_coverage_struct) #maps field ids to tile_struct
     
     for key in tile_struct.keys(): #sets tile to 0 if previously observed
-        if 'epochs' in tile_struct_hold[key] and tile_struct_hold[key]["epochs"].size > 0:
+        if not 'epochs' in tile_struct_hold[key]: continue
+        epochs = tile_struct_hold[key]["epochs"]
+        
+        if params["doAlternatingFilters"]: #only sets to 0 if filters match for that particular block
+            for jj in range(len(epochs)):
+                if np.any(params["filters"][0] in tile_struct[key]["epochs_filters"][jj]):
+                    tile_struct[key]['prob']=0.0
+                    break
+        
+        else: #simply sets to 0 if there are overlapping fields found
             tile_struct[key]['prob']=0.0
 
     return tile_struct
@@ -371,7 +378,7 @@ def timeallocation(params, map_struct, tile_structs,previous_coverage_struct=Non
                     if previous_coverage_struct is None: raise ValueError("Previous round's coverage struct was not provided")
                     tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(params_hold, map_struct, tile_structs_hold,previous_coverage_struct)
                 else:
-                    tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(params_hold, map_struct, tile_structs_hold,previous_coverage_struct)
+                    tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(params_hold, map_struct, tile_structs_hold)
 
                 coverage_structs.append(coverage_struct)
                 for ii in range(len(coverage_struct["ipix"])):
