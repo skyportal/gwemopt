@@ -35,6 +35,8 @@ import healpy as hp
 #import ephem
 import astropy, astroplan
 from astropy import table
+from astropy import time
+import astropy.units as u
 
 import gwemopt.utils, gwemopt.gracedb
 import gwemopt.rankedTilesGenerator, gwemopt.waw
@@ -46,6 +48,7 @@ import gwemopt.tiles, gwemopt.segments
 
 import gwemopt.footprint, gwemopt.transients
 import gwemopt.quadrants, gwemopt.mapsplit
+import gwemopt.ztf_coverage
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -146,6 +149,10 @@ def parse_commandline():
     parser.add_option("--footprint_dec",default=60.0,type=float)
     parser.add_option("--footprint_radius",default=10.0,type=float)
 
+    parser.add_option("--doZTFCoverage", action="store_true", default=False)
+    parser.add_option("--start_time",default=None)
+    parser.add_option("--end_time",default=None)
+
     parser.add_option("--doTransients",  action="store_true", default=False)
     parser.add_option("--transientsFile",default="../transients/ps1_objects.csv")
     parser.add_option("--dt",default=14.0,type=float)
@@ -211,7 +218,11 @@ def params_struct(opts):
     configFiles = glob.glob("%s/*.config"%opts.configDirectory)
     for configFile in configFiles:
         telescope = configFile.split("/")[-1].replace(".config","")
-        if not telescope in telescopes: continue
+        if not telescope in telescopes:
+            if opts.doZTFCoverage and telescope == "ZTF":
+                pass
+            else:
+                continue
         params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
         params["config"][telescope]["telescope"] = telescope
         if opts.doSingleExposure:
@@ -339,6 +350,17 @@ def params_struct(opts):
     params["doBlocks"] = opts.doBlocks
     params["Nblocks"] = opts.Nblocks
 
+    params["doZTFCoverage"] = opts.doZTFCoverage
+    if opts.start_time is None:
+        params["start_time"] = time.Time.now() - time.TimeDelta(1.0*u.day)
+    else:
+        params["start_time"] = time.Time(opts.start_time, format='isot', scale='utc')
+
+    if opts.end_time is None:
+        params["end_time"] = time.Time.now()
+    else:
+        params["end_time"] = time.Time(opts.end_time, format='isot', scale='utc')
+
     return params
 
 # =============================================================================
@@ -363,6 +385,8 @@ elif opts.doSkymap:
     params["gpstime"]
 elif opts.doFootprint:
     params["skymap"] = gwemopt.footprint.get_skymap(params)
+elif opts.doZTFCoverage:
+    params["skymap"] = gwemopt.ztf_coverage.get_skymap(params)
 else:
     print("Need to enable --doEvent, --doFootprint or --doSkymap")
     exit(0)

@@ -239,7 +239,10 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
         distmed[~np.isfinite(distmed)] = np.nan
         #distmed[distmed<np.nanmedian(distmed)/4.0] = np.nanmedian(distmed)/4.0
 
-        ranked_tile_distances = compute_tiles_map(params, tile_struct, distmed, func='np.nanmedian(x)')        
+        if params["tilesType"] == "galaxy":
+            ranked_tile_distances = compute_tiles_map(params, tile_struct, distmed, func='center', ipix_keep=map_struct["ipix_keep"])
+        else:
+            ranked_tile_distances = compute_tiles_map(params, tile_struct, distmed, func='np.nanmedian(x)', ipix_keep=map_struct["ipix_keep"])        
         ranked_tile_distances_median = ranked_tile_distances / np.nanmedian(ranked_tile_distances)
         ranked_tile_distances_median = ranked_tile_distances_median**dist_exp
         ranked_tile_probs = ranked_tile_probs*ranked_tile_distances_median
@@ -269,7 +272,6 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
                 if tile_struct[key]['prob'] > 0.0 and observability_duration < min_obs_duration: 
                    tileprob = 0.0
 
-
             tile_struct[key]["prob"] = tileprob
             if prob == 0.0:
                 tile_struct[key]["exposureTime"] = 0.0
@@ -294,7 +296,6 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
                     tile_struct[key]["exposureTime"] = exposureTime
                     tile_struct[key]["nexposures"] = len(params["exposuretimes"])
                     tile_struct[key]["filt"] = params["filters"]
-
     else:
         ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
 
@@ -316,7 +317,7 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
                     observability_duration += tile_struct[key]['segmentlist'][counter][1] - tile_struct[key]['segmentlist'][counter][0]
                 if tile_struct[key]['prob'] > 0.0 and observability_duration < min_obs_duration: 
                     prob = 0.0
-
+ 
             tile_struct[key]["prob"] = prob
             tile_struct[key]["exposureTime"] = exposureTime
             tile_struct[key]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
