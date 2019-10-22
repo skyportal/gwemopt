@@ -1,13 +1,36 @@
 
 import os
 import requests
+import urllib.parse
 from astropy import time
 import astropy.units as u
 from astropy.table import Table
 import numpy as np
 import healpy as hp
+import pandas as pd
 
 import gwemopt.ztf_tiling
+
+def ztf_queue():
+
+    ZTF_URL = "http://127.0.0.1:9999"
+    fields, quadrants = [], []    
+
+    r = requests.get(
+        urllib.parse.urljoin(ZTF_URL, 'current_queue'))
+    data = r.json()
+    queue = pd.read_json(data['queue'], orient='records')
+    if len(queue) > 0:
+        n_fields = len(queue['field_id'].unique())
+        queue_info.append(f"   Number of unique field_ids: {n_fields}")
+        for field in queue['field_id'].unique():
+            rcids = np.arange(64)
+            for rcid in rcids:
+                fields.append(int(field))
+                quadrants.append(int(rcid))
+
+    return np.array(fields), np.array(quadrants)
+
 
 def ztf_depot(start_time=None, end_time=None):
     """ZTF depot reader.
@@ -72,6 +95,7 @@ def get_skymap(params):
     ra = np.rad2deg(phi)
     dec = np.rad2deg(0.5*np.pi - theta)
 
+    #fields, quadrants = ztf_queue()
     fields, quadrants = ztf_depot(start_time=params["start_time"],
                                   end_time=params["end_time"])
 
