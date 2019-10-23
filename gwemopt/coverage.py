@@ -175,148 +175,33 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
             if params["doBlocks"]:
                 tile_struct = gwemopt.utils.eject_tiles(params,telescope,tile_struct)
                    
-            if params["doUpdateScheduler"] and previous_coverage_struct: #erases tiles from a previous round
-                tile_struct = update_observed_tiles(params,tile_struct,previous_coverage_struct)
-            
             params_hold = copy.copy(params)
             config_struct_hold = copy.copy(config_struct)
-            coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct)
+            
+            coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
+
             if params["doBalanceExposure"]:
-                prob={}
-                for key in tile_struct.keys():
-                    prob[key] = tile_struct[key]['prob']
-
-                keys_scheduled = coverage_struct["data"][:,5]
-                filts_used = {key:[] for key in keys_scheduled}
-                filts = coverage_struct["filters"]
-
-                for (key,filt) in zip(keys_scheduled,filts): #finds # of tiles w/balanced exposures if no max tiles restriction is imposed
-                    filts_used[key].append(filt)
-                n_equal=0
-                for key in filts_used:
-                    if len(filts_used[key]) == len(params["filters"]):
-                        n_equal+=1
-                optimized_max=-1 #assigns baseline optimized maxtiles
-
-                params["doMaxTiles"] = True
-                countervals=[]
-                
-                coarse_bool = False
-                if config_struct["FOV_type"] == "circle" and config_struct["FOV"] <= 2.0:
-                        max_trials = np.linspace(10,210,9)
-                        coarse_bool = True
-                elif config_struct["FOV_type"] == "square" and config_struct["FOV"] <= 4.0:
-                        max_trials = np.linspace(10,210,9)
-                        coarse_bool = True
-                else:
-                        max_trials = np.linspace(10,200,20)
-
-                for ii,max_trial in enumerate(max_trials):
-                    params["max_nb_tiles"] = np.array([max_trial],dtype=np.float)
-                    params_hold = copy.copy(params)
-                    tile_struct_hold = copy.copy(tile_struct)
-
-                    config_struct_hold = copy.copy(config_struct)
-                    coverage_struct_hold,tile_struct_hold = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct_hold)
-                    keys_scheduled = coverage_struct_hold["data"][:,5]
-                    filts_used = {key:[] for key in keys_scheduled}
-                    filts = coverage_struct_hold["filters"]
-                    counter=0
-                    for (key,filt) in zip(keys_scheduled,filts):
-                        filts_used[key].append(filt)
-                        if len(filts_used[key]) == len(params["filters"]):
-                            counter+=1
-                    countervals.append(counter)
-                    if counter>=n_equal:
-                        n_equal,optimized_max = counter,max_trial
-
-                    for key in tile_struct.keys():
-                        tile_struct[key]['prob'] = prob[key]
-                    if ii>0 and counter<=countervals[ii-1]: break #breaks if # of fields w/ all exposures starts decreasing
-
-                if coarse_bool == True:
-                    max_trials = np.linspace(optimized_max-24,optimized_max+24,9)
-                else:
-                    max_trials = np.linspace(optimized_max-9,optimized_max+9,10)
-
-                countervals=[] #to compare # of fields w/ all exposures between different iterations
-                
-                for ii,max_trial in enumerate(max_trials):
-                    if optimized_max==-1: break #breaks if no max tiles restriction should be imposed
-                    params["max_nb_tiles"] = np.array([max_trial],dtype=np.float)
-                    params_hold = copy.copy(params)
-                    tile_struct_hold = copy.copy(tile_struct)
-                    config_struct_hold = copy.copy(config_struct)
-                    coverage_struct_hold,tile_struct_hold = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct_hold)
-
-                    keys_scheduled = coverage_struct_hold["data"][:,5]
-                    filts_used = {key:[] for key in keys_scheduled}
-                    filts = coverage_struct_hold["filters"]
-                    counter=0
-                    for (key,filt) in zip(keys_scheduled,filts):
-                        filts_used[key].append(filt)
-                        if len(filts_used[key]) == len(params["filters"]):
-                            counter+=1
-                    countervals.append(counter)
-                    if counter>=n_equal:
-                        n_equal,optimized_max = counter,max_trial
-
-                    for key in tile_struct.keys():
-                        tile_struct[key]['prob'] = prob[key]
-                    if ii>0 and counter<=countervals[ii-1]: break #breaks if # of fields w/ all exposures starts decreasing
-                
-                optimized_max_prev=optimized_max
-
-                #another for loop for more accurate estimation, only if optimized_max is below a certain number (to save runtime)
-                if optimized_max<=50 and coarse_bool == False:
-
-                    max_trials=np.linspace(optimized_max-1,optimized_max+1,3)
-                    countervals=[]
-                    for ii,max_trial in enumerate(max_trials):
-                        if optimized_max==-1: break #breaks if no max tiles restriction should be imposed
-                        if max_trial==optimized_max_prev: continue #doesn't redo maxtile # that has already been tested
-                        params["max_nb_tiles"] = np.array([max_trial],dtype=np.float)
-                        params_hold = copy.copy(params)
-                        tile_struct_hold = copy.copy(tile_struct)
-                        config_struct_hold = copy.copy(config_struct)
-                        coverage_struct_hold,tile_struct_hold = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct_hold)
-                    
-                        keys_scheduled = coverage_struct_hold["data"][:,5]
-                        filts_used = {key:[] for key in keys_scheduled}
-                        filts = coverage_struct_hold["filters"]
-                        counter=0
-                        for (key,filt) in zip(keys_scheduled,filts):
-                            filts_used[key].append(filt)
-                            if len(filts_used[key]) == len(params["filters"]):
-                                counter+=1
-                        countervals.append(counter)
-                        if counter>=n_equal:
-                            n_equal,optimized_max = counter,max_trial
-
-                        for key in tile_struct.keys():
-                            tile_struct[key]['prob'] = prob[key]
-                        if ii>0 and counter<=countervals[ii-1]: break #breaks if # of fields w/ all exposures starts decreasing
-
+                optimized_max = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_hold)
                 params["max_nb_tiles"] = np.array([optimized_max],dtype=np.float)
 
                 params_hold = copy.copy(params)
                 config_struct_hold = copy.copy(config_struct)
-                coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct)
+                coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
 
-                params_hold = copy.copy(params)
-                config_struct_hold = copy.copy(config_struct)
                 tile_struct, doReschedule = gwemopt.utils.balance_tiles(params_hold, tile_struct, coverage_struct)
+                config_struct_hold = copy.copy(config_struct)
+
                 if doReschedule:
-                    coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct)
+                    coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
                 
-                keys_scheduled = coverage_struct["data"][:,5]
-                filts = coverage_struct["filters"]
+                keys_scheduled,filts = coverage_struct["data"][:,5], coverage_struct["filters"]
                 filts_used = {key:[] for key in keys_scheduled}
                 equal_filts = False
                 for (key,filt) in zip(keys_scheduled,filts): #checks if there are any fields w/ obs. in all filters
                     filts_used[key].append(filt)
                     if len(filts_used[key]) == len(params["filters"]):
                         equal_filts=True
+                        break
 
                 if not equal_filts:
                     filters = ','.join(params["filters"])
@@ -448,10 +333,21 @@ def erase_observed_tiles(params,tile_struct,telescope): #only for run_gwemopt_su
     return tile_struct
 
 def update_observed_tiles(params,tile_struct,previous_coverage_struct):
-    tile_struct_hold = gwemopt.utils.check_overlapping_tiles(params,tile_struct,previous_coverage_struct) #maps field ids to tile_struct
     
+    if params["doAlternatingFilters"]:
+        tile_struct_hold = copy.copy(tile_struct)
+    else:
+        tile_struct_hold = gwemopt.utils.check_overlapping_tiles(params,tile_struct,previous_coverage_struct) #maps field ids to tile_struct
+
     for key in tile_struct.keys(): #sets tile to 0 if previously observed
-        if 'epochs' in tile_struct_hold[key] and tile_struct_hold[key]["epochs"].size > 0:
+        if not 'epochs' in tile_struct_hold[key]: continue
+        epochs = tile_struct_hold[key]["epochs"]
+        
+        if params["doAlternatingFilters"]: #only sets to 0 if filters match for that particular block
+            if np.any(params["filters"][0] in tile_struct[key]["epochs_filters"]):
+                tile_struct[key]['prob']=0.0
+        
+        else: #simply sets to 0 if there are overlapping fields found
             tile_struct[key]['prob']=0.0
 
     return tile_struct
@@ -484,7 +380,7 @@ def timeallocation(params, map_struct, tile_structs,previous_coverage_struct=Non
                     if previous_coverage_struct is None: raise ValueError("Previous round's coverage struct was not provided")
                     tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(params_hold, map_struct, tile_structs_hold,previous_coverage_struct)
                 else:
-                    tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(params_hold, map_struct, tile_structs_hold,previous_coverage_struct)
+                    tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(params_hold, map_struct, tile_structs_hold)
 
                 coverage_structs.append(coverage_struct)
                 for ii in range(len(coverage_struct["ipix"])):
