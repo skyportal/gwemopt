@@ -285,8 +285,8 @@ def get_catalog(params, map_struct):
         GWGC, PGC, HyperLEDA = GWGC[mask], PGC[mask], HyperLEDA[mask]
         _2MASS, SDSS = _2MASS[mask], SDSS[mask]
 
-    if len(ra) > 10000:
-        print('Cutting catalog to top 10000 galaxies...')
+    if len(ra) > 2000:
+        print('Cutting catalog to top 2000 galaxies...')
         idx = np.arange(2000).astype(int)
         ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
         distmpc, z = distmpc[idx], z[idx]
