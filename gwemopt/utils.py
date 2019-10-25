@@ -240,6 +240,7 @@ def params_checker(params):
 
 def read_skymap(params,is3D=False,map_struct=None):
 
+    header = []
     if map_struct is None:
         map_struct = {}
 
