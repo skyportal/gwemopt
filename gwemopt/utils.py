@@ -240,6 +240,7 @@ def params_checker(params):
 
 def read_skymap(params,is3D=False,map_struct=None):
 
+    header = []
     if map_struct is None:
         map_struct = {}
 
@@ -271,7 +272,7 @@ def read_skymap(params,is3D=False,map_struct=None):
             filename = params["skymap"]
         
             if is3D:
-                healpix_data = hp.read_map(filename, field=(0,1,2,3), verbose=False)
+                healpix_data, header = hp.read_map(filename, field=(0,1,2,3), verbose=False,h=True)
         
                 distmu_data = healpix_data[1]
                 distsigma_data = healpix_data[2]
@@ -284,7 +285,7 @@ def read_skymap(params,is3D=False,map_struct=None):
                 map_struct["distnorm"] = norm_data
     
             else:
-                prob_data = hp.read_map(filename, field=0, verbose=False)
+                prob_data, header = hp.read_map(filename, field=0, verbose=False,h=True)
                 prob_data = prob_data / np.sum(prob_data)
         
                 map_struct["prob"] = prob_data
@@ -344,6 +345,10 @@ def read_skymap(params,is3D=False,map_struct=None):
     map_struct["npix"] = npix
     map_struct["pixarea"] = pixarea
     map_struct["pixarea_deg2"] = pixarea_deg2
+    
+    for j in range(len(header)):
+        if header[j][0] == "DATE":
+            map_struct["trigtime"] = header[j][1]
 
     return map_struct   
 

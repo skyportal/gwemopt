@@ -22,7 +22,6 @@ def ztf_queue():
     queue = pd.read_json(data['queue'], orient='records')
     if len(queue) > 0:
         n_fields = len(queue['field_id'].unique())
-        queue_info.append(f"   Number of unique field_ids: {n_fields}")
         for field in queue['field_id'].unique():
             rcids = np.arange(64)
             for rcid in rcids:
