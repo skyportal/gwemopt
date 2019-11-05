@@ -5,8 +5,9 @@
 import sys
 import voeventparse as vp
 
-import ToO_manager as too
+#import ToO_manager as too
 #import ToO_manager_David as too
+import ToO_manager_JG as too
 
 #fileo= open('MS190425b-1-Preliminary.xml,0')
 
@@ -14,6 +15,6 @@ filename = str(sys.argv[1])
 fileo= open(filename)
 v = vp.load(fileo)
 
-too.online_processing(v,role_filter='test')
-#too.online_processing(v,role_filter='observation')
+#too.online_processing(v,role_filter='test')
+too.online_processing(v,role_filter='observation')
 
