@@ -739,11 +739,12 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
             if extra_time > 0: extra_time = extra_time + filt_change_time
             elif extra_time <= 0: extra_time = filt_change_time
             config_struct["exposurelist"] = config_struct["exposurelist"].shift(extra_time / 86400.)
-    
-        prob = {}
-        for key in tile_struct.keys(): #save tiles that were set to 0 (for doBalanceExposure)
-            if tile_struct[key]['prob']==0.0:
-                prob[key]=0.0
+
+        if params["doBalanceExposure"]:
+            prob = {}
+            for key in tile_struct.keys(): #save tiles that were set to 0 (for doBalanceExposure)
+                if tile_struct[key]['prob']==0.0:
+                    prob[key]=0.0
         
         if not params["tilesType"] == "galaxy":
             tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)

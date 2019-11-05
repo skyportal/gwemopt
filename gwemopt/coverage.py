@@ -243,7 +243,7 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
             if params["doBalanceExposure"]:
                 cnt,ntrials = 0,10
                 while cnt < ntrials:
-                    tile_struct, doReschedule = gwemopt.utils.balance_tiles(params, telescope, tile_struct, coverage_struct)
+                    tile_struct, doReschedule = gwemopt.utils.balance_tiles(params, tile_struct, coverage_struct)
                     if doReschedule:
                         coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
                         cnt = cnt+1
