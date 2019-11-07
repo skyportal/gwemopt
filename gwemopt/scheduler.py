@@ -543,7 +543,7 @@ def write_xml(xmlfile,map_struct,coverage_struct,config_struct):
         )
     table.add_Field(Field(name="priority", ucd="", unit="", dataType="int", Description=[""]))
     table_field = utilityTable(table)
-    table_field.blankTable(len(coverage_struct))
+    table_field.blankTable(len(coverage_struct["ipix"]))
 
     for ii in range(len(coverage_struct["ipix"])):
         data = coverage_struct["data"][ii,:]

@@ -433,12 +433,15 @@ def compute_tiles_map(params, tile_struct, skymap, func=None, ipix_keep=[]):
         if rat > params["maximumOverlap"]:
             vals[ii] = 0.0            
         else:
-            if len(prob[tile_struct[key]["ipix"]]) == 0:
+            ipix = tile_struct[key]["ipix"]
+            if len(ipix) == 0:
                 vals[ii] = 0.0
             else:
-                vals_to_sum = prob[tile_struct[key]["ipix"]]
+                vals_to_sum = prob[ipix]
                 vals_to_sum[vals_to_sum < 0] = 0
                 vals[ii] = f(vals_to_sum)
+
+        ipix_keep = np.setdiff1d(ipix_keep, tile_struct[key]["ipix"])
         ipix_slice = np.setdiff1d(tile_struct[key]["ipix"],ipix_keep)
         if len(ipix_slice) > 0:
             prob[ipix_slice] = -1

@@ -169,7 +169,7 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
 
         if params["doPerturbativeTiling"] and (jj>0) and (not params["tilesType"] == "galaxy"):
             tile_struct = gwemopt.utils.perturb_tiles(params, config_struct, telescope, map_struct_hold, tile_struct)
-        
+ 
         if params["doOverlappingScheduling"]:
             tile_struct = gwemopt.utils.check_overlapping_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))
 
