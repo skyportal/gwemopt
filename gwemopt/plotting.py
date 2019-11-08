@@ -2,9 +2,7 @@
 import os, sys, copy
 import numpy as np
 import healpy as hp
-import gwemopt.coverage
 from astropy.time import Time
-import gwemopt.utils
 
 from scipy.stats import norm
 
@@ -17,6 +15,8 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 
 from gwemopt.segments import angular_distance
+import gwemopt.coverage
+import gwemopt.utils
 
 try:
     import ligo.skymap.plot
