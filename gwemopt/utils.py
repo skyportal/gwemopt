@@ -1081,3 +1081,20 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                 tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
 
     return tile_struct
+
+def order_by_observability(params,tile_structs):
+    observability = []
+    for telescope in params["telescopes"]:
+        config_struct = params["config"][telescope]
+        tiles_struct = tile_structs[telescope]
+        exposurelist = config_struct["exposurelist"]
+        observability_prob = 0.0
+        keys = tiles_struct.keys()
+        for jj, key in enumerate(keys):
+            tilesegmentlist = tiles_struct[key]["segmentlist"]
+            if tiles_struct[key]["prob"] == 0: continue
+            if tilesegmentlist.intersects_segment(exposurelist[0]):
+                observability_prob = observability_prob + tiles_struct[key]["prob"]
+        observability.append(observability_prob)
+    idx = np.argsort(observability)[::-1]
+    params["telescopes"] = [params["telescopes"][ii] for ii in idx]

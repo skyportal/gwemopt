@@ -388,6 +388,9 @@ def update_observed_tiles(params,tile_struct,previous_coverage_struct):
     return tile_struct
 
 def timeallocation(params, map_struct, tile_structs,previous_coverage_struct=None):
+    
+    if len(params["telescopes"]) > 1 and params["doOrderByObservability"]:
+        gwemopt.utils.order_by_observability(params,tile_structs)
 
     if params["timeallocationType"] == "powerlaw":
         print("Generating powerlaw schedule...")
