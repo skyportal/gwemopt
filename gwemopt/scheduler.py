@@ -721,6 +721,12 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
     filters, exposuretimes = params["filters"], params["exposuretimes"]
     coverage_structs = []
     maxidx = 0
+
+    if params["doBalanceExposure"]: #save tile probabilities
+        prob = {}
+        for key in tile_struct.keys():
+            prob[key] = tile_struct[key]['prob']
+
     for i in range(len(exposuretimes)):
         params["filters"] = [filters[i]]
         params["exposuretimes"] = [exposuretimes[i]]
@@ -739,12 +745,6 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
             if extra_time > 0: extra_time = extra_time + filt_change_time
             elif extra_time <= 0: extra_time = filt_change_time
             config_struct["exposurelist"] = config_struct["exposurelist"].shift(extra_time / 86400.)
-
-        if params["doBalanceExposure"]:
-            prob = {}
-            for key in tile_struct.keys(): #save tiles that were set to 0 (for doBalanceExposure)
-                if tile_struct[key]['prob']==0.0:
-                    prob[key]=0.0
         
         if not params["tilesType"] == "galaxy":
             tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
@@ -768,6 +768,11 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
         elif len(coverage_struct["exposureused"]) == 0: deltaL = 0
 
         coverage_structs.append(coverage_struct)
+
+        if params["doBalanceExposure"]: # resets probabilities for each filter block
+            for key in tile_struct.keys():
+                tile_struct[key]['prob'] = prob[key]
+
         if deltaL <= 1: break
     params["filters"], params["exposuretimes"] = filters, exposuretimes
 
