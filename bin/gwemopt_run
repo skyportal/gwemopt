@@ -309,6 +309,7 @@ def params_struct(opts):
 
     params["doSingleExposure"] = opts.doSingleExposure
     params["doBalanceExposure"] = opts.doBalanceExposure
+    params["unbalanced_tiles"] = None
     params["filters"] = opts.filters.split(",")
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
     params["doMovie_supersched"] = False

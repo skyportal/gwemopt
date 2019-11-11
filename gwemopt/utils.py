@@ -194,6 +194,9 @@ def params_checker(params):
     if "Nblocks" not in params.keys():
         params["Nblocks"] = 4
 
+    if "unbalanced_tiles" not in params.keys():
+        params["unbalanced_tiles"] = None
+
     if "config" not in params.keys():
         params["config"] = {}
         configFiles = glob.glob("%s/*.config"%params["configDirectory"])
@@ -826,7 +829,9 @@ def eject_tiles(params, telescope, tile_struct):
     return tile_struct
 
 def balance_tiles(params, tile_struct, coverage_struct):
-
+    
+    params["unbalanced_tiles"] = []
+    
     filters, exposuretimes = params["filters"], params["exposuretimes"]
 
     keys_scheduled = coverage_struct["data"][:,5]
@@ -837,12 +842,15 @@ def balance_tiles(params, tile_struct, coverage_struct):
         filts_used[key].append(filt)
 
     doReschedule = False
+    balanced_fields = 0
     for key in filts_used:
         if len(filts_used[key]) != len(filters):
             tile_struct[key]['prob'] = 0.0
+            params["unbalanced_tiles"].append(key)
             doReschedule = True
-
-    return tile_struct, doReschedule
+        else:
+            balanced_fields+=1
+    return tile_struct, doReschedule, balanced_fields
 
 def slice_galaxy_tiles(params, tile_struct, coverage_struct):
 

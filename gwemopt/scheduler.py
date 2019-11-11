@@ -748,10 +748,6 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
         
         if not params["tilesType"] == "galaxy":
             tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
-        
-        if params["doBalanceExposure"]:
-            for key in prob: #re-assigns 0 prob to tiles w/ unbalanced observations
-                tile_struct[key]['prob'] = 0.0
 
         if params["doUpdateScheduler"] and previous_coverage_struct: #erases tiles from a previous round
             tile_struct = gwemopt.coverage.update_observed_tiles(params,tile_struct_hold,previous_coverage_struct)
@@ -759,6 +755,12 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
         coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
         if params["doMaxTiles"]:
             tile_struct,doReschedule = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct, coverage_struct)
+            
+            # set unbalanced fields to 0
+            if params["doBalanceExposure"] and params["unbalanced_tiles"]:
+                for key in params["unbalanced_tiles"]:
+                    tile_struct[key]['prob'] = 0.0
+
             if doReschedule:
                 coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
 
