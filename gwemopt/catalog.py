@@ -18,7 +18,7 @@ from astropy.io import ascii
 from astropy.cosmology import WMAP9 as cosmo
 from astropy.table import Column
 import astropy.units as u
-
+import scipy.stats
 # Unset row limits when querying Vizier
 Vizier.ROW_LIMIT = -1
 
@@ -95,6 +95,7 @@ def get_catalog(params, map_struct):
             GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
             _2MASS, SDSS = _2MASS[idx], SDSS[idx]
 
+            
             with h5py.File(catalogFile, 'w') as f:
                 f.create_dataset('ra', data=ra)
                 f.create_dataset('dec', data=dec)
@@ -138,13 +139,13 @@ def get_catalog(params, map_struct):
         if not os.path.isfile(catalogFile):
             raise ValueError("Please add %s." % catalogFile)
 
-        t = Table.read(catalogFile)
-        name = t["name"]
-        ra, dec = t["ra"], t["dec"]
-        sfr_fuv, mstar = t["sfr_fuv"], t["mstar"]
-        distmpc, magb = t["distmpc"], t["magb"]
-        a, b2a, pa = t["a"], t["b2a"], t["pa"]
-        btc = t["btc"]
+        with h5py.File(catalogFile, 'r') as f:
+            name = f['name'][:]
+            ra, dec = f['ra'][:], f['dec'][:]
+            sfr_fuv, mstar = f['sfr_fuv'][:], f['mstar'][:]
+            distmpc, magb = f['distmpc'][:], f['magb'][:]
+            a, b2a, pa = f['a'][:], f['b2a'][:], f['pa'][:]
+            btc = f['btc'][:]
 
         idx = np.where(distmpc >= 0)[0]
         ra, dec = ra[idx], dec[idx]
@@ -161,6 +162,48 @@ def get_catalog(params, map_struct):
         btc = btc[idx]
 
         z = -1*np.ones(distmpc.shape)
+        r = distmpc * 1.0
+        mag = magb * 1.0
+
+
+    elif params["galaxy_catalog"] == "mangrove":
+        catalogFile = os.path.join(params["catalogDir"],
+                               "%s.ecsv" % params["galaxy_catalog"])
+        
+        if not os.path.isfile(catalogFile):
+            print("mangrove catalog not found localy, start the automatic download")
+            url = 'https://mangrove.lal.in2p3.fr/data/mangrove.ecsv'
+            os.system("wget -O {}/mangrove.ecsv {}".format(params["catalogDir"], url))
+            
+        print(catalogFile)
+        cat = Table.read(catalogFile,format='ascii.ecsv')
+        
+        ra, dec = cat["RA"], cat["dec"]
+        distmpc, z = cat["dist"], cat["z"]
+        magb, magk = cat["B_mag"], cat["K_mag"]
+        magW1, magW2, magW3, magW4 = cat["w1mpro"], cat["w2mpro"], cat["w3mpro"], cat["w4mpro"]
+        stellarmass = cat['stellarmass']
+        # Keep track of galaxy identifier
+        GWGC, PGC, HyperLEDA = cat["GWGC_name"], cat["PGC"], cat["HyperLEDA_name"]
+        _2MASS, SDSS = cat["2MASS_name"], cat["SDSS-DR12_name"]
+
+        idx = np.where(distmpc >= 0)[0]
+        ra, dec = ra[idx], dec[idx]
+        distmpc, z = distmpc[idx], z[idx]
+        magb, magk = magb[idx], magk[idx]
+        magW1, magW2, magW3, magW4 = magW1[idx], magW2[idx], magW3[idx], magW4[idx]
+        stellarmass = stellarmass[idx]
+        GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
+        _2MASS, SDSS = _2MASS[idx], SDSS[idx]
+        
+
+        # Convert bytestring to unicode
+        GWGC = GWGC.astype('U')
+        PGC = PGC.astype('U')
+        HyperLEDA = HyperLEDA.astype('U')
+        _2MASS = _2MASS.astype('U')
+        SDSS = SDSS.astype('U')
+
         r = distmpc * 1.0
         mag = magb * 1.0
 
@@ -203,19 +246,41 @@ def get_catalog(params, map_struct):
         idx = np.arange(len(r)).astype(int)
 
     # this happens when we are using a tiny catalog...
-    if len(idx) == 0:
-        idx = np.arange(len(r)).astype(int)
     if np.all(Sloc == 0.0):
         Sloc[:] = 1.0
 
+
+    #new version of the Slum calcul (from HOGWARTs)
+    Lsun = 3.828e26
+    Msun = 4.83
+    Mknmin = -19
+    Mknmax = -12
+    Lblist = []
+    
+    for i in range(0, len(r)):
+        Mb = mag[i] - 5 * np.log10((r[i] * 10 ** 6)) + 5
+        #L = Lsun * 2.512 ** (Msun - Mb)
+        Lb = Lsun * 2.512 ** (Msun - Mb)
+        Lblist.append(Lb)
+        
+                           
+    #set 0 when Sloc is 0 (keep compatible galaxies for normalization)
+    Lblist = np.array(Lblist)
+    
+    Lblist[Sloc == 0] = 0
+
+    Slum = Lblist / np.nansum(np.array(Lblist))
+   
+  
+    """
     L_nu = const * 10.**((mag + MAB0)/(-2.5))
-    idx2 = np.where(~np.isfinite(L_nu))[0]
-    L_nu[idx2] = 0.0
     L_nu = L_nu / np.nanmax(L_nu[idx])
     L_nu = L_nu**params["catalog_n"]
     L_nu[L_nu < 0.001] = 0.001
     L_nu[L_nu > 1.0] = 1.0
     Slum = L_nu / np.sum(L_nu)
+    """
+
 
     mlim, M_KNmin, M_KNmax = 22, -17, -12
     L_KNmin = const * 10.**((M_KNmin + MAB0)/(-2.5))
@@ -230,6 +295,46 @@ def get_catalog(params, map_struct):
     Sloc[np.isnan(Sloc)] = 0
     Slum[np.isnan(Slum)] = 0
 
+    if params["galaxy_grade"] == "Smass":
+        
+        if params["galaxy_catalog"] != "mangrove":
+            raise ValueError("You are trying to use the stellar mass information (Smass), please select the mangrove catalog for such use.")
+
+        #set Smass
+        Smass = np.array(stellarmass)
+        
+        #put null values to nan
+        Smass[np.where(Smass == 0)] = np.nan
+
+        #go back to linear scaling and not log
+        Smass = 10**Smass
+
+        # Keep only galaxies with finite stellarmass when using it in the grade
+        #set nan values to 0
+        Smass[~np.isfinite(Smass)] = 0  
+ 
+        #set Smass
+        Smass = Smass / np.sum(Smass)
+        
+	#alpha is defined only with non null mass galaxies, we set a mask for that
+        ind_without_mass = np.where(Smass == 0)
+        Sloc_temp = copy.deepcopy(Sloc)
+        Sloc_temp[ind_without_mass] = 0
+
+        #alpha_mass parameter is defined in such way that in mean Sloc count in as much as Sloc*alpha*Smass
+        alpha_mass = (np.sum(Sloc_temp) / np.sum( Sloc_temp*Smass ) )
+        print("You chose to use the grade using stellar mass, the parameters values are:")
+        print("alpha_mass =", alpha_mass)
+
+	#beta_mass is a parameter allowing to change the importance of Sloc according to Sloc*alpha*Smass
+        #beta_mass should be fitted in the futur on real GW event for which we have the host galaxy
+        #fixed to one at the moment
+        beta_mass = 1
+        print("beta_mass =", beta_mass)
+
+        Smass = Sloc*(1+ (alpha_mass*beta_mass*Smass) )
+        #Smass = Sloc*Smass
+        
     S = Sloc*Slum*Sdet
 
     prob = np.zeros(map_struct["prob"].shape)
@@ -241,22 +346,34 @@ def get_catalog(params, map_struct):
         for j in range(len(ipix)):
             prob[ipix[j]] += S[j]
         grade = S
-
-    #prob[prob==0] = 1e-10
+    elif params["galaxy_grade"] == "Smass":
+        for j in range(len(ipix)):
+            prob[ipix[j]] += Smass[j]
+        grade = Smass
+ 
     prob = prob / np.sum(prob)
 
     map_struct['prob_catalog'] = prob
     if params["doUseCatalog"]:
         map_struct['prob'] = prob
 
+    Lblist = np.array(Lblist)
+
     idx = np.where(~np.isnan(grade))[0]
     grade = grade[idx]
     ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
     distmpc, z = distmpc[idx], z[idx]
+
     if params["galaxy_catalog"] == "GLADE":
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]
-    
+        Lblist = Lblist[idx]
+        mag = mag[idx]
+ 
+    if params["galaxy_catalog"] == "mangrove":
+        GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
+        _2MASS, SDSS = _2MASS[idx], SDSS[idx]   
+        Smass, stellarmass = Smass[idx], stellarmass[idx]
     """
     Sthresh = np.max(grade)*0.01
     idx = np.where(grade >= Sthresh)[0]
@@ -276,49 +393,110 @@ def get_catalog(params, map_struct):
     if params["galaxy_catalog"] == "GLADE":
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]
+        Lblist = Lblist[idx]
+        mag = mag[idx]
 
-    # Keep only galaxies within 3sigma in distance
-    mask = Sloc > 0
-    ra, dec, Sloc, S = ra[mask], dec[mask], Sloc[mask], S[mask]
-    distmpc, z = distmpc[mask], z[mask]
-    if params["galaxy_catalog"] == "GLADE":
+    if params["galaxy_catalog"] == "mangrove":
+        GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
+        _2MASS, SDSS = _2MASS[idx], SDSS[idx]
+        stellarmass = stellarmass[idx]
+        Smass = Smass[idx]
+        
+    # Keep only galaxies within 3sigma in distance
+    if params["galaxy_catalog"] != "mangrove":
+        mask = Sloc > 0
+        ra, dec, Sloc, S = ra[mask], dec[mask], Sloc[mask], S[mask],
+        distmpc, z = distmpc[mask], z[mask]
+        if params["galaxy_catalog"] == "GLADE":
+            GWGC, PGC, HyperLEDA = GWGC[mask], PGC[mask], HyperLEDA[mask]
+            _2MASS, SDSS = _2MASS[mask], SDSS[mask]
+            Lblist = Lblist[mask]
+
+    if params["galaxy_catalog"] == "mangrove":
+        # Keep only galaxies within 3sigma in distance
+        mask = Sloc > 0
+        ra, dec, Sloc, S, Smass = ra[mask], dec[mask], Sloc[mask], S[mask], Smass[mask]
+        distmpc, z = distmpc[mask], z[mask]
         GWGC, PGC, HyperLEDA = GWGC[mask], PGC[mask], HyperLEDA[mask]
         _2MASS, SDSS = _2MASS[mask], SDSS[mask]
-
+        stellarmass = stellarmass[mask]
+        
     if len(ra) > 2000:
         print('Cutting catalog to top 2000 galaxies...')
         idx = np.arange(2000).astype(int)
-        ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
+        ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx],
         distmpc, z = distmpc[idx], z[idx]
         if params["galaxy_catalog"] == "GLADE":
             GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
             _2MASS, SDSS = _2MASS[idx], SDSS[idx]
+            Lblist = Lblist[idx]
+            mag = mag[idx]
+
+        elif params["galaxy_catalog"] == "mangrove":
+            GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
+            _2MASS, SDSS = _2MASS[idx], SDSS[idx]
+            stellarmass, Smass = stellarmass[idx], Smass[idx]
 
     # now normalize the distributions
     S = S / np.sum(S)
     Sloc = Sloc / np.sum(Sloc)
-    
+
+    if params["galaxy_grade"] == "Smass":
+        Smass = Smass/ np.sum(Smass)
+
     catalog_struct = {}
     catalog_struct["ra"] = ra
     catalog_struct["dec"] = dec
     catalog_struct["Sloc"] = Sloc
     catalog_struct["S"] = S
+    if params["galaxy_catalog"] == "mangrove":    
+            catalog_struct["Smass"] = Smass
+            
+    print("output directory :")
+    print(params["outputDir"])
+    print("params[writeCatalog]")
+    print(params["writeCatalog"])
 
     if params["writeCatalog"]:
         catalogfile = os.path.join(params["outputDir"], 'catalog.csv')
         fid = open(catalogfile, 'w')
         cnt = 1
         if params["galaxy_catalog"] == "GLADE":
-            fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS\n")
-            for a, b, c, d, e, f, g, h, i, j, k in zip(ra, dec, Sloc, S, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS):
-                fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k))
-                cnt = cnt + 1
+
+            if params["galaxy_grade"] == "S":
+ 
+                fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z,GWGC, PGC, HyperLEDA, 2MASS, SDSS, BLum\n")
+                for a, b, c, d, e, f, g, h, i, j, k, l in zip(ra, dec, Sloc, S, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS, Lblist):
+                    fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s, %.2E\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k, l))
+                    cnt = cnt + 1
+                
+            else:
+
+                fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS\n")
+                for a, b, c, d, e, f, g, h, i, j, k in zip(ra, dec, Sloc, S, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS):
+                    fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k))
+                    cnt = cnt + 1
+
+        elif params["galaxy_catalog"] == "mangrove":
+
+            if params["galaxy_grade"] == "Smass":
+                fid.write("id, RAJ2000, DEJ2000, Smass, S, Sloc, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS, stellarmass\n")
+                for a, b, c, d, e, f, g, h, i, j, k, l, m in zip(ra, dec, Smass, S, Sloc, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS, stellarmass):
+                    fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k, l, m))
+                    cnt = cnt + 1
+            else:
+                fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS\n")
+                for a, b, c, d, e, f, g, h, i, j, k in zip(ra, dec, Sloc, S, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS):
+                    fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k))
+                    cnt = cnt + 1
+                
         else:
             fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z\n")
-            for a, b, c, d, e, f in zip(ra, dec, Sloc, S, distmpc, z):
+            for a, b, c, d in zip(ra, dec, Sloc, S, distmpc, z):
                 fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f\n" % (cnt, a, b, c, d, e, f))
                 cnt = cnt + 1
 
         fid.close()
 
     return map_struct, catalog_struct
+
