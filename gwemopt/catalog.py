@@ -373,7 +373,10 @@ def get_catalog(params, map_struct):
     if params["galaxy_catalog"] == "mangrove":
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]   
-        Smass, stellarmass = Smass[idx], stellarmass[idx]
+        stellarmass = stellarmass[idx]
+        if params["galaxy_grade"] == "Smass":
+            Smass = Smass[idx]
+
     """
     Sthresh = np.max(grade)*0.01
     idx = np.where(grade >= Sthresh)[0]
@@ -400,8 +403,9 @@ def get_catalog(params, map_struct):
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]
         stellarmass = stellarmass[idx]
-        Smass = Smass[idx]
-        
+        if params["galaxy_grade"] == "Smass":
+            Smass = Smass[idx]
+       
     # Keep only galaxies within 3sigma in distance
     if params["galaxy_catalog"] != "mangrove":
         mask = Sloc > 0
@@ -415,16 +419,20 @@ def get_catalog(params, map_struct):
     if params["galaxy_catalog"] == "mangrove":
         # Keep only galaxies within 3sigma in distance
         mask = Sloc > 0
-        ra, dec, Sloc, S, Smass = ra[mask], dec[mask], Sloc[mask], S[mask], Smass[mask]
+        ra, dec, Sloc, S = ra[mask], dec[mask], Sloc[mask], S[mask]
         distmpc, z = distmpc[mask], z[mask]
         GWGC, PGC, HyperLEDA = GWGC[mask], PGC[mask], HyperLEDA[mask]
         _2MASS, SDSS = _2MASS[mask], SDSS[mask]
         stellarmass = stellarmass[mask]
+
+        if params["galaxy_grade"] == "Smass":
+            Smass = Smass[mask]
+
         
     if len(ra) > 2000:
         print('Cutting catalog to top 2000 galaxies...')
         idx = np.arange(2000).astype(int)
-        ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx],
+        ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
         distmpc, z = distmpc[idx], z[idx]
         if params["galaxy_catalog"] == "GLADE":
             GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
@@ -435,7 +443,10 @@ def get_catalog(params, map_struct):
         elif params["galaxy_catalog"] == "mangrove":
             GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
             _2MASS, SDSS = _2MASS[idx], SDSS[idx]
-            stellarmass, Smass = stellarmass[idx], Smass[idx]
+            stellarmass = stellarmass[idx]
+
+            if params["galaxy_grade"] == "Smass":
+                Smass = Smass[idx]
 
     # now normalize the distributions
     S = S / np.sum(S)
@@ -449,14 +460,11 @@ def get_catalog(params, map_struct):
     catalog_struct["dec"] = dec
     catalog_struct["Sloc"] = Sloc
     catalog_struct["S"] = S
-    if params["galaxy_catalog"] == "mangrove":    
+    if params["galaxy_catalog"] == "mangrove":
+        if params["galaxy_grade"] == "Smass":
+
             catalog_struct["Smass"] = Smass
             
-    print("output directory :")
-    print(params["outputDir"])
-    print("params[writeCatalog]")
-    print(params["writeCatalog"])
-
     if params["writeCatalog"]:
         catalogfile = os.path.join(params["outputDir"], 'catalog.csv')
         fid = open(catalogfile, 'w')
