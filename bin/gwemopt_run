@@ -105,7 +105,7 @@ def parse_commandline():
     parser.add_option("--doCatalogDatabase",  action="store_true", default=False)
     parser.add_option("--catalogDir", help="catalog directory",default="../catalogs")
     parser.add_option("--galaxy_catalog", help="Source catalog",default="GLADE")
-    parser.add_option("--galaxy_grade", help="grade to use ('S' or 'Sloc')",
+    parser.add_option("--galaxy_grade", help="grade to use ('S', 'Sloc' or 'Smass')",
                       type=str, default="S")
     parser.add_option("--writeCatalog",  action="store_true", default=False)
     parser.add_option("--catalog_n",default=1.0,type=float)
