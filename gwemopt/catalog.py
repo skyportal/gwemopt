@@ -453,17 +453,17 @@ def get_catalog(params, map_struct):
     Sloc = Sloc / np.sum(Sloc)
 
     if params["galaxy_grade"] == "Smass":
-        Smass = Smass/ np.sum(Smass)
+        Smass = Smass/np.sum(Smass)
+    else:
+        Smass = np.ones(Smass.shape)
+        Smass = Smass/np.sum(Smass)
 
     catalog_struct = {}
     catalog_struct["ra"] = ra
     catalog_struct["dec"] = dec
     catalog_struct["Sloc"] = Sloc
     catalog_struct["S"] = S
-    if params["galaxy_catalog"] == "mangrove":
-        if params["galaxy_grade"] == "Smass":
-
-            catalog_struct["Smass"] = Smass
+    catalog_struct["Smass"] = Smass
             
     if params["writeCatalog"]:
         catalogfile = os.path.join(params["outputDir"], 'catalog.csv')
