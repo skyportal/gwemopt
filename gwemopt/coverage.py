@@ -183,31 +183,43 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
             coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
 
             if params["doBalanceExposure"]:
-                optimized_max = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_hold)
-                params["max_nb_tiles"] = np.array([optimized_max],dtype=np.float)
+                
+                optimized_bool = False
+                if not params["doMaxTiles"]: #optimize max tiles (iff max tiles not already specified)
+                    optimized_bool = True
+                    optimized_max = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_hold)
+                    params["max_nb_tiles"] = np.array([optimized_max],dtype=np.float)
 
                 params_hold = copy.copy(params)
                 config_struct_hold = copy.copy(config_struct)
+                
                 coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
-
-                tile_struct, doReschedule = gwemopt.utils.balance_tiles(params_hold, tile_struct, coverage_struct)
+                tile_struct, doReschedule,balanced_fields = gwemopt.utils.balance_tiles(params_hold, tile_struct, coverage_struct)
                 config_struct_hold = copy.copy(config_struct)
 
                 if doReschedule:
                     coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
-                
-                keys_scheduled,filts = coverage_struct["data"][:,5], coverage_struct["filters"]
-                filts_used = {key:[] for key in keys_scheduled}
-                equal_filts = False
-                for (key,filt) in zip(keys_scheduled,filts): #checks if there are any fields w/ obs. in all filters
-                    filts_used[key].append(filt)
-                    if len(filts_used[key]) == len(params["filters"]):
-                        equal_filts=True
-                        break
-
-                if not equal_filts:
-                    filters = ','.join(params["filters"])
-                    print('No fields were found with observations in both filters %s ' % filters)
+            
+                # run a few more iterations to balance fields if max tiles is not optimized
+                if not optimized_bool:
+                    cnt,ntrials = 0,5
+                    coverage_struct_hold = coverage_struct
+                    while cnt < ntrials:
+                        params_hold = copy.copy(params)
+                        config_struct_hold = copy.copy(config_struct)
+                        
+                        tile_struct,doReschedule,balanced_fields = gwemopt.utils.balance_tiles(params_hold, tile_struct, coverage_struct_hold)
+                        
+                        if cnt == 0: before_balance = balanced_fields # get # of balanced fields before additional iters.
+                        
+                        if doReschedule:
+                            coverage_struct_hold,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
+                            cnt += 1
+                        else: break
+                    
+                    #use new coverage struct iff balanced fields have increased
+                    if balanced_fields>before_balance:
+                        coverage_struct = coverage_struct_hold
 
 
         else:
@@ -278,7 +290,7 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
             if params["doBalanceExposure"]:
                 cnt,ntrials = 0,10
                 while cnt < ntrials:
-                    tile_struct, doReschedule = gwemopt.utils.balance_tiles(params, tile_struct, coverage_struct)
+                    tile_struct, doReschedule,balanced_fields = gwemopt.utils.balance_tiles(params, tile_struct, coverage_struct)
                     if doReschedule:
                         coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
                         cnt = cnt+1
@@ -388,6 +400,9 @@ def update_observed_tiles(params,tile_struct,previous_coverage_struct):
     return tile_struct
 
 def timeallocation(params, map_struct, tile_structs,previous_coverage_struct=None):
+    
+    if len(params["telescopes"]) > 1 and params["doOrderByObservability"]:
+        gwemopt.utils.order_by_observability(params,tile_structs)
 
     if params["timeallocationType"] == "powerlaw":
         print("Generating powerlaw schedule...")

@@ -66,13 +66,14 @@ def galaxy(params, map_struct, catalog_struct):
         new_ra = []
         new_dec = []
         new_Sloc = []
+        new_Smass = []
         new_S = []
         galaxies = []
         idxRem = np.arange(len(catalog_struct["ra"])).astype(int)
 
         while len(idxRem) > 0:
             ii = idxRem[0]
-            ra, dec, Sloc, S = catalog_struct["ra"][ii], catalog_struct["dec"][ii], catalog_struct["Sloc"][ii], catalog_struct["S"][ii]    
+            ra, dec, Sloc, S, Smass = catalog_struct["ra"][ii], catalog_struct["dec"][ii], catalog_struct["Sloc"][ii], catalog_struct["S"][ii], catalog_struct["Smass"][ii]    
             
             if config_struct["FOV_type"] == "square":
                 decCorners = (dec - FoV, dec + FoV)
@@ -125,6 +126,7 @@ def galaxy(params, map_struct, catalog_struct):
             new_dec.append(dec_center)
             new_Sloc.append(np.sum(catalog_struct["Sloc"][idxRem][mask]))
             new_S.append(np.sum(catalog_struct["S"][idxRem][mask]))
+            new_Smass.append(np.sum(catalog_struct["Smass"][idxRem][mask]))
             galaxies.append(idxRem[mask])
 
             idxRem = np.setdiff1d(idxRem, idxRem[mask])
@@ -135,11 +137,12 @@ def galaxy(params, map_struct, catalog_struct):
         catalog_struct_new["dec"] = new_dec
         catalog_struct_new["Sloc"] = new_Sloc
         catalog_struct_new["S"] = new_S
+        catalog_struct_new["Smass"] = new_Smass
         catalog_struct_new["galaxies"] = galaxies
 
         moc_struct = {}
         cnt = 0
-        for ra, dec, Sloc, S in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"]):
+        for ra, dec, Sloc, S, Smass in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"], catalog_struct_new["Smass"]):
             moc_struct[cnt] = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
             cnt = cnt + 1
         
@@ -147,12 +150,14 @@ def galaxy(params, map_struct, catalog_struct):
         tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
 
         cnt = 0
-        for ra, dec, Sloc, S, galaxies in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"],catalog_struct_new["galaxies"]):
+        for ra, dec, Sloc, S, Smass,  galaxies in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"],catalog_struct_new["Smass"], catalog_struct_new["galaxies"]):
             if params["galaxy_grade"] == "Sloc":
                 tile_struct[cnt]['prob'] = Sloc
             elif params["galaxy_grade"] == "S":
                 tile_struct[cnt]['prob'] = S
-
+            elif params["galaxy_grade"] == "Smass":
+                tile_struct[cnt]['prob'] = Smass
+                
             tile_struct[cnt]['galaxies'] = galaxies
             if config_struct["FOV_type"] == "square":
                 tile_struct[cnt]['area'] = params["config"][telescope]['FOV']**2
@@ -256,15 +261,15 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
             ranked_tile_times[ranked_tile_probs>0,ii] = params["exposuretimes"][ii]
         for key, prob, exposureTime, tileprob in zip(keys, ranked_tile_probs, ranked_tile_times, tile_probs):
 
-            # Try to load the minimum duration of time from telescope config file
-            # Otherwise set it to zero
+            # Try to load the minimum duration of time from telescope config file
+            # Otherwise set it to zero
             try:
                 min_obs_duration = config_struct["min_observability_duration"] / 24
             except:
                 min_obs_duration = 0.0
 
-            # Check that a given tile is observable a minimum amount of time
-            # If not set the proba associated to the tile to zero
+            # Check that a given tile is observable a minimum amount of time
+            # If not set the proba associated to the tile to zero
             if 'segmentlist' and 'prob' in tile_struct[key] and tile_struct[key]['segmentlist'] and min_obs_duration > 0.0:
                 observability_duration = 0.0 
                 for counter in range(len(tile_struct[key]['segmentlist'])):
@@ -302,15 +307,15 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
         keys = tile_struct.keys()
 
         for key, prob, exposureTime, tileprob in zip(keys, ranked_tile_probs, ranked_tile_times, tile_probs):
-            # Try to load the minimum duration of time from telescope config file
-            # Otherwise set it to zero
+            # Try to load the minimum duration of time from telescope config file
+            # Otherwise set it to zero
             try:
                 min_obs_duration = config_struct["min_observability_duration"] / 24
             except:
                 min_obs_duration = 0.0
 
-            # Check that a given tile is observable a minimum amount of time
-            # If not set the proba associated to the tile to zero
+            # Check that a given tile is observable a minimum amount of time
+            # If not set the proba associated to the tile to zero
             if 'segmentlist' and 'prob' in tile_struct[key] and tile_struct[key]['segmentlist'] and min_obs_duration > 0.0:
                 observability_duration = 0.0 
                 for counter in range(len(tile_struct[key]['segmentlist'])):

@@ -105,7 +105,7 @@ def parse_commandline():
     parser.add_option("--doCatalogDatabase",  action="store_true", default=False)
     parser.add_option("--catalogDir", help="catalog directory",default="../catalogs")
     parser.add_option("--galaxy_catalog", help="Source catalog",default="GLADE")
-    parser.add_option("--galaxy_grade", help="grade to use ('S' or 'Sloc')",
+    parser.add_option("--galaxy_grade", help="grade to use ('S', 'Sloc' or 'Smass')",
                       type=str, default="S")
     parser.add_option("--writeCatalog",  action="store_true", default=False)
     parser.add_option("--catalog_n",default=1.0,type=float)
@@ -309,6 +309,7 @@ def params_struct(opts):
 
     params["doSingleExposure"] = opts.doSingleExposure
     params["doBalanceExposure"] = opts.doBalanceExposure
+    params["unbalanced_tiles"] = None
     params["filters"] = opts.filters.split(",")
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
     params["doMovie_supersched"] = False
@@ -479,22 +480,6 @@ if opts.doTiles:
         print("Plotting tiles struct...")
         gwemopt.plotting.tiles(params, map_struct, tile_structs)
     
-if len(params["telescopes"]) > 1 and opts.doOrderByObservability:
-    observability = []
-    for telescope in params["telescopes"]:
-        config_struct = params["config"][telescope]
-        tiles_struct = tile_structs[telescope]
-        exposurelist = config_struct["exposurelist"]
-        observability_prob = 0.0
-        keys = tiles_struct.keys()
-        for jj, key in enumerate(keys):
-            tilesegmentlist = tiles_struct[key]["segmentlist"]
-            if tiles_struct[key]["prob"] == 0: continue
-            if tilesegmentlist.intersects_segment(exposurelist[0]):
-                observability_prob = observability_prob + tiles_struct[key]["prob"]
-        observability.append(observability_prob)
-    idx = np.argsort(observability)[::-1]
-    params["telescopes"] = [params["telescopes"][ii] for ii in idx]
 
 if opts.doSchedule:
     if opts.doTiles:
