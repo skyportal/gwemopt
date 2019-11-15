@@ -443,7 +443,7 @@ def get_catalog(params, map_struct):
         elif params["galaxy_catalog"] == "mangrove":
             GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
             _2MASS, SDSS = _2MASS[idx], SDSS[idx]
-            stellarmass. magb = stellarmass[idx], magb[idx]
+            stellarmass, magb = stellarmass[idx], magb[idx]
 
             if params["galaxy_grade"] == "Smass":
                 Smass = Smass[idx]
