@@ -429,9 +429,9 @@ def get_catalog(params, map_struct):
             Smass = Smass[mask]
 
         
-    if len(ra) > 1000000:
-        print('Cutting catalog to top 1000000 galaxies...')
-        idx = np.arange(1000000).astype(int)
+    if len(ra) > 2000:
+        print('Cutting catalog to top 2000 galaxies...')
+        idx = np.arange(2000).astype(int)
         ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
         distmpc, z = distmpc[idx], z[idx]
         if params["galaxy_catalog"] == "GLADE":
