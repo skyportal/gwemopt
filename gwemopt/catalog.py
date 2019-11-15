@@ -171,12 +171,12 @@ def get_catalog(params, map_struct):
                                "%s.ecsv" % params["galaxy_catalog"])
         
         if not os.path.isfile(catalogFile):
-            print("mangrove catalog not found localy, start the automatic download")
-            url = 'https://mangrove.lal.in2p3.fr/data/mangrove.ecsv'
-            os.system("wget -O {}/mangrove.ecsv {}".format(params["catalogDir"], url))
+            print("mangrove catalog not found locally, start the automatic download")
+            url = 'https://mangrove.lal.in2p3.fr/data/mangrove.hdf5'
+            os.system("wget -O {}/mangrove.hdf5 {}".format(params["catalogDir"], url))
             
         print(catalogFile)
-        cat = Table.read(catalogFile,format='ascii.ecsv')
+        cat = Table.read(catalogFile)
         
         ra, dec = cat["RA"], cat["dec"]
         distmpc, z = cat["dist"], cat["z"]
