@@ -168,15 +168,15 @@ def get_catalog(params, map_struct):
 
     elif params["galaxy_catalog"] == "mangrove":
         catalogFile = os.path.join(params["catalogDir"],
-                               "%s.ecsv" % params["galaxy_catalog"])
+                               "%s.hdf5" % params["galaxy_catalog"])
         
         if not os.path.isfile(catalogFile):
             print("mangrove catalog not found localy, start the automatic download")
-            url = 'https://mangrove.lal.in2p3.fr/data/mangrove.ecsv'
-            os.system("wget -O {}/mangrove.ecsv {}".format(params["catalogDir"], url))
+            url = 'https://mangrove.lal.in2p3.fr/data/mangrove.hdf5'
+            os.system("wget -O {}/mangrove.hdf5 {}".format(params["catalogDir"], url))
             
         print(catalogFile)
-        cat = Table.read(catalogFile,format='ascii.ecsv')
+        cat = Table.read(catalogFile)
         
         ra, dec = cat["RA"], cat["dec"]
         distmpc, z = cat["dist"], cat["z"]
@@ -368,12 +368,12 @@ def get_catalog(params, map_struct):
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]
         Lblist = Lblist[idx]
-        mag = mag[idx]
+        magb = magb[idx]
  
     if params["galaxy_catalog"] == "mangrove":
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]   
-        stellarmass = stellarmass[idx]
+        stellarmass, magb = stellarmass[idx], magb[idx]
         if params["galaxy_grade"] == "Smass":
             Smass = Smass[idx]
 
@@ -397,12 +397,12 @@ def get_catalog(params, map_struct):
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]
         Lblist = Lblist[idx]
-        mag = mag[idx]
+        magb = magb[idx]
 
     if params["galaxy_catalog"] == "mangrove":
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]
-        stellarmass = stellarmass[idx]
+        stellarmass, magb = stellarmass[idx], magb[idx]
         if params["galaxy_grade"] == "Smass":
             Smass = Smass[idx]
        
@@ -423,7 +423,7 @@ def get_catalog(params, map_struct):
         distmpc, z = distmpc[mask], z[mask]
         GWGC, PGC, HyperLEDA = GWGC[mask], PGC[mask], HyperLEDA[mask]
         _2MASS, SDSS = _2MASS[mask], SDSS[mask]
-        stellarmass = stellarmass[mask]
+        stellarmass, magb = stellarmass[mask], magb[mask]
 
         if params["galaxy_grade"] == "Smass":
             Smass = Smass[mask]
@@ -438,12 +438,12 @@ def get_catalog(params, map_struct):
             GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
             _2MASS, SDSS = _2MASS[idx], SDSS[idx]
             Lblist = Lblist[idx]
-            mag = mag[idx]
+            magb = magb[idx]
 
         elif params["galaxy_catalog"] == "mangrove":
             GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
             _2MASS, SDSS = _2MASS[idx], SDSS[idx]
-            stellarmass = stellarmass[idx]
+            stellarmass. magb = stellarmass[idx], magb[idx]
 
             if params["galaxy_grade"] == "Smass":
                 Smass = Smass[idx]
@@ -464,7 +464,7 @@ def get_catalog(params, map_struct):
     catalog_struct["Sloc"] = Sloc
     catalog_struct["S"] = S
     catalog_struct["Smass"] = Smass
-            
+
     if params["writeCatalog"]:
         catalogfile = os.path.join(params["outputDir"], 'catalog.csv')
         fid = open(catalogfile, 'w')
@@ -488,9 +488,9 @@ def get_catalog(params, map_struct):
         elif params["galaxy_catalog"] == "mangrove":
 
             if params["galaxy_grade"] == "Smass":
-                fid.write("id, RAJ2000, DEJ2000, Smass, S, Sloc, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS, stellarmass\n")
-                for a, b, c, d, e, f, g, h, i, j, k, l, m in zip(ra, dec, Smass, S, Sloc, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS, stellarmass):
-                    fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k, l, m))
+                fid.write("id, RAJ2000, DEJ2000, Smass, S, Sloc, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS, B_mag, stellarmass\n")
+                for a, b, c, d, e, f, g, h, i, j, k, l, m, n in zip(ra, dec, Smass, S, Sloc, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS, magb, stellarmass):
+                    fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k, l, m, n))
                     cnt = cnt + 1
             else:
                 fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS\n")
