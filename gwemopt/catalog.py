@@ -229,7 +229,7 @@ def get_catalog(params, map_struct):
             mask = np.zeros(len(r))
             
             #calculate the moments from distmu, distsigma and distnorm
-            mom_mean, mom_std, momt_norm = distance.parameters_to_moments(map_struct["distmu"],map_struct["distsigma"])
+            mom_mean, mom_std, mom_norm = distance.parameters_to_moments(map_struct["distmu"],map_struct["distsigma"])
 
             condition_indexer = np.where( (r < (mom_mean[ipix] + (3*mom_std[ipix]))) & (r > (mom_mean[ipix] - (3*mom_std[ipix])) )) 
             mask[condition_indexer] = 1
