@@ -458,7 +458,7 @@ def get_catalog(params, map_struct):
     if params["galaxy_grade"] == "Smass":
         Smass = Smass/np.sum(Smass)
     else:
-        Smass = np.ones(Smass.shape)
+        Smass = np.ones(Sloc.shape)
         Smass = Smass/np.sum(Smass)
 
     catalog_struct = {}
