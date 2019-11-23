@@ -12,7 +12,7 @@ from scipy.stats import norm
 from scipy.special import gammaincinv
 
 from astroquery.vizier import Vizier
-
+from ligo.skymap import distance
 from astropy.table import Table
 from astropy.io import ascii
 from astropy.cosmology import WMAP9 as cosmo
@@ -227,8 +227,11 @@ def get_catalog(params, map_struct):
             
             #creat an mask to cut at 3 sigma in distance
             mask = np.zeros(len(r))
+            
+            #calculate the moments from distmu, distsigma and distnorm
+            mom_mean, mom_std, mom_norm = distance.parameters_to_moments(map_struct["distmu"],map_struct["distsigma"])
 
-            condition_indexer = np.where( (r < (map_struct["distmu"][ipix] + (3*map_struct["distsigma"][ipix]))) & (r > (map_struct["distmu"][ipix] - (3*map_struct["distsigma"][ipix])) )) 
+            condition_indexer = np.where( (r < (mom_mean[ipix] + (3*mom_std[ipix]))) & (r > (mom_mean[ipix] - (3*mom_std[ipix])) )) 
             mask[condition_indexer] = 1
 
             Sloc = prob_scaled[ipix] * (map_struct["distnorm"][ipix] *
@@ -455,7 +458,7 @@ def get_catalog(params, map_struct):
     if params["galaxy_grade"] == "Smass":
         Smass = Smass/np.sum(Smass)
     else:
-        Smass = np.ones(Smass.shape)
+        Smass = np.ones(Sloc.shape)
         Smass = Smass/np.sum(Smass)
 
     catalog_struct = {}
