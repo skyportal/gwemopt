@@ -101,7 +101,6 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
     detections = 0
 
     for pinpoint in ipix:
-        ra, dec = hp.pix2ang(nside, pinpoint, lonlat=True)
         dist = -1
         while (dist < 0):
             dist = norm(map_struct["distmu"][pinpoint],map_struct["distsigma"][pinpoint]).rvs()
