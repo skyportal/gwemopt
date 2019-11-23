@@ -5,6 +5,7 @@ import healpy as hp
 from astropy.time import Time
 import scipy.stats
 from scipy.interpolate import interpolate as interp
+from scipy.stats import norm
 
 import matplotlib
 #matplotlib.rc('text', usetex=True)
@@ -38,10 +39,7 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
     dists = np.logspace(-1,3,1000)
     ndetections = np.zeros((len(dists),))
 
-    for ii in range(Ninj):
-        # THE SKY-LOCATION AS A HEALPIXEL ID
-        pinpoint = hp.ang2pix(nside, theta=ras[ii], phi=decs[ii], lonlat=True)
-
+    for pinpoint in ipix:
         idxs = []
         for jj in range(len(coverage_struct["ipix"])):
             expPixels = coverage_struct["ipix"][jj]
@@ -86,6 +84,55 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
 
     return efficiency_struct
 
+def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
+
+    nside = params["nside"]
+    npix = hp.nside2npix(nside)
+    Ninj = params["Ninj"]
+    gpstime = params["gpstime"]
+    mjd_inj = Time(gpstime, format='gps', scale='utc').mjd
+    
+    if params["doCatalog"]:
+        distn = scipy.stats.rv_discrete(values=(np.arange(npix),map_struct["prob_catalog"]))
+    else:
+        distn = scipy.stats.rv_discrete(values=(np.arange(npix),map_struct["prob"]))
+    ipix = distn.rvs(size=Ninj)
+
+    detections = 0
+
+    for pinpoint in ipix:
+        ra, dec = hp.pix2ang(nside, pinpoint, lonlat=True)
+        dist = -1
+        while (dist < 0):
+            dist = norm(map_struct["distmu"][pinpoint],map_struct["distsigma"][pinpoint]).rvs()
+        
+        idxs = []
+        for jj in range(len(coverage_struct["ipix"])):
+            expPixels = coverage_struct["ipix"][jj]
+            
+            if pinpoint in expPixels:
+                idxs.append(jj)
+
+        if len(idxs) == 0:
+            continue
+    
+        mjds = coverage_struct["data"][idxs,2]
+        mags = coverage_struct["data"][idxs,3]
+        filts = coverage_struct["filters"][idxs]
+        
+        for mjd, mag, filt in zip(mjds,mags,filts):
+            lightcurve_t = lightcurve_struct["t"] + mjd_inj
+            lightcurve_mag = lightcurve_struct[filt]
+            idx = np.where(np.isfinite(lightcurve_mag))[0]
+            
+            f = interp.interp1d(lightcurve_t[idx], lightcurve_mag[idx],fill_value='extrapolate')
+            lightcurve_mag_interp = f(mjd)
+            dist_threshold = (10**(((mag-lightcurve_mag_interp)/5.0)+1.0))/1e6
+
+            if dist<=dist_threshold:
+                detections+=1
+
+    print(f'Percent detections out of {Ninj} injected KNe: {detections*100/Ninj}% ')
 
 def save_efficiency_data(params, efficiency_struct, lightcurve_struct):
     for i in range(0, len(efficiency_struct["distances"])):
