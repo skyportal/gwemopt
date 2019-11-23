@@ -5,7 +5,6 @@ import healpy as hp
 from astropy.time import Time
 import scipy.stats
 from scipy.interpolate import interpolate as interp
-from scipy.stats import norm
 
 import matplotlib
 #matplotlib.rc('text', usetex=True)
@@ -103,7 +102,7 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
     for pinpoint in ipix:
         dist = -1
         while (dist < 0):
-            dist = norm(map_struct["distmu"][pinpoint],map_struct["distsigma"][pinpoint]).rvs()
+            dist = scipy.stats.norm(map_struct["distmu"][pinpoint],map_struct["distsigma"][pinpoint]).rvs()
         
         idxs = []
         for jj in range(len(coverage_struct["ipix"])):
