@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import os
 import datetime
@@ -41,6 +42,7 @@ from astropy.table import Table
 path_config = 'config/'
 
 force_Db_use = True
+force_Db_use = False
 
 def Tel_dicf():
     Tel_dic = {
@@ -238,6 +240,7 @@ def init_observation_plan(VO_dic, skymappath, dirpath="", filename=""):
     params["powerlaw_dist_exp"] = 1.0
 
     params["doPlots"] = False
+    params["doPlots"] = True
     params["doMovie"] = False
     # params["doObservability"] = True
     params["doObservability"] = False
@@ -249,7 +252,7 @@ def init_observation_plan(VO_dic, skymappath, dirpath="", filename=""):
     params["footprint_dec"] = 60.0
     params["footprint_radius"] = 10.0
 
-    params["airmass"] = 2.5
+    params["airmass"] = 4.0
 
     params["doCommitDatabase"] = False
     params["doRequestScheduler"] = False
@@ -265,6 +268,7 @@ def init_observation_plan(VO_dic, skymappath, dirpath="", filename=""):
     params["doMinimalTiling"] = True
     params["doIterativeTiling"] = True
     params["doMaxTiles"] = True
+    params["doMaxTiles"] = False
     params["iterativeOverlap"] = 0.2
     params["maximumOverlap"] = 0.2
 
@@ -282,6 +286,14 @@ def init_observation_plan(VO_dic, skymappath, dirpath="", filename=""):
     params["doOverlappingScheduling"] = False
     params["doPerturbativeTiling"] = True
 
+    params['ForceCorner'] = False
+    params['doBlocks'] = False
+    params['doUpdateScheduler'] = False
+    params['doSuperSched'] = False
+    params['doBalanceExposure'] = False
+    params['doMovie_supersched'] = False
+    params['doOrderByObservability'] = False
+
     params["doSingleExposure"] = True
     params["filters"] = filt
     params["exposuretimes"] = exposuretimes
@@ -294,16 +306,13 @@ def init_observation_plan(VO_dic, skymappath, dirpath="", filename=""):
     params["nside"] = skymap_header['NSIDE']
     params["DISTMEAN"] = skymap_header['DISTMEAN']
     params["DISTSTD"] = skymap_header['DISTSTD']
-
-    params["DISTMEAN"], params["DISTSTD"] = 100.0, 50.0
+    params["distance_useGal"] = 300
 
     # Use galaxies to compute the grade, both for tiling and galaxy targeting, only when dist_mean + dist_std < 300Mpc
-    if params["DISTMEAN"]+params["DISTSTD"]<=300:
+    if params["DISTMEAN"]+params["DISTSTD"]<=params["distance_useGal"]:
         params["doUseCatalog"] = True
         params["doCatalog"] = True
         params["writeCatalog"] = True
-
-    params = gwemopt.utils.params_checker(params)
 
     return params
 
@@ -428,8 +437,21 @@ def Observation_plan_multiple(telescopes, VO_dic, trigger_id, params, map_struct
     # Initialise table
     tiles_table = None
 
+    if params["doPlots"]:
+        gwemopt.plotting.skymap(params, map_struct)
+
+    print(params["galaxy_catalog"])
+
     if params["doCatalog"]:
         map_struct, catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
+
+    if params["doPlots"]:
+        gwemopt.plotting.skymap(params, map_struct)
+
+    print(stop)
+
+    if params["doPlots"]:
+        gwemopt.plotting.skymap(params, map_struct)
 
     if params["tilesType"] == "moc":
         print("Generating MOC struct...")
@@ -478,6 +500,9 @@ def Observation_plan_multiple(telescopes, VO_dic, trigger_id, params, map_struct
         gwemopt.plotting.skymap(params, map_struct)
         gwemopt.plotting.tiles(params, map_struct, tile_structs)
         gwemopt.plotting.coverage(params, map_struct, coverage_struct)
+        gwemopt.scheduler.summary(params,map_struct,coverage_struct)
+
+    print(stop)
 
     tiles_tables = {}
     for jj, telescope in enumerate(telescopes):
@@ -666,7 +691,7 @@ def Observation_plan(telescope, VO_dic, trigger_id, params, map_struct_input):
     params["event"] = ""
     params["telescopes"] = [telescope]
 
-    if telescope in ["GWAC", "TRE", "TCA", "TCH", "OAJ"]:
+    if telescope in ["GWAC", "TRE", "TCA", "TCH", "OAJ", "FZU-Auger", "FZU-CTA-N"]:
         params["tilesType"] = "moc"
         params["scheduleType"] = "greedy"
         params["timeallocationType"] = "powerlaw"
@@ -1080,6 +1105,8 @@ def GW_treatment_alert(v, output_dic, file_log_s):
         else:
             Db_use = False
 
+    #Db_use = False
+
     GW_vo["ba"] = fa.FA_shift()
 
     GW_vo["eventype"] = "GW"
@@ -1152,7 +1179,7 @@ def GW_treatment_alert(v, output_dic, file_log_s):
         if not os.path.isfile(skypath):
             command = "curl " + " -o " + skypath + " -O " + GW_vo["locpix"]
             os.system(command)
-
+        print (skypath)
         hdul = fits.open(skypath)
         lumin = np.round(hdul[1].header['DISTMEAN'], 3)
         errorlumin = np.round(hdul[1].header['DISTSTD'], 3)
@@ -1164,7 +1191,6 @@ def GW_treatment_alert(v, output_dic, file_log_s):
 
         # Load params dictionary for gwemopt
         params = init_observation_plan(GW_vo, output_dic["skymappath"])
-
         print("Loading skymap...")
         # Function to read maps
         map_struct = gwemopt.utils.read_skymap(params, is3D=params["do3D"])
@@ -1182,26 +1208,34 @@ def GW_treatment_alert(v, output_dic, file_log_s):
 
         if GW_vo["voimportance"] == 1:
             LISTE_TELESCOPE_TILING = ["OAJ", "TRE", 'TCH', 'TCA']
-            max_nb_tiles_tiling = np.array([60, 50, 50, 50])
+            max_nb_tiles_tiling = np.array([20, 20, 20, 20])
+            LISTE_TELESCOPE_TILING2 = ["FZU-Auger", "FZU-CTA-N"]
+            max_nb_tiles_tiling2 = np.array([20, 20])
             #max_nb_tiles_tiling = -1 * np.ones(len(LISTE_TELESCOPE_TILING))
             LISTE_TELESCOPE_GALAXY = ["Makes-60","Lisnyky-AZT8","Zadko","TNT","UBAI-T60N","ShAO-T60","Abastunami-T70","UBAI-T60S","Abastunami-T48","IRIS"]
+            #LISTE_TELESCOPE_GALAXY = ["Makes-60"]
             max_nb_tiles_galaxy = np.array([50]*len(LISTE_TELESCOPE_GALAXY))
             #max_nb_tiles_galaxy = -1 * np.ones(len(LISTE_TELESCOPE_GALAXY))
         else:
             LISTE_TELESCOPE_TILING = ["TRE", "TCH", "TCA"]
-            max_nb_tiles_tiling = np.array([50, 50, 50])
+            max_nb_tiles_tiling = np.array([30, 30, 30])
+            #LISTE_TELESCOPE_TILING2 = ["FZU-Auger", "FZU-CTA-N"]
+            #max_nb_tiles_tiling2 = np.array([20,20])
+            #LISTE_TELESCOPE_TILING = ["TRE", "TCH", "TCA", "FZU-Auger", "FZU-CTA-N"]
+            #max_nb_tiles_tiling = np.array([100, 100, 100, 100, 100])
+
+            #LISTE_TELESCOPE_TILING = ["FZU-Auger", "FZU-CTA-N"]
+            #max_nb_tiles_tiling = np.array([100,100])
+
+            #LISTE_TELESCOPE_TILING = ["FZU-Auger"]
+            #max_nb_tiles_tiling = np.array([100])
+
             #max_nb_tiles_tiling = -1 * np.ones(len(LISTE_TELESCOPE_TILING))
             LISTE_TELESCOPE_GALAXY = ["Makes-60","Lisnyky-AZT8","Zadko","TNT","UBAI-T60N","ShAO-T60","Abastunami-T70","UBAI-T60S","Abastunami-T48","IRIS"]
+            #LISTE_TELESCOPE_GALAXY = ["Makes-60"]
             max_nb_tiles_galaxy = np.array([50]*len(LISTE_TELESCOPE_GALAXY))
             #max_nb_tiles_galaxy = -1 * np.ones(len(LISTE_TELESCOPE_GALAXY))
 
-        LISTE_TELESCOPE_TILING = []
-        max_nb_tiles_tiling = np.array([])
-        LISTE_TELESCOPE_GALAXY = ["Makes-60"]
-        max_nb_tiles_galaxy = np.array([50]*len(LISTE_TELESCOPE_GALAXY))
-
-        ### TILING ###
-        params["max_nb_tiles"] = max_nb_tiles_tiling
         # Adapt percentage of golden tiles with the 90% skymap size. Arbitrary, needs to be optimised!!!
         if float(GW_dic["90cr"]) < 60:
             params["iterativeOverlap"] = 0.8
@@ -1209,22 +1243,31 @@ def GW_treatment_alert(v, output_dic, file_log_s):
             params["doPerturbativeTiling"] = False
         else:
             params["iterativeOverlap"] = 0.2
-            params["doIterativeTiling"] = True
-            params["doPerturbativeTiling"] = True
+            params["doIterativeTiling"] = False
+            params["doPerturbativeTiling"] = False
         print (GW_dic["90cr"], GW_dic["50cr"])
         print ('ITERATIVE OVERLAP: ', params["iterativeOverlap"])
         #params["galaxy_grade"] = 'Sloc'
 
+
+        ### TILING ###
+        params["max_nb_tiles"] = max_nb_tiles_tiling
         aTables_tiling, galaxies_table = Observation_plan_multiple(LISTE_TELESCOPE_TILING, GW_vo, trigger_id, params, map_struct, 'Tiling')
         # Send data to DB and send xml files to telescopes through broker for tiling
-        send_data(LISTE_TELESCOPE_TILING, params, aTables_tiling, galaxies_table, GW_vo, GW_dic, trigger_id, v, file_log_s, path_config, output_dic, message_obs, name_dic, Db_use=Db_use, gal2DB=False)
+        print(stop)
+        #send_data(LISTE_TELESCOPE_TILING, params, aTables_tiling, galaxies_table, GW_vo, GW_dic, trigger_id, v, file_log_s, path_config, output_dic, message_obs, name_dic, Db_use=Db_use, gal2DB=False)
+
+        #params["max_nb_tiles"] = max_nb_tiles_tiling2
+        aTables_tiling2, galaxies_table2 = Observation_plan_multiple(LISTE_TELESCOPE_TILING2, GW_vo, trigger_id, params, map_struct, 'Tiling')
+        # Send data to DB and send xml files to telescopes through broker for tiling
+        print(stop)
+        send_data(LISTE_TELESCOPE_TILING2, params, aTables_tiling2, galaxies_table2, GW_vo, GW_dic, trigger_id, v, file_log_s, path_config, output_dic, message_obs, name_dic, Db_use=Db_use, gal2DB=False)
 
         ### Galaxy targeting ###
         #if the  mean distance(+error) of the skymap is less than 300Mpc we perform galaxy targeting
-        if params["DISTMEAN"]+params["DISTSTD"]<=300:
+        if params["DISTMEAN"]+params["DISTSTD"]<=params["distance_useGal"]:
             #params["galaxy_grade"] = 'Sloc'
             params["max_nb_tiles"] = max_nb_tiles_galaxy
-            params["doPerturbativeTiling"] = True
             aTables_galaxy, galaxies_table = Observation_plan_multiple(LISTE_TELESCOPE_GALAXY, GW_vo, trigger_id, params, map_struct, 'Galaxy targeting')
             # Send data to DB and send xml files to telescopes through broker for galaxy targeting
             send_data(LISTE_TELESCOPE_GALAXY, params, aTables_galaxy, galaxies_table, GW_vo, GW_dic, trigger_id, v, file_log_s, path_config, output_dic, message_obs, name_dic, Db_use=Db_use, gal2DB=True)
@@ -1899,6 +1942,7 @@ def create_GRANDMAvoevent(lalid, Trigger_dic, VO_dic, Tel_dic, output_dic, send2
     with open(file_voevent, 'wb') as f:
         vp.dump(v, f)
 
+    send2DB = False
     if send2DB:
         # Send information contained in VOEvent to database
         # First try with variable v
@@ -1995,7 +2039,7 @@ def send_data(telescope_list, params, aTables, galaxies_table, GW_vo, GW_dic, tr
 
     for i_tel, telescope in enumerate(telescope_list):
         print (telescope) 
-        if telescope not in ["GWAC", "TRE", "TCA", "TCH", "OAJ"]:
+        if telescope not in ["GWAC", "TRE", "TCA", "TCH", "OAJ", "FZU-Auger", "FZU-CTA-N"]:
    
             if not params["doUseCatalog"]:
                 print("Observation plan for {} is not computed as we don't use the galaxies catalog at this distance".format(telescope))
