@@ -514,8 +514,10 @@ if opts.doEfficiency:
             efficiency_struct = gwemopt.efficiency.compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
             efficiency_structs[key] = efficiency_struct
             efficiency_structs[key]["legend_label"] = lightcurve_struct["legend_label"]
+            if opts.do3D:
+                gwemopt.efficiency.compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
 
-        if opts.doPlots: 
+        if opts.doPlots:
             print("Plotting efficiency...")
             gwemopt.plotting.efficiency(params, map_struct, efficiency_structs)
     else:
