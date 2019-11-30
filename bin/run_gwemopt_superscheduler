@@ -155,7 +155,7 @@ def params_struct(opts,schedround):
     params["tilesType"] = opts.tilesType
     params["gpstime"] = opts.gpstime
     params["scheduleType"] = opts.scheduleType
-    params["timeallocationType"]: opts.timeallocationType
+    params["timeallocationType"] = opts.timeallocationType
     params["telescopes"] = telescopes
     params["outputDir"] = opts.outputDir
     params["tilingDir"] = opts.tilingDir
@@ -391,7 +391,7 @@ for ii in range(len(alltelescopes)):
         min = np.min(coverage_struct["data"][idx,2])
     except:
         continue
-    max = np.max(coverage_struct["data"][idx,2]*1.000005)
+    max = np.max(coverage_struct["data"][idx,2]*1.000001)
     if min<mjd_min: mjd_min=min
     if max>mjd_max: mjd_max=max
 min_field_id = coverage_struct["data"][2][5]
@@ -402,8 +402,8 @@ for ii in range(len(coverage_struct_0["ipix"])):
         continue
     data = coverage_struct_0["data"][ii,:]
     x,y=data[2],data[5]
-    width=(mjd_max-mjd_min)/14
-    height=20
+    width=(mjd_max-mjd_min)/19
+    height=10
     patch = matplotlib.patches.Rectangle(xy=(x,y),width=width,height=height)
     if data[5] in params["covered_field_ids"][alltelescopes[w][0]][w]: #makes sure field id was covered by telescope in that round then sets to green
         patch.set_fc('green')
@@ -459,18 +459,25 @@ for jj in range(len(alltelescopes)):
         else: continue
 
         x,y=data[2],mapped_field_id
-        width=(mjd_max-mjd_min)/14
-        height=20
+        width=(mjd_max-mjd_min)/19
+        height=10
         
+        #patch = matplotlib.patches.Ellipse(xy=(x,y),width = width/2.5,height = height)
         patch = matplotlib.patches.Rectangle(xy=(x,y),width=width,height=height)
-        round = jj
-        if mapped_field_id in og_uncovered and data[5] in params["covered_field_ids"][coverage_struct["telescope"][ii]][jj]: #loops through past rounds to see if tile was previously unobserved and now reobserved
-            patch.set_fc('blue')
-        elif data[5] in params["covered_field_ids"][coverage_struct["telescope"][ii]][jj]: #sets color to green if observed
-            patch.set_fc('green')
+        
+        if jj == len(alltelescopes)-1:
+            if mapped_field_id in og_uncovered: #loops through past rounds to see if tile was previously unobserved and now reobserved
+                patch.set_fc('blue')
+            else:
+                patch.set_fc('none')
         else:
-            patch.set_fc('red')
-            og_uncovered.append(mapped_field_id)
+            if mapped_field_id in og_uncovered and data[5] in params["covered_field_ids"][coverage_struct["telescope"][ii]][jj]: #loops through past rounds to see if tile was previously unobserved and now reobserved
+                patch.set_fc('blue')
+            elif data[5] in params["covered_field_ids"][coverage_struct["telescope"][ii]][jj]: #sets color to green if observed
+                patch.set_fc('green')
+            else:
+                patch.set_fc('red')
+                og_uncovered.append(mapped_field_id)
 
         if mapped_field_id<min_field_id: min_field_id=mapped_field_id
         if mapped_field_id>max_field_id: max_field_id=mapped_field_id
