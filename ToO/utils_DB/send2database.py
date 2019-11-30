@@ -13,7 +13,7 @@ class populate_DB:
     """ This class allows to write information in DB """
 
     def __init__(self, path_config, filename_config):
-       
+        
         # Get config params from json file
         with open(path_config+filename_config) as f:
             data = json.load(f)
@@ -25,7 +25,6 @@ class populate_DB:
 
     def connect_db(self):
         # Open database connection
-        print(self.HOST, self.USER, self.PWD, self.DB)
         self.db = pymysql.connect(host=self.HOST, user=self.USER, passwd=self.PWD, db=self.DB)
 
         # prepare a cursor object using cursor() method
@@ -432,7 +431,7 @@ class populate_DB:
         """ Convert telescope name from gwemopt convention to GRANDMA convention """
 
         if telname == "F60":
-            telnameDB = "GWAC/F60-A"
+            telnameDB = "F60"
         elif telname == "GWAC":
             telnameDB = "GWAC"
         elif telname == "IRIS":
@@ -467,6 +466,17 @@ class populate_DB:
             telnameDB = "ShAO-T60"
         elif telname == "OHP-T120":
             telnameDB = "OHP-T120"
+        elif telname == "UBAI-T60N":
+            telnameDB = "UBAI-T60N"
+        elif telname == "UBAI-T60S":
+            telnameDB = "UBAI-T60S"
+        elif telname == "F30":
+            telnameDB = "F30"
+        elif telname == "FZU-Auger":
+            telnameDB = "FZU-Auger"
+        elif telname == "FZU-CTA-N":
+            telnameDB = "FZU-CTA-N"
+
         else:
             telnameDB = "Not found"
 

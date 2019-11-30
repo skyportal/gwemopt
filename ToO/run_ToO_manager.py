@@ -5,9 +5,9 @@
 import sys
 import voeventparse as vp
 
-#import ToO_manager as too
+import ToO_manager as too
 #import ToO_manager_David as too
-import ToO_manager_JG as too
+#import ToO_manager_JG as too
 
 #fileo= open('MS190425b-1-Preliminary.xml,0')
 
