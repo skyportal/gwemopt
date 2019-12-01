@@ -381,20 +381,24 @@ def erase_observed_tiles(params,tile_struct,telescope): #only for run_gwemopt_su
 
 def update_observed_tiles(params,tile_struct,previous_coverage_struct):
     
-    if params["doAlternatingFilters"]:
-        tile_struct_hold = copy.copy(tile_struct)
-    else:
-        tile_struct_hold = gwemopt.utils.check_overlapping_tiles(params,tile_struct,previous_coverage_struct) #maps field ids to tile_struct
+    if not params["doAlternatingFilters"]:
+        tile_struct = gwemopt.utils.check_overlapping_tiles(params,tile_struct,previous_coverage_struct) #maps field ids to tile_struct
 
     for key in tile_struct.keys(): #sets tile to 0 if previously observed
-        if not 'epochs' in tile_struct_hold[key]: continue
-        epochs = tile_struct_hold[key]["epochs"]
+        if 'epochs' not in tile_struct[key]: continue
+        ipix = tile_struct[key]["ipix"]
         
-        if params["doAlternatingFilters"]: #only sets to 0 if filters match for that particular block
-            if np.any(params["filters"][0] in tile_struct[key]["epochs_filters"]):
-                tile_struct[key]['prob']=0.0
-        
-        else: #simply sets to 0 if there are overlapping fields found
+        tot_overlap = sum(tile_struct[key]["epochs_overlap"]) #sums over list of overlapping ipix lengths
+
+        if params["doAlternatingFilters"]:
+            #only takes into account fields with same filters for total overlap
+            for ii,filt in enumerate(tile_struct[key]["epochs_filters"]):
+                if filt != params["filters"][0]:
+                    tot_overlap -= tile_struct[key]["epochs_overlap"][ii]
+
+        rat = tot_overlap/len(ipix)
+
+        if rat > 0.3:
             tile_struct[key]['prob']=0.0
 
     return tile_struct

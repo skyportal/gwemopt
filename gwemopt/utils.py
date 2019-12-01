@@ -55,7 +55,7 @@ def readParamsFromFile(file):
     return params
 
 def params_checker(params):
-    #assigns defaults to params
+    """"Assigns defaults to params."""
     do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure","doBlocks","doUpdateScheduler"]
  
     for parameter in do_Parameters:
@@ -906,6 +906,7 @@ def slice_galaxy_tiles(params, tile_struct, coverage_struct):
     return tile_struct
 
 def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_hold):
+    """Returns value of max_tiles_nb optimized for number of scheduled fields with balanced filters."""
     prob={}
     for key in tile_struct.keys():
         prob[key] = tile_struct[key]['prob']
@@ -1073,20 +1074,21 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                 rat = np.array([float(len(overlap)) / float(len(ipix)),
                                 float(len(overlap)) / float(len(ipix2))])
                                 
+                if len(overlap) == 0 or (params["doSuperSched"] and np.max(rat) < 0.50): continue
                 if params["doSuperSched"] or params["doUpdateScheduler"]:
-                    if np.max(rat)<0.50: continue
-                    if params["doSuperSched"]:
-                        if 'epochs_telescope' not in tile_struct[key]: tile_struct[key]["epochs_telescope"]=[]
-                        tile_struct[key]["epochs_telescope"].append(coverage_struct["telescope"][jj])
+                    if 'epochs_telescope' not in tile_struct[key]:
+                        tile_struct[key]["epochs_telescope"]=[]
+                        tile_struct[key]["epochs_filters"]=[]
                     
-                    if 'epochs_filters' not in tile_struct[key]: tile_struct[key]["epochs_filters"]=[]
+                    tile_struct[key]["epochs_telescope"].append(coverage_struct["telescope"][jj])
                     tile_struct[key]["epochs_filters"].append(coverage_struct["filters"][jj])
-
-                elif len(overlap)==0: continue
 
                 if not 'epochs' in tile_struct[key]:
                     tile_struct[key]["epochs"] = np.empty((0,8))
+                    tile_struct[key]["epochs_overlap"] = []
+
                 tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
+                tile_struct[key]["epochs_overlap"].append(len(overlap))
 
     return tile_struct
 
