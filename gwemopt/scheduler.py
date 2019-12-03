@@ -716,8 +716,10 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
     if "filt_change_time" in config_struct.keys(): filt_change_time = config_struct["filt_change_time"]
     else: filt_change_time = 0
     if params["doUpdateScheduler"] or params["doTreasureMap"]:
-        if previous_coverage_struct is None: raise ValueError("Previous round's coverage struct was not provided")
-        tile_struct_hold = gwemopt.utils.check_overlapping_tiles(params,tile_struct,previous_coverage_struct) #maps field ids to tile_struct
+        if not previous_coverage_struct:
+            print("\nNo previous observations were ingested.\n")
+        else:
+            tile_struct_hold = gwemopt.utils.check_overlapping_tiles(params,tile_struct,previous_coverage_struct) #maps field ids to tile_struct
 
     filters, exposuretimes = params["filters"], params["exposuretimes"]
     coverage_structs = []

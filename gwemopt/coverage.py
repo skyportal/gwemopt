@@ -280,8 +280,10 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
                     raise ValueError("need to specify tiles that have been observed using --observedTiles")
         
             if params["doUpdateScheduler"] or params["doTreasureMap"]:
-                if previous_coverage_struct is None: raise ValueError("Previous round's coverage struct was not provided")
-                tile_struct = update_observed_tiles(params,tile_struct,previous_coverage_struct) #coverage_struct of the previous round
+                if not previous_coverage_struct:
+                    print("\nNo previous observations were ingested.\n")
+                else:
+                    tile_struct = update_observed_tiles(params,tile_struct,previous_coverage_struct) #coverage_struct of the previous round
 
             if params["doSuperSched"]:
                 tile_struct = erase_observed_tiles(params,tile_struct,telescope)
@@ -413,14 +415,16 @@ def timeallocation(params, map_struct, tile_structs,previous_coverage_struct=Non
         print("Generating powerlaw schedule...")
         
         if params["doTreasureMap"]:
-            if not params["treasuremap_token"]: print("\n Must provide Treasure Map API Token. \n")
+            if not params["treasuremap_token"]:
+                print("Must provide Treasure Map API Token.")
+                exit(0)
             treasuremap_coverage = gwemopt.utils.get_treasuremap_pointings(params)
         
-            if previous_coverage_struct:
+            if previous_coverage_struct and treasuremap_coverage["data"]:
                 previous_coverage_struct["data"] = np.append(previous_coverage_struct["data"],treasuremap_coverage["data"],axis=0)
                 previous_coverage_struct["filters"] = previous_coverage_struct["filters"] + treasuremap_coverage["filters"]
                 previous_coverage_struct["ipix"] = previous_coverage_struct["ipix"] + treasuremap_coverage["ipix"]
-            else:
+            elif treasuremap_coverage["data"]:
                 previous_coverage_struct = treasuremap_coverage
 
         if params["doBlocks"]:
@@ -444,7 +448,8 @@ def timeallocation(params, map_struct, tile_structs,previous_coverage_struct=Non
                     params_hold["config"][telescope]["exposurelist"] = exposurelist
                     tile_structs_hold[telescope] = gwemopt.tiles.powerlaw_tiles_struct(params_hold, config_struct, telescope, map_struct, tile_structs_hold[telescope])
                 if params["doUpdateScheduler"] or params["doTreasureMap"]:
-                    if previous_coverage_struct is None: raise ValueError("Previous round's coverage struct was not provided")
+                    if not previous_coverage_struct:
+                        print("\nNo previous observations were ingested.\n")
                     tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(params_hold, map_struct, tile_structs_hold,previous_coverage_struct)
                 else:
                     tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(params_hold, map_struct, tile_structs_hold)
