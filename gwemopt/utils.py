@@ -11,6 +11,10 @@ import astropy, astroplan
 from scipy.stats import norm
 from scipy.optimize import minimize
 
+import requests
+import urllib.parse
+import re
+
 import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u
@@ -1075,20 +1079,19 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                                 float(len(overlap)) / float(len(ipix2))])
                                 
                 if len(overlap) == 0 or (params["doSuperSched"] and np.max(rat) < 0.50): continue
-                if params["doSuperSched"] or params["doUpdateScheduler"]:
+                if params["doSuperSched"]:
                     if 'epochs_telescope' not in tile_struct[key]:
                         tile_struct[key]["epochs_telescope"]=[]
-                        tile_struct[key]["epochs_filters"]=[]
-                    
                     tile_struct[key]["epochs_telescope"].append(coverage_struct["telescope"][jj])
-                    tile_struct[key]["epochs_filters"].append(coverage_struct["filters"][jj])
 
                 if not 'epochs' in tile_struct[key]:
                     tile_struct[key]["epochs"] = np.empty((0,8))
                     tile_struct[key]["epochs_overlap"] = []
-
+                    tile_struct[key]["epochs_filters"]=[]
+                    
                 tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
                 tile_struct[key]["epochs_overlap"].append(len(overlap))
+                tile_struct[key]["epochs_filters"].append(coverage_struct["filters"][jj])
 
     return tile_struct
 
@@ -1108,3 +1111,68 @@ def order_by_observability(params,tile_structs):
         observability.append(observability_prob)
     idx = np.argsort(observability)[::-1]
     params["telescopes"] = [params["telescopes"][ii] for ii in idx]
+
+def get_treasuremap_pointings(params):
+    BASE = 'http://treasuremap.space/api/v0'
+    TARGET = 'pointings'
+    info = {
+        "api_token": params["treasuremap_token"],
+        "bands": params["filters"],
+        "statuses": params["treasuremap_status"],
+        "graceid": params["graceid"]
+    }
+    
+    url = "{}/{}?{}".format(BASE, TARGET, urllib.parse.urlencode(info))
+
+    try:
+        r = requests.get(url = url)
+    except requests.exceptions.RequestException as e:
+        print(e)
+        exit(1)
+
+    observations = r.text.split("}")
+
+    #dicts of instrument FOVs
+    FOV_square = {44: 4.96, 47: 6.86}
+    FOV_circle = {38: 1.1}
+    
+    #create coverage_struct
+    coverage_struct = {}
+    coverage_struct["data"] = np.empty((0, 8))
+    coverage_struct["filters"] = []
+    coverage_struct["ipix"] = []
+
+    #read information into coverage struct
+    for obs in observations:
+
+        if "POINT" not in obs: continue
+        if "invalid api_token" in obs:
+            print("Invalid Treasure Map API token.")
+            exit(1)
+        
+        #get ra and dec
+        pointing = re.search('\(([^)]+)', obs).group(1)
+        pointing = pointing.split(" ")
+        ra, dec = float(pointing[0]), float(pointing[1])
+        
+        #get filter
+        filteridx = obs.find("band") + 10 #jump to starting index of filter
+        filter = obs[filteridx].split("\"")[0]
+
+        #get instrument id
+        instrumentidx = obs.find("instrumentid") + 16 #jump to starting index of instrument id
+        instrument_id = int(obs[instrumentidx:].split(",")[0])
+
+        #get ipix
+        if instrument_id in FOV_square:
+            ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra, dec, FOV_square[instrument_id], params["nside"])
+        elif instrument_id in FOV_circle:
+            ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra, dec, FOV_circle[instrument_id], params["nside"])
+        else: continue
+        
+        coverage_struct["data"] = np.append(coverage_struct["data"], np.array([[ra, dec, -1, -1, -1, -1, -1, -1]]), axis=0)
+        coverage_struct["filters"].append(filter)
+        coverage_struct["ipix"].append(ipix)
+
+    return coverage_struct
+

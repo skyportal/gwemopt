@@ -148,7 +148,10 @@ def parse_commandline():
     parser.add_option("--footprint_ra",default=30.0,type=float)
     parser.add_option("--footprint_dec",default=60.0,type=float)
     parser.add_option("--footprint_radius",default=10.0,type=float)
-
+    parser.add_option("--doTreasureMap", action="store_true", default=False)
+    parser.add_option("--treasuremap_token", help = "Treasure Map API Token.", default="")
+    parser.add_option("--treasuremap_status", default= "planned,completed")
+    parser.add_option("--graceid", default= "S190426c")
     parser.add_option("--doZTFCoverage", action="store_true", default=False)
     parser.add_option("--start_time",default=None)
     parser.add_option("--end_time",default=None)
@@ -295,6 +298,10 @@ def params_struct(opts):
     params["doObservability"] = opts.doObservability
     params["do3D"] = opts.do3D
     params["doDatabase"] = opts.doDatabase
+    params["doTreasureMap"] = opts.doTreasureMap
+    params["treasuremap_token"] = opts.treasuremap_token
+    params["treasuremap_status"] = opts.treasuremap_status.split(",")
+    params["graceid"] = opts.graceid
     params["doCalcTiles"] = opts.doCalcTiles
     params["doFootprint"] = opts.doFootprint
     params["footprint_ra"] = opts.footprint_ra
