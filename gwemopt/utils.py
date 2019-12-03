@@ -1144,11 +1144,10 @@ def get_treasuremap_pointings(params):
 
     #read information into coverage struct
     for obs in observations:
-
-        if "POINT" not in obs: continue
         if "invalid api_token" in obs:
             print("Invalid Treasure Map API token.")
             exit(1)
+        elif "POINT" not in obs: continue
         
         #get ra and dec
         pointing = re.search('\(([^)]+)', obs).group(1)
