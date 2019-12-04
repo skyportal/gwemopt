@@ -1156,7 +1156,7 @@ def get_treasuremap_pointings(params):
         
         #get filter
         filteridx = obs.find("band") + 10 #jump to starting index of filter
-        filter = obs[filteridx].split("\"")[0]
+        filter = obs[filteridx:].split("\"")[0][:-1]
 
         #get instrument id
         instrumentidx = obs.find("instrumentid") + 16 #jump to starting index of instrument id
