@@ -150,7 +150,7 @@ def parse_commandline():
     parser.add_option("--footprint_radius",default=10.0,type=float)
     parser.add_option("--doTreasureMap", action="store_true", default=False)
     parser.add_option("--treasuremap_token", help = "Treasure Map API Token.", default="")
-    parser.add_option("--treasuremap_status", default= "planned,completed")
+    parser.add_option("--treasuremap_status", help = "Status of Treasure Map observations to be queried.", default= "planned,completed")
     parser.add_option("--graceid", default= "S190426c")
     parser.add_option("--doZTFCoverage", action="store_true", default=False)
     parser.add_option("--start_time",default=None)
