@@ -139,13 +139,13 @@ def get_catalog(params, map_struct):
         if not os.path.isfile(catalogFile):
             raise ValueError("Please add %s." % catalogFile)
 
-        with h5py.File(catalogFile, 'r') as f:
-            name = f['name'][:]
-            ra, dec = f['ra'][:], f['dec'][:]
-            sfr_fuv, mstar = f['sfr_fuv'][:], f['mstar'][:]
-            distmpc, magb = f['distmpc'][:], f['magb'][:]
-            a, b2a, pa = f['a'][:], f['b2a'][:], f['pa'][:]
-            btc = f['btc'][:]
+        cat = Table.read(catalogFile)
+        name = cat['name']
+        ra, dec = cat['ra'], cat['dec']
+        sfr_fuv, mstar = cat['sfr_fuv'], cat['mstar']
+        distmpc, magb = cat['distmpc'], cat['magb']
+        a, b2a, pa = cat['a'], cat['b2a'], cat['pa']
+        btc = cat['btc']
 
         idx = np.where(distmpc >= 0)[0]
         ra, dec = ra[idx], dec[idx]
@@ -175,7 +175,6 @@ def get_catalog(params, map_struct):
             url = 'https://mangrove.lal.in2p3.fr/data/mangrove.hdf5'
             os.system("wget -O {}/mangrove.hdf5 {}".format(params["catalogDir"], url))
             
-        print(catalogFile)
         cat = Table.read(catalogFile)
         
         ra, dec = cat["RA"], cat["dec"]
