@@ -352,7 +352,11 @@ def read_skymap(params,is3D=False,map_struct=None):
 
     if params["doRASlice"]:
         ra_low, ra_high = params["raslice"][0], params["raslice"][1]
-        ipix = np.where((ra_high*360.0/24.0 < ra) | (ra_low*360.0/24.0 > ra))[0]
+        if ra_low <= ra_high:
+            ipix = np.where((ra_high*360.0/24.0 < ra) | (ra_low*360.0/24.0 > ra))[0]
+        else:
+            ipix = np.where((ra_high*360.0/24.0 < ra) & (ra_low*360.0/24.0 > ra))[0]
+            print(ra_high, ra_low, ipix, ra)
         map_struct["prob"][ipix] = 0.0
         map_struct["prob"] = map_struct["prob"] / np.sum(map_struct["prob"])
 
