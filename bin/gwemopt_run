@@ -188,6 +188,9 @@ def parse_commandline():
     parser.add_option("--doBlocks",action="store_true",default=False)
     parser.add_option("--Nblocks",default=4,type=int)
 
+    parser.add_option("--doRASlice",action="store_true",default=False)
+    parser.add_option("--raslice",default="0.0,24.0")
+
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
 
@@ -307,6 +310,9 @@ def params_struct(opts):
     params["footprint_ra"] = opts.footprint_ra
     params["footprint_dec"] = opts.footprint_dec
     params["footprint_radius"] = opts.footprint_radius
+
+    params["doRASlice"] = opts.doRASlice
+    params["raslice"] = np.array(opts.raslice.split(","),dtype=np.float)
 
     params["doTransients"] = opts.doTransients
     params["transientsFile"] = opts.transientsFile

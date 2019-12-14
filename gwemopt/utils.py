@@ -60,7 +60,7 @@ def readParamsFromFile(file):
 
 def params_checker(params):
     """"Assigns defaults to params."""
-    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure","doBlocks","doUpdateScheduler","doTreasureMap"]
+    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure","doBlocks","doUpdateScheduler","doTreasureMap","doRASlice"]
  
     for parameter in do_Parameters:
         if parameter not in params.keys():
@@ -210,6 +210,8 @@ def params_checker(params):
     if "graceid" not in params.keys():
         params["graceid"] = "S190426c"
 
+    if "raslice" not in params.keys():
+        params["raslice"] = [0.0,24.0]
 
     if "config" not in params.keys():
         params["config"] = {}
@@ -347,6 +349,12 @@ def read_skymap(params,is3D=False,map_struct=None):
 
     map_struct["ra"] = ra
     map_struct["dec"] = dec
+
+    if params["doRASlice"]:
+        ra_low, ra_high = params["raslice"][0], params["raslice"][1]
+        ipix = np.where((ra_high*360.0/24.0 < ra) | (ra_low*360.0/24.0 > ra))[0]
+        map_struct["prob"][ipix] = 0.0
+        map_struct["prob"] = map_struct["prob"] / np.sum(map_struct["prob"])
 
     sort_idx = np.argsort(map_struct["prob"])[::-1]
     csm = np.empty(len(map_struct["prob"]))
