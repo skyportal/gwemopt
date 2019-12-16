@@ -963,16 +963,14 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
     for ii,max_trial in enumerate(max_trials):
         params["max_nb_tiles"] = np.array([max_trial],dtype=np.float)
         params_hold = copy.copy(params)
-        tile_struct_hold = copy.copy(tile_struct)
         config_struct_hold = copy.copy(config_struct)
         
-        coverage_struct_hold,tile_struct_hold = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct_hold)
+        coverage_struct_hold,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct)
 
         keys_scheduled = coverage_struct_hold["data"][:,5]
         filts_used = {key:[] for key in keys_scheduled}
         filts = coverage_struct_hold["filters"]
         
-        #count number of 'balanced' exposures
         counter=0
         for (key,filt) in zip(keys_scheduled,filts):
             filts_used[key].append(filt)
@@ -980,7 +978,7 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
                 counter+=1
         countervals.append(counter)
 
-        #update optimized value and check for breaking conditions
+        #check for breaking conditions
         if counter>=n_equal:
             n_equal,optimized_max = counter,max_trial
         if counter == n_equal and ii>2:
@@ -989,7 +987,9 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
         for key in tile_struct.keys():
             tile_struct[key]['prob'] = prob[key]
         if ii>0 and counter<countervals[ii-1] or repeating: break
-        
+
+    if repeating: return optimized_max
+
     #optimize within narrower range for more precision
     if coarse_bool == True:
         max_trials = np.linspace(optimized_max-24,optimized_max+24,7)
@@ -1005,10 +1005,9 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
         if optimized_max==-1: break #breaks if no max tiles restriction should be imposed
         params["max_nb_tiles"] = np.array([max_trial],dtype=np.float)
         params_hold = copy.copy(params)
-        tile_struct_hold = copy.copy(tile_struct)
         config_struct_hold = copy.copy(config_struct)
         
-        coverage_struct_hold,tile_struct_hold = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct_hold)
+        coverage_struct_hold,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct)
         
         keys_scheduled = coverage_struct_hold["data"][:,5]
         filts_used = {key:[] for key in keys_scheduled}
@@ -1152,20 +1151,16 @@ def get_treasuremap_pointings(params):
             exit(1)
         elif "POINT" not in obs: continue
         
-        #get ra and dec
         pointing = re.search('\(([^)]+)', obs).group(1)
         pointing = pointing.split(" ")
         ra, dec = float(pointing[0]), float(pointing[1])
         
-        #get filter
         filteridx = obs.find("band") + 10 #jump to starting index of filter
         filter = obs[filteridx:].split("\"")[0][:-1]
 
-        #get instrument id
         instrumentidx = obs.find("instrumentid") + 16 #jump to starting index of instrument id
         instrument_id = int(obs[instrumentidx:].split(",")[0])
 
-        #get ipix
         if instrument_id in FOV_square:
             ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra, dec, FOV_square[instrument_id], params["nside"])
         elif instrument_id in FOV_circle:
