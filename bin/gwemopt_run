@@ -115,6 +115,10 @@ def parse_commandline():
     parser.add_option("--doEfficiency",  action="store_true", default=False)
     parser.add_option("-e", "--efficiencyOutput", help="Output file of the efficiency.", 
                       default="efficiency.txt")
+    parser.add_option("-m", "--modelType", help="(file, Bulla, Tophat, afterglow)",default="Tophat")
+    parser.add_option("--mag", help="mag.", default=-16, type=float)
+    parser.add_option("--dmag", help="dmag.", default=0.0, type=float)
+
     #parser.add_option("-t", "--telescopes", help="Telescope names.",
     #                  default ="PS1")
     #parser.add_option("-d", "--coverageFiles", help="Telescope data files.",
@@ -520,7 +524,11 @@ if opts.doSchedule or opts.doCoverage:
 if opts.doEfficiency:
     if opts.doSchedule or opts.doCoverage:
         print("Computing efficiency...")
-        lightcurve_structs = gwemopt.lightcurve.read_files(params["lightcurveFiles"])
+        if opts.modelType == "file":
+            lightcurve_structs = gwemopt.lightcurve.read_files(params["lightcurveFiles"])
+        elif opts.modelType == "Tophat":
+            lightcurve_structs = gwemopt.lightcurve.tophat(mag0=opts.mag,
+                                                           dmag=opts.dmag)
         efficiency_structs = {}
         for key in lightcurve_structs.keys():
             lightcurve_struct = lightcurve_structs[key]

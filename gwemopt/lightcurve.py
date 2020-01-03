@@ -11,6 +11,24 @@ matplotlib.use('Agg')
 matplotlib.rcParams.update({'font.size': 16})
 import matplotlib.pyplot as plt
 
+def tophat(mag0=0.0,dmag=0.0):
+
+    ntime, t_i, t_f = 30, 0.25, 15.25
+    phase = np.linspace(t_i, t_f, ntime)  # epochs
+
+    filters = ["u", "g", "r", "i", "z", "y", "J", "H", "K"]
+    mags = {}
+    mags["tophat"] = {}
+    mags["tophat"]["name"] = "tophat"
+    mags["tophat"]["legend_label"] = "Tophat: %.3f, %.3f" % (mag0, dmag)
+    mags["tophat"]["t"] = phase
+
+    for filt in filters:
+        mag = mag0 + phase*dmag 
+        mags["tophat"][filt] = mag
+
+    return mags
+
 def compute_apparent_magnitude_samples(params, lightcurve_struct, samples_struct, t):
 
     filt = params["config"][params["telescopes"][0]]["filt"]
