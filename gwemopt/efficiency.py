@@ -13,6 +13,8 @@ matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
 
+from ligo.skymap import distance
+
 import gwemopt.utils
 
 def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
@@ -97,13 +99,17 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
         distn = scipy.stats.rv_discrete(values=(np.arange(npix),map_struct["prob"]))
     ipix = distn.rvs(size=Ninj)
 
+    #calculate the moments from distmu, distsigma and distnorm
+    mom_mean, mom_std, mom_norm = distance.parameters_to_moments(map_struct["distmu"],map_struct["distsigma"])
+
     detections = 0
 
     for pinpoint in ipix:
         dist = -1
         while (dist < 0):
             dist = scipy.stats.norm(map_struct["distmu"][pinpoint],map_struct["distsigma"][pinpoint]).rvs()
-        
+            dist = mom_mean[pinpoint] + mom_std[pinpoint] * np.random.normal()
+
         idxs = []
         for jj in range(len(coverage_struct["ipix"])):
             expPixels = coverage_struct["ipix"][jj]
