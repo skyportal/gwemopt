@@ -117,7 +117,7 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
         mjds = coverage_struct["data"][idxs,2]
         mags = coverage_struct["data"][idxs,3]
         filts = coverage_struct["filters"][idxs]
-        
+        single_detection = False
         for mjd, mag, filt in zip(mjds,mags,filts):
             lightcurve_t = lightcurve_struct["t"] + mjd_inj
             lightcurve_mag = lightcurve_struct[filt]
@@ -128,7 +128,9 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
             dist_threshold = (10**(((mag-lightcurve_mag_interp)/5.0)+1.0))/1e6
 
             if dist<=dist_threshold:
-                detections+=1
+                single_detection = True
+
+        if single_detection: detections+=1
 
     print(f'Percent detections out of {Ninj} injected KNe: {detections*100/Ninj}% ')
 
