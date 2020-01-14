@@ -185,6 +185,8 @@ def get_catalog(params, map_struct):
         # Keep track of galaxy identifier
         GWGC, PGC, HyperLEDA = cat["GWGC_name"], cat["PGC"], cat["HyperLEDA_name"]
         _2MASS, SDSS = cat["2MASS_name"], cat["SDSS-DR12_name"]
+        #keep track of the AGN flag
+        AGN_flag = cat["AGN_flag"]
 
         idx = np.where(distmpc >= 0)[0]
         ra, dec = ra[idx], dec[idx]
@@ -194,7 +196,7 @@ def get_catalog(params, map_struct):
         stellarmass = stellarmass[idx]
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]
-        
+        AGN_flag = AGN_flag[idx]
 
         # Convert bytestring to unicode
         GWGC = GWGC.astype('U')
@@ -248,9 +250,10 @@ def get_catalog(params, map_struct):
         idx = np.arange(len(r)).astype(int)
 
     # this happens when we are using a tiny catalog...
+    CompatibleGal = True
     if np.all(Sloc == 0.0):
         Sloc[:] = 1.0
-
+        CompatibleGal = False
 
     #new version of the Slum calcul (from HOGWARTs)
     Lsun = 3.828e26
@@ -376,6 +379,7 @@ def get_catalog(params, map_struct):
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]   
         stellarmass, magb = stellarmass[idx], magb[idx]
+        AGN_flag = AGN_flag[idx]
         if params["galaxy_grade"] == "Smass":
             Smass = Smass[idx]
 
@@ -405,6 +409,7 @@ def get_catalog(params, map_struct):
         GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
         _2MASS, SDSS = _2MASS[idx], SDSS[idx]
         stellarmass, magb = stellarmass[idx], magb[idx]
+        AGN_flag = AGN_flag[idx]
         if params["galaxy_grade"] == "Smass":
             Smass = Smass[idx]
        
@@ -426,6 +431,7 @@ def get_catalog(params, map_struct):
         GWGC, PGC, HyperLEDA = GWGC[mask], PGC[mask], HyperLEDA[mask]
         _2MASS, SDSS = _2MASS[mask], SDSS[mask]
         stellarmass, magb = stellarmass[mask], magb[mask]
+        AGN_flag = AGN_flag[mask]
 
         if params["galaxy_grade"] == "Smass":
             Smass = Smass[mask]
@@ -446,6 +452,7 @@ def get_catalog(params, map_struct):
             GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
             _2MASS, SDSS = _2MASS[idx], SDSS[idx]
             stellarmass, magb = stellarmass[idx], magb[idx]
+            AGN_flag = AGN_flag[idx]
 
             if params["galaxy_grade"] == "Smass":
                 Smass = Smass[idx]
@@ -466,6 +473,9 @@ def get_catalog(params, map_struct):
     catalog_struct["Sloc"] = Sloc
     catalog_struct["S"] = S
     catalog_struct["Smass"] = Smass
+
+    catalog_struct["CompatibleGal"] = CompatibleGal
+
 
     if params["writeCatalog"]:
         catalogfile = os.path.join(params["outputDir"], 'catalog.csv')
@@ -490,15 +500,37 @@ def get_catalog(params, map_struct):
         elif params["galaxy_catalog"] == "mangrove":
 
             if params["galaxy_grade"] == "Smass":
-                fid.write("id, RAJ2000, DEJ2000, Smass, S, Sloc, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS, B_mag, stellarmass\n")
-                for a, b, c, d, e, f, g, h, i, j, k, l, m, n in zip(ra, dec, Smass, S, Sloc, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS, magb, stellarmass):
-                    fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k, l, m, n))
-                    cnt = cnt + 1
+
+                if params["AGN_flag"]:
+
+                    fid.write("id, RAJ2000, DEJ2000, Smass, S, Sloc, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS, B_mag, AGN_flag, stellarmass\n")
+                    for a, b, c, d, e, f, g, h, i, j, k, l, m, n, o in zip(ra, dec, Smass, S, Sloc, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS, magb, AGN_flag,stellarmass):
+                        fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o))
+                        cnt = cnt + 1
+                    
+                else:
+
+                    fid.write("id, RAJ2000, DEJ2000, Smass, S, Sloc, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS, B_mag, stellarmass\n")
+                    for a, b, c, d, e, f, g, h, i, j, k, l, m, n in zip(ra, dec, Smass, S, Sloc, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS, magb, stellarmass):
+                        fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k, l, m, n))
+                        cnt = cnt + 1
+
+
             else:
-                fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS\n")
-                for a, b, c, d, e, f, g, h, i, j, k in zip(ra, dec, Sloc, S, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS):
-                    fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k))
-                    cnt = cnt + 1
+
+                if params["AGN_flag"]:
+
+                    fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS, AGN_flag\n")
+                    for a, b, c, d, e, f, g, h, i, j, k, l in zip(ra, dec, Sloc, S, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS, AGN_flag):
+                        fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k, l))
+                        cnt = cnt + 1
+
+                else:
+
+                    fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z, GWGC, PGC, HyperLEDA, 2MASS, SDSS\n")
+                    for a, b, c, d, e, f, g, h, i, j, k in zip(ra, dec, Sloc, S, distmpc, z, GWGC, PGC, HyperLEDA, _2MASS, SDSS):
+                        fid.write("%d, %.5f, %.5f, %.5e, %.5e, %.4f, %.4f, %s, %s, %s, %s, %s\n" % (cnt, a, b, c, d, e, f, g, h, i, j, k))
+                        cnt = cnt + 1
                 
         else:
             fid.write("id, RAJ2000, DEJ2000, Sloc, S, Dist, z\n")
