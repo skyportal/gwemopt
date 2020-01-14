@@ -229,8 +229,7 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
                 sat_sun_restriction = config_struct["sat_sun_restriction"]
             except:
                 sat_sun_restriction = 0.0
-            print("sat_sun_restriction =", sat_sun_restriction)
-            print("params[tilesType] =", params["tilesType"])
+            
             if not params["tilesType"] == "galaxy":
                 tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct)  
     
