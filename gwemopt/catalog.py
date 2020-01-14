@@ -250,9 +250,10 @@ def get_catalog(params, map_struct):
         idx = np.arange(len(r)).astype(int)
 
     # this happens when we are using a tiny catalog...
-    #if np.all(Sloc == 0.0):
-    #    Sloc[:] = 1.0
-
+    CompatibleGal = True
+    if np.all(Sloc == 0.0):
+        Sloc[:] = 1.0
+        CompatibleGal = False
 
     #new version of the Slum calcul (from HOGWARTs)
     Lsun = 3.828e26
@@ -472,6 +473,9 @@ def get_catalog(params, map_struct):
     catalog_struct["Sloc"] = Sloc
     catalog_struct["S"] = S
     catalog_struct["Smass"] = Smass
+
+    catalog_struct["CompatibleGal"] = CompatibleGal
+
 
     if params["writeCatalog"]:
         catalogfile = os.path.join(params["outputDir"], 'catalog.csv')

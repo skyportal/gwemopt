@@ -279,7 +279,7 @@ def init_observation_plan(VO_dic, skymappath, dirpath="", filename=""):
     params["galaxy_catalog"] = "mangrove"
     params["doCatalog"] = False
     params["galaxy_grade"] = 'Smass'
-    params["AGN_flag"] = False
+    params["AGN_flag"] = True
     params["writeCatalog"] = False
     params["doParallel"] = False
     params["Ncores"] = 2
@@ -448,7 +448,7 @@ def Observation_plan_multiple(telescopes, VO_dic, trigger_id, params, map_struct
         map_struct, catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
         
         #add here a security which for the use of the 2D probability if no compatible galaxies are found in the catalog
-        if len(catalog_struct['ra']) == 0:
+        if catalog_struct['CompatibleGal'] == False:
             print("No compatible galaxy found in the skymap, go back to the 2D proba for tiling telescopes")
             map_struct = copy.deepcopy(map_struct_input) 
 
@@ -636,9 +636,6 @@ def Observation_plan_multiple(telescopes, VO_dic, trigger_id, params, map_struct
         #if storeGal: send_ObsPlan_galaxies_to_DB(galaxies_table, trigger_id)
 
     #        return np.transpose(np.array([rank_id, ra_vec, dec_vec, grade_vec])), galaxies_table
-
-    print("tiles_tables =", tiles_tables)
-    print("galaxies_table =", galaxies_table)
 
     return tiles_tables, galaxies_table
 
