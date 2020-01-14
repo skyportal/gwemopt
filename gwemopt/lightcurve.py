@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 def tophat(mag0=0.0,dmag=0.0):
 
-    ntime, t_i, t_f = 30, 0.25, 15.25
+    ntime, t_i, t_f = 30, 0.00, 15.25
     phase = np.linspace(t_i, t_f, ntime)  # epochs
 
     filters = ["u", "g", "r", "i", "z", "y", "J", "H", "K"]
