@@ -240,7 +240,7 @@ def init_observation_plan(VO_dic, skymappath, dirpath="", filename=""):
     params["powerlaw_dist_exp"] = 1.0
 
     params["doPlots"] = False
-    params["doPlots"] = True
+    params["doPlots"] = False
     params["doMovie"] = False
     # params["doObservability"] = True
     params["doObservability"] = False
@@ -271,13 +271,15 @@ def init_observation_plan(VO_dic, skymappath, dirpath="", filename=""):
     params["doMaxTiles"] = False
     params["iterativeOverlap"] = 0.2
     params["maximumOverlap"] = 0.2
+    params["doTreasureMap"] = False
 
     params["catalog_n"] = 1.0
     params["doUseCatalog"] = False
     params["catalogDir"] = "../catalogs"
-    params["galaxy_catalog"] = "GLADE"
+    params["galaxy_catalog"] = "mangrove"
     params["doCatalog"] = False
-    params["galaxy_grade"] = 'Sloc'
+    params["galaxy_grade"] = 'Smass'
+    params["AGN_flag"] = True
     params["writeCatalog"] = False
     params["doParallel"] = False
     params["Ncores"] = 2
@@ -293,7 +295,7 @@ def init_observation_plan(VO_dic, skymappath, dirpath="", filename=""):
     params['doBalanceExposure'] = False
     params['doMovie_supersched'] = False
     params['doOrderByObservability'] = False
-
+    params["doRASlice"] = False
     params["doSingleExposure"] = True
     params["filters"] = filt
     params["exposuretimes"] = exposuretimes
@@ -444,11 +446,14 @@ def Observation_plan_multiple(telescopes, VO_dic, trigger_id, params, map_struct
 
     if params["doCatalog"]:
         map_struct, catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
+        
+        #add here a security which for the use of the 2D probability if no compatible galaxies are found in the catalog
+        if catalog_struct['CompatibleGal'] == False:
+            print("No compatible galaxy found in the skymap, go back to the 2D proba for tiling telescopes")
+            map_struct = copy.deepcopy(map_struct_input) 
 
     if params["doPlots"]:
         gwemopt.plotting.skymap(params, map_struct)
-
-    print(stop)
 
     if params["doPlots"]:
         gwemopt.plotting.skymap(params, map_struct)
@@ -501,8 +506,6 @@ def Observation_plan_multiple(telescopes, VO_dic, trigger_id, params, map_struct
         gwemopt.plotting.tiles(params, map_struct, tile_structs)
         gwemopt.plotting.coverage(params, map_struct, coverage_struct)
         gwemopt.scheduler.summary(params,map_struct,coverage_struct)
-
-    print(stop)
 
     tiles_tables = {}
     for jj, telescope in enumerate(telescopes):
@@ -633,6 +636,7 @@ def Observation_plan_multiple(telescopes, VO_dic, trigger_id, params, map_struct
         #if storeGal: send_ObsPlan_galaxies_to_DB(galaxies_table, trigger_id)
 
     #        return np.transpose(np.array([rank_id, ra_vec, dec_vec, grade_vec])), galaxies_table
+
     return tiles_tables, galaxies_table
 
 def Observation_plan(telescope, VO_dic, trigger_id, params, map_struct_input):
@@ -759,6 +763,11 @@ def Observation_plan(telescope, VO_dic, trigger_id, params, map_struct_input):
 
     if params["doCatalog"]:
         map_struct, catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
+
+        #add here a security which for the use of the 2D probability if no compatible galaxies are found in the catalog
+        if len(catalog_struct['ra']) == 0:
+            print("No compatible galaxy found in the skymap, go back to the 2D proba for tiling telescopes")
+            map_struct = copy.deepcopy(map_struct_input)
 
     if params["tilesType"] == "moc":
         print("Generating MOC struct...")
@@ -1219,8 +1228,8 @@ def GW_treatment_alert(v, output_dic, file_log_s):
         else:
             LISTE_TELESCOPE_TILING = ["TRE", "TCH", "TCA"]
             max_nb_tiles_tiling = np.array([30, 30, 30])
-            #LISTE_TELESCOPE_TILING2 = ["FZU-Auger", "FZU-CTA-N"]
-            #max_nb_tiles_tiling2 = np.array([20,20])
+            LISTE_TELESCOPE_TILING2 = ["FZU-Auger", "FZU-CTA-N"]
+            max_nb_tiles_tiling2 = np.array([20,20])
             #LISTE_TELESCOPE_TILING = ["TRE", "TCH", "TCA", "FZU-Auger", "FZU-CTA-N"]
             #max_nb_tiles_tiling = np.array([100, 100, 100, 100, 100])
 
@@ -1254,13 +1263,13 @@ def GW_treatment_alert(v, output_dic, file_log_s):
         params["max_nb_tiles"] = max_nb_tiles_tiling
         aTables_tiling, galaxies_table = Observation_plan_multiple(LISTE_TELESCOPE_TILING, GW_vo, trigger_id, params, map_struct, 'Tiling')
         # Send data to DB and send xml files to telescopes through broker for tiling
-        print(stop)
+        
         #send_data(LISTE_TELESCOPE_TILING, params, aTables_tiling, galaxies_table, GW_vo, GW_dic, trigger_id, v, file_log_s, path_config, output_dic, message_obs, name_dic, Db_use=Db_use, gal2DB=False)
 
         #params["max_nb_tiles"] = max_nb_tiles_tiling2
         aTables_tiling2, galaxies_table2 = Observation_plan_multiple(LISTE_TELESCOPE_TILING2, GW_vo, trigger_id, params, map_struct, 'Tiling')
         # Send data to DB and send xml files to telescopes through broker for tiling
-        print(stop)
+        
         send_data(LISTE_TELESCOPE_TILING2, params, aTables_tiling2, galaxies_table2, GW_vo, GW_dic, trigger_id, v, file_log_s, path_config, output_dic, message_obs, name_dic, Db_use=Db_use, gal2DB=False)
 
         ### Galaxy targeting ###
