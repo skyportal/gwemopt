@@ -23,7 +23,8 @@ def combine_coverage_structs(coverage_structs):
     coverage_struct_combined["FOV"] = np.empty((0,1))
     coverage_struct_combined["area"] = np.empty((0,1))
     coverage_struct_combined["telescope"] = np.empty((0,1))
-    coverage_struct_combined["galaxies"] = []    
+    coverage_struct_combined["galaxies"] = []
+    coverage_struct_combined["exposureused"] = []
 
     for coverage_struct in coverage_structs:
         coverage_struct_combined["data"] = np.append(coverage_struct_combined["data"],coverage_struct["data"],axis=0)
@@ -33,6 +34,7 @@ def combine_coverage_structs(coverage_structs):
         coverage_struct_combined["FOV"] = np.append(coverage_struct_combined["FOV"],coverage_struct["FOV"])
         coverage_struct_combined["area"] = np.append(coverage_struct_combined["area"],coverage_struct["area"])
         coverage_struct_combined["telescope"] = np.append(coverage_struct_combined["telescope"],coverage_struct["telescope"])
+        coverage_struct_combined["exposureused"] += list(coverage_struct["exposureused"])
         if "galaxies" in coverage_struct:
             coverage_struct_combined["galaxies"] = coverage_struct_combined["galaxies"] + coverage_struct["galaxies"]
 
@@ -181,9 +183,18 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
             config_struct_hold = copy.copy(config_struct)
             
             coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
+            
+            if params["doFilterChanges"] and params["do3D"]:
 
-            if params["doBalanceExposure"]:
-                
+                coverage_struct = gwemopt.scheduler.schedule_ra_splits(params,config_struct,
+                                                                       map_struct_hold,tile_struct,
+                                                                       telescope,previous_coverage_struct)
+
+  
+            elif params["doFilterChanges"]:
+                print("Need to enable --do3D if using --doFilterChanges")
+                exit(0)
+            elif params["doBalanceExposure"]:
                 optimized_bool = False
                 if not params["doMaxTiles"]: #optimize max tiles (iff max tiles not already specified)
                     optimized_bool = True

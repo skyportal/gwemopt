@@ -722,11 +722,6 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
     coverage_structs = []
     maxidx = 0
 
-    if params["doBalanceExposure"]: #save tile probabilities
-        prob = {}
-        for key in tile_struct.keys():
-            prob[key] = tile_struct[key]['prob']
-
     for i in range(len(exposuretimes)):
         params["filters"] = [filters[i]]
         params["exposuretimes"] = [exposuretimes[i]]
@@ -771,11 +766,120 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
 
         coverage_structs.append(coverage_struct)
 
-        if params["doBalanceExposure"]: # resets probabilities for each filter block
-            for key in tile_struct.keys():
-                tile_struct[key]['prob'] = prob[key]
-
         if deltaL <= 1: break
     params["filters"], params["exposuretimes"] = filters, exposuretimes
 
     return gwemopt.coverage.combine_coverage_structs(coverage_structs),tile_struct
+
+def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescope,previous_coverage_struct):
+    
+    location = astropy.coordinates.EarthLocation(config_struct["longitude"],
+                                                 config_struct["latitude"],
+                                                 config_struct["elevation"])
+
+    gwemopt.utils.auto_rasplit(params,map_struct_hold,config_struct,params["nside_down"])
+
+    maxidx = 0
+    raslices = params["raslices"]
+    coverage_structs = []
+    skip = False
+    while len(params["raslices"]) != 0:
+        params["unbalanced_tiles"] = []
+        config_struct["exposurelist"] = segments.segmentlist(config_struct["exposurelist"][maxidx:])
+        map_struct_slice = copy.deepcopy(map_struct_hold)
+        
+        exposurelist = np.array_split(config_struct["exposurelist"],len(params["raslices"]))[0]
+        minhas = []
+        minhas_late = []
+        try_end = False
+        if len(params["raslices"]) == 1:
+            raslice = params["raslices"][0]
+            del params["raslices"][0]
+        else:
+            for raslice in params["raslices"]:
+                has = []
+                has_late = []
+                for seg in exposurelist:
+                    mjds = np.linspace(seg[0], seg[1], 100)
+                    tt = Time(mjds, format='mjd', scale='utc', location=location)
+                    lst = tt.sidereal_time('mean')/u.hourangle
+                    ha = np.abs(lst - raslice[0])
+                    ha_late = np.abs(lst - raslice[1])
+
+                    idx = np.where(ha > 12.0)[0]
+                    ha[idx] = 24.0 - ha[idx]
+                    idx_late = np.where(ha_late > 12.0)[0]
+                    ha_late[idx_late] = 24.0 - ha_late[idx_late]
+                    has += list(ha)
+                    has_late += list(ha_late)
+                minhas.append(np.min(has))
+                minhas_late.append(np.min(has_late))
+        
+            #conditions for trying to schedule end of slice
+            if np.min(minhas_late) <= 5.0 and np.min(has) > 4.0 and not skip:
+                try_end = True
+                min = np.argmin(minhas_late)
+                raslice = params["raslices"][min]
+            else:
+                min = np.argmin(minhas)
+                raslice = params["raslices"][min]
+                del params["raslices"][min]
+
+        #do RA slicing
+        ra_low,ra_high = raslice[0],raslice[1]
+        ra = map_struct_slice["ra"]
+        if ra_low <= ra_high:
+            ipix = np.where((ra_high*360.0/24.0 < ra) | (ra_low*360.0/24.0 > ra))[0]
+        else:
+            ipix = np.where((ra_high*360.0/24.0 < ra) & (ra_low*360.0/24.0 > ra))[0]
+
+        map_struct_slice["prob"][ipix] = 0.0
+        map_struct_slice["prob"] = map_struct_slice["prob"] / np.sum(map_struct_slice["prob"])
+        tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_slice, tile_struct)
+
+        config_struct_hold = copy.copy(config_struct)
+        coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params, config_struct_hold,
+                                                                             telescope,map_struct_slice,
+                                                                             tile_struct,previous_coverage_struct)
+        if len(coverage_struct["ipix"]) == 0: continue
+        optimized_max = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_slice)
+        params["max_nb_tiles"] = np.array([optimized_max],dtype=np.float)
+        balanced_fields = 0
+        coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params, config_struct, telescope,
+                                                                             map_struct_slice, tile_struct,
+                                                                             previous_coverage_struct)
+
+        tile_struct, doReschedule, balanced_fields = gwemopt.utils.balance_tiles(params, tile_struct, coverage_struct)
+        config_struct_hold = copy.copy(config_struct)
+
+        if balanced_fields == 0:
+            if try_end:
+                skip = True
+            continue
+        elif try_end:
+            del params["raslices"][min]
+        skip = False
+
+        if len(coverage_struct["exposureused"]) > 0:
+            maxidx = int(coverage_struct["exposureused"][-1])
+
+        idxs = np.isin(coverage_struct["data"][:,5],params["unbalanced_tiles"])
+        out = np.nonzero(idxs)[0]
+
+        coverage_struct["data"] = np.delete(coverage_struct["data"],out,axis=0)
+        coverage_struct["filters"] = np.delete(coverage_struct["filters"],out)
+        coverage_struct["area"] = np.delete(coverage_struct["area"],out)
+        coverage_struct["FOV"] = np.delete(coverage_struct["FOV"],out)
+        coverage_struct["telescope"] = np.delete(coverage_struct["telescope"],out)
+
+        for i in out[::-1]:
+            del coverage_struct["patch"][i]
+            del coverage_struct["ipix"][i]
+            del coverage_struct["exposureused"][i]
+        coverage_structs.append(coverage_struct)
+
+        #max 4 filter sets
+        if len(coverage_structs)==4:
+            break
+
+    return gwemopt.coverage.combine_coverage_structs(coverage_structs)

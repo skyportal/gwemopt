@@ -863,18 +863,18 @@ def balance_tiles(params, tile_struct, coverage_struct):
     filts = coverage_struct["filters"]
     filts_used = {key: [] for key in keys_scheduled} #dictionary of scheduled filters for each key
 
-    for (key,filt) in zip(keys_scheduled,filts):
-        filts_used[key].append(filt)
-
     doReschedule = False
     balanced_fields = 0
-    for key in filts_used:
-        if len(filts_used[key]) != len(filters):
-            tile_struct[key]['prob'] = 0.0
-            params["unbalanced_tiles"].append(key)
-            doReschedule = True
-        else:
+    for (key,filt) in zip(keys_scheduled,filts):
+        filts_used[key].append(filt)
+        if len(filts_used[key]) == len(params["filters"]):
             balanced_fields+=1
+
+    params["unbalanced_tiles"] = [key for key in keys_scheduled if len(filts_used[key]) != len(params["filters"])]
+
+    if (len(keys_scheduled) - balanced_fields) != 0:
+        doReschedule = True
+
     return tile_struct, doReschedule, balanced_fields
 
 def slice_galaxy_tiles(params, tile_struct, coverage_struct):
@@ -965,7 +965,8 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
         params_hold = copy.copy(params)
         config_struct_hold = copy.copy(config_struct)
         
-        coverage_struct_hold,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct)
+        coverage_struct_hold,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold,
+                                                                                  telescope, map_struct_hold, tile_struct)
 
         keys_scheduled = coverage_struct_hold["data"][:,5]
         filts_used = {key:[] for key in keys_scheduled}
@@ -981,7 +982,7 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
         #check for breaking conditions
         if counter>=n_equal:
             n_equal,optimized_max = counter,max_trial
-        if counter == n_equal and ii>2:
+        if ii>2:
             repeating = countervals[ii] == countervals[ii-1] == countervals[ii-2]
 
         for key in tile_struct.keys():
@@ -992,12 +993,14 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
 
     #optimize within narrower range for more precision
     if coarse_bool == True:
-        max_trials = np.linspace(optimized_max-24,optimized_max+24,7)
+        max_trials = np.linspace(optimized_max,optimized_max+24,4)
     else:
         if optimized_max < 100:
-            max_trials = np.linspace(optimized_max-9,optimized_max+9,10)
+            max_trials = np.linspace(optimized_max-3,optimized_max+9,7)
+        elif optimized_max == 200:
+            max_trials = np.linspace(optimized_max,optimized_max+60,4)
         else:
-            max_trials = np.linspace(optimized_max-9,optimized_max+9,4)
+            max_trials = np.linspace(optimized_max,optimized_max+9,4)
 
     countervals=[]
     repeating = False
@@ -1007,7 +1010,8 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
         params_hold = copy.copy(params)
         config_struct_hold = copy.copy(config_struct)
         
-        coverage_struct_hold,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct)
+        coverage_struct_hold,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold,
+                                                                                  telescope, map_struct_hold, tile_struct)
         
         keys_scheduled = coverage_struct_hold["data"][:,5]
         filts_used = {key:[] for key in keys_scheduled}

@@ -169,6 +169,8 @@ def parse_commandline():
     parser.add_option("--doSingleExposure",  action="store_true", default=False)
     parser.add_option("--filters",default="r,g,r")
     parser.add_option("--doAlternatingFilters",  action="store_true", default=False)
+    parser.add_option("--doFilterChanges",  action="store_true", default=False)
+    parser.add_option("--nside_down",default=2,type=int)
     parser.add_option("--iterativeOverlap",default=0.0,type=float)
     parser.add_option("--maximumOverlap",default=1.0,type=float)
     parser.add_option("--doBalanceExposure",  action="store_true", default=False)
@@ -347,6 +349,8 @@ def params_struct(opts):
     params["doOverlappingScheduling"] = opts.doOverlappingScheduling
     params["doPerturbativeTiling"] = opts.doPerturbativeTiling
     params["doOrderByObservability"] = opts.doOrderByObservability
+    params["doFilterChanges"] = opts.doFilterChanges
+    params["nside_down"] = opts.nside_down
 
     params["doCatalog"] = opts.doCatalog
     params["catalog_n"] = opts.catalog_n
