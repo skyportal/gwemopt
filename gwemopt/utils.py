@@ -60,7 +60,7 @@ def readParamsFromFile(file):
 
 def params_checker(params):
     """"Assigns defaults to params."""
-    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure","doBlocks","doUpdateScheduler","doTreasureMap","doRASlice"]
+    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure","doBlocks","doUpdateScheduler","doTreasureMap","doRASlice","doFilterChanges"]
  
     for parameter in do_Parameters:
         if parameter not in params.keys():
@@ -212,6 +212,9 @@ def params_checker(params):
 
     if "raslice" not in params.keys():
         params["raslice"] = [0.0,24.0]
+
+    if "nside_down" not in params.keys():
+        params["nside_down"] = 2
 
     if "config" not in params.keys():
         params["config"] = {}
