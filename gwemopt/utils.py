@@ -216,6 +216,9 @@ def params_checker(params):
     if "nside_down" not in params.keys():
         params["nside_down"] = 2
 
+    if "max_filter_sets" not in params.keys():
+        params["max_filter_sets"] = 4
+
     if "config" not in params.keys():
         params["config"] = {}
         configFiles = glob.glob("%s/*.config"%params["configDirectory"])
@@ -260,9 +263,8 @@ def params_checker(params):
 
     return params
 
-def auto_rasplit(params, map_struct):
+def auto_rasplit(params,map_struct,nside_down):
 
-    nside_down = 1
     prob_down, distmu_down,\
     distsigma_down, distnorm_down = ligodist.ud_grade(map_struct["prob"],\
                                                       map_struct["distmu"],\
@@ -388,8 +390,6 @@ def read_skymap(params,is3D=False,map_struct=None):
         map_struct["prob"] = hp.ud_grade(map_struct["prob"],nside,power=-2)
 
     if is3D:
-        auto_rasplit(params, map_struct)
-
         if natural_nside != nside:
             map_struct["prob"], map_struct["distmu"],\
             map_struct["distsigma"], map_struct["distnorm"] = ligodist.ud_grade(map_struct["prob"],\

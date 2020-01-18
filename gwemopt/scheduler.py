@@ -777,7 +777,7 @@ def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescop
                                                  config_struct["latitude"],
                                                  config_struct["elevation"])
 
-    raslices = gwemopt.utils.auto_rasplit(params,map_struct_hold,config_struct,params["nside_down"])
+    raslices = gwemopt.utils.auto_rasplit(params,map_struct_hold,params["nside_down"])
 
     maxidx = 0
     coverage_structs = []
@@ -875,10 +875,15 @@ def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescop
             del coverage_struct["patch"][i]
             del coverage_struct["ipix"][i]
             del coverage_struct["exposureused"][i]
-        coverage_structs.append(coverage_struct)
 
-        #max 4 filter sets
-        if len(coverage_structs)==4:
-            break
+        #limit to max number of filter sets
+        if len(coverage_structs)<params["max_filter_sets"]:
+            coverage_structs.append(coverage_struct)
+        else:
+            prob_structs = [np.sum(prev_struct["data"][:,6]) for prev_struct in coverage_structs]
+            if np.any(np.array(prob_structs)<np.sum(coverage_struct["data"][:,6])):
+                argmin = np.argmin(prob_structs)
+                del coverage_structs[argmin]
+                coverage_structs.append(coverage_struct)
 
     return gwemopt.coverage.combine_coverage_structs(coverage_structs)
