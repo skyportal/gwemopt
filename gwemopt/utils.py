@@ -323,7 +323,8 @@ def auto_rasplit(params, map_struct):
         raslices = []
         for segment in segmentlist:
             raslices.append([segment[0],segment[1]])
-    params["raslices"] = raslices
+
+    return raslices
 
 def read_skymap(params,is3D=False,map_struct=None):
 

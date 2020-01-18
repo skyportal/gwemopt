@@ -777,26 +777,25 @@ def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescop
                                                  config_struct["latitude"],
                                                  config_struct["elevation"])
 
-    gwemopt.utils.auto_rasplit(params,map_struct_hold,config_struct,params["nside_down"])
+    raslices = gwemopt.utils.auto_rasplit(params,map_struct_hold,config_struct,params["nside_down"])
 
     maxidx = 0
-    raslices = params["raslices"]
     coverage_structs = []
     skip = False
-    while len(params["raslices"]) != 0:
+    while len(raslices) != 0:
         params["unbalanced_tiles"] = []
         config_struct["exposurelist"] = segments.segmentlist(config_struct["exposurelist"][maxidx:])
         map_struct_slice = copy.deepcopy(map_struct_hold)
         
-        exposurelist = np.array_split(config_struct["exposurelist"],len(params["raslices"]))[0]
+        exposurelist = np.array_split(config_struct["exposurelist"],len(raslices))[0]
         minhas = []
         minhas_late = []
         try_end = False
-        if len(params["raslices"]) == 1:
-            raslice = params["raslices"][0]
-            del params["raslices"][0]
+        if len(raslices) == 1:
+            raslice = raslices[0]
+            del raslices[0]
         else:
-            for raslice in params["raslices"]:
+            for raslice in raslices:
                 has = []
                 has_late = []
                 for seg in exposurelist:
@@ -819,11 +818,11 @@ def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescop
             if np.min(minhas_late) <= 5.0 and np.min(has) > 4.0 and not skip:
                 try_end = True
                 min = np.argmin(minhas_late)
-                raslice = params["raslices"][min]
+                raslice = raslices[min]
             else:
                 min = np.argmin(minhas)
-                raslice = params["raslices"][min]
-                del params["raslices"][min]
+                raslice = raslices[min]
+                del raslices[min]
 
         #do RA slicing
         ra_low,ra_high = raslice[0],raslice[1]
@@ -857,7 +856,7 @@ def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescop
                 skip = True
             continue
         elif try_end:
-            del params["raslices"][min]
+            del raslices[min]
         skip = False
 
         if len(coverage_struct["exposureused"]) > 0:
