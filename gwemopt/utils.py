@@ -304,7 +304,6 @@ def auto_rasplit(params,map_struct,nside_down):
     if wrap:
         idxremove = []
         for ii, seg in enumerate(segmentlist):
-            print(seg)
             if np.isclose(seg[0], 0.0) and wrap:
                 seg1 = seg
                 idxremove.append(ii)
