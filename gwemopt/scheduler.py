@@ -862,19 +862,7 @@ def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescop
         if len(coverage_struct["exposureused"]) > 0:
             maxidx = int(coverage_struct["exposureused"][-1])
 
-        idxs = np.isin(coverage_struct["data"][:,5],params["unbalanced_tiles"])
-        out = np.nonzero(idxs)[0]
-
-        coverage_struct["data"] = np.delete(coverage_struct["data"],out,axis=0)
-        coverage_struct["filters"] = np.delete(coverage_struct["filters"],out)
-        coverage_struct["area"] = np.delete(coverage_struct["area"],out)
-        coverage_struct["FOV"] = np.delete(coverage_struct["FOV"],out)
-        coverage_struct["telescope"] = np.delete(coverage_struct["telescope"],out)
-
-        for i in out[::-1]:
-            del coverage_struct["patch"][i]
-            del coverage_struct["ipix"][i]
-            del coverage_struct["exposureused"][i]
+        coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params, coverage_struct)
 
         #limit to max number of filter sets
         if len(coverage_structs)<params["max_filter_sets"]:

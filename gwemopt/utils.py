@@ -924,9 +924,7 @@ def eject_tiles(params, telescope, tile_struct):
     return tile_struct
 
 def balance_tiles(params, tile_struct, coverage_struct):
-    
-    params["unbalanced_tiles"] = []
-    
+
     filters, exposuretimes = params["filters"], params["exposuretimes"]
 
     keys_scheduled = coverage_struct["data"][:,5]
@@ -942,10 +940,29 @@ def balance_tiles(params, tile_struct, coverage_struct):
 
     params["unbalanced_tiles"] = [key for key in keys_scheduled if len(filts_used[key]) != len(params["filters"])]
 
-    if (len(keys_scheduled) - balanced_fields) != 0:
+    if len(params["unbalanced_tiles"]) != 0:
         doReschedule = True
 
     return tile_struct, doReschedule, balanced_fields
+
+def erase_unbalanced_tiles(params,coverage_struct):
+
+    idxs = np.isin(coverage_struct["data"][:,5],params["unbalanced_tiles"])
+    out = np.nonzero(idxs)[0]
+    
+    coverage_struct["data"] = np.delete(coverage_struct["data"],out,axis=0)
+    coverage_struct["filters"] = np.delete(coverage_struct["filters"],out)
+    coverage_struct["area"] = np.delete(coverage_struct["area"],out)
+    coverage_struct["FOV"] = np.delete(coverage_struct["FOV"],out)
+    coverage_struct["telescope"] = np.delete(coverage_struct["telescope"],out)
+    
+    for i in out[::-1]:
+        del coverage_struct["patch"][i]
+        del coverage_struct["ipix"][i]
+        del coverage_struct["exposureused"][i]
+
+    return coverage_struct
+
 
 def slice_galaxy_tiles(params, tile_struct, coverage_struct):
 
