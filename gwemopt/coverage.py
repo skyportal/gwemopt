@@ -184,15 +184,15 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
             
             coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
             
-            if params["doFilterChanges"] and params["do3D"]:
+            if params["doRASlices"] and params["do3D"]:
 
                 coverage_struct = gwemopt.scheduler.schedule_ra_splits(params,config_struct,
                                                                        map_struct_hold,tile_struct,
                                                                        telescope,previous_coverage_struct)
 
   
-            elif params["doFilterChanges"]:
-                print("Need to enable --do3D if using --doFilterChanges")
+            elif params["doRASlices"]:
+                print("Need to enable --do3D if using --doRASlices")
                 exit(0)
             elif params["doBalanceExposure"]:
                 optimized_bool = False
@@ -367,7 +367,6 @@ def erase_observed_tiles(params,tile_struct,telescope): #only for run_gwemopt_su
                     coverage_telescope = tile_struct[key]["epochs_telescope"][jj]
                     if field_id in params["covered_field_ids"][prevtelescope][ii] and coverage_telescope == prevtelescope: #makes sure field id obtained from check_overlapping_tiles is for the correct telescope
                         tile_struct[key]['prob'] = 0.0
-
                         break
     return tile_struct
 
