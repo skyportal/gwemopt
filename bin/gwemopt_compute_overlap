@@ -1,0 +1,180 @@
+import healpy as hp
+import numpy as np
+import copy
+import astropy.coordinates
+from astropy.time import Time, TimeDelta
+import astropy.coordinates
+import astropy.units as u
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+
+def skymap_evol(maplal,mapbaye):
+
+    hpx_lal, header = hp.read_map(maplal,verbose=False,h=True)
+    hpx_baye, header = hp.read_map(mapbaye,verbose=False,h=True)
+    hpx_baye_new, header = hp.read_map(mapbaye,verbose=False,h=True)
+
+    npix_baye = len(hpx_baye)
+    nside_baye = hp.npix2nside(npix_baye)
+    npix_lal = len(hpx_lal)
+    nside_lal = hp.npix2nside(npix_lal)
+    
+    #sort credible levels for bayestar map
+    i = np.flipud(np.argsort(hpx_baye))
+    sorted_credible_levels = np.cumsum(hpx_baye[i])
+    credible_levels = np.empty_like(sorted_credible_levels)
+    credible_levels[i] = sorted_credible_levels
+
+    ipix_baye = [ipix for ipix in np.arange(npix_baye) if credible_levels[ipix]<=0.90]
+    
+    #sort credible levels for lalinf map
+    i = np.flipud(np.argsort(hpx_lal))
+    sorted_credible_levels = np.cumsum(hpx_lal[i])
+    credible_levels = np.empty_like(sorted_credible_levels)
+    credible_levels[i] = sorted_credible_levels
+
+    difs = []
+    ipix_lal_ref = []
+    
+    #for overlap calculation
+    for ipix in np.arange(npix_lal):
+        theta,phi = hp.pix2ang(nside_lal, ipix)
+        ipix_ref = hp.ang2pix(nside_baye, theta, phi)
+        
+        ipix_lal_ref.append(ipix_ref)
+    
+    intersection = list(set(ipix_baye) & set(ipix_lal_ref))
+    prob = sum(hpx_baye[intersection])
+    print("intersection of lalinf map with 90% of bayestar: ", prob)
+
+
+    #for difference calculation
+    for ipix in ipix_baye:
+        theta,phi = hp.pix2ang(nside_baye, ipix)
+        ipix_ref = hp.ang2pix(nside_lal, theta, phi)
+        
+        dif = np.abs(hpx_baye[ipix]-hpx_lal[ipix_ref])
+        difs.append(dif)
+        hpx_baye_new[ipix] = np.abs(hpx_baye[ipix]-hpx_lal[ipix_ref])
+
+    difs.sort(reverse = True)
+    cumsum = np.cumsum(difs)
+
+    sns.set_style("dark")
+    plt.plot(np.arange(len(cumsum)),cumsum,c='b')
+    plt.title('S200213t Skymap Evol')
+    plt.ylabel("|prob(bayestar) - prob(lalinf)|")
+    plt.show()
+
+    #plot difference using mollweide projection
+
+    unit='Gravitational-wave probability'
+    cbar=False
+    try:
+        import ligo.skymap.plot
+        cmap = "cylon"
+    except:
+        cmap = 'PuBuGn'
+
+    plotName = os.path.join("/Users/mouzaalmualla/Desktop/grandma_plots",'difference.pdf')
+    hp.mollview(
+                hpx_baye_new,title='Difference between 90% of Bayestar and LALInf maps',unit=unit,cbar=cbar,
+                min=np.min(hpx_baye_new),max=np.max(hpx_baye_new),
+                cmap=cmap)
+    add_edges()
+    plt.show()
+    plt.savefig(plotName,dpi=200)
+    plt.close('all')
+
+def observability(map,gpstime,airmass,telescope_info):
+    
+    prob, header = hp.read_map(map,field=0,verbose=False,h=True)
+    prob = prob / np.sum(prob)
+            
+    npix = len(prob)
+    nside = hp.npix2nside(npix)
+    event_time = Time(gpstime, format='gps', scale='utc')
+    dts = np.arange(0,7,1.0/24.0)
+    dts = np.arange(0,7,1.0/4.0)
+    
+
+    # Look up (celestial) spherical polar coordinates of HEALPix grid.
+    theta, phi = hp.pix2ang(nside, np.arange(npix))
+    # Convert to RA, Dec.
+    radecs = astropy.coordinates.SkyCoord(
+                                          ra=phi*u.rad, dec=(0.5*np.pi - theta)*u.rad)
+    
+    obs = {}
+    obs["prob"] = copy.deepcopy(prob)
+    obs["observability"] = np.zeros((npix,))
+    
+    
+    for telescope in telescope_info.keys():
+    
+        obs[telescope] = {}
+        obs[telescope]["dts"] = {}
+
+        observatory = astropy.coordinates.EarthLocation(lat=telescope_info[telescope][0]*u.deg, lon=telescope_info[telescope][1]*u.deg, height=telescope_info[telescope][2]*u.m)
+
+        for dt in dts:
+            time = event_time+TimeDelta(dt*u.day)
+            
+            frame = astropy.coordinates.AltAz(obstime=time, location=observatory)
+            altaz = radecs.transform_to(frame)
+            sun_altaz = astropy.coordinates.get_sun(time).transform_to(altaz)
+
+            idx = np.where((altaz.alt >= 30*u.deg) &  (sun_altaz.alt <= -18*u.deg) & (altaz.secz <= airmass))[0]
+ 
+            obs["observability"][idx] = 1
+
+    obs["prob"] = obs["prob"]*obs["observability"]
+
+    unit='Gravitational-wave probability'
+    cbar=False
+    try:
+        import ligo.skymap.plot
+        cmap = "cylon"
+    except:
+        cmap = 'PuBuGn'
+
+    plotName = os.path.join("/Users/mouzaalmualla/Desktop/grandma_plots",'observability.pdf')
+    hp.mollview(
+                obs["prob"],title='',unit=unit,cbar=cbar,
+                min=np.min(prob),max=np.max(prob),
+                cmap=cmap)
+    add_edges()
+    plt.show()
+    plt.savefig(plotName,dpi=200)
+    plt.close('all')
+
+def add_edges():
+    
+    hp.graticule(verbose=False)
+    plt.grid(True)
+    lons = np.arange(-150.0,180,30.0)
+    lats = np.zeros(lons.shape)
+    for lon, lat in zip(lons,lats):
+        hp.projtext(lon,lat,"%.0f"%lon,lonlat=True)
+    lats = np.arange(-60.0,90,30.0)
+    lons = np.zeros(lons.shape)
+    for lon, lat in zip(lons,lats):
+        hp.projtext(lon,lat,"%.0f"%lat,lonlat=True)
+
+
+map = "/Users/mouzaalmualla/Desktop/data/GW190425/LALInference.fits.gz"
+gpstime = 1240215503.0171
+airmass = 2.5
+telescope_info = {}
+
+#LATITUDE, LONGITUDE, ELEVATION
+telescope_info["ZTF"] = [33.3563,-116.8648,1742.0]
+
+
+observability(map,gpstime,airmass,telescope_info)
+
+
+maplal = "/Users/mouzaalmualla/Desktop/data/S200105ae/LALInference.fits.gz"
+mapbaye = "/Users/mouzaalmualla/Desktop/data/S200105ae/bayestar.fits.gz"
+
+skymap_evol(maplal,mapbaye)
