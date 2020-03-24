@@ -96,6 +96,8 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
     if params["doCatalog"]:
         distn = scipy.stats.rv_discrete(values=(np.arange(npix),map_struct["prob_catalog"]))
     else:
+        map_struct["prob"][np.isinf(map_struct["distmu"])] = 0.
+        map_struct["prob"] = map_struct["prob"]/np.sum(map_struct["prob"])
         distn = scipy.stats.rv_discrete(values=(np.arange(npix),map_struct["prob"]))
     ipix = distn.rvs(size=Ninj)
 
@@ -107,7 +109,6 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
     for pinpoint in ipix:
         dist = -1
         while (dist < 0):
-            dist = scipy.stats.norm(map_struct["distmu"][pinpoint],map_struct["distsigma"][pinpoint]).rvs()
             dist = mom_mean[pinpoint] + mom_std[pinpoint] * np.random.normal()
 
         idxs = []
@@ -135,6 +136,7 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
 
             if dist<=dist_threshold:
                 single_detection = True
+                break
 
         if single_detection: detections+=1
 
