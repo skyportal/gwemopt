@@ -49,7 +49,7 @@ for event,skymap,gpstime in zip(events,skymaps,gpstimes):
             outputDir = os.path.join(baseplotDir,event,lcurve,"%d"%(exposuretime))
             #fid2.write('/home/michael.coughlin/gwemopt/bin/gwemopt_run --doRASlices --Tobs 0.0,3.0 --telescope ZTF --doSchedule --doSkymap --doPlots --skymap %s --gpstime %.2f --doTiles --doSingleExposure --filters g,r,g,r,g,r --powerlaw_cl 0.9 --doAlternatingFilters --doEfficiency --do3D --modelType %s --mag %.1f --dmag %.1f --lightcurveFiles %s -o %s --exposuretimes %d,%d --doUsePrimary -c %s\n' % (skymap,gpstime,modelType,mag,dmag,lightcurveFile,outputDir,exposuretime,exposuretime,configDirectory))
 
-            fid2.write('/home/michael.coughlin/gwemopt/bin/gwemopt_run --mindiff 10800 --Tobs 0.0,3.0 --telescope ZTF --doSchedule --doSkymap --doPlots --skymap %s --gpstime %.2f --doTiles --doSingleExposure --filters g,r,g,r,g,r --powerlaw_cl 0.9 --doEfficiency --do3D --modelType %s --mag %.1f --dmag %.1f --lightcurveFiles %s -o %s --exposuretimes %d,%d,%d,%d --doUsePrimary -c %s\n' % (skymap,gpstime,modelType,mag,dmag,lightcurveFile,outputDir,exposuretime,exposuretime,exposuretime,exposuretime,configDirectory))
+            fid2.write('/home/michael.coughlin/gwemopt/bin/gwemopt_run --Ninj 1000 --mindiff 10800 --Tobs 0.0,3.0 --telescope ZTF --doSchedule --doSkymap --doPlots --skymap %s --gpstime %.2f --doTiles --doSingleExposure --filters g,r,g,r --powerlaw_cl 0.9 --doEfficiency --do3D --modelType %s --mag %.1f --dmag %.1f --lightcurveFiles %s -o %s --exposuretimes %d,%d,%d,%d --doUsePrimary -c %s\n' % (skymap,gpstime,modelType,mag,dmag,lightcurveFile,outputDir,exposuretime,exposuretime,exposuretime,exposuretime,configDirectory))
 
             efficiency_file = os.path.join(outputDir,'efficiency.txt')
             if not os.path.isfile(efficiency_file):
@@ -66,7 +66,7 @@ fid = open(os.path.join(condorDir,'condor.sub'),'w')
 fid.write('executable = /home/michael.coughlin/gwemopt/bin/gwemopt_run\n')
 fid.write('output = logs/out.$(jobNumber)\n');
 fid.write('error = logs/err.$(jobNumber)\n');
-fid.write('arguments = --mindiff 10800 --Tobs 0.0,3.0 --telescope ZTF --doSchedule --doSkymap --doPlots --skymap $(skymap) --gpstime $(gpstime) --doTiles --doSingleExposure --filters g,r,g,r --powerlaw_cl 0.9 --doEfficiency --do3D --modelType $(modelType) --mag $(mag) --dmag $(dmag) --lightcurveFiles $(lightcurveFile) -o $(outputDir) --exposuretimes $(exposuretimes) --doUsePrimary -c %s\n' % (configDirectory))
+fid.write('arguments = --Ninj 1000 --mindiff 10800 --Tobs 0.0,3.0 --telescope ZTF --doSchedule --doSkymap --doPlots --skymap $(skymap) --gpstime $(gpstime) --doTiles --doSingleExposure --filters g,r,g,r --powerlaw_cl 0.9 --doEfficiency --do3D --modelType $(modelType) --mag $(mag) --dmag $(dmag) --lightcurveFiles $(lightcurveFile) -o $(outputDir) --exposuretimes $(exposuretimes) --doUsePrimary -c %s\n' % (configDirectory))
 #fid.write('arguments = --doRASlices --telescope ZTF --doSchedule --doSkymap --doPlots --skymap $(skymap) --gpstime $(gpstime) --doTiles --doSingleExposure --filters g,r --powerlaw_cl 0.9 --doAlternatingFilters --doEfficiency --do3D --modelType $(modelType) --mag $(mag) --dmag $(dmag) --lightcurveFiles $(lightcurveFile) -o $(outputDir) --exposuretimes $(exposuretimes) --doUsePrimary -c %s\n' % (configDirectory)) 
 #fid.write('arguments = --telescope ZTF --doSchedule --doSkymap --doPlots --skymap $(skymap) --gpstime $(gpstime) --doTiles --doSingleExposure --filters g --powerlaw_cl 0.9 --doAlternatingFilters --doEfficiency --do3D --modelType $(modelType) --mag $(mag) --dmag $(dmag) --lightcurveFiles $(lightcurveFile) -o $(outputDir) --exposuretimes $(exposuretimes) --doUsePrimary -c %s\n' % (configDirectory)) 
 fid.write('requirements = OpSys == "LINUX"\n');
@@ -75,7 +75,7 @@ fid.write('request_cpus = 1\n');
 fid.write('accounting_group = ligo.dev.o2.burst.allsky.stamp\n');
 fid.write('notification = never\n');
 fid.write('getenv = true\n');
-fid.write('log = /usr1/mcoughlin/gwemopt_efficiency.log\n')
+fid.write('log = /usr1/michael.coughlin/gwemopt_efficiency.log\n')
 fid.write('+MaxHours = 24\n');
 fid.write('universe = vanilla\n');
 fid.write('queue 1\n');
