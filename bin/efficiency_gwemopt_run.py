@@ -33,7 +33,7 @@ lightcurveLabels = ['KN: 0.005 $M_\odot$, 0.11 $M_\odot$',
 modelTypes = ["file","file","Tophat","Tophat"]
 mags = [-16.0,-16.0,-16.0,-16.0]
 dmags = [0.0,0.0,0.0,0.5]
-exposuretimes = np.arange(30,930,30)
+exposuretimes = np.arange(30,630,30)
 
 baseplotDir = "/home/michael.coughlin/gwemopt/output/efficiency"
 condorDir = "/home/michael.coughlin/gwemopt/condor"
@@ -110,7 +110,7 @@ for event,skymap,gpstime in zip(events,skymaps,gpstimes):
                  arrowprops=dict(facecolor='black', arrowstyle='<->'),
                  )
 
-    ax1.set_xlim([15,780])
+    ax1.set_xlim([15,600])
     ax1.set_ylim([0,1.0])
     ax2.set_ylim([0,1.0])
 

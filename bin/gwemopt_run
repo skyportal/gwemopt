@@ -538,11 +538,11 @@ if opts.doEfficiency:
         efficiency_structs = {}
         for key in lightcurve_structs.keys():
             lightcurve_struct = lightcurve_structs[key]
-            efficiency_struct = gwemopt.efficiency.compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
+            efficiency_struct = gwemopt.efficiency.compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct, do3D=opts.do3D)
             efficiency_structs[key] = efficiency_struct
             efficiency_structs[key]["legend_label"] = lightcurve_struct["legend_label"]
             if opts.do3D:
-                gwemopt.efficiency.compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
+                efficiency_structs[key]["3D"] = gwemopt.efficiency.compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
 
         if opts.doPlots:
             print("Plotting efficiency...")
