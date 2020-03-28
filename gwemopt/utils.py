@@ -396,7 +396,7 @@ def read_skymap(params,is3D=False,map_struct=None):
             map_struct["distsigma"] = hp.pixelfunc.ud_grade(map_struct["distsigma"],nside)
             map_struct["distnorm"] = hp.pixelfunc.ud_grade(map_struct["distnorm"],nside)
 
-            map_struct["distmu"][map_struct["distmu"] == -1.6375e+30] = np.inf
+            map_struct["distmu"][map_struct["distmu"] < -1e+30] = np.inf
 
         nside_down = 32
 
@@ -404,7 +404,7 @@ def read_skymap(params,is3D=False,map_struct=None):
         distsigma_down = hp.pixelfunc.ud_grade(map_struct["distsigma"],nside_down)
         distnorm_down = hp.pixelfunc.ud_grade(map_struct["distnorm"],nside_down)
 
-        distmu_down[distmu_down == -1.6375e+30] = np.inf
+        distmu_down[distmu_down < -1e+30] = np.inf
 
         r = np.linspace(0, 2000)
         map_struct["distmed"] = np.zeros(distmu_down.shape)
