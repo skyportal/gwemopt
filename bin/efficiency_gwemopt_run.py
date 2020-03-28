@@ -24,8 +24,12 @@ events = ["S200105ae","S200213t","S200115j"]
 gpstimes = [1262276684.0572,1265602259.327981,1263122607.742047]
 skymaps = ["/home/michael.coughlin/gwemopt/data/S200105ae/LALInference.fits.gz","/home/michael.coughlin/gwemopt/data/S200213t/LALInference.fits.gz","/home/michael.coughlin/gwemopt/data/S200115j/LALInference.fits.gz"]
 
-lightcurveFiles = ["/home/michael.coughlin/gwemopt/lightcurves/Bulla_mejdyn0.005_mejwind0.110_phi45_45.6.dat","/home/michael.coughlin/gwemopt/lightcurves/Bulla_mejdyn0.005_mejwind0.010_phi45_45.6.dat","Tophat","Tophat"]
-lightcurveLabels = ['KN: 0.005 $M_\odot$, 0.11 $M_\odot$', 
+events = ["S200105ae","S200213t"]
+gpstimes = [1262276684.0572,1265602259.327981]
+skymaps = ["/home/michael.coughlin/gwemopt/data/S200105ae/LALInference.fits.gz","/home/michael.coughlin/gwemopt/data/S200213t/LALInference.fits.gz"]
+
+lightcurveFiles = ["/home/michael.coughlin/gwemopt/lightcurves/Bulla_mejdyn0.005_mejwind0.050_phi45_45.6.dat","/home/michael.coughlin/gwemopt/lightcurves/Bulla_mejdyn0.005_mejwind0.010_phi45_45.6.dat","Tophat","Tophat"]
+lightcurveLabels = ['KN: 0.005 $M_\odot$, 0.05 $M_\odot$', 
                     'KN: 0.005 $M_\odot$, 0.01 $M_\odot$',
                     'Tophat: -16 mag, 0 mag/day',
                     'Tophat: -16 mag, 0.5 mag/day']
@@ -100,13 +104,13 @@ for event,skymap,gpstime in zip(events,skymaps,gpstimes):
     rect1 = Rectangle((120, 0), 180, 1, alpha=0.3, color='g')
     ax1.add_patch(rect1)
 
-    plt.text(35, 0.55, "Survey")
-    plt.annotate('', xy=(30, 0.5), xytext=(110,0.5),
+    plt.text(40, 1.05, "Survey")
+    plt.annotate('', xy=(0.02, 1.03), xytext=(0.17,1.03), xycoords='axes fraction',
                  arrowprops=dict(facecolor='black', arrowstyle='->'),
                  )
 
-    plt.text(185, 0.53, "ToO")
-    plt.annotate('', xy=(120, 0.5), xytext=(300,0.5),
+    plt.text(185, 1.05, "ToO")
+    plt.annotate('', xy=(0.17, 1.03), xytext=(0.5,1.03), xycoords='axes fraction',
                  arrowprops=dict(facecolor='black', arrowstyle='<->'),
                  )
 

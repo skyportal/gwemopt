@@ -21,7 +21,11 @@ events = ["S200105ae","S200213t","S200115j"]
 gpstimes = [1262276684.0572,1265602259.327981,1263122607.742047]
 skymaps = ["/home/michael.coughlin/gwemopt/data/S200105ae/LALInference.fits.gz","/home/michael.coughlin/gwemopt/data/S200213t/bayestar.fits.gz","/home/michael.coughlin/gwemopt/data/S200115j/LALInference.fits.gz"]
 
-lightcurveFiles = ["/home/michael.coughlin/gwemopt/lightcurves/Bulla_mejdyn0.005_mejwind0.110_phi45_45.6.dat","/home/michael.coughlin/gwemopt/lightcurves/Bulla_mejdyn0.005_mejwind0.010_phi45_45.6.dat","Tophat","Tophat"]
+events = ["S200105ae","S200213t"]
+gpstimes = [1262276684.0572,1265602259.327981]
+skymaps = ["/home/michael.coughlin/gwemopt/data/S200105ae/LALInference.fits.gz","/home/michael.coughlin/gwemopt/data/S200213t/LALInference.fits.gz"]
+
+lightcurveFiles = ["/home/michael.coughlin/gwemopt/lightcurves/Bulla_mejdyn0.005_mejwind0.050_phi45_45.6.dat","/home/michael.coughlin/gwemopt/lightcurves/Bulla_mejdyn0.005_mejwind0.010_phi45_45.6.dat","Tophat","Tophat"]
 modelTypes = ["file","file","Tophat","Tophat"]
 mags = [-16.0,-16.0,-16.0,-16.0]
 dmags = [0.0,0.0,0.0,0.5]
@@ -49,10 +53,10 @@ for event,skymap,gpstime in zip(events,skymaps,gpstimes):
             outputDir = os.path.join(baseplotDir,event,lcurve,"%d"%(exposuretime))
             #fid2.write('/home/michael.coughlin/gwemopt/bin/gwemopt_run --doRASlices --Tobs 0.0,3.0 --telescope ZTF --doSchedule --doSkymap --doPlots --skymap %s --gpstime %.2f --doTiles --doSingleExposure --filters g,r,g,r,g,r --powerlaw_cl 0.9 --doAlternatingFilters --doEfficiency --do3D --modelType %s --mag %.1f --dmag %.1f --lightcurveFiles %s -o %s --exposuretimes %d,%d --doUsePrimary -c %s\n' % (skymap,gpstime,modelType,mag,dmag,lightcurveFile,outputDir,exposuretime,exposuretime,configDirectory))
 
-            fid2.write('/home/michael.coughlin/gwemopt/bin/gwemopt_run --Ninj 1000 --mindiff 10800 --Tobs 0.0,3.0 --telescope ZTF --doSchedule --doSkymap --doPlots --skymap %s --gpstime %.2f --doTiles --doSingleExposure --filters g,r,g,r --powerlaw_cl 0.9 --doEfficiency --do3D --modelType %s --mag %.1f --dmag %.1f --lightcurveFiles %s -o %s --exposuretimes %d,%d,%d,%d --doUsePrimary -c %s\n' % (skymap,gpstime,modelType,mag,dmag,lightcurveFile,outputDir,exposuretime,exposuretime,exposuretime,exposuretime,configDirectory))
-
             efficiency_file = os.path.join(outputDir,'efficiency.txt')
             if not os.path.isfile(efficiency_file):
+                fid2.write('/home/michael.coughlin/gwemopt/bin/gwemopt_run --Ninj 10000 --mindiff 10800 --Tobs 0.0,3.0 --telescope ZTF --doSchedule --doSkymap --doPlots --skymap %s --gpstime %.2f --doTiles --doSingleExposure --filters g,r,g,r --powerlaw_cl 0.9 --doEfficiency --do3D --modelType %s --mag %.1f --dmag %.1f --lightcurveFiles %s -o %s --exposuretimes %d,%d,%d,%d --doUsePrimary -c %s\n' % (skymap,gpstime,modelType,mag,dmag,lightcurveFile,outputDir,exposuretime,exposuretime,exposuretime,exposuretime,configDirectory))
+
                 fid.write('JOB %d condor.sub\n'%(job_number))
                 fid.write('RETRY %d 3\n'%(job_number))
                 fid.write('VARS %d jobNumber="%d" skymap="%s" gpstime="%.2f" lightcurveFile="%s" outputDir="%s" modelType="%s" mag="%.1f" dmag="%.1f" exposuretimes="%d,%d,%d,%d"\n'%(job_number,job_number,skymap,gpstime,lightcurveFile,outputDir,modelType,mag,dmag,exposuretime,exposuretime,exposuretime,exposuretime))
@@ -66,11 +70,11 @@ fid = open(os.path.join(condorDir,'condor.sub'),'w')
 fid.write('executable = /home/michael.coughlin/gwemopt/bin/gwemopt_run\n')
 fid.write('output = logs/out.$(jobNumber)\n');
 fid.write('error = logs/err.$(jobNumber)\n');
-fid.write('arguments = --Ninj 1000 --mindiff 10800 --Tobs 0.0,3.0 --telescope ZTF --doSchedule --doSkymap --doPlots --skymap $(skymap) --gpstime $(gpstime) --doTiles --doSingleExposure --filters g,r,g,r --powerlaw_cl 0.9 --doEfficiency --do3D --modelType $(modelType) --mag $(mag) --dmag $(dmag) --lightcurveFiles $(lightcurveFile) -o $(outputDir) --exposuretimes $(exposuretimes) --doUsePrimary -c %s\n' % (configDirectory))
+fid.write('arguments = --Ninj 10000 --mindiff 10800 --Tobs 0.0,3.0 --telescope ZTF --doSchedule --doSkymap --doPlots --skymap $(skymap) --gpstime $(gpstime) --doTiles --doSingleExposure --filters g,r,g,r --powerlaw_cl 0.9 --doEfficiency --do3D --modelType $(modelType) --mag $(mag) --dmag $(dmag) --lightcurveFiles $(lightcurveFile) -o $(outputDir) --exposuretimes $(exposuretimes) --doUsePrimary -c %s\n' % (configDirectory))
 #fid.write('arguments = --doRASlices --telescope ZTF --doSchedule --doSkymap --doPlots --skymap $(skymap) --gpstime $(gpstime) --doTiles --doSingleExposure --filters g,r --powerlaw_cl 0.9 --doAlternatingFilters --doEfficiency --do3D --modelType $(modelType) --mag $(mag) --dmag $(dmag) --lightcurveFiles $(lightcurveFile) -o $(outputDir) --exposuretimes $(exposuretimes) --doUsePrimary -c %s\n' % (configDirectory)) 
 #fid.write('arguments = --telescope ZTF --doSchedule --doSkymap --doPlots --skymap $(skymap) --gpstime $(gpstime) --doTiles --doSingleExposure --filters g --powerlaw_cl 0.9 --doAlternatingFilters --doEfficiency --do3D --modelType $(modelType) --mag $(mag) --dmag $(dmag) --lightcurveFiles $(lightcurveFile) -o $(outputDir) --exposuretimes $(exposuretimes) --doUsePrimary -c %s\n' % (configDirectory)) 
 fid.write('requirements = OpSys == "LINUX"\n');
-fid.write('request_memory = 4000\n');
+fid.write('request_memory = 8000\n');
 fid.write('request_cpus = 1\n');
 fid.write('accounting_group = ligo.dev.o2.burst.allsky.stamp\n');
 fid.write('notification = never\n');
