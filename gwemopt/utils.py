@@ -390,18 +390,21 @@ def read_skymap(params,is3D=False,map_struct=None):
 
     if is3D:
         if natural_nside != nside:
-            map_struct["prob"], map_struct["distmu"],\
-            map_struct["distsigma"], map_struct["distnorm"] = ligodist.ud_grade(map_struct["prob"],\
-                                                                                map_struct["distmu"],\
-                                                                                map_struct["distsigma"],\
-                                                                                nside)
-        
+            
+            map_struct["prob"] = hp.pixelfunc.ud_grade(map_struct["prob"],nside,power=-2)
+            map_struct["distmu"] = hp.pixelfunc.ud_grade(map_struct["distmu"],nside)
+            map_struct["distsigma"] = hp.pixelfunc.ud_grade(map_struct["distsigma"],nside)
+            map_struct["distnorm"] = hp.pixelfunc.ud_grade(map_struct["distnorm"],nside)
+
+            map_struct["distmu"][map_struct["distmu"] == -1.6375e+30] = np.inf
+
         nside_down = 32
-        _, distmu_down,\
-        distsigma_down, distnorm_down = ligodist.ud_grade(map_struct["prob"],\
-                                                          map_struct["distmu"],\
-                                                          map_struct["distsigma"],\
-                                                          nside_down)
+
+        distmu_down = hp.pixelfunc.ud_grade(map_struct["distmu"],nside_down)
+        distsigma_down = hp.pixelfunc.ud_grade(map_struct["distsigma"],nside_down)
+        distnorm_down = hp.pixelfunc.ud_grade(map_struct["distnorm"],nside_down)
+
+        distmu_down[distmu_down == -1.6375e+30] = np.inf
 
         r = np.linspace(0, 2000)
         map_struct["distmed"] = np.zeros(distmu_down.shape)
@@ -959,7 +962,6 @@ def erase_unbalanced_tiles(params,coverage_struct):
     for i in out[::-1]:
         del coverage_struct["patch"][i]
         del coverage_struct["ipix"][i]
-        del coverage_struct["exposureused"][i]
 
     return coverage_struct
 
@@ -1083,7 +1085,7 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
         max_trials = np.linspace(optimized_max,optimized_max+24,4)
     else:
         if optimized_max < 100:
-            max_trials = np.linspace(optimized_max-3,optimized_max+9,7)
+            max_trials = np.linspace(optimized_max-3,optimized_max+9,13)
         elif optimized_max == 200:
             max_trials = np.linspace(optimized_max,optimized_max+60,4)
         else:
