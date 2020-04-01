@@ -262,7 +262,6 @@ def absmag_tiles_struct(params, config_struct, telescope, map_struct, tile_struc
     ranked_tile_times = np.zeros((len(ranked_tile_probs),len(params["exposuretimes"])))
     for ii in range(len(params["exposuretimes"])):
         ranked_tile_times[ranked_tile_probs>0,ii] = config_struct["exposuretime_orig"]*nexp[ranked_tile_probs>0]
-    print(ranked_tile_times)
 
     for key, prob, exposureTime, tileprob in zip(keys, ranked_tile_probs, ranked_tile_times, tile_probs):
 
