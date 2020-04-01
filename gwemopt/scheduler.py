@@ -98,6 +98,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
     tileprobs = np.zeros((len(keys),))
     tilenexps = np.zeros((len(keys),))
     tileexptime = np.zeros((len(keys),))
+    tileexpdur = np.zeros((len(keys),))
     tilefilts = {}
     tileavailable = np.zeros((len(keys),))
     tileavailable_tiles = {} 
@@ -107,6 +108,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
     for jj, key in enumerate(keys):
         tileprobs[jj] = tile_struct[key]["prob"]
         tilenexps[jj] = tile_struct[key]["nexposures"]
+        tileexpdur[jj] = tile_struct[key]["exposureTime"]
         tilefilts[key] = copy.deepcopy(tile_struct[key]["filt"])
         tileavailable_tiles[jj] = []
         keynames.append(key) 
@@ -193,7 +195,10 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
             probmatrix[ii, :] = np.array(probs * (True^horizon_mask))
 
     if params["scheduleType"] == "greedy":
-        for ii in np.arange(len(exposurelist)): 
+        dt = (exposurelist[ii][1] - exposurelist[ii][0]) * 86400
+        for ii in np.arange(len(exposurelist)):
+            if idxs[ii] > 0: continue
+
             exptimecheck = np.where(exposurelist[ii][0]-tileexptime <
                                     params["mindiff"]/86400.0)[0]
             exptimecheckkeys = [keynames[x] for x in exptimecheck]
@@ -205,10 +210,18 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
                 idx = keynames.index(idx2)
                 tilenexps[idx] = tilenexps[idx] - 1
                 tileexptime[idx] = exposurelist[ii][0]
+
+                num = int(np.round(tileexpdur[idx]/dt))
+                tilenexps[idx] = tilenexps[idx] - 1
+                tileexptime[idx] = exposurelist[ii][0]
                 if len(tilefilts[idx2]) > 0:
                     filt = tilefilts[idx2].pop(0)
-                    filts[ii] = filt
-            idxs[ii] = idx2
+                    for jj in range(num):
+                        filts[ii+jj] = filt
+                for jj in range(num):
+                    idxs[ii+jj] = idx2
+            else:
+                idxs[ii] = idx2
 
             if not exposureids: break
     elif params["scheduleType"] == "greedy_slew":
@@ -742,7 +755,10 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
             config_struct["exposurelist"] = config_struct["exposurelist"].shift(extra_time / 86400.)
         
         if not params["tilesType"] == "galaxy":
-            tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
+            if params["timeallocationType"] == "absmag":
+                tile_struct = gwemopt.tiles.absmag_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
+            else:
+                tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
 
         if (params["doUpdateScheduler"] or params["doTreasureMap"]) and previous_coverage_struct: #erases tiles from a previous round
             tile_struct = gwemopt.coverage.update_observed_tiles(params,tile_struct_hold,previous_coverage_struct)
@@ -834,7 +850,11 @@ def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescop
 
         map_struct_slice["prob"][ipix] = 0.0
         map_struct_slice["prob"] = map_struct_slice["prob"] / np.sum(map_struct_slice["prob"])
-        tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_slice, tile_struct)
+
+        if params["timeallocationType"] == "absmag":
+            tile_struct = gwemopt.tiles.absmag_tiles_struct(params, config_struct, telescope, map_struct_slice, tile_struct)
+        else:
+            tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_slice, tile_struct)
 
         config_struct_hold = copy.copy(config_struct)
         coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params, config_struct_hold,

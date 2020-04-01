@@ -219,6 +219,9 @@ def params_checker(params):
     if "max_filter_sets" not in params.keys():
         params["max_filter_sets"] = 4
 
+    if "absmag" not in params.keys():
+        params["absmag"] = -15
+
     if "config" not in params.keys():
         params["config"] = {}
         configFiles = glob.glob("%s/*.config"%params["configDirectory"])
