@@ -827,14 +827,21 @@ def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescop
                     ha_late[idx_late] = 24.0 - ha_late[idx_late]
                     has += list(ha)
                     has_late += list(ha_late)
-                minhas.append(np.min(has))
-                minhas_late.append(np.min(has_late))
-        
-            #conditions for trying to schedule end of slice
-            if np.min(minhas_late) <= 5.0 and np.min(has) > 4.0 and not skip:
-                try_end = True
-                min = np.argmin(minhas_late)
-                raslice = raslices[min]
+                if len(has) > 0:
+                    minhas.append(np.min(has))
+                if len(has_late) > 0:
+                    minhas_late.append(np.min(has_late))
+       
+            if (len(minhas_late) > 0) and (len(has_late) > 0): 
+                #conditions for trying to schedule end of slice
+                if np.min(minhas_late) <= 5.0 and np.min(has) > 4.0 and not skip:
+                    try_end = True
+                    min = np.argmin(minhas_late)
+                    raslice = raslices[min]
+                else:
+                    min = np.argmin(minhas)
+                    raslice = raslices[min]
+                    del raslices[min]
             else:
                 min = np.argmin(minhas)
                 raslice = raslices[min]
@@ -849,7 +856,6 @@ def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescop
             ipix = np.where((ra_high*360.0/24.0 < ra) & (ra_low*360.0/24.0 > ra))[0]
 
         map_struct_slice["prob"][ipix] = 0.0
-        map_struct_slice["prob"] = map_struct_slice["prob"] / np.sum(map_struct_slice["prob"])
 
         if params["timeallocationType"] == "absmag":
             tile_struct = gwemopt.tiles.absmag_tiles_struct(params, config_struct, telescope, map_struct_slice, tile_struct)

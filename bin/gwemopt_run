@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
-# Copyright (C) 2017 Michael Coughlin
+# Copyright (C) 2020 Michael Coughlin
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -130,7 +130,7 @@ def parse_commandline():
     parser.add_option("-l", "--lightcurveFiles", help="Lightcurve files.",
                       default ="../lightcurves/Me2017_H4M050V20.dat")
     parser.add_option("--observedTiles", help="Tiles that have already been observed.", default = "")
-    parser.add_option("--Ninj",default=1000,type=int)
+    parser.add_option("--Ninj",default=10000,type=int)
     parser.add_option("--Ntiles",default=10,type=int)
     parser.add_option("--doCalcTiles", action="store_true",default = False)
     parser.add_option("--Ntiles_cr",default=0.70,type=float)
@@ -545,11 +545,11 @@ if opts.doEfficiency:
         efficiency_structs = {}
         for key in lightcurve_structs.keys():
             lightcurve_struct = lightcurve_structs[key]
-            efficiency_struct = gwemopt.efficiency.compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
+            efficiency_struct = gwemopt.efficiency.compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct, do3D=opts.do3D)
             efficiency_structs[key] = efficiency_struct
             efficiency_structs[key]["legend_label"] = lightcurve_struct["legend_label"]
             if opts.do3D:
-                gwemopt.efficiency.compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
+                efficiency_structs[key]["3D"] = gwemopt.efficiency.compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
 
         if opts.doPlots:
             print("Plotting efficiency...")

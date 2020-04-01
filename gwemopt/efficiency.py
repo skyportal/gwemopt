@@ -17,7 +17,8 @@ from ligo.skymap import distance
 
 import gwemopt.utils
 
-def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
+def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct,
+                       do3D=False):
 
     nside = params["nside"]
     npix = hp.nside2npix(nside)
@@ -80,8 +81,11 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
     efficiency_struct["distances"] = dists
 
     save_efficiency_data(params, efficiency_struct, lightcurve_struct)
-    efficiency_metric = calculate_efficiency_metric(params, efficiency_struct)
-    save_efficiency_metric(params, os.path.join(params["outputDir"],"efficiency.txt"), efficiency_metric, lightcurve_struct)
+
+    if do3D:
+        eff_3D = compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
+        efficiency_metric = [eff_3D, np.sqrt(eff_3D * (1 - eff_3D) / params["Ninj"])]
+        save_efficiency_metric(params, os.path.join(params["outputDir"],"efficiency.txt"), efficiency_metric, lightcurve_struct)
 
     return efficiency_struct
 
@@ -107,8 +111,10 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
     for pinpoint in ipix:
         dist = -1
         while (dist < 0):
-            dist = scipy.stats.norm(map_struct["distmu"][pinpoint],map_struct["distsigma"][pinpoint]).rvs()
-            dist = mom_mean[pinpoint] + mom_std[pinpoint] * np.random.normal()
+            if np.isinf(mom_mean[pinpoint]) or np.isinf(mom_std[pinpoint]):
+                dist = np.inf
+            else:
+                dist = mom_mean[pinpoint] + mom_std[pinpoint] * np.random.normal()
 
         idxs = []
         for jj in range(len(coverage_struct["ipix"])):
@@ -135,10 +141,12 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
 
             if dist<=dist_threshold:
                 single_detection = True
+                break
 
         if single_detection: detections+=1
 
     print(f'Percent detections out of {Ninj} injected KNe: {detections*100/Ninj}% ')
+    return detections/Ninj
 
 def save_efficiency_data(params, efficiency_struct, lightcurve_struct):
     for i in range(0, len(efficiency_struct["distances"])):

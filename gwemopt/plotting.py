@@ -163,15 +163,19 @@ def skymap(params,map_struct):
     plt.close('all')
 
     if "distmu" in map_struct:
+        fin = np.copy(map_struct["distmu"])
+        fin[~np.isfinite(fin)] = np.nan
         plotName = os.path.join(params["outputDir"],'dist.pdf')
-        hp.mollview(map_struct["distmu"],unit='Distance [Mpc]',min=np.percentile(map_struct["distmu"],10),max=np.percentile(map_struct["distmu"],90))
+        hp.mollview(map_struct["distmu"],unit='Distance [Mpc]',min=np.nanpercentile(fin,10),max=np.nanpercentile(fin,90))
         add_edges()
         plt.show()
         plt.savefig(plotName,dpi=200)
         plt.close('all')
 
+        fin = np.copy(map_struct["distmed"])
+        fin[~np.isfinite(fin)] = np.nan
         plotName = os.path.join(params["outputDir"],'dist_median.pdf')
-        hp.mollview(map_struct["distmed"],unit='Distance [Mpc]',min=np.percentile(map_struct["distmed"],10),max=np.percentile(map_struct["distmed"],90))
+        hp.mollview(map_struct["distmed"],unit='Distance [Mpc]',min=np.nanpercentile(fin,10),max=np.nanpercentile(fin,90))
         add_edges()
         plt.show()
         plt.savefig(plotName,dpi=200)
