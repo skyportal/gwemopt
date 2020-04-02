@@ -1,6 +1,37 @@
 
 import numpy as np
 from astropy import table
+from astropy.table import Table
+
+import requests
+from celery.local import PromiseProxy
+import pyvo.dal
+
+def get_ztf_depot_table(url):
+    with requests.get(url) as r:
+        deptable = Table.read(r.text, format='ascii.fixed_width',
+                              data_start=2, data_end=-1)
+    return deptable
+
+client = PromiseProxy(
+    pyvo.dal.TAPService,
+    ('https://irsa.ipac.caltech.edu/TAP',))
+
+url = 'https://ztfweb.ipac.caltech.edu/ztf/depot/adhoc/' +\
+      'specialrefs/SpecialRefImages.txt'
+refstable = get_ztf_depot_table(url)
+
+refs = refstable.group_by(['field', 'fid']).groups.aggregate(np.mean)
+refs = refs.filled()
+
+refs_grouped_by_field = refs.group_by('field').groups
+
+for field_id, rows in zip(refs_grouped_by_field.keys,
+                          refs_grouped_by_field):
+    print(field_id[0], rows['fid'].tolist(), rows['maglimcat'].tolist())
+
+dist = 340
+distmod = 5.0*(np.log10(dist*1e6)-1.0)
 
 filename = '../input/ZTF.ref'
 refs = table.unique(table.Table.read(filename,
