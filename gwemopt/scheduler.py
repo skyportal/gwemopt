@@ -108,7 +108,10 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
     for jj, key in enumerate(keys):
         tileprobs[jj] = tile_struct[key]["prob"]
         tilenexps[jj] = tile_struct[key]["nexposures"]
-        tileexpdur[jj] = tile_struct[key]["exposureTime"]
+        try:
+            tileexpdur[jj] = tile_struct[key]["exposureTime"]
+        except:
+            tileexpdur[jj] = tile_struct[key]["exposureTime"][0]
         tilefilts[key] = copy.deepcopy(tile_struct[key]["filt"])
         tileavailable_tiles[jj] = []
         keynames.append(key) 

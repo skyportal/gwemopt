@@ -60,7 +60,7 @@ def readParamsFromFile(file):
 
 def params_checker(params):
     """"Assigns defaults to params."""
-    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure","doBlocks","doUpdateScheduler","doTreasureMap","doRASlice","doRASlices"]
+    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure","doBlocks","doUpdateScheduler","doTreasureMap","doRASlice","doRASlices","doRotate"]
  
     for parameter in do_Parameters:
         if parameter not in params.keys():
@@ -222,6 +222,12 @@ def params_checker(params):
     if "absmag" not in params.keys():
         params["absmag"] = -15
 
+    if "phi" not in params.keys():
+        params["phi"] = 0
+
+    if "theta" not in params.keys():
+        params["theta"] = 0
+
     if "config" not in params.keys():
         params["config"] = {}
         configFiles = glob.glob("%s/*.config"%params["configDirectory"])
@@ -330,6 +336,28 @@ def auto_rasplit(params,map_struct,nside_down):
 
     return raslices
 
+def rotate_map(hmap, rot_theta, rot_phi):
+    """
+    Take hmap (a healpix map array) and return another healpix map array
+    which is ordered such that it has been rotated in (theta, phi) by the
+    amounts given.
+    """
+    nside = hp.npix2nside(len(hmap))
+
+    # Get theta, phi for non-rotated map
+    t,p = hp.pix2ang(nside, np.arange(hp.nside2npix(nside))) #theta, phi
+
+    # Define a rotator
+    r = hp.Rotator(deg=False, rot=[rot_phi,rot_theta])
+
+    # Get theta, phi under rotated co-ordinates
+    trot, prot = r(t,p)
+
+    # Interpolate map onto these co-ordinates
+    rot_map = hp.get_interp_val(hmap, trot, prot)
+
+    return rot_map
+
 def read_skymap(params,is3D=False,map_struct=None):
 
     header = []
@@ -381,6 +409,10 @@ def read_skymap(params,is3D=False,map_struct=None):
                 prob_data = prob_data / np.sum(prob_data)
         
                 map_struct["prob"] = prob_data
+
+    if params["doRotate"]:
+        for key in map_struct.keys():
+            map_struct[key] = rotate_map(map_struct[key], np.deg2rad(params["theta"]), np.deg2rad(params["phi"]))
 
     natural_nside = hp.pixelfunc.get_nside(map_struct["prob"])
     nside = params["nside"]
