@@ -198,7 +198,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
             probmatrix[ii, :] = np.array(probs * (True^horizon_mask))
 
     if params["scheduleType"] == "greedy":
-        dt = (exposurelist[ii][1] - exposurelist[ii][0]) * 86400
+        dt = (exposurelist[0][1] - exposurelist[0][0]) * 86400
         for ii in np.arange(len(exposurelist)):
             if idxs[ii] > 0: continue
 
