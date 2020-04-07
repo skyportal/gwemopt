@@ -1069,7 +1069,7 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
         countervals.append(counter)
 
         #check for breaking conditions
-        if counter>=n_equal:
+        if counter>n_equal:
             n_equal,optimized_max = counter,max_trial
         if ii>2:
             repeating = countervals[ii] == countervals[ii-1] == countervals[ii-2]
@@ -1113,7 +1113,7 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
                 counter+=1
         countervals.append(counter)
 
-        if counter>=n_equal:
+        if counter>n_equal:
             n_equal,optimized_max = counter,max_trial
         if counter == n_equal and ii > 1:
             repeating = countervals[ii] == countervals[ii-1] == countervals[ii-2]
