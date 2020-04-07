@@ -198,6 +198,12 @@ def parse_commandline():
     parser.add_option("--doRASlice",action="store_true",default=False)
     parser.add_option("--raslice",default="0.0,24.0")
 
+    parser.add_option("--absmag",default=-15.0,type=float)
+
+    parser.add_option("--doRotate",  action="store_true", default=False)
+    parser.add_option("--theta", help="theta rotation.", default=0.0, type=float)
+    parser.add_option("--phi", help="phi rotation.", default=0.0, type=float)
+
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
 
@@ -240,6 +246,9 @@ def params_struct(opts):
         params["config"][telescope]["telescope"] = telescope
         if opts.doSingleExposure:
             exposuretime = np.array(opts.exposuretimes.split(","),dtype=np.float)[0]
+
+            params["config"][telescope]["magnitude_orig"] = params["config"][telescope]["magnitude"] 
+            params["config"][telescope]["exposuretime_orig"] = params["config"][telescope]["exposuretime"] 
 
             nmag = np.log(exposuretime/params["config"][telescope]["exposuretime"]) / np.log(2.5)
             params["config"][telescope]["magnitude"] = params["config"][telescope]["magnitude"] + nmag
@@ -374,7 +383,14 @@ def params_struct(opts):
     params["doBlocks"] = opts.doBlocks
     params["Nblocks"] = opts.Nblocks
 
+    params["absmag"] = opts.absmag
+
+    params["doRotate"] = opts.doRotate
+    params["phi"] = opts.phi
+    params["theta"] = opts.theta
+
     params["doZTFCoverage"] = opts.doZTFCoverage
+
     if opts.start_time is None:
         params["start_time"] = time.Time.now() - time.TimeDelta(1.0*u.day)
     else:

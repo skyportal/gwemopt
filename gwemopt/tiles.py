@@ -195,6 +195,120 @@ def hierarchical(params, map_struct):
 
     return tile_structs
 
+def absmag_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
+
+    keys = tile_struct.keys()
+    ntiles = len(keys)
+    if ntiles == 0:
+        return tile_struct
+
+    tot_obs_time = config_struct["tot_obs_time"]
+
+    if "observability" in map_struct:
+        prob = map_struct["observability"][telescope]["prob"]
+    else:
+        prob = map_struct["prob"]
+
+    n, cl, dist_exp = params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"]
+    
+    if params["tilesType"] == "galaxy":
+        tile_probs = compute_tiles_map(params, tile_struct, prob, func='center', ipix_keep=map_struct["ipix_keep"])
+    else:
+        tile_probs = compute_tiles_map(params, tile_struct, prob, func='np.sum(x)', ipix_keep=map_struct["ipix_keep"])
+
+    tile_probs[tile_probs<np.max(tile_probs)*0.01] = 0.0
+ 
+    prob_scaled = copy.deepcopy(prob)
+    prob_sorted = np.sort(prob_scaled)[::-1]
+    prob_indexes = np.argsort(prob_scaled)[::-1]
+    prob_cumsum = np.cumsum(prob_sorted)
+    index = np.argmin(np.abs(prob_cumsum - cl)) + 1
+    #prob_scaled[prob_indexes[index:]] = 1e-10
+    prob_scaled[prob_indexes[index:]] = 0.0
+    prob_scaled = prob_scaled**n
+    prob_scaled = prob_scaled / np.nansum(prob_scaled)
+   
+    if params["tilesType"] == "galaxy":
+        ranked_tile_probs = compute_tiles_map(params, tile_struct, prob_scaled, func='center', ipix_keep=map_struct["ipix_keep"])
+    else:
+        ranked_tile_probs = compute_tiles_map(params, tile_struct, prob_scaled, func='np.sum(x)', ipix_keep=map_struct["ipix_keep"])
+
+    ranked_tile_probs[np.isnan(ranked_tile_probs)] = 0.0
+    ranked_tile_probs_thresh = np.max(ranked_tile_probs)*0.01
+    ranked_tile_probs[ranked_tile_probs<=ranked_tile_probs_thresh] = 0.0
+    ranked_tile_probs = ranked_tile_probs / np.nansum(ranked_tile_probs)
+
+    if "distmed" in map_struct:
+        distmed = map_struct["distmed"]
+        distmed[distmed<=0] = np.nan
+        distmed[~np.isfinite(distmed)] = np.nan
+        #distmed[distmed<np.nanmedian(distmed)/4.0] = np.nanmedian(distmed)/4.0
+
+        if params["tilesType"] == "galaxy":
+            ranked_tile_distances = compute_tiles_map(params, tile_struct, distmed, func='center', ipix_keep=map_struct["ipix_keep"])
+        else:
+            ranked_tile_distances = compute_tiles_map(params, tile_struct, distmed, func='np.nanmedian(x)', ipix_keep=map_struct["ipix_keep"])        
+        
+        distmod = 5*np.log10(ranked_tile_distances*1e6) - 5.0
+        absmag = params["absmag"]
+        appmag = distmod + absmag
+        nmag = appmag - config_struct["magnitude_orig"]
+
+        nexp = np.round(np.exp(nmag*np.log(2.5)))
+        nexp[nexp<0] = 0.0
+        nexp = nexp + 1
+      
+    keys = tile_struct.keys()
+    ranked_tile_times = np.zeros((len(ranked_tile_probs),len(params["exposuretimes"])))
+    for ii in range(len(params["exposuretimes"])):
+        ranked_tile_times[ranked_tile_probs>0,ii] = config_struct["exposuretime_orig"]*nexp[ranked_tile_probs>0]
+
+    for key, prob, exposureTime, tileprob in zip(keys, ranked_tile_probs, ranked_tile_times, tile_probs):
+
+        # Try to load the minimum duration of time from telescope config file
+        # Otherwise set it to zero
+        try:
+            min_obs_duration = config_struct["min_observability_duration"] / 24
+        except:
+            min_obs_duration = 0.0
+
+        # Check that a given tile is observable a minimum amount of time
+        # If not set the proba associated to the tile to zero
+        if 'segmentlist' and 'prob' in tile_struct[key] and tile_struct[key]['segmentlist'] and min_obs_duration > 0.0:
+            observability_duration = 0.0 
+            for counter in range(len(tile_struct[key]['segmentlist'])):
+                observability_duration += tile_struct[key]['segmentlist'][counter][1] - tile_struct[key]['segmentlist'][counter][0]
+            if tile_struct[key]['prob'] > 0.0 and observability_duration < min_obs_duration: 
+               tileprob = 0.0
+
+        tile_struct[key]["prob"] = tileprob
+        if prob == 0.0:
+            tile_struct[key]["exposureTime"] = 0.0
+            tile_struct[key]["nexposures"] = 0
+            tile_struct[key]["filt"] = []
+        else:
+            if params["doReferences"] and (telescope in ["ZTF", "DECam"]):
+                tile_struct[key]["exposureTime"] = []
+                tile_struct[key]["nexposures"] = []
+                tile_struct[key]["filt"] = []
+                if key in config_struct["reference_images"]:
+                    for ii in range(len(params["filters"])):
+                        if params["filters"][ii] in config_struct["reference_images"][key]:
+                            tile_struct[key]["exposureTime"].append(exposureTime[ii])
+                            tile_struct[key]["filt"].append(params["filters"][ii])
+                    tile_struct[key]["nexposures"] = len(tile_struct[key]["exposureTime"])
+                else:
+                    tile_struct[key]["exposureTime"] = 0.0
+                    tile_struct[key]["nexposures"] = 0
+                    tile_struct[key]["filt"] = []
+            else:
+                tile_struct[key]["exposureTime"] = exposureTime
+                tile_struct[key]["nexposures"] = len(params["exposuretimes"])
+                tile_struct[key]["filt"] = params["filters"]
+            
+    return tile_struct
+
+
 def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
     keys = tile_struct.keys()
@@ -259,6 +373,7 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
         ranked_tile_times = np.zeros((len(ranked_tile_probs),len(params["exposuretimes"])))
         for ii in range(len(params["exposuretimes"])):
             ranked_tile_times[ranked_tile_probs>0,ii] = params["exposuretimes"][ii]
+
         for key, prob, exposureTime, tileprob in zip(keys, ranked_tile_probs, ranked_tile_times, tile_probs):
 
             # Try to load the minimum duration of time from telescope config file
