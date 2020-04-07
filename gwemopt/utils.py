@@ -413,7 +413,8 @@ def read_skymap(params,is3D=False,map_struct=None):
     if params["doRotate"]:
         for key in map_struct.keys():
             map_struct[key] = rotate_map(map_struct[key], np.deg2rad(params["theta"]), np.deg2rad(params["phi"]))
-
+        map_struct["prob"] = map_struct["prob"] / np.sum(map_struct["prob"])
+ 
     natural_nside = hp.pixelfunc.get_nside(map_struct["prob"])
     nside = params["nside"]
     
