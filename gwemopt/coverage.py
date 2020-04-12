@@ -197,22 +197,21 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
             elif params["doBalanceExposure"]:
                 optimized_bool = False
                 if not params["doMaxTiles"]: #optimize max tiles (iff max tiles not already specified)
-                    optimized_bool = True
-                    optimized_max = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_hold)
+                    optimized_max,optimized_bool = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_hold)
                     params["max_nb_tiles"] = np.array([optimized_max],dtype=np.float)
-
-                params_hold = copy.copy(params)
-                config_struct_hold = copy.copy(config_struct)
-                
-                coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
-                tile_struct, doReschedule,balanced_fields = gwemopt.utils.balance_tiles(params_hold, tile_struct, coverage_struct)
-                config_struct_hold = copy.copy(config_struct)
-
-                if doReschedule:
+                if not optimized_bool:
+                    params_hold = copy.copy(params)
+                    config_struct_hold = copy.copy(config_struct)
+                    
                     coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
                     tile_struct, doReschedule,balanced_fields = gwemopt.utils.balance_tiles(params_hold, tile_struct, coverage_struct)
-                
-                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params_hold,coverage_struct)
+                    config_struct_hold = copy.copy(config_struct)
+
+                    if doReschedule:
+                        coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
+                        tile_struct, doReschedule,balanced_fields = gwemopt.utils.balance_tiles(params_hold, tile_struct, coverage_struct)
+                    
+#                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params_hold,coverage_struct)
         else:
 
             #load the sun retriction for a satelite
@@ -286,7 +285,7 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
                         cnt = cnt+1
                     else: break
 
-                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params,coverage_struct)
+#                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params,coverage_struct)
 
             if params["doMaxTiles"]:
                 tile_struct, doReschedule = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct, coverage_struct)    
@@ -383,9 +382,8 @@ def absmag(params, map_struct, tile_structs,previous_coverage_struct=None):
 
                 if doReschedule:
                     coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
-                    tile_struct, doReschedule,balanced_fields = gwemopt.utils.balance_tiles(params_hold, tile_struct, coverage_struct)
                 
-                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params_hold,coverage_struct)
+#                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params_hold,coverage_struct)
         else:
 
             #load the sun retriction for a satelite
@@ -459,7 +457,7 @@ def absmag(params, map_struct, tile_structs,previous_coverage_struct=None):
                         cnt = cnt+1
                     else: break
 
-                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params,coverage_struct)
+#                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params,coverage_struct)
 
             if params["doMaxTiles"]:
                 tile_struct, doReschedule = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct, coverage_struct)    

@@ -967,17 +967,12 @@ def balance_tiles(params, tile_struct, coverage_struct):
     filters, exposuretimes = params["filters"], params["exposuretimes"]
 
     keys_scheduled = coverage_struct["data"][:,5]
-    filts = coverage_struct["filters"]
-    filts_used = {key: [] for key in keys_scheduled} #dictionary of scheduled filters for each key
 
     doReschedule = False
-    balanced_fields = 0
-    for (key,filt) in zip(keys_scheduled,filts):
-        filts_used[key].append(filt)
-        if len(filts_used[key]) == len(params["filters"]):
-            balanced_fields+=1
+    unique, freq = np.unique(keys_scheduled, return_counts=True)
+    balanced_fields = np.sum(freq==len(params["filters"]))
 
-    params["unbalanced_tiles"] = [key for key in keys_scheduled if len(filts_used[key]) != len(params["filters"])]
+    params["unbalanced_tiles"] = [key for i,key in enumerate(unique) if freq[i] != len(params["filters"])]
 
     if len(params["unbalanced_tiles"]) != 0:
         doReschedule = True
@@ -1062,15 +1057,9 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
         prob[key] = tile_struct[key]['prob']
     
     keys_scheduled = coverage_struct["data"][:,5]
-    filts_used = {key:[] for key in keys_scheduled}
-    filts = coverage_struct["filters"]
-    
-    for (key,filt) in zip(keys_scheduled,filts):
-        filts_used[key].append(filt)
-    n_equal=0
-    for key in filts_used:
-        if len(filts_used[key]) == len(params["filters"]):
-            n_equal+=1
+    unique, freq = np.unique(keys_scheduled, return_counts=True)
+    n_equal = np.sum(freq==len(params["filters"]))
+
     optimized_max=-1 #assigns baseline optimized maxtiles
     
     params["doMaxTiles"] = True
@@ -1094,14 +1083,9 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
                                                                                   telescope, map_struct_hold, tile_struct)
 
         keys_scheduled = coverage_struct_hold["data"][:,5]
-        filts_used = {key:[] for key in keys_scheduled}
-        filts = coverage_struct_hold["filters"]
+        unique, freq = np.unique(keys_scheduled, return_counts=True)
+        counter = np.sum(freq==len(params["filters"]))
         
-        counter=0
-        for (key,filt) in zip(keys_scheduled,filts):
-            filts_used[key].append(filt)
-            if len(filts_used[key]) == len(params["filters"]):
-                counter+=1
         countervals.append(counter)
 
         #check for breaking conditions
@@ -1121,7 +1105,7 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
         max_trials = np.linspace(optimized_max,optimized_max+24,4)
     else:
         if optimized_max < 100:
-            max_trials = np.linspace(optimized_max-3,optimized_max+9,13)
+            max_trials = np.linspace(optimized_max-3,optimized_max+9,7)
         elif optimized_max == 200:
             max_trials = np.linspace(optimized_max,optimized_max+60,4)
         else:
@@ -1139,25 +1123,42 @@ def optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescop
                                                                                   telescope, map_struct_hold, tile_struct)
         
         keys_scheduled = coverage_struct_hold["data"][:,5]
-        filts_used = {key:[] for key in keys_scheduled}
-        filts = coverage_struct_hold["filters"]
+        unique, freq = np.unique(keys_scheduled, return_counts=True)
+        counter = np.sum(freq==len(params["filters"]))
         
-        counter=0
-        for (key,filt) in zip(keys_scheduled,filts):
-            filts_used[key].append(filt)
-            if len(filts_used[key]) == len(params["filters"]):
-                counter+=1
         countervals.append(counter)
 
         if counter>n_equal:
             n_equal,optimized_max = counter,max_trial
+            n_dif = np.sum(freq!=len(params["filters"]))
         if counter == n_equal and ii > 1:
             repeating = countervals[ii] == countervals[ii-1] == countervals[ii-2]
 
         for key in tile_struct.keys():
             tile_struct[key]['prob'] = prob[key]
         if ii>0 and counter<countervals[ii-1] or repeating: break
-    return optimized_max
+            
+    #check percent difference between # of fields scheduled in each filter
+    tile_struct, doReschedule,balanced_fields = gwemopt.utils.balance_tiles(params_hold, tile_struct, coverage_struct)
+    if doReschedule:
+        config_struct_hold = copy.copy(config_struct)
+        params["max_nb_tiles"] = np.array([optimized_max],dtype=np.float)
+        coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope,
+                                                                     map_struct_hold, tile_struct,previous_coverage_struct)
+        keys_scheduled = coverage_struct_hold["data"][:,5]
+        unique, freq = np.unique(keys_scheduled, return_counts=True)
+        n_equal = np.sum(freq==len(params["filters"]))
+        n_dif = np.sum(freq!=len(params["filters"]))
+    
+    n_1 = n_equal
+    n_2 = n_equal + n_dif
+    p_dif = n_dif/((n_1+n_2)*0.5)
+    optimized_bool = True
+    if p_dif >= 0.1:
+        optimized_bool = False
+        optimized_max = n_1
+
+    return optimized_max,optimized_bool
 
 def check_overlapping_tiles(params, tile_struct, coverage_struct):
 
