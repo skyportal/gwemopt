@@ -1149,15 +1149,17 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
         count = 0
         n_difs,n_equals,p_difs = [n_dif],[n_equal],[p_dif]
         unbalanced_tiles = []
-        while count<10:
-            params_hold = copy.copy(params)
+        repeating = False
+        params_hold = copy.copy(params)
+        while count<20 and optimized_max>0:
             for key in tile_struct_hold.keys():
                 tile_struct_hold[key]['prob'] = prob[key]
+
             doReschedule,balanced_fields = balance_tiles(params_hold, opt_tile_struct, opt_coverage_struct)
+            params_hold["unbalanced_tiles"] = unbalanced_tiles + params_hold["unbalanced_tiles"]
             if not doReschedule: break
             config_struct_hold = copy.copy(config_struct)
-            params_hold["max_nb_tiles"] = np.array([optimized_max],dtype=np.int)
-            params_hold["unbalanced_tiles"] = params_hold["unbalanced_tiles"] + unbalanced_tiles
+            params_hold["max_nb_tiles"] = np.array([np.ceil(optimized_max)],dtype=np.float)
             coverage_struct,tile_struct_hold = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope,
                                                                                     map_struct_hold, tile_struct_hold)
             keys_scheduled = coverage_struct["data"][:,5]
@@ -1167,11 +1169,11 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
             n_1 = n_equal
             n_2 = n_equal + n_dif
             p_dif = n_dif/((n_1+n_2)*0.5)
-            
-            if n_dif > n_difs[-1] and p_dif >= 0.15: #try decreasing max-tiles if n_difs increase
-                optimized_max -= len(params_hold["unbalanced_tiles"])*0.5
+
+            if p_dif > p_difs[-1] and p_dif >= 0.15: #try decreasing max-tiles if n_difs increase
+                optimized_max -= 0.1*optimized_max
                 continue
-            elif (n_dif > n_difs[-1]) or (n_equal < n_equals[-1] and p_difs[-1] < 0.15): break
+            elif (p_dif > p_difs[-1]) or (p_difs[-1] < 0.15 and (n_equal < n_equals[-1] or repeating)): break
 
             opt_coverage_struct,opt_tile_struct = coverage_struct,tile_struct_hold
             n_difs.append(n_dif)
