@@ -1063,7 +1063,7 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
     n_dif = np.sum(freq!=len(params["filters"]))
 
     optimized_max=-1 #assigns baseline optimized maxtiles
-    
+    n_dif_og = np.sum(freq!=len(params["filters"]))
     params["doMaxTiles"] = True
     countervals=[]
     
@@ -1092,10 +1092,12 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
         countervals.append(counter)
 
         #check for breaking conditions
-        if counter>n_equal:
-            n_equal,optimized_max = counter,max_trial
+        if counter >= n_equal:
             n_dif = np.sum(freq!=len(params["filters"]))
-            opt_coverage_struct,opt_tile_struct = coverage_struct_hold,tile_struct_hold
+            if counter>n_equal or counter == n_equal and optimized_max == - 1 and n_dif <= n_dif_og:
+                n_equal,optimized_max = counter,max_trial
+                n_dif = np.sum(freq!=len(params["filters"]))
+                opt_coverage_struct,opt_tile_struct = coverage_struct_hold,tile_struct_hold
         if ii>2:
             repeating = countervals[ii] == countervals[ii-1] == countervals[ii-2]
 
@@ -1170,7 +1172,7 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
             n_2 = n_equal + n_dif
             p_dif = n_dif/((n_1+n_2)*0.5)
 
-            if p_dif > p_difs[-1] and p_dif >= 0.15: #try decreasing max-tiles if n_difs increase
+            if p_dif > p_difs[-1] and p_dif >= 0.15 and optimized_max > 0: #try decreasing max-tiles if n_difs increase
                 optimized_max -= 0.1*optimized_max
                 continue
             elif (p_dif > p_difs[-1]) or (p_difs[-1] < 0.15 and n_equal < n_equals[-1]): break
