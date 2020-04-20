@@ -1151,7 +1151,7 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
         unbalanced_tiles = []
         params_hold = copy.copy(params)
         
-        while count<20 and optimized_max>=0.8*n_1_og:
+        while count<20:
             for key in tile_struct_hold.keys():
                 tile_struct_hold[key]['prob'] = prob[key]
 
