@@ -445,7 +445,7 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
             
     return tile_struct
 
-def moc(params, map_struct, moc_structs):
+def moc(params, map_struct, moc_structs, doSegments=True):
 
     tile_structs = {}
     for telescope in params["telescopes"]:
@@ -454,7 +454,8 @@ def moc(params, map_struct, moc_structs):
         moc_struct = moc_structs[telescope]
 
         tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
-        tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
+        if doSegments:
+            tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
         tile_structs[telescope] = tile_struct
 
     return tile_structs
