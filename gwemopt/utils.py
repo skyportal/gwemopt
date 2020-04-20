@@ -1088,7 +1088,7 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
         keys_scheduled = coverage_struct_hold["data"][:,5]
         unique, freq = np.unique(keys_scheduled, return_counts=True)
         counter = np.sum(freq==len(params["filters"]))
-        
+
         countervals.append(counter)
 
         #check for breaking conditions
@@ -1121,10 +1121,10 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
         params["max_nb_tiles"] = np.array([max_trial],dtype=np.float)
         params_hold = copy.copy(params)
         config_struct_hold = copy.copy(config_struct)
-        
+
         coverage_struct_hold,tile_struct_hold = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold,
                                                                                   telescope, map_struct_hold, tile_struct_hold)
-        
+
         keys_scheduled = coverage_struct_hold["data"][:,5]
         unique, freq = np.unique(keys_scheduled, return_counts=True)
         counter = np.sum(freq==len(params["filters"]))
@@ -1151,7 +1151,8 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
         unbalanced_tiles = []
         repeating = False
         params_hold = copy.copy(params)
-        while count<20 and optimized_max>0:
+        
+        while count<20 and optimized_max>=0.8*n_1_og:
             for key in tile_struct_hold.keys():
                 tile_struct_hold[key]['prob'] = prob[key]
 
@@ -1173,15 +1174,18 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
             if p_dif > p_difs[-1] and p_dif >= 0.15: #try decreasing max-tiles if n_difs increase
                 optimized_max -= 0.1*optimized_max
                 continue
-            elif (p_dif > p_difs[-1]) or (p_difs[-1] < 0.15 and (n_equal < n_equals[-1] or repeating)): break
-
+            elif (p_dif > p_difs[-1]) or (p_difs[-1] < 0.15 and n_equal < n_equals[-1]): break
             opt_coverage_struct,opt_tile_struct = coverage_struct,tile_struct_hold
             n_difs.append(n_dif)
             n_equals.append(n_equal)
             p_difs.append(p_dif)
             unbalanced_tiles = unbalanced_tiles + params_hold["unbalanced_tiles"]
             count+=1
-    
+
+            if count == 19 and np.min(p_difs)>0.15: #try setting it to original n_equal as final resort
+                optimized_max = n_1_og
+
+
     return optimized_max,opt_coverage_struct,opt_tile_struct
 
 def check_overlapping_tiles(params, tile_struct, coverage_struct):
