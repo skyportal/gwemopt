@@ -33,8 +33,9 @@ import numpy as np
 np.random.seed(0)
 
 import healpy as hp
-from astropy import table
+from astropy.table import unique, vstack, Table
 from astropy import units as u
+from astropy.time import Time
 from astropy import cosmology
 from astropy.coordinates import Distance
 from astropy.coordinates import SkyCoord
@@ -67,19 +68,31 @@ def parse_commandline():
     """
     parser = optparse.OptionParser(usage=__doc__,version=__version__)
 
-    parser.add_option("-s", "--skymap", help="GW skymap.", default='../data/GW190425/LALInference.fits.gz')
-    parser.add_option("--fields", help="Observed fields.", default='../data/GW190425/fields.dat')
+    #parser.add_option("-s", "--skymap", help="GW skymap.", default='../data/S200115j/LALInference.fits.gz')
+    #parser.add_option("-s", "--skymap", help="GW skymap.", default='../data/S200115j/bayestar.fits.gz')
+    #parser.add_option("--fields", help="Observed fields.", default='../data/S200115j/ZTF_fields.dat,../data/S200115j/TCA_fields.dat,../data/S200115j/TCH_fields.dat,../data/S200115j/TRE_fields.dat')
+
+    parser.add_option("-s", "--skymap", help="GW skymap.", default='../data/S200213t/LALInference.fits.gz')
+    parser.add_option("--fields", help="Observed fields.", default='../data/S200213t/ZTF_fields.dat,../data/S200213t/TCA_fields.dat,../data/S200213t/TCH_fields.dat,../data/S200213t/TRE_fields.dat,../data/S200213t/OAJ_fields.dat')
+
     parser.add_option("--transients", help="Transient list.", default='../data/GW190425/transients.dat')
 
     parser.add_option("-c", "--configDirectory", help="GW-EM config file directory.", default ="../config/")
-    parser.add_option("-o", "--outputDir", help="output directory",default="../output/GW190425")
+    #parser.add_option("-o", "--outputDir", help="output directory",default="../output/S200115j")
+    parser.add_option("-o", "--outputDir", help="output directory",default="../output/S200213t")
 
-    parser.add_option("-t", "--telescope", help="Telescope.", default ="ZTF")
+    #parser.add_option("-t", "--telescope", help="Telescope.", default ="ZTF,TCA,TCH,TRE")
+    parser.add_option("-t", "--telescope", help="Telescope.", default ="ZTF,TCA,TCH,TRE,OAJ")
+    #parser.add_option("-g", "--gps", help="Event time GPS.", default=1263097398, type=float)
+    parser.add_option("-g", "--gps", help="Event time GPS.", default=1265627458.327981, type=float)
+
     parser.add_option("--nside",default=256,type=int)
     parser.add_option("-f","--filter",default="1,2")
-    parser.add_option("--rotation",default=240.0,type=float)
+    parser.add_option("--rotation",default=120.0,type=float)
 
     parser.add_option("--catalogFile", default="../catalogs/CLU.hdf5")
+
+    parser.add_option("--doTransients",action="store_true",default=False)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -112,7 +125,7 @@ warnings.filterwarnings("ignore")
 opts = parse_commandline()
 filters = [int(x) for x in opts.filter.split(",")]
 
-t = table.Table.read(opts.catalogFile)
+t = Table.read(opts.catalogFile)
 name = t["name"]
 ra, dec = t["ra"], t["dec"]
 sfr_fuv, mstar = t["sfr_fuv"], t["mstar"]
@@ -130,16 +143,14 @@ params["config"] = {}
 configFiles = glob.glob("%s/*.config"%opts.configDirectory)
 for configFile in configFiles:
     telescope = configFile.split("/")[-1].replace(".config","")
-    if not opts.telescope == telescope: continue
+    if not telescope in opts.telescope.split(","): continue
     params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
     params["config"][telescope]["telescope"] = telescope
     params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2),comments='%')
     params["config"][telescope]["tot_obs_time"] = 1.0
 
-obs = table.Table.read(opts.fields, format="ascii",
-                       names=("fieldID","fId","time"))
-transients = table.Table.read(opts.transients, format="ascii",
-                              names=("name","ra","dec"))
+transients = Table.read(opts.transients, format="ascii",
+                        names=("name","ra","dec"))
 
 params["outputDir"] = opts.outputDir
 
@@ -149,7 +160,7 @@ if not os.path.isdir(params["outputDir"]):
 params["tilesType"] = "moc"
 params["doMinimalTiling"] = False
 params["doParallel"] = False
-params["telescopes"] = [opts.telescope]
+params["telescopes"] = opts.telescope.split(",")
 params["nside"] = opts.nside
 params["doChipGaps"] = False
 params["doSingleExposure"] = False
@@ -160,8 +171,7 @@ params["exposuretimes"] = [30.0]
 params["rotation"] = [opts.rotation,0,0]
 
 params = gwemopt.utils.params_checker(params)
-params = gwemopt.segments.get_telescope_segments(params)
-
+#params = gwemopt.segments.get_telescope_segments(params)
 moc_structs = gwemopt.moc.create_moc(params)
 
 map_struct = {}
@@ -176,52 +186,100 @@ map_struct["distmu"] = distmu_data
 map_struct["distsigma"] = distsigma_data
 map_struct["prob"] = prob_data
 map_struct["distnorm"] = norm_data
+map_struct["ipix_keep"] = []
 
 map_struct["prob"], map_struct["distmu"],map_struct["distsigma"], map_struct["distnorm"] = ligodist.ud_grade(map_struct["prob"],map_struct["distmu"],map_struct["distsigma"],opts.nside)
 
-for transient in transients:
-    print(transient["name"])
-    idx = hp.ang2pix(opts.nside, transient["ra"],
-                     transient["dec"], lonlat=True)
-    d = Distance(map_struct["distmu"][idx], u.Mpc)
-    if map_struct["distsigma"][idx] > map_struct["distmu"][idx]:
-        map_struct["distsigma"][idx] = map_struct["distmu"][idx]-1
-        print('error greater than mean, setting close to equal')
-    d1, d2 = Distance(map_struct["distmu"][idx]-map_struct["distsigma"][idx], u.Mpc), Distance(map_struct["distmu"][idx]+map_struct["distsigma"][idx], u.Mpc)
-    print('Distance: %.0f +- %.0f, %.3f +- %.3f' % (map_struct["distmu"][idx], map_struct["distsigma"][idx],d.z,np.mean(np.abs([d.z-d1.z,d.z-d2.z]))))
+pixarea_deg2 = hp.nside2pixarea(opts.nside, degrees=True)
+map_struct["pixarea_deg2"] = pixarea_deg2
 
-    transient_coord = SkyCoord(ra=transient["ra"]*u.degree,
-                               dec=transient["dec"]*u.degree,
-                               frame='icrs')
-    sep = catalog.separation(transient_coord).arcsec
-    idx2 = np.argsort(sep)
-    print('Galaxies')
-    for ii in range(5):
-        idy = idx2[ii]
-        if sep[idy] > 100: continue
-        dg = Distance(distmpc[idy], u.Mpc)
-        print('%s %.5f %.5f %.5f %.5f %.5f' % (name[idy], ra[idy], dec[idy],
-                                               sep[idy], distmpc[idy], dg.z))  
+if opts.doTransients:
+    for transient in transients:
+        print(transient["name"])
+        idx = hp.ang2pix(opts.nside, transient["ra"],
+                         transient["dec"], lonlat=True)
+        d = Distance(map_struct["distmu"][idx], u.Mpc)
+        if map_struct["distsigma"][idx] > map_struct["distmu"][idx]:
+            map_struct["distsigma"][idx] = map_struct["distmu"][idx]-1
+            print('error greater than mean, setting close to equal')
+        d1, d2 = Distance(map_struct["distmu"][idx]-map_struct["distsigma"][idx], u.Mpc), Distance(map_struct["distmu"][idx]+map_struct["distsigma"][idx], u.Mpc)
+        print('Distance: %.0f +- %.0f, %.3f +- %.3f' % (map_struct["distmu"][idx], map_struct["distsigma"][idx],d.z,np.mean(np.abs([d.z-d1.z,d.z-d2.z]))))
+    
+        transient_coord = SkyCoord(ra=transient["ra"]*u.degree,
+                                   dec=transient["dec"]*u.degree,
+                                   frame='icrs')
+        sep = catalog.separation(transient_coord).arcsec
+        idx2 = np.argsort(sep)
+        print('Galaxies')
+        for ii in range(5):
+            idy = idx2[ii]
+            if sep[idy] > 100: continue
+            dg = Distance(distmpc[idy], u.Mpc)
+            print('%s %.5f %.5f %.5f %.5f %.5f' % (name[idy], ra[idy], dec[idy],
+                                                   sep[idy], distmpc[idy], dg.z))  
+    
+        print(' ')
 
-    print(' ')
-  
-print(stop)
+tiles_structs = gwemopt.tiles.moc(params, map_struct, moc_structs,
+                                  doSegments=False)
 
-tiles_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
+fieldsfiles = opts.fields.split(",")
+telescopes = opts.telescope.split(",")
+
+color2 = 'coral'
+color1 = 'cornflowerblue'
+color3 = 'darkgreen'
+color4 = 'darkmagenta'
+color5 = 'red'
+
+colors = [color1,color2,color3,color4,color5]
 
 unit='Gravitational-wave probability'
 cbar=False
 cmap = plt.get_cmap('PuBuGn')
 
 plotName = os.path.join(params["outputDir"],'tiles.pdf')
-plt.figure()
-hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,rot=[opts.rotation,0,0],cmap=cmap)
+
+fig = plt.figure(figsize=(12, 8))
+
+gs = fig.add_gridspec(4, 1)
+ax1 = fig.add_subplot(gs[0:3, 0], projection='astro hours mollweide')
+ax2 = fig.add_subplot(gs[3, 0])
+ax3 = ax2.twinx()   # mirror them
+
+plt.axes(ax1)
+
+hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,rot=[opts.rotation,0,0],cmap=cmap, hold=True)
+
+hp.graticule(verbose=False, dmer=3*360.0/24.0, dpar=30.0)
+plt.grid(True)
+lons = np.arange(0.0,24,3.0)
+lats = np.zeros(lons.shape)
+for lon, lat in zip(lons,lats):
+    hp.projtext(lon*360.0/24.0,lat,"%.0f hr"%lon,lonlat=True,color='k')
+lats = np.arange(-60.0,90,30.0)
+lons = 120*np.ones(lons.shape)
+for lon, lat in zip(lons,lats):
+    if lat == 0.0: continue
+    hp.projtext(lon,lat,"%.0f"%lat,lonlat=True,color='k')
+
 ax = plt.gca()
-for telescope in tiles_structs:
+labels = []
+for kk, telescope in enumerate(tiles_structs):
+    labels.append(telescope)
     tiles_struct = tiles_structs[telescope]
+    color = colors[kk]
+
+    idx = telescopes.index(telescope)
+    fields = fieldsfiles[idx]
+
+    table = Table.read(fields, format="ascii",
+                       names=("fieldID","fId","time","limmag","exposure_time"))
+    
+
     for index in tiles_struct.keys():
-        idx = np.where(obs["fieldID"]==index)[0]
-        rows = obs[idx]
+        idx = np.where(table["fieldID"]==index)[0]
+        rows = table[idx]
         idx2 = []
         for ii, row in enumerate(rows):
             if row["fId"] in filters:
@@ -243,34 +301,116 @@ for telescope in tiles_structs:
             if alpha >= 1:
                 alpha = 0.5
             patch_cpy.set_alpha(alpha)
-        #if np.isin(index,fieldIDs):
-        #    patch_cpy.set_color('black')
+            patch_cpy.set_color(color)
         #hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
         ax.add_patch(patch_cpy)        
 
-        #tiles.plot()
+patches = [ plt.plot([],[], marker="s", ms=10, ls="", mec=None, color=colors[i], 
+            label="{:s}".format(labels[i]) )[0]  for i in range(len(labels)) ]
+plt.legend(handles=patches, loc=8, ncol=4, facecolor="plum", numpoints=1 )
 
-hp.graticule(verbose=False)
-plt.grid(True)
-lons = np.arange(-150.0,180,30.0)
-lats = np.zeros(lons.shape)
-for lon, lat in zip(lons,lats):
-    hp.projtext(lon,lat,"%.0f"%lon,lonlat=True,color='k')
-lats = np.arange(-60.0,90,30.0)
-lons = np.zeros(lons.shape)
-for lon, lat in zip(lons,lats):
-    hp.projtext(lon,lat,"%.0f"%lat,lonlat=True,color='k')
+#for transient in transients:
+#    hp.visufunc.projplot(transient["ra"], transient["dec"], lonlat=True,
+#                         marker="o",markersize=10)
+#    hp.visufunc.projtext(transient["ra"]+2.0, transient["dec"], 
+#                         transient["name"][-3:],
+#                         lonlat=True, fontsize=4, color='w')
 
-for transient in transients:
-    hp.visufunc.projplot(transient["ra"], transient["dec"], lonlat=True,
-                         marker="o",markersize=10)
-    hp.visufunc.projtext(transient["ra"]+2.0, transient["dec"], 
-                         transient["name"][-3:],
-                         lonlat=True, fontsize=4, color='w')
+plt.axes(ax2)
+
+ipixlist = []
+for kk, telescope in enumerate(tiles_structs):
+    labels.append(telescope)
+    tiles_struct = tiles_structs[telescope]
+    color = colors[kk]
+
+    idx = telescopes.index(telescope)
+    fields = fieldsfiles[idx]
+
+    table = Table.read(fields, format="ascii",
+                       names=("fieldID","fId","time","limmag","exposure_time"))
+
+    ipixs = np.empty((0,2))
+    cum_prob = 0.0
+    cum_area = 0.0
+
+    tts, cum_probs, cum_areas = [], [], []
+
+    start_time = Time(opts.gps, format='gps').mjd
+    table["mjd"] = Time(table["time"], format='isot').mjd - start_time
+    table.sort('mjd')
+
+    table = table[table["mjd"] > 0]
+
+    table = unique(table, keys=['fieldID'], keep='first')
+    table.sort('mjd')
+
+    for row in table:
+
+        for index in tiles_struct.keys():
+            idx = np.where(row["fieldID"]==index)[0]
+            if len(idx) > 0: break
+        ipix, corners, patch = tiles_struct[index]["ipix"], tiles_struct[index]["corners"], tiles_struct[index]["patch"]
+
+        ipixs = np.append(ipixs,ipix)
+        ipixs = np.unique(ipixs).astype(int)
+
+        cum_prob = np.sum(map_struct["prob"][ipixs])
+        cum_area = len(ipixs) * map_struct["pixarea_deg2"]
+
+        cum_probs.append(cum_prob)
+        cum_areas.append(cum_area)
+        tts.append(row["mjd"])
+
+        ipixlist.append(ipix.tolist())
+
+    ax2.plot(tts, cum_probs, color=color, linestyle='-', label=telescope)
+    ax3.plot(tts, cum_areas, color=color, linestyle='--')
+
+    if kk == 0:
+        tableall = table
+    else:
+        tableall = vstack([tableall, table])
+
+tableall["ipix"] = ipixlist
+
+ipixs = np.empty((0,2))
+cum_prob = 0.0
+cum_area = 0.0
+
+tts, cum_probs, cum_areas = [], [], []
+
+tableall.sort('mjd')
+for row in tableall:
+    ipix = row["ipix"]
+    ipixs = np.append(ipixs,ipix)
+    ipixs = np.unique(ipixs).astype(int)
+
+    cum_prob = np.sum(map_struct["prob"][ipixs])
+    cum_area = len(ipixs) * map_struct["pixarea_deg2"]
+
+    cum_probs.append(cum_prob)
+    cum_areas.append(cum_area)
+    tts.append(row["mjd"])
+
+color, telescope = 'k', 'All'
+ax2.plot(tts, cum_probs, color=color, linestyle='-', label=telescope)
+ax3.plot(tts, cum_areas, color=color, linestyle='--')
+
+ax2.set_xlabel('Time since event [days]')
+ax2.set_ylabel('Integrated Probability')
+ax3.set_ylabel('Sky area [sq. deg.]')
+
+#for transient in transients:
+#    hp.visufunc.projplot(transient["ra"], transient["dec"], lonlat=True,
+#                         marker="o",markersize=10)
+#    hp.visufunc.projtext(transient["ra"]+2.0, transient["dec"], 
+#                         transient["name"][-3:],
+#                         lonlat=True, fontsize=4, color='w')
 
 #gwemopt.plotting.add_edges()
 plt.show()
-plt.savefig(plotName,dpi=200)
+plt.savefig(plotName,dpi=200,bbox_inches='tight')
 plt.close('all')
 
 
