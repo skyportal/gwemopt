@@ -1149,7 +1149,6 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
         count = 0
         n_difs,n_equals,p_difs = [n_dif],[n_equal],[p_dif]
         unbalanced_tiles = []
-        repeating = False
         params_hold = copy.copy(params)
         
         while count<20 and optimized_max>=0.8*n_1_og:
