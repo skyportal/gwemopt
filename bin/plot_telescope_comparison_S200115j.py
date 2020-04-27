@@ -29,7 +29,7 @@ filename = "../data/S200115j/telescopes.dat"
 teles = [line.rstrip('\n') for line in open(filename,'r')]
 
 diffs = [#[0.8,0.92], 
-         [0.95,0.95],
+         [0.97,0.93],
          [0.7,1.05], [1.15,1.0],
          [0.9,1.05], [0.95, 0.95],
          [1.25, 1.02]]
@@ -61,7 +61,7 @@ for tele, diff in zip(teles,diffs):
     diffx, diffy = diff
     x, y = coverage, limmag
 
-    x1text = x*diffx*1.01
+    x1text = x*diffx*1.05
     y1text = y*diffy*1.01
 
     x1arrow = x*diffx*1.01
