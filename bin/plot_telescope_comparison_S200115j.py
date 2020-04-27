@@ -29,10 +29,20 @@ filename = "../data/S200115j/telescopes.dat"
 teles = [line.rstrip('\n') for line in open(filename,'r')]
 
 diffs = [#[0.8,0.92], 
-         [0.97,0.93],
-         [0.7,1.05], [1.15,1.0],
-         [0.9,1.05], [0.95, 0.95],
-         [1.25, 1.02]]
+         [0.9,0.951],
+         [0.975,1.05], 
+         [1.1,1.0],
+         [0.9,1.05], 
+         [0.95, 0.95],
+         [1.95, 1.02]]
+
+diffsl =[[-0.08, -0.01],
+         [-0.2, 0.01], 
+         [0.02, 0.0],
+         [-0.7, 0.01], 
+         [-3.8, -0.015],
+         [0.0, 0.0]]
+
 
 plotName = os.path.join(outputDir,'S200115j_performance.pdf')
 fig = plt.figure(figsize=(8,6))
@@ -51,7 +61,7 @@ ax.add_patch(rect1)
 
 plt.xlabel('Probability Enclosed')
 plt.ylabel('Limiting Magnitude')
-for tele, diff in zip(teles,diffs):
+for tele, diff, diffl in zip(teles,diffs,diffsl):
     telesplit = tele.split(" ")
     tel, limmag, coverage = telesplit[0], float(telesplit[1]), float(telesplit[2])
     #plt.text(model[3], model[1], model[0])
@@ -61,8 +71,11 @@ for tele, diff in zip(teles,diffs):
     diffx, diffy = diff
     x, y = coverage, limmag
 
-    x1text = x*diffx*1.05
-    y1text = y*diffy*1.01
+    difflx, diffly = diffl
+
+
+    x1text = x*diffx*(1.+difflx)
+    y1text = y*diffy*(1.+diffly)
 
     x1arrow = x*diffx*1.01
     y1arrow = y*diffy*1.01
