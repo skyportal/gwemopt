@@ -37,9 +37,9 @@ diffs = [#[0.8,0.92],
          [1.95, 1.02]]
 
 diffsl =[[-0.08, -0.01],
-         [-0.2, 0.01], 
+         [-0.2, 0.01],
          [0.02, 0.0],
-         [-0.7, 0.01], 
+         [-0.7, 0.01],
          [-3.8, -0.015],
          [0.0, 0.0]]
 
@@ -70,7 +70,6 @@ for tele, diff, diffl in zip(teles,diffs,diffsl):
 
     diffx, diffy = diff
     x, y = coverage, limmag
-
     difflx, diffly = diffl
 
 
