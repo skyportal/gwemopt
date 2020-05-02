@@ -228,6 +228,9 @@ def params_checker(params):
     if "theta" not in params.keys():
         params["theta"] = 0
 
+    if "program_id" not in params.keys():
+        params["program_id"] = -1
+
     if "config" not in params.keys():
         params["config"] = {}
         configFiles = glob.glob("%s/*.config"%params["configDirectory"])
