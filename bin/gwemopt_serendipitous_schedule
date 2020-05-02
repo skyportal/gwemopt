@@ -47,6 +47,8 @@ import matplotlib
 matplotlib.use('Agg')
 matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
+from matplotlib import patches
+from matplotlib.colors import LogNorm
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
@@ -92,6 +94,7 @@ def parse_commandline():
 
     parser.add_option("--doSchedule",  action="store_true", default=False)
     parser.add_option("--doPlots",  action="store_true", default=False)
+    parser.add_option("--doMovie",  action="store_true", default=False)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -157,17 +160,19 @@ params["doChipGaps"] = False
 params["doSingleExposure"] = True
 params["doAlternatingFilters"] = True
 params["doRASlices"] = False
-params["doBalanceExposure"] = False
+params["doBalanceExposure"] = True
 params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"] = 0.0, 0.9, 0.0
 params["gpstime"] = opts.gps
 params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
 params["filters"] = opts.filters.split(",")
 params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
 params["doMaxTiles"] = False
-params["doPrimary"] = True
+params["doUsePrimary"] = True
 params["scheduleType"] = "greedy_slew"
 params["airmass"] = 1.5
 params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","),dtype=np.float)
+
+mjd0 = Time(opts.gps, format='gps').mjd
 
 npix = hp.nside2npix(opts.nside)
 theta, phi = hp.pix2ang(opts.nside, np.arange(npix))
@@ -198,6 +203,8 @@ if opts.doPlots:
     print("Plotting skymap...")
     gwemopt.plotting.skymap(params,map_struct_1)
 
+prob_data = np.ones((npix,))
+prob_data = prob_data / np.sum(prob_data)
 idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
 prob_data[idx] = 0.0
 prob_data = prob_data / np.sum(prob_data)
@@ -216,38 +223,103 @@ map_struct_2["pixarea_deg2"] = pixarea_deg2
 map_struct_2["ra"] = ra
 map_struct_2["dec"] = dec
 
-if opts.doPlots:
-    params["outputDir"] = os.path.join(baseoutputDir, "map_2")
-    if not os.path.isdir(params["outputDir"]):
-        os.makedirs(params["outputDir"])
-    print("Plotting skymap...")
-    gwemopt.plotting.skymap(params,map_struct_2)
-
 params = gwemopt.utils.params_checker(params)
 
-Tmin, Tmax, dt = 0, 14, 0.2
+Tmin, Tmax, dt = 0, 7, 0.2
 Tobs = np.arange(Tmin, Tmax+dt, dt)
 
+params["outputDir"] = baseoutputDir
 schedulefile = os.path.join(params["outputDir"],'schedule_ZTF.dat')
 if not os.path.isfile(schedulefile):
     coverage_structs = []
     for ii in range(len(Tobs)-1):
-    
+   
+        params["outputDir"] = os.path.join(baseoutputDir, "%d" % ii)
+        if not os.path.isdir(params["outputDir"]):
+            os.makedirs(params["outputDir"])
+ 
         if np.mod(ii,2) == 1:
+            schedule_table = pd.read_csv(schedulefile, 
+                                         delimiter = ' ', header=None,
+                                         names = ('field', 'ra', 'dec', 'mjd',
+                                                  'exposure_time', 'prob',
+                                                  'airmass', 'filt',
+                                                  'program_id'))
+            idx = np.where((schedule_table['mjd'] >= (mjd0+Tobs[ii]-2.0)) &
+                           (schedule_table['mjd'] <= (mjd0+Tobs[ii])))[0]
+            schedule_table_field = schedule_table.iloc[idx]
+
+            if len(schedule_table_field) == 0:
+                prob_data = np.zeros((npix,))
+                for jj, row2 in schedule_table_field.iterrows():
+                    field = row2["field"]
+                    if not field in moc_structs: continue
+                    moc_struct = moc_structs[field]
+                    ipix = moc_struct["ipix"]
+                    prob_data[ipix] = 1.0
+                idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
+                prob_data[idx] = 0.0
+                prob_data = prob_data / np.sum(prob_data)
+            else:
+                prob_data = np.ones((npix,))            
+                idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
+                prob_data[idx] = 0.0
+                prob_data = prob_data / np.sum(prob_data)
+
+            map_struct_2["prob"] = prob_data
+            
+            sort_idx = np.argsort(map_struct_2["prob"])[::-1]
+            csm = np.empty(len(map_struct_2["prob"]))
+            csm[sort_idx] = np.cumsum(map_struct_2["prob"][sort_idx])
+            
+            map_struct_2["cumprob"] = csm
+
             map_struct = map_struct_2
             params["filters"] = ["g","r","g","r"]
             params["exposuretimes"] = [180.0,180.0,180.0,180.0]
             params["program_id"] = 2
+
+            if opts.doPlots:
+                print("Plotting skymap...")
+                gwemopt.plotting.skymap(params,map_struct_2)
         else:
+            if os.path.isfile(schedulefile):
+                prob_data = np.ones((npix,))
+
+                schedule_table = pd.read_csv(schedulefile,
+                                             delimiter = ' ', header=None,
+                                             names = ('field', 'ra', 'dec', 'mjd',
+                                                      'exposure_time', 'prob',
+                                                      'airmass', 'filt',
+                                                      'program_id'))
+                idx = np.where((schedule_table['mjd'] >= (mjd0+Tobs[ii]-2.0)) &
+                               (schedule_table['mjd'] <= (mjd0+Tobs[ii])))[0]
+                schedule_table_field = schedule_table.iloc[idx]
+
+                for jj, row2 in schedule_table_field.iterrows():
+                    field = row2["field"]
+                    if not field in moc_structs: continue
+                    moc_struct = moc_structs[field]
+                    ipix = moc_struct["ipix"]
+                    prob_data[ipix] = 0.0
+                prob_data = prob_data / np.sum(prob_data)
+            else:
+                prob_data = np.ones((npix,))
+                prob_data = prob_data / np.sum(prob_data)
+
+            map_struct_1["prob"] = prob_data
+
+            sort_idx = np.argsort(map_struct_1["prob"])[::-1]
+            csm = np.empty(len(map_struct_1["prob"]))
+            csm[sort_idx] = np.cumsum(map_struct_1["prob"][sort_idx])
+
+            map_struct_1["cumprob"] = csm
+
             map_struct = map_struct_1
             params["filters"] = ["g","r"]
             params["exposuretimes"] = [30.0,30.0]
             params["program_id"] = 1    
 
-        params["outputDir"] = os.path.join(baseoutputDir, "%d" % ii)
-        if not os.path.isdir(params["outputDir"]):
-            os.makedirs(params["outputDir"])
-     
         params["Tobs"] = np.array([Tobs[ii], Tobs[ii+1]])
         params = gwemopt.segments.get_telescope_segments(params)
 
@@ -278,15 +350,169 @@ if not os.path.isfile(schedulefile):
                 gwemopt.plotting.coverage(params, map_struct, coverage_struct)
     
         coverage_structs.append(coverage_struct)
+
+        coverage_struct_combined = gwemopt.coverage.combine_coverage_structs(coverage_structs)
+        params["outputDir"] = baseoutputDir
+        if opts.doSchedule:
+            print("Summary of coverage...")
+            gwemopt.scheduler.summary(params,map_struct,coverage_struct_combined)
     
-    coverage_struct = gwemopt.coverage.combine_coverage_structs(coverage_structs)
-    params["outputDir"] = baseoutputDir
-    if opts.doSchedule:
-        print("Summary of coverage...")
-        gwemopt.scheduler.summary(params,map_struct,coverage_struct)
-    
-        if opts.doPlots:
-            gwemopt.plotting.coverage(params, map_struct, coverage_struct)
+            if opts.doPlots:
+                gwemopt.plotting.coverage(params, map_struct, coverage_struct_combined)
+
+if opts.doMovie:
+
+    # load the data
+    hdulist = fits.open(opts.inputDir+'Gaia_hp8_densitymap.fits')
+    hist = hdulist[1].data['srcdens'][np.argsort(hdulist[1].data['hpx8'])]
+
+    bands = {'g': 1, 'r': 2, 'i': 3, 'z': 4, 'J': 5}   
+    schedule_table = pd.read_csv(schedulefile, delimiter = ' ', header=None,
+                                 names = ('field', 'ra', 'dec', 'mjd',
+                                          'exposure_time', 'prob', 
+                                          'airmass', 'filt', 'program_id'))
+
+    #schedule_table = schedule_table[:100]
+    gfields, rfields, grfields = [], [], []
+    for ii, row1 in schedule_table.iterrows():
+        idx = np.where((schedule_table['mjd'] >= row1['mjd']-1.0) &
+                       (schedule_table['mjd'] <= row1['mjd']))[0]
+        schedule_table_field = schedule_table.iloc[idx]
+
+        idx = np.where(schedule_table_field["filt"] == "g")[0]
+        schedule_table_field_g = schedule_table_field.iloc[idx]
+
+        idx = np.where(schedule_table_field["filt"] == "r")[0]
+        schedule_table_field_r = schedule_table_field.iloc[idx]
+
+        gfield = np.unique(schedule_table_field_g["field"])
+        rfield = np.unique(schedule_table_field_r["field"])    
+        grfield = np.intersect1d(gfield,rfield)
+
+        gfields.append(len(gfield))
+        rfields.append(len(rfield))
+        grfields.append(len(grfield))
+
+    schedule_table["gfields"] = gfields
+    schedule_table["rfields"] = rfields
+    schedule_table["grfields"] = grfields
+
+    moc_structs = gwemopt.moc.create_moc(params)
+    moc_structs = moc_structs["ZTF"]
+
+    moviedir = os.path.join(baseoutputDir,'movie')
+    if not os.path.isdir(moviedir):
+        os.makedirs(moviedir)
+
+    cnt = 0 
+    for ii, row1 in schedule_table.iterrows():
+        plotName = os.path.join(moviedir,'movie-%04d.png'%cnt)
+        if os.path.isfile(plotName): continue
+        if not np.mod(ii,10) == 0: continue
+
+        fig = plt.figure(figsize=(12, 8))
+
+        gs = fig.add_gridspec(4, 1)
+        ax1 = fig.add_subplot(gs[0:3, 0], projection='astro hours mollweide')
+        ax2 = fig.add_subplot(gs[3, 0])
+
+        plt.axes(ax1)
+        # plot the data in healpy
+        norm ='log'
+
+        ax1.imshow_hpx(hist, cmap='viridis', norm=LogNorm(), nested=True)
+        ax1.grid()
+
+        ra = ax1.coords[0]
+        dec = ax1.coords[1]
+
+        ra.set_ticks_visible(False)
+        dec.set_ticks_visible(False)
+
+        for jj, row2 in schedule_table.iterrows():
+            if ii < jj: continue
+            dt = row1["mjd"] - row2["mjd"]
+            if dt > 1: continue
+
+            field = row2["field"]
+            if not field in moc_structs: continue
+            moc_struct = moc_structs[field]
+            ras, decs = moc_struct["corners"][:,0], moc_struct["corners"][:,1]
+            if len(ras) == 4:
+                ras = [ras[0], ras[1], ras[3], ras[2], ras[0]]
+                decs = [decs[0], decs[1], decs[3], decs[2], decs[0]]
+            if row2['filt'] == 'g':
+                color = 'g'
+            elif row2['filt'] == 'r':
+                color = 'r'
+            else:
+                color = 'k'
+
+            idx = np.where((schedule_table['mjd'] >= row1['mjd']-1.0) &
+                           (schedule_table['mjd'] <= row1['mjd']) &
+                           (schedule_table['field'] == field))[0]
+            schedule_table_field = schedule_table.iloc[idx]
+
+            idx = np.where(schedule_table_field["filt"] == "g")[0]
+            schedule_table_field_g = schedule_table_field.iloc[idx]
+
+            idx = np.where(schedule_table_field["filt"] == "r")[0]
+            schedule_table_field_r = schedule_table_field.iloc[idx]
+
+            alpha = 1.0*(1-dt)
+            linewidth = 3.0*(1-dt)
+            if ii == jj:
+                alpha = 1.0
+                linewidth = 3.0
+                poly = patches.Polygon(np.vstack((ras, decs)).T, transform=ax1.get_transform('world'), alpha=alpha, color=color)
+                ax1.plot(ras, decs, color=color, transform=ax1.get_transform('world'), alpha=alpha, linewidth=linewidth)
+                ax1.add_patch(poly)
+            else:
+                alpha = 0.5*(1-dt)
+                linewidth = 2.0*(1-dt)
+                if (len(schedule_table_field_g) > 0) and (len(schedule_table_field_r) > 0):
+                    color='magenta'
+                poly = patches.Polygon(np.vstack((ras, decs)).T, transform=ax1.get_transform('world'), alpha=alpha, color=color)
+                ax1.plot(ras, decs, color=color, transform=ax1.get_transform('world'), alpha=alpha, linewidth=linewidth)
+                ax1.add_patch(poly)
+
+        idx = np.where(schedule_table['mjd'] <= row1['mjd'])[0]
+        schedule_table_field = schedule_table.iloc[idx]
+
+        ax2.plot(schedule_table_field["mjd"]-mjd0, schedule_table_field["gfields"],
+                 '-', color='g',label='g-band')
+        ax2.plot(schedule_table_field["mjd"]-mjd0, schedule_table_field["rfields"],
+                 '--', color='r',label='r-band')
+        ax2.plot(schedule_table_field["mjd"]-mjd0, schedule_table_field["grfields"],
+                 ':', color='magenta',label='g+r-bands')
+        ax2.legend(loc=1)
+        ax2.set_xlabel('Days since MJD=%.5f' % mjd0)
+        ax2.set_ylabel('Fields observed last 24 hrs')
+
+        ax2.set_xlim([np.min(schedule_table['mjd'])-mjd0,
+                      np.max(schedule_table['mjd'])-mjd0])
+        max_area = np.max([np.max(schedule_table['gfields']),
+                           np.max(schedule_table['rfields']),
+                           np.max(schedule_table['grfields'])])
+        ax2.set_ylim([0,max_area])
+        fig.suptitle('')
+
+        plotName = os.path.join(moviedir,'movie-%04d.png'%cnt)
+        plt.savefig(plotName,dpi=200,bbox_inches='tight')
+        plt.close()
+
+        cnt = cnt + 1
+
+    output = "schedule"
+    moviefiles = os.path.join(moviedir,"movie-%04d.png")
+    filename = os.path.join(moviedir,"%s.mpg" % (output))
+    ffmpeg_command = 'ffmpeg -an -y -r 20 -i %s -b:v %s %s'%(moviefiles,'5000k',filename)
+    os.system(ffmpeg_command)
+    filename = os.path.join(moviedir,"%s.gif" % (output))
+    ffmpeg_command = 'ffmpeg -an -y -r 20 -i %s -b:v %s %s'%(moviefiles,'5000k',filename)
+    os.system(ffmpeg_command)
+    rm_command = "rm %s/*.png"%(moviedir)
+    os.system(rm_command)
 
 all_obs_table = pd.read_csv(opts.observations, delimiter = '|')
 all_obs_table.columns = [c.replace(' ', '') for c in all_obs_table.columns]
@@ -294,20 +520,26 @@ use_obs = all_obs_table['status'] == 1
 obstable = all_obs_table[use_obs]
 obstable['ccdid'] = np.floor(obstable["rcid"]/4)
 
+params["outputDir"] = baseoutputDir
+
 obsfile = os.path.join(params["outputDir"],'obs.dat')
 fid = open(obsfile, 'w')
 fid.write('nightdate  |       jd        | field | rcid |        ra0         |       dec0       | nalertpackets | programid |   expid   | fid | scimaglim | diffmaglim | sciinpseeing | difffwhm | exptime | status\n')
 fid.write('------------+-----------------+-------+------+--------------------+------------------+---------------+-----------+-----------+-----+-----------+------------+--------------+----------+---------+--------\n')
  
 bands = {'g': 1, 'r': 2, 'i': 3, 'z': 4, 'J': 5}   
-lines = [line.rstrip('\n') for line in open(schedulefile,'r')]
-for line in lines:
-    lineSplit = line.split(" ")
-    field = int(lineSplit[0])
-    mjd = float(lineSplit[3])
-    exptime = int(lineSplit[4])
-    filter_id = bands[lineSplit[7]]
-    program_id = int(lineSplit[8])
+schedule_table = pd.read_csv(schedulefile, delimiter = ' ', header=None,
+                             names = ('field', 'ra', 'dec', 'mjd',
+                                      'exposure_time', 'prob',
+                                      'airmass', 'filt', 'program_id'))
+
+for ii, row1 in schedule_table.iterrows():
+    field = row1["field"]
+    mjd = row1["mjd"]
+    exptime = row1["exposure_time"]
+    filt = row1["filt"]
+    filter_id = bands[filt]
+    program_id = row1["program_id"]
 
     tt = Time(mjd, format='mjd')
     jd = tt.jd
@@ -319,108 +551,20 @@ for line in lines:
         obstable_field = obstable.iloc[idx]
         if len(obstable_field) == 0:
             print('No data for field %d...' % (field-cnt))
+            cnt = cnt+1
 
     idy = np.random.randint(len(obstable_field))
     obstable_row = obstable_field.iloc[[idy]]
-
-    jd = obstable_row["jd"].to_numpy()[0]
-    obstable_rows = obstable[obstable["jd"] == jd]
+    obstable_rows = obstable[obstable["jd"] == obstable_row["jd"].to_numpy()[0]]
 
     ttday = tt.isot.split("T")[0]
     for ii, row in obstable_rows.iterrows():
         nmag = np.log(exptime/row.exptime)/np.log(2.5)
-        fid.write('%s | %.7f |   %d |   %d |      %.9f |  %.11f |             %d |         %d |  %d |   %d |     %.2f |    %.4f |       %.4f |  %.5f |      %d |      %d\n' %(ttday, jd, field, int(row.rcid), row.ra0, row.dec0, int(row.nalertpackets), program_id, int(row.expid), filter_id, row.scimaglim + nmag, row.diffmaglim + nmag, row.sciinpseeing, row.difffwhm, exptime, int(row.status)))
+        try:
+            nalertpackets = int(row.nalertpackets)
+        except:
+            nalertpackets = 0
+
+        fid.write('%s | %.7f |   %d |   %d |      %.9f |  %.11f |             %d |         %d |  %d |   %d |     %.2f |    %.4f |       %.4f |  %.5f |      %d |      %d\n' %(ttday, jd, field, int(row.rcid), row.ra0, row.dec0, nalertpackets, program_id, int(row.expid), filter_id, row.scimaglim + nmag, row.diffmaglim + nmag, row.sciinpseeing, row.difffwhm, exptime, int(row.status)))
 fid.close()
-
-print(stop)
-
-# init figure
-fig1 = plt.figure(figsize=(14,8))
-
-# background setup
-NSIDE = 256
-NPIX = hp.nside2npix(NSIDE)
-coordsys = ['C','C']
-nest = True
-
-# colormap
-cm = plt.cm.get_cmap('viridis') # colorscale
-cm.set_under('w')
-cm.set_bad('w')
-
-# load the data
-hdulist = fits.open(opts.inputDir+'Gaia_hp8_densitymap.fits')
-hist = hdulist[1].data['srcdens'][np.argsort(hdulist[1].data['hpx8'])]
-
-# plot the data in healpy
-norm ='log'
-hp.mollview(hist,fig=1,norm=norm,unit='Stars per sq. arcmin.',cbar=False,nest=nest,title='',coord=coordsys,notext=True,cmap=cm,flip='astro',nlocs=4)
-
-# borders
-lw = 3
-pi = np.pi
-dtor = pi/180.
-theta = np.arange(0,181)*dtor
-hp.projplot(theta, theta*0-pi,'-k',
-                               lw=lw,direct=True)
-hp.projplot(theta, theta*0+0.9999*pi,'-k',
-                               lw=lw,direct=True)
-phi = np.arange(-180,180)*dtor
-hp.projplot(phi*0+1.e-10, phi,'-k',
-                               lw=lw,direct=True)
-hp.projplot(phi*0+pi-1.e-10, phi,'-k',
-                               lw=lw,direct=True)
-
-# galaxy
-for gallat in [15,0,-15]:
-    theta = np.arange(0., 360, 0.036)
-    phi = gallat*np.ones_like(theta)
-    hp.projplot(theta, phi, 'w-', coord=['G'],lonlat=True,lw=2)
-
-# ecliptic
-for ecllat in zip([0,-30,30],[2,1,1]):
-    theta = np.arange(0., 360, 0.036)
-    phi = gallat*np.ones_like(theta)
-    hp.projplot(theta, phi, 'w-', coord=['E'],lonlat=True,lw=2,ls=':')
-
-# graticule
-hp.graticule(ls='-',alpha=0.1,lw=0.5)
-
-# NWES
-fig = plt.gcf()
-ax = plt.gca()
-plt.text(0.0,0.5,r'E',ha='right',transform=ax.transAxes,weight='bold')
-plt.text(1.0,0.5,r'W',ha='left',transform=ax.transAxes,weight='bold')
-plt.text(0.5,0.992,r'N',va='bottom',ha='center',transform=ax.transAxes,weight='bold')
-plt.text(0.5,0.0,r'S',va='top',ha='center',transform=ax.transAxes,weight='bold')
-
-for telescope in params["telescopes"]:
-    config_struct = params["config"][telescope]
-    moc_struct = moc_structs[telescope]
-
-    fields = moc_struct.keys()
-    for field in fields:
-        print(field)
-        if field < 246: continue
-        ra, dec = moc_struct[field]["ra"], moc_struct[field]["dec"]
-
-        coords = moc_struct[field]["corners"]
-        coords = SkyCoord(np.squeeze(coords), unit='deg')
-        #ax.plot(coords.ra, coords.dec, color='k', transform=ax.transAxes, zorder=500)
-        color = 'k'
-        hp.projplot(coords.ra, coords.dec, color,
-                    coord=coordsys,lonlat=True,lw=2,alpha=0.5)
-
-        hp.projtext(ra, dec,
-                    s='%d'%field, text='%d'%field,
-                    coord=coordsys,
-                    lonlat=True,
-                    fontsize=8,
-                    color='k',zorder=700,
-                    ha='center',va='center')
-
-plt.show()
-plotName = os.path.join(params["outputDir"],'coverage.pdf')
-plt.savefig(plotName)
-plt.close()
 
