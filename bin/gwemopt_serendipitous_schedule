@@ -1,0 +1,235 @@
+#!/usr/bin/python
+
+# Copyright (C) 2017 Michael Coughlin
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 3 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+# Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+""".
+Gravitational-wave Electromagnetic Optimization
+
+This script generates an optimized list of pointings and content for
+reviewing gravitational-wave skymap likelihoods.
+
+Comments should be e-mailed to michael.coughlin@ligo.org.
+
+"""
+
+
+import os, sys, glob, optparse, shutil, warnings
+import copy
+import numpy as np
+np.random.seed(0)
+
+import healpy as hp
+import pandas as pd
+from astropy.table import unique, vstack, Table
+from astropy import units as u
+from astropy.time import Time
+from astropy import cosmology
+from astropy.coordinates import Distance
+from astropy.coordinates import SkyCoord
+
+import matplotlib
+#matplotlib.rc('text', usetex=True)
+matplotlib.use('Agg')
+matplotlib.rcParams.update({'font.size': 16})
+matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
+import matplotlib.pyplot as plt
+from matplotlib import cm
+
+import ligo.skymap.distance as ligodist
+
+import gwemopt.utils, gwemopt.plotting
+import gwemopt.moc, gwemopt.tiles 
+import gwemopt.coverage
+
+__author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
+__version__ = 1.0
+__date__    = "6/17/2017"
+
+# =============================================================================
+#
+#                               DEFINITIONS
+#
+# =============================================================================
+
+def parse_commandline():
+    """@Parse the options given on the command-line.
+    """
+    parser = optparse.OptionParser(usage=__doc__,version=__version__)
+
+    parser.add_option("-c", "--configDirectory", help="GW-EM config file directory.", default ="../config/")
+    #parser.add_option("-o", "--outputDir", help="output directory",default="../output/S200115j")
+    parser.add_option("-o", "--outputDir", help="output directory",default="../output/serendipitous")
+
+    parser.add_option("-t", "--telescope", help="Telescope.", default ="ZTF")
+    #parser.add_option("-g", "--gps", help="Event time GPS.", default=1263097398, type=float)
+    parser.add_option("-g", "--gps", help="Event time GPS.", default=1240704018, type=float)
+
+    parser.add_option("--Tobs",default="0.0,1.0")
+
+    parser.add_option("--observations", help="observation file.", default='../data/serendipitous/2019-04-25-2019-10-03_subdata.txt')
+
+    parser.add_option("--nside",default=256,type=int)
+
+    parser.add_option("--exposuretimes",default="30.0,30.0")
+    parser.add_option("-f","--filters",default="g,r")
+    parser.add_option("--max_nb_tiles",default="-1,-1")
+
+    parser.add_option("--doSchedule",  action="store_true", default=False)
+    parser.add_option("--doPlots",  action="store_true", default=False)
+
+    parser.add_option("-v", "--verbose", action="store_true", default=False,
+                      help="Run verbosely. (Default: False)")
+
+    opts, args = parser.parse_args()
+
+    # show parameters
+    if opts.verbose:
+        print >> sys.stderr, ""
+        print >> sys.stderr, "running gwemopt_run..."
+        print >> sys.stderr, "version: %s"%__version__
+        print >> sys.stderr, ""
+        print >> sys.stderr, "***************** PARAMETERS ********************"
+        for o in opts.__dict__.items():
+          print >> sys.stderr, o[0]+":"
+          print >> sys.stderr, o[1]
+        print >> sys.stderr, ""
+
+    return opts
+
+# =============================================================================
+#
+#                                    MAIN
+#
+# =============================================================================
+
+warnings.filterwarnings("ignore")
+
+# Parse command line
+opts = parse_commandline()
+
+params = {}
+params["config"] = {}
+configFiles = glob.glob("%s/*.config"%opts.configDirectory)
+for configFile in configFiles:
+    telescope = configFile.split("/")[-1].replace(".config","")
+    if not telescope in opts.telescope.split(","): continue
+    params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
+    params["config"][telescope]["telescope"] = telescope
+    params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2),comments='%')
+    params["config"][telescope]["tot_obs_time"] = 1.0
+
+    exposuretime = np.array(opts.exposuretimes.split(","),dtype=np.float)[0]
+
+    params["config"][telescope]["magnitude_orig"] = params["config"][telescope]["magnitude"]
+    params["config"][telescope]["exposuretime_orig"] = params["config"][telescope]["exposuretime"]
+
+    nmag = np.log(exposuretime/params["config"][telescope]["exposuretime"]) / np.log(2.5)
+    params["config"][telescope]["magnitude"] = params["config"][telescope]["magnitude"] + nmag
+    params["config"][telescope]["exposuretime"] = exposuretime  
+
+params["outputDir"] = opts.outputDir
+
+if not os.path.isdir(params["outputDir"]):
+    os.makedirs(params["outputDir"])
+
+params["tilesType"] = "moc"
+params["doMinimalTiling"] = False
+params["doParallel"] = False
+params["telescopes"] = opts.telescope.split(",")
+params["nside"] = opts.nside
+params["doChipGaps"] = False
+params["doSingleExposure"] = True
+params["doAlternatingFilters"] = False
+params["doRASlices"] = False
+params["doBalanceExposure"] = False
+params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"] = 0.0, 0.9, 0.0
+params["gpstime"] = opts.gps
+params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
+params["filters"] = opts.filters.split(",")
+params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
+params["doMaxTiles"] = False
+params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","),dtype=np.float)
+
+npix = hp.nside2npix(opts.nside)
+theta, phi = hp.pix2ang(opts.nside, np.arange(npix))
+prob_data = np.ones((npix,))
+ra = np.rad2deg(phi)
+dec = np.rad2deg(0.5*np.pi - theta)
+radecs = SkyCoord(ra=ra*u.deg, dec=dec*u.deg)
+idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
+prob_data[idx] = 0.0
+prob_data = prob_data / np.sum(prob_data)
+
+map_struct = {}
+map_struct["prob"] = prob_data
+
+sort_idx = np.argsort(map_struct["prob"])[::-1]
+csm = np.empty(len(map_struct["prob"]))
+csm[sort_idx] = np.cumsum(map_struct["prob"][sort_idx])
+
+map_struct["cumprob"] = csm
+map_struct["ipix_keep"] = []
+pixarea_deg2 = hp.nside2pixarea(opts.nside, degrees=True)
+map_struct["pixarea_deg2"] = pixarea_deg2
+map_struct["ra"] = ra
+map_struct["dec"] = dec
+
+if opts.doPlots:
+    print("Plotting skymap...")
+    gwemopt.plotting.skymap(params,map_struct)
+
+params = gwemopt.utils.params_checker(params)
+
+baseoutputDir = params["outputDir"]
+if not os.path.isdir(baseoutputDir):
+    os.makedirs(baseoutputDir)
+
+Tobs = np.arange(0, 2, 0.2)
+for ii in range(len(Tobs)-1):
+
+    params["outputDir"] = os.path.join(baseoutputDir, "%d" % ii)
+    if not os.path.isdir(params["outputDir"]):
+        os.makedirs(params["outputDir"])
+ 
+    params["Tobs"] = np.array([Tobs[ii], Tobs[ii+1]])
+    params = gwemopt.segments.get_telescope_segments(params)
+    moc_structs = gwemopt.moc.create_moc(params)
+    tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
+
+    if opts.doPlots:
+        print("Plotting tiles struct...")
+        gwemopt.plotting.tiles(params, map_struct, tile_structs)
+
+    if opts.doSchedule:
+        print("Generating coverage...")
+        tile_structs, coverage_struct = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
+
+    if opts.doSchedule:
+        print("Summary of coverage...")
+        gwemopt.scheduler.summary(params,map_struct,coverage_struct)
+
+        if opts.doPlots:
+            gwemopt.plotting.coverage(params, map_struct, coverage_struct)
+
+all_obs_table = pd.read_csv(opts.observations, delimiter = '|')
+all_obs_table.columns = [c.replace(' ', '') for c in all_obs_table.columns]
+use_obs = all_obs_table['status'] == 1
+obstable = all_obs_table[use_obs]
+obstable['ccdid'] = np.floor(obstable["rcid"]/4)
+
+obstable = obstable[['field', 'rcid', 'fid', 'expid', 'jd', 'exptime', 'sciinpseeing', 'diffmaglim', 'scimaglim', 'programid']]
+

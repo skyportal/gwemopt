@@ -274,11 +274,14 @@ def params_checker(params):
 
 def auto_rasplit(params,map_struct,nside_down):
 
-    prob_down, distmu_down,\
-    distsigma_down, distnorm_down = ligodist.ud_grade(map_struct["prob"],\
+    if params["do3D"]:
+        prob_down, distmu_down,\
+        distsigma_down, distnorm_down = ligodist.ud_grade(map_struct["prob"],\
                                                       map_struct["distmu"],\
                                                       map_struct["distsigma"],\
                                                       nside_down)
+    else:
+        prob_down = hp.ud_grade(map_struct["prob"],nside_down,power=-2) 
 
     npix = hp.nside2npix(nside_down)
     theta, phi = hp.pix2ang(nside_down, np.arange(npix))

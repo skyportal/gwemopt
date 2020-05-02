@@ -86,6 +86,8 @@ def parse_commandline():
     #parser.add_option("-g", "--gps", help="Event time GPS.", default=1263097398, type=float)
     parser.add_option("-g", "--gps", help="Event time GPS.", default=1265627458.327981, type=float)
 
+    parser.add_option("-m", "--tmax", help="Max time post trigger.", default=3.0, type=float)
+
     parser.add_option("--nside",default=256,type=int)
     parser.add_option("-f","--filter",default="1,2")
     parser.add_option("--rotation",default=120.0,type=float)
@@ -226,17 +228,17 @@ tiles_structs = gwemopt.tiles.moc(params, map_struct, moc_structs,
 fieldsfiles = opts.fields.split(",")
 telescopes = opts.telescope.split(",")
 
-color2 = 'coral'
+color2 = 'cyan'
 color1 = 'cornflowerblue'
 color3 = 'darkgreen'
 color4 = 'darkmagenta'
-color5 = 'red'
+color5 = 'pink'
 
 colors = [color1,color2,color3,color4,color5]
 
 unit='Gravitational-wave probability'
 cbar=False
-cmap = plt.get_cmap('PuBuGn')
+cmap = plt.get_cmap('cylon')
 
 plotName = os.path.join(params["outputDir"],'tiles.pdf')
 
@@ -277,6 +279,18 @@ for kk, telescope in enumerate(tiles_structs):
                        names=("fieldID","fId","time","limmag","exposure_time"))
     
 
+    start_time = Time(opts.gps, format='gps').mjd
+    table["mjd"] = Time(table["time"], format='isot').mjd - start_time
+    table.sort('mjd')
+
+    table = table[table["mjd"] > 0]
+    table = table[table["mjd"] < opts.tmax]
+
+    if len(table) == 0: continue
+
+    table = unique(table, keys=['fieldID'], keep='first')
+    table.sort('mjd')
+
     for index in tiles_struct.keys():
         idx = np.where(table["fieldID"]==index)[0]
         rows = table[idx]
@@ -307,7 +321,7 @@ for kk, telescope in enumerate(tiles_structs):
 
 patches = [ plt.plot([],[], marker="s", ms=10, ls="", mec=None, color=colors[i], 
             label="{:s}".format(labels[i]) )[0]  for i in range(len(labels)) ]
-plt.legend(handles=patches, loc=8, ncol=4, facecolor="plum", numpoints=1 )
+plt.legend(handles=patches, loc=8, ncol=5, facecolor="plum", numpoints=1 )
 
 #for transient in transients:
 #    hp.visufunc.projplot(transient["ra"], transient["dec"], lonlat=True,
@@ -319,6 +333,7 @@ plt.legend(handles=patches, loc=8, ncol=4, facecolor="plum", numpoints=1 )
 plt.axes(ax2)
 
 ipixlist = []
+cnt = 0
 for kk, telescope in enumerate(tiles_structs):
     labels.append(telescope)
     tiles_struct = tiles_structs[telescope]
@@ -341,6 +356,9 @@ for kk, telescope in enumerate(tiles_structs):
     table.sort('mjd')
 
     table = table[table["mjd"] > 0]
+    table = table[table["mjd"] < opts.tmax]
+
+    if len(table) == 0: continue
 
     table = unique(table, keys=['fieldID'], keep='first')
     table.sort('mjd')
@@ -367,10 +385,12 @@ for kk, telescope in enumerate(tiles_structs):
     ax2.plot(tts, cum_probs, color=color, linestyle='-', label=telescope)
     ax3.plot(tts, cum_areas, color=color, linestyle='--')
 
-    if kk == 0:
+    if cnt == 0:
         tableall = table
     else:
         tableall = vstack([tableall, table])
+
+    cnt = cnt + 1
 
 tableall["ipix"] = ipixlist
 

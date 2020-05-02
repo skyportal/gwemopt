@@ -184,16 +184,12 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
             
             coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
             
-            if params["doRASlices"] and params["do3D"]:
+            #if params["doRASlices"] and params["do3D"]:
+            if params["doRASlices"]:
 
                 coverage_struct = gwemopt.scheduler.schedule_ra_splits(params,config_struct,
                                                                        map_struct_hold,tile_struct,
                                                                        telescope,previous_coverage_struct)
-
-  
-            elif params["doRASlices"]:
-                print("Need to enable --do3D if using --doRASlices")
-                exit(0)
             elif params["doBalanceExposure"]:
                 optimized_bool = False
                 if not params["doMaxTiles"]: #optimize max tiles (iff max tiles not already specified)
