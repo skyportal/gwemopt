@@ -144,9 +144,9 @@ for configFile in configFiles:
     params["config"][telescope]["exposuretime"] = exposuretime  
 
 params["outputDir"] = opts.outputDir
-
 if not os.path.isdir(params["outputDir"]):
     os.makedirs(params["outputDir"])
+baseoutputDir = params["outputDir"]
 
 params["tilesType"] = "moc"
 params["doMinimalTiling"] = False
@@ -164,44 +164,68 @@ params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
 params["filters"] = opts.filters.split(",")
 params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
 params["doMaxTiles"] = False
+params["doPrimary"] = True
+params["scheduleType"] = "greedy_slew"
+params["airmass"] = 1.5
 params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","),dtype=np.float)
 
 npix = hp.nside2npix(opts.nside)
 theta, phi = hp.pix2ang(opts.nside, np.arange(npix))
 prob_data = np.ones((npix,))
+prob_data = prob_data / np.sum(prob_data)
 ra = np.rad2deg(phi)
 dec = np.rad2deg(0.5*np.pi - theta)
 radecs = SkyCoord(ra=ra*u.deg, dec=dec*u.deg)
+
+map_struct_1 = {}
+map_struct_1["prob"] = prob_data
+
+sort_idx = np.argsort(map_struct_1["prob"])[::-1]
+csm = np.empty(len(map_struct_1["prob"]))
+csm[sort_idx] = np.cumsum(map_struct_1["prob"][sort_idx])
+
+map_struct_1["cumprob"] = csm
+map_struct_1["ipix_keep"] = []
+pixarea_deg2 = hp.nside2pixarea(opts.nside, degrees=True)
+map_struct_1["pixarea_deg2"] = pixarea_deg2
+map_struct_1["ra"] = ra
+map_struct_1["dec"] = dec
+
+if opts.doPlots:
+    params["outputDir"] = os.path.join(baseoutputDir, "map_1")
+    if not os.path.isdir(params["outputDir"]):
+        os.makedirs(params["outputDir"])
+    print("Plotting skymap...")
+    gwemopt.plotting.skymap(params,map_struct_1)
+
 idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
 prob_data[idx] = 0.0
 prob_data = prob_data / np.sum(prob_data)
 
-map_struct = {}
-map_struct["prob"] = prob_data
+map_struct_2 = {}
+map_struct_2["prob"] = prob_data
 
-sort_idx = np.argsort(map_struct["prob"])[::-1]
-csm = np.empty(len(map_struct["prob"]))
-csm[sort_idx] = np.cumsum(map_struct["prob"][sort_idx])
+sort_idx = np.argsort(map_struct_2["prob"])[::-1]
+csm = np.empty(len(map_struct_2["prob"]))
+csm[sort_idx] = np.cumsum(map_struct_2["prob"][sort_idx])
 
-map_struct["cumprob"] = csm
-map_struct["ipix_keep"] = []
+map_struct_2["cumprob"] = csm
+map_struct_2["ipix_keep"] = []
 pixarea_deg2 = hp.nside2pixarea(opts.nside, degrees=True)
-map_struct["pixarea_deg2"] = pixarea_deg2
-map_struct["ra"] = ra
-map_struct["dec"] = dec
+map_struct_2["pixarea_deg2"] = pixarea_deg2
+map_struct_2["ra"] = ra
+map_struct_2["dec"] = dec
 
 if opts.doPlots:
+    params["outputDir"] = os.path.join(baseoutputDir, "map_2")
+    if not os.path.isdir(params["outputDir"]):
+        os.makedirs(params["outputDir"])
     print("Plotting skymap...")
-    gwemopt.plotting.skymap(params,map_struct)
+    gwemopt.plotting.skymap(params,map_struct_2)
 
 params = gwemopt.utils.params_checker(params)
 
-baseoutputDir = params["outputDir"]
-if not os.path.isdir(baseoutputDir):
-    os.makedirs(baseoutputDir)
-
-Tmin, Tmax, dt = 0, 2, 0.2
-Tmax = 0.2
+Tmin, Tmax, dt = 0, 14, 0.2
 Tobs = np.arange(Tmin, Tmax+dt, dt)
 
 schedulefile = os.path.join(params["outputDir"],'schedule_ZTF.dat')
@@ -209,11 +233,13 @@ if not os.path.isfile(schedulefile):
     coverage_structs = []
     for ii in range(len(Tobs)-1):
     
-        if np.mod(ii,2) == 0:
+        if np.mod(ii,2) == 1:
+            map_struct = map_struct_2
             params["filters"] = ["g","r","g","r"]
-            params["exposuretimes"] = [120.0,120.0,120.0,120.0]
+            params["exposuretimes"] = [180.0,180.0,180.0,180.0]
             params["program_id"] = 2
         else:
+            map_struct = map_struct_1
             params["filters"] = ["g","r"]
             params["exposuretimes"] = [30.0,30.0]
             params["program_id"] = 1    
@@ -224,7 +250,7 @@ if not os.path.isfile(schedulefile):
      
         params["Tobs"] = np.array([Tobs[ii], Tobs[ii+1]])
         params = gwemopt.segments.get_telescope_segments(params)
-    
+
         cnt = 0
         for telescope in params["telescopes"]:
             if not len(params["config"][telescope]["segmentlist"]) == 0:
@@ -286,8 +312,13 @@ for line in lines:
     tt = Time(mjd, format='mjd')
     jd = tt.jd
 
-    idx = np.where(field == obstable["field"])[0]
-    obstable_field = obstable.iloc[idx]
+    obstable_field = []
+    cnt = 0
+    while len(obstable_field) == 0:
+        idx = np.where(field-cnt == obstable["field"])[0]
+        obstable_field = obstable.iloc[idx]
+        if len(obstable_field) == 0:
+            print('No data for field %d...' % (field-cnt))
 
     idy = np.random.randint(len(obstable_field))
     obstable_row = obstable_field.iloc[[idy]]
@@ -298,7 +329,6 @@ for line in lines:
     ttday = tt.isot.split("T")[0]
     for ii, row in obstable_rows.iterrows():
         nmag = np.log(exptime/row.exptime)/np.log(2.5)
-        print(nmag)
         fid.write('%s | %.7f |   %d |   %d |      %.9f |  %.11f |             %d |         %d |  %d |   %d |     %.2f |    %.4f |       %.4f |  %.5f |      %d |      %d\n' %(ttday, jd, field, int(row.rcid), row.ra0, row.dec0, int(row.nalertpackets), program_id, int(row.expid), filter_id, row.scimaglim + nmag, row.diffmaglim + nmag, row.sciinpseeing, row.difffwhm, exptime, int(row.status)))
 fid.close()
 
