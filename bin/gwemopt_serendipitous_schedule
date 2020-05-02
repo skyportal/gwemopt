@@ -40,6 +40,7 @@ from astropy.time import Time
 from astropy import cosmology
 from astropy.coordinates import Distance
 from astropy.coordinates import SkyCoord
+from astropy.io import fits
 
 import matplotlib
 #matplotlib.rc('text', usetex=True)
@@ -72,6 +73,7 @@ def parse_commandline():
 
     parser.add_option("-c", "--configDirectory", help="GW-EM config file directory.", default ="../config/")
     #parser.add_option("-o", "--outputDir", help="output directory",default="../output/S200115j")
+    parser.add_option("-i","--inputDir",default="../input/")
     parser.add_option("-o", "--outputDir", help="output directory",default="../output/serendipitous")
 
     parser.add_option("-t", "--telescope", help="Telescope.", default ="ZTF")
@@ -153,7 +155,7 @@ params["telescopes"] = opts.telescope.split(",")
 params["nside"] = opts.nside
 params["doChipGaps"] = False
 params["doSingleExposure"] = True
-params["doAlternatingFilters"] = False
+params["doAlternatingFilters"] = True
 params["doRASlices"] = False
 params["doBalanceExposure"] = False
 params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"] = 0.0, 0.9, 0.0
@@ -199,6 +201,7 @@ if not os.path.isdir(baseoutputDir):
     os.makedirs(baseoutputDir)
 
 Tmin, Tmax, dt = 0, 2, 0.2
+Tmax = 0.2
 Tobs = np.arange(Tmin, Tmax+dt, dt)
 
 coverage_structs = []
@@ -219,7 +222,7 @@ for ii in range(len(Tobs)-1):
     params = gwemopt.segments.get_telescope_segments(params)
 
     cnt = 0
-    for telescope in opts.telescope.split(","):
+    for telescope in params["telescopes"]:
         if not len(params["config"][telescope]["segmentlist"]) == 0:
             cnt = cnt + 1
     if cnt == 0:
@@ -254,6 +257,96 @@ if opts.doSchedule:
 
     if opts.doPlots:
         gwemopt.plotting.coverage(params, map_struct, coverage_struct)
+
+# init figure
+fig1 = plt.figure(figsize=(14,8))
+
+# background setup
+NSIDE = 256
+NPIX = hp.nside2npix(NSIDE)
+coordsys = ['C','C']
+nest = True
+
+# colormap
+cm = plt.cm.get_cmap('viridis') # colorscale
+cm.set_under('w')
+cm.set_bad('w')
+
+# load the data
+hdulist = fits.open(opts.inputDir+'Gaia_hp8_densitymap.fits')
+hist = hdulist[1].data['srcdens'][np.argsort(hdulist[1].data['hpx8'])]
+
+# plot the data in healpy
+norm ='log'
+hp.mollview(hist,fig=1,norm=norm,unit='Stars per sq. arcmin.',cbar=False,nest=nest,title='',coord=coordsys,notext=True,cmap=cm,flip='astro',nlocs=4)
+
+# borders
+lw = 3
+pi = np.pi
+dtor = pi/180.
+theta = np.arange(0,181)*dtor
+hp.projplot(theta, theta*0-pi,'-k',
+                               lw=lw,direct=True)
+hp.projplot(theta, theta*0+0.9999*pi,'-k',
+                               lw=lw,direct=True)
+phi = np.arange(-180,180)*dtor
+hp.projplot(phi*0+1.e-10, phi,'-k',
+                               lw=lw,direct=True)
+hp.projplot(phi*0+pi-1.e-10, phi,'-k',
+                               lw=lw,direct=True)
+
+# galaxy
+for gallat in [15,0,-15]:
+    theta = np.arange(0., 360, 0.036)
+    phi = gallat*np.ones_like(theta)
+    hp.projplot(theta, phi, 'w-', coord=['G'],lonlat=True,lw=2)
+
+# ecliptic
+for ecllat in zip([0,-30,30],[2,1,1]):
+    theta = np.arange(0., 360, 0.036)
+    phi = gallat*np.ones_like(theta)
+    hp.projplot(theta, phi, 'w-', coord=['E'],lonlat=True,lw=2,ls=':')
+
+# graticule
+hp.graticule(ls='-',alpha=0.1,lw=0.5)
+
+# NWES
+fig = plt.gcf()
+ax = plt.gca()
+plt.text(0.0,0.5,r'E',ha='right',transform=ax.transAxes,weight='bold')
+plt.text(1.0,0.5,r'W',ha='left',transform=ax.transAxes,weight='bold')
+plt.text(0.5,0.992,r'N',va='bottom',ha='center',transform=ax.transAxes,weight='bold')
+plt.text(0.5,0.0,r'S',va='top',ha='center',transform=ax.transAxes,weight='bold')
+
+for telescope in params["telescopes"]:
+    config_struct = params["config"][telescope]
+    moc_struct = moc_structs[telescope]
+
+    fields = moc_struct.keys()
+    for field in fields:
+        if field < 246: continue
+        ra, dec = moc_struct[field]["ra"], moc_struct[field]["dec"]
+
+        coords = moc_struct[field]["corners"]
+        coords = SkyCoord(np.squeeze(coords), unit='deg')
+        #ax.plot(coords.ra, coords.dec, color='k', transform=ax.transAxes, zorder=500)
+        color = 'k'
+        hp.projplot(coords.ra, coords.dec, color,
+                    coord=coordsys,lonlat=True,lw=2,alpha=0.5)
+
+        hp.projtext(ra, dec,
+                    s='%d'%field, text='%d'%field,
+                    coord=coordsys,
+                    lonlat=True,
+                    fontsize=8,
+                    color='k',zorder=700,
+                    ha='center',va='center')
+
+plt.show()
+plotName = os.path.join(params["outputDir"],'coverage.pdf')
+plt.savefig(plotName)
+plt.close()
+
 
 all_obs_table = pd.read_csv(opts.observations, delimiter = '|')
 all_obs_table.columns = [c.replace(' ', '') for c in all_obs_table.columns]
