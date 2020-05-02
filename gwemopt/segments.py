@@ -19,6 +19,10 @@ def get_telescope_segments(params):
 
         params["config"][telescope]["segmentlist"] = get_segments(params, params["config"][telescope])
         params["config"][telescope]["exposurelist"] = gwemopt.utils.get_exposures(params, params["config"][telescope], params["config"][telescope]["segmentlist"])
+        if len(params["config"][telescope]["exposurelist"]) == 0:
+            params["config"][telescope]["n_windows"] = 0
+            params["config"][telescope]["tot_obs_time"] = 0.0
+            continue
 
         nexp, junk = np.array(params["config"][telescope]["exposurelist"]).shape        
         params["config"][telescope]["n_windows"] = nexp

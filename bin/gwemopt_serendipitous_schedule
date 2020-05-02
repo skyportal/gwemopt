@@ -198,8 +198,18 @@ baseoutputDir = params["outputDir"]
 if not os.path.isdir(baseoutputDir):
     os.makedirs(baseoutputDir)
 
-Tobs = np.arange(0, 2, 0.2)
+Tmin, Tmax, dt = 0, 2, 0.2
+Tobs = np.arange(Tmin, Tmax+dt, dt)
+
+coverage_structs = []
 for ii in range(len(Tobs)-1):
+
+    if np.mod(ii,2) == 0:
+        params["filters"] = ["g","r","g","r","g","r"]
+        params["exposuretimes"] = [30.0,30.0,30.0,30.0,30.0,30.0]
+    else:
+        params["filters"] = ["g","r"]
+        params["exposuretimes"] = [30.0,30.0]
 
     params["outputDir"] = os.path.join(baseoutputDir, "%d" % ii)
     if not os.path.isdir(params["outputDir"]):
@@ -207,6 +217,15 @@ for ii in range(len(Tobs)-1):
  
     params["Tobs"] = np.array([Tobs[ii], Tobs[ii+1]])
     params = gwemopt.segments.get_telescope_segments(params)
+
+    cnt = 0
+    for telescope in opts.telescope.split(","):
+        if not len(params["config"][telescope]["segmentlist"]) == 0:
+            cnt = cnt + 1
+    if cnt == 0:
+        print('Skipping round %.2f-%.2f' % (Tobs[ii], Tobs[ii+1]))
+        continue
+
     moc_structs = gwemopt.moc.create_moc(params)
     tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
 
@@ -224,6 +243,17 @@ for ii in range(len(Tobs)-1):
 
         if opts.doPlots:
             gwemopt.plotting.coverage(params, map_struct, coverage_struct)
+
+    coverage_structs.append(coverage_struct)
+
+coverage_struct = gwemopt.coverage.combine_coverage_structs(coverage_structs)
+params["outputDir"] = baseoutputDir
+if opts.doSchedule:
+    print("Summary of coverage...")
+    gwemopt.scheduler.summary(params,map_struct,coverage_struct)
+
+    if opts.doPlots:
+        gwemopt.plotting.coverage(params, map_struct, coverage_struct)
 
 all_obs_table = pd.read_csv(opts.observations, delimiter = '|')
 all_obs_table.columns = [c.replace(' ', '') for c in all_obs_table.columns]
