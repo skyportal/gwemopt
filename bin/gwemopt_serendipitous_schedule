@@ -163,8 +163,6 @@ params["doSingleExposure"] = True
 params["doAlternatingFilters"] = True
 params["doRASlices"] = False
 params["doBalanceExposure"] = True
-params["doBlocks"] = True
-params["Nblocks"] = 4
 params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"] = 0.0, 0.9, 0.0
 params["gpstime"] = opts.gps
 params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
@@ -253,14 +251,15 @@ if not os.path.isfile(schedulefile):
                            (schedule_table['mjd'] <= (mjd0+Tobs[ii])))[0]
             schedule_table_field = schedule_table.iloc[idx]
 
-            if len(schedule_table_field) == 0:
+            if len(schedule_table_field) > 0:
                 prob_data = np.zeros((npix,))
                 for jj, row2 in schedule_table_field.iterrows():
                     field = row2["field"]
-                    if not field in moc_structs: continue
-                    moc_struct = moc_structs[field]
+                    if not field in moc_structs["ZTF"]: continue
+                    moc_struct = moc_structs["ZTF"][field]
                     ipix = moc_struct["ipix"]
                     prob_data[ipix] = 1.0
+                prob_data[prob_data == 0.0] = 0.1
                 idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
                 prob_data[idx] = 0.0
                 prob_data = prob_data / np.sum(prob_data)
@@ -283,6 +282,9 @@ if not os.path.isfile(schedulefile):
             params["exposuretimes"] = [180.0,180.0,180.0,180.0]
             params["program_id"] = 2
 
+            params["doBlocks"] = False
+            params["Nblocks"] = 2
+
             if opts.doPlots:
                 print("Plotting skymap...")
                 gwemopt.plotting.skymap(params,map_struct_2)
@@ -302,10 +304,10 @@ if not os.path.isfile(schedulefile):
 
                 for jj, row2 in schedule_table_field.iterrows():
                     field = row2["field"]
-                    if not field in moc_structs: continue
-                    moc_struct = moc_structs[field]
+                    if not field in moc_structs["ZTF"]: continue
+                    moc_struct = moc_structs["ZTF"][field]
                     ipix = moc_struct["ipix"]
-                    prob_data[ipix] = 0.0
+                    prob_data[ipix] = 0.1
                 prob_data = prob_data / np.sum(prob_data)
             else:
                 prob_data = np.ones((npix,))
@@ -323,6 +325,9 @@ if not os.path.isfile(schedulefile):
             params["filters"] = ["g","r"]
             params["exposuretimes"] = [30.0,30.0]
             params["program_id"] = 1    
+
+            params["doBlocks"] = True
+            params["Nblocks"] = 2
 
         params["Tobs"] = np.array([Tobs[ii], Tobs[ii+1]])
         params = gwemopt.segments.get_telescope_segments(params)
