@@ -92,6 +92,8 @@ def parse_commandline():
     parser.add_option("-f","--filters",default="g,r")
     parser.add_option("--max_nb_tiles",default="-1,-1")
 
+    parser.add_option("--downsample",default=1,type=int)
+
     parser.add_option("--doSchedule",  action="store_true", default=False)
     parser.add_option("--doPlots",  action="store_true", default=False)
     parser.add_option("--doMovie",  action="store_true", default=False)
@@ -161,6 +163,8 @@ params["doSingleExposure"] = True
 params["doAlternatingFilters"] = True
 params["doRASlices"] = False
 params["doBalanceExposure"] = True
+params["doBlocks"] = True
+params["Nblocks"] = 4
 params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"] = 0.0, 0.9, 0.0
 params["gpstime"] = opts.gps
 params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
@@ -169,7 +173,7 @@ params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
 params["doMaxTiles"] = False
 params["doUsePrimary"] = True
 params["scheduleType"] = "greedy_slew"
-params["airmass"] = 1.5
+params["airmass"] = 2.0
 params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","),dtype=np.float)
 
 mjd0 = Time(opts.gps, format='gps').mjd
@@ -225,7 +229,7 @@ map_struct_2["dec"] = dec
 
 params = gwemopt.utils.params_checker(params)
 
-Tmin, Tmax, dt = 0, 7, 0.2
+Tmin, Tmax, dt = 0, 60, 0.2
 Tobs = np.arange(Tmin, Tmax+dt, dt)
 
 params["outputDir"] = baseoutputDir
@@ -407,8 +411,10 @@ if opts.doMovie:
     cnt = 0 
     for ii, row1 in schedule_table.iterrows():
         plotName = os.path.join(moviedir,'movie-%04d.png'%cnt)
-        if os.path.isfile(plotName): continue
-        if not np.mod(ii,10) == 0: continue
+        if os.path.isfile(plotName):
+            cnt = cnt + 1
+            continue
+        if not np.mod(ii,opts.downsample) == 0: continue
 
         fig = plt.figure(figsize=(12, 8))
 
@@ -432,7 +438,7 @@ if opts.doMovie:
         for jj, row2 in schedule_table.iterrows():
             if ii < jj: continue
             dt = row1["mjd"] - row2["mjd"]
-            if dt > 1: continue
+            if dt > 2: continue
 
             field = row2["field"]
             if not field in moc_structs: continue
@@ -441,6 +447,7 @@ if opts.doMovie:
             if len(ras) == 4:
                 ras = [ras[0], ras[1], ras[3], ras[2], ras[0]]
                 decs = [decs[0], decs[1], decs[3], decs[2], decs[0]]
+                ras, decs = np.array(ras), np.array(decs)
             if row2['filt'] == 'g':
                 color = 'g'
             elif row2['filt'] == 'r':
@@ -448,7 +455,7 @@ if opts.doMovie:
             else:
                 color = 'k'
 
-            idx = np.where((schedule_table['mjd'] >= row1['mjd']-1.0) &
+            idx = np.where((schedule_table['mjd'] >= row1['mjd']-2.0) &
                            (schedule_table['mjd'] <= row1['mjd']) &
                            (schedule_table['field'] == field))[0]
             schedule_table_field = schedule_table.iloc[idx]
@@ -459,17 +466,27 @@ if opts.doMovie:
             idx = np.where(schedule_table_field["filt"] == "r")[0]
             schedule_table_field_r = schedule_table_field.iloc[idx]
 
-            alpha = 1.0*(1-dt)
-            linewidth = 3.0*(1-dt)
             if ii == jj:
                 alpha = 1.0
                 linewidth = 3.0
+
+                idx1, idx2 = np.where(ras>=180.0)[0], np.where(ras<180.0)[0]
+                idx3, idx4 = np.where(ras>300.0)[0], np.where(ras<60.0)[0]
+                if (len(idx1)>0 and len(idx2)>0) and not (len(idx3)>0 and len(idx4)>0):
+                    alpha = 0.0
+
                 poly = patches.Polygon(np.vstack((ras, decs)).T, transform=ax1.get_transform('world'), alpha=alpha, color=color)
                 ax1.plot(ras, decs, color=color, transform=ax1.get_transform('world'), alpha=alpha, linewidth=linewidth)
                 ax1.add_patch(poly)
             else:
-                alpha = 0.5*(1-dt)
-                linewidth = 2.0*(1-dt)
+                alpha = 0.5*(2-dt)*0.5
+                linewidth = 2.0*(2-dt)*0.5
+
+                idx1, idx2 = np.where(ras>=180.0)[0], np.where(ras<180.0)[0]
+                idx3, idx4 = np.where(ras>300.0)[0], np.where(ras<60.0)[0]
+                if (len(idx1)>0 and len(idx2)>0) and not (len(idx3)>0 and len(idx4)>0):
+                    alpha = 0.0
+
                 if (len(schedule_table_field_g) > 0) and (len(schedule_table_field_r) > 0):
                     color='magenta'
                 poly = patches.Polygon(np.vstack((ras, decs)).T, transform=ax1.get_transform('world'), alpha=alpha, color=color)
