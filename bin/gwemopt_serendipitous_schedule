@@ -84,7 +84,11 @@ def parse_commandline():
 
     parser.add_option("--Tobs",default="0.0,1.0")
 
-    parser.add_option("--observations", help="observation file.", default='../data/serendipitous/2019-04-25-2019-10-03_subdata.txt')
+    parser.add_option("--Tmin",default=0.0,type=float)
+    parser.add_option("--Tmax",default=60.0,type=float)
+    parser.add_option("--dt",default=0.2,type=float)
+
+    parser.add_option("--observations", help="observation file.", default='../data/serendipitous/ztf_obsfile_status1_backfill_v2_0501_0901.csv')
 
     parser.add_option("--nside",default=256,type=int)
 
@@ -226,137 +230,154 @@ map_struct_2["ra"] = ra
 map_struct_2["dec"] = dec
 
 params = gwemopt.utils.params_checker(params)
+moc_structs = gwemopt.moc.create_moc(params)
 
-Tmin, Tmax, dt = 0, 60, 0.2
+map_struct = map_struct_1
+
+Tmin, Tmax, dt = opts.Tmin, opts.Tmax, opts.dt
 Tobs = np.arange(Tmin, Tmax+dt, dt)
 
 params["outputDir"] = baseoutputDir
 schedulefile = os.path.join(params["outputDir"],'schedule_ZTF.dat')
+
 if not os.path.isfile(schedulefile):
     coverage_structs = []
     for ii in range(len(Tobs)-1):
-   
+        print('Running block %d/%d' % (ii, len(Tobs)-1))  
+ 
         params["outputDir"] = os.path.join(baseoutputDir, "%d" % ii)
         if not os.path.isdir(params["outputDir"]):
             os.makedirs(params["outputDir"])
- 
-        if np.mod(ii,2) == 1:
-            schedule_table = pd.read_csv(schedulefile, 
-                                         delimiter = ' ', header=None,
-                                         names = ('field', 'ra', 'dec', 'mjd',
-                                                  'exposure_time', 'prob',
-                                                  'airmass', 'filt',
-                                                  'program_id'))
-            idx = np.where((schedule_table['mjd'] >= (mjd0+Tobs[ii]-2.0)) &
-                           (schedule_table['mjd'] <= (mjd0+Tobs[ii])))[0]
-            schedule_table_field = schedule_table.iloc[idx]
 
-            if len(schedule_table_field) > 0:
-                prob_data = np.zeros((npix,))
-                for jj, row2 in schedule_table_field.iterrows():
-                    field = row2["field"]
-                    if not field in moc_structs["ZTF"]: continue
-                    moc_struct = moc_structs["ZTF"][field]
-                    ipix = moc_struct["ipix"]
-                    prob_data[ipix] = 1.0
-                prob_data[prob_data == 0.0] = 0.1
-                idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
-                prob_data[idx] = 0.0
-                prob_data = prob_data / np.sum(prob_data)
-            else:
-                prob_data = np.ones((npix,))            
-                idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
-                prob_data[idx] = 0.0
-                prob_data = prob_data / np.sum(prob_data)
-
-            map_struct_2["prob"] = prob_data
-            
-            sort_idx = np.argsort(map_struct_2["prob"])[::-1]
-            csm = np.empty(len(map_struct_2["prob"]))
-            csm[sort_idx] = np.cumsum(map_struct_2["prob"][sort_idx])
-            
-            map_struct_2["cumprob"] = csm
-
-            map_struct = map_struct_2
-            params["filters"] = ["g","r","g","r"]
-            params["exposuretimes"] = [180.0,180.0,180.0,180.0]
-            params["program_id"] = 2
-
-            params["doBlocks"] = False
-            params["Nblocks"] = 2
-
-            if opts.doPlots:
-                print("Plotting skymap...")
-                gwemopt.plotting.skymap(params,map_struct_2)
+        schedulefileind = os.path.join(params["outputDir"],'schedule_ZTF.dat')
+        if os.path.isfile(schedulefileind):
+            moc_struct = moc_structs["ZTF"]
+            coverage_struct = gwemopt.coverage.read_coverage(params, "ZTF",
+                                                             schedulefileind,
+                                                             moc_struct=moc_struct)
         else:
-            if os.path.isfile(schedulefile):
-                prob_data = np.ones((npix,))
-
-                schedule_table = pd.read_csv(schedulefile,
+            if np.mod(ii,2) == 1:
+                schedule_table = pd.read_csv(schedulefile, 
                                              delimiter = ' ', header=None,
-                                             names = ('field', 'ra', 'dec', 'mjd',
+                                             names = ('field', 'ra', 'dec',
+                                                      'mjd', 'mag',
                                                       'exposure_time', 'prob',
                                                       'airmass', 'filt',
                                                       'program_id'))
-                idx = np.where((schedule_table['mjd'] >= (mjd0+Tobs[ii]-2.0)) &
+                idx = np.where((schedule_table['mjd'] >= (mjd0+Tobs[ii]-7.0)) &
                                (schedule_table['mjd'] <= (mjd0+Tobs[ii])))[0]
                 schedule_table_field = schedule_table.iloc[idx]
-
-                for jj, row2 in schedule_table_field.iterrows():
-                    field = row2["field"]
-                    if not field in moc_structs["ZTF"]: continue
-                    moc_struct = moc_structs["ZTF"][field]
-                    ipix = moc_struct["ipix"]
-                    prob_data[ipix] = 0.1
-                prob_data = prob_data / np.sum(prob_data)
+    
+                if len(schedule_table_field) > 0:
+                    prob_data = np.zeros((npix,))
+                    for jj, row2 in schedule_table_field.iterrows():
+                        field = row2["field"]
+                        if not field in moc_structs["ZTF"]: continue
+                        moc_struct = moc_structs["ZTF"][field]
+                        ipix = moc_struct["ipix"]
+                        prob_data[ipix] = 1.0
+                        dt = mjd0 + Tobs[ii] - row2["mjd"]
+                        prob_data[ipix] = np.exp(-dt)
+                    prob_data[prob_data < 0.01] = 0.01
+                    idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
+                    prob_data[idx] = 0.0
+                    prob_data = prob_data / np.sum(prob_data)
+                else:
+                    prob_data = np.ones((npix,))            
+                    idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
+                    prob_data[idx] = 0.0
+                    prob_data = prob_data / np.sum(prob_data)
+    
+                map_struct_2["prob"] = prob_data
+                
+                sort_idx = np.argsort(map_struct_2["prob"])[::-1]
+                csm = np.empty(len(map_struct_2["prob"]))
+                csm[sort_idx] = np.cumsum(map_struct_2["prob"][sort_idx])
+                
+                map_struct_2["cumprob"] = csm
+    
+                map_struct = map_struct_2
+                params["filters"] = ["g","r"]
+                params["exposuretimes"] = [180.0,180.0]
+                params["program_id"] = 2
+    
+                params["doBlocks"] = False
+                params["Nblocks"] = 2
+    
+                if opts.doPlots:
+                    print("Plotting skymap...")
+                    gwemopt.plotting.skymap(params,map_struct_2)
             else:
-                prob_data = np.ones((npix,))
-                prob_data = prob_data / np.sum(prob_data)
-
-            map_struct_1["prob"] = prob_data
-
-            sort_idx = np.argsort(map_struct_1["prob"])[::-1]
-            csm = np.empty(len(map_struct_1["prob"]))
-            csm[sort_idx] = np.cumsum(map_struct_1["prob"][sort_idx])
-
-            map_struct_1["cumprob"] = csm
-
-            map_struct = map_struct_1
-            params["filters"] = ["g","r"]
-            params["exposuretimes"] = [30.0,30.0]
-            params["program_id"] = 1    
-
-            params["doBlocks"] = True
-            params["Nblocks"] = 2
-
-        params["Tobs"] = np.array([Tobs[ii], Tobs[ii+1]])
-        params = gwemopt.segments.get_telescope_segments(params)
-
-        cnt = 0
-        for telescope in params["telescopes"]:
-            if not len(params["config"][telescope]["segmentlist"]) == 0:
-                cnt = cnt + 1
-        if cnt == 0:
-            print('Skipping round %.2f-%.2f' % (Tobs[ii], Tobs[ii+1]))
-            continue
+                if os.path.isfile(schedulefile):
+                    prob_data = np.ones((npix,))
     
-        moc_structs = gwemopt.moc.create_moc(params)
-        tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
+                    schedule_table = pd.read_csv(schedulefile,
+                                                 delimiter = ' ', header=None,
+                                                 names = ('field', 'ra', 'dec',
+                                                          'mjd', 'mag',
+                                                          'exposure_time', 'prob',
+                                                          'airmass', 'filt',
+                                                          'program_id'))
+                    idx = np.where((schedule_table['mjd'] >= (mjd0+Tobs[ii]-7.0)) &
+                                   (schedule_table['mjd'] <= (mjd0+Tobs[ii])))[0]
+                    schedule_table_field = schedule_table.iloc[idx]
     
-        if opts.doPlots:
-            print("Plotting tiles struct...")
-            gwemopt.plotting.tiles(params, map_struct, tile_structs)
+                    for jj, row2 in schedule_table_field.iterrows():
+                        field = row2["field"]
+                        if not field in moc_structs["ZTF"]: continue
+                        moc_struct = moc_structs["ZTF"][field]
+                        ipix = moc_struct["ipix"]
+                        dt = mjd0 + Tobs[ii] - row2["mjd"]
+                        prob_data[ipix] = 1.0 - np.exp(-dt)
+                    prob_data = prob_data / np.sum(prob_data)
+                else:
+                    prob_data = np.ones((npix,))
+                    prob_data = prob_data / np.sum(prob_data)
     
-        if opts.doSchedule:
-            print("Generating coverage...")
-            tile_structs, coverage_struct = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
+                map_struct_1["prob"] = prob_data
     
-        if opts.doSchedule:
-            print("Summary of coverage...")
-            gwemopt.scheduler.summary(params,map_struct,coverage_struct)
+                sort_idx = np.argsort(map_struct_1["prob"])[::-1]
+                csm = np.empty(len(map_struct_1["prob"]))
+                csm[sort_idx] = np.cumsum(map_struct_1["prob"][sort_idx])
     
+                map_struct_1["cumprob"] = csm
+    
+                map_struct = map_struct_1
+                params["filters"] = ["g","r"]
+                params["exposuretimes"] = [30.0,30.0]
+                params["program_id"] = 1    
+    
+                params["doBlocks"] = True
+                params["Nblocks"] = 2
+    
+            params["Tobs"] = np.array([Tobs[ii], Tobs[ii+1]])
+            params = gwemopt.segments.get_telescope_segments(params)
+    
+            cnt = 0
+            for telescope in params["telescopes"]:
+                if not len(params["config"][telescope]["segmentlist"]) == 0:
+                    cnt = cnt + 1
+            if cnt == 0:
+                print('Skipping round %.2f-%.2f' % (Tobs[ii], Tobs[ii+1]))
+                continue
+        
+            moc_structs = gwemopt.moc.create_moc(params)
+            tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
+        
             if opts.doPlots:
-                gwemopt.plotting.coverage(params, map_struct, coverage_struct)
+                print("Plotting tiles struct...")
+                gwemopt.plotting.tiles(params, map_struct, tile_structs)
+        
+            if opts.doSchedule:
+                print("Generating coverage...")
+                tile_structs, coverage_struct = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
+        
+            if opts.doSchedule:
+                print("Summary of coverage...")
+                gwemopt.scheduler.summary(params,map_struct,coverage_struct)
+        
+                if opts.doPlots:
+                    gwemopt.plotting.coverage(params, map_struct, coverage_struct)
     
         coverage_structs.append(coverage_struct)
 
@@ -367,7 +388,8 @@ if not os.path.isfile(schedulefile):
             gwemopt.scheduler.summary(params,map_struct,coverage_struct_combined)
     
             if opts.doPlots:
-                gwemopt.plotting.coverage(params, map_struct, coverage_struct_combined)
+                if (np.mod(ii, 15) == 0) or (ii == len(Tobs)-2):
+                    gwemopt.plotting.coverage(params, map_struct, coverage_struct_combined)
 
 if opts.doMovie:
 
@@ -536,22 +558,20 @@ if opts.doMovie:
     rm_command = "rm %s/*.png"%(moviedir)
     os.system(rm_command)
 
-all_obs_table = pd.read_csv(opts.observations, delimiter = '|')
-all_obs_table.columns = [c.replace(' ', '') for c in all_obs_table.columns]
+all_obs_table = pd.read_csv(opts.observations, delimiter = ',')
 use_obs = all_obs_table['status'] == 1
 obstable = all_obs_table[use_obs]
-obstable['ccdid'] = np.floor(obstable["rcid"]/4)
 
 params["outputDir"] = baseoutputDir
 
 obsfile = os.path.join(params["outputDir"],'obs.dat')
 fid = open(obsfile, 'w')
-fid.write('nightdate  |       jd        | field | rcid |        ra0         |       dec0       | nalertpackets | programid |   expid   | fid | scimaglim | diffmaglim | sciinpseeing | difffwhm | exptime | status\n')
-fid.write('------------+-----------------+-------+------+--------------------+------------------+---------------+-----------+-----------+-----+-----------+------------+--------------+----------+---------+--------\n')
+fid.write('jd,fieldid,chid,progid,expid,filterid,limMag,status\n')
  
 bands = {'g': 1, 'r': 2, 'i': 3, 'z': 4, 'J': 5}   
 schedule_table = pd.read_csv(schedulefile, delimiter = ' ', header=None,
-                             names = ('field', 'ra', 'dec', 'mjd',
+                             names = ('field', 'ra', 'dec',
+                                      'mjd', 'mag',
                                       'exposure_time', 'prob',
                                       'airmass', 'filt', 'program_id'))
 
@@ -569,7 +589,7 @@ for ii, row1 in schedule_table.iterrows():
     obstable_field = []
     cnt = 0
     while len(obstable_field) == 0:
-        idx = np.where(field-cnt == obstable["field"])[0]
+        idx = np.where(field-cnt == obstable["fieldid"])[0]
         obstable_field = obstable.iloc[idx]
         if len(obstable_field) == 0:
             print('No data for field %d...' % (field-cnt))
@@ -579,14 +599,11 @@ for ii, row1 in schedule_table.iterrows():
     obstable_row = obstable_field.iloc[[idy]]
     obstable_rows = obstable[obstable["jd"] == obstable_row["jd"].to_numpy()[0]]
 
-    ttday = tt.isot.split("T")[0]
     for ii, row in obstable_rows.iterrows():
-        nmag = np.log(exptime/row.exptime)/np.log(2.5)
-        try:
-            nalertpackets = int(row.nalertpackets)
-        except:
-            nalertpackets = 0
+        # FIXME
+        #nmag = np.log(exptime/row.exptime)/np.log(2.5)
+        nmag = np.log(exptime/30.0)/np.log(2.5)
 
-        fid.write('%s | %.7f |   %d |   %d |      %.9f |  %.11f |             %d |         %d |  %d |   %d |     %.2f |    %.4f |       %.4f |  %.5f |      %d |      %d\n' %(ttday, jd, field, int(row.rcid), row.ra0, row.dec0, nalertpackets, program_id, int(row.expid), filter_id, row.scimaglim + nmag, row.diffmaglim + nmag, row.sciinpseeing, row.difffwhm, exptime, int(row.status)))
+        fid.write('%.7f, %d, %d, %d, %d, %d, %.2f, %d\n'%(jd, field, int(row.chid), program_id, int(row.expid), filter_id, row.limMag+nmag, int(row.status)))
 fid.close()
 
