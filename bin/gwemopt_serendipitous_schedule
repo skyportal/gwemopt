@@ -40,6 +40,7 @@ from astropy.time import Time
 from astropy import cosmology
 from astropy.coordinates import Distance
 from astropy.coordinates import SkyCoord
+from astropy.coordinates import EarthLocation
 from astropy.io import fits
 
 import matplotlib
@@ -243,8 +244,8 @@ schedulefile = os.path.join(params["outputDir"],'schedule_ZTF.dat')
 if not os.path.isfile(schedulefile):
     coverage_structs = []
     for ii in range(len(Tobs)-1):
-        print('Running block %d/%d' % (ii, len(Tobs)-1))  
- 
+        print(f'Running block {ii}/{len(Tobs)-1}')
+        params["doMaxTiles"] = False
         params["outputDir"] = os.path.join(baseoutputDir, "%d" % ii)
         if not os.path.isdir(params["outputDir"]):
             os.makedirs(params["outputDir"])
@@ -347,7 +348,7 @@ if not os.path.isfile(schedulefile):
                 params["exposuretimes"] = [30.0,30.0]
                 params["program_id"] = 1    
     
-                params["doBlocks"] = True
+                params["doBlocks"] = False
                 params["Nblocks"] = 2
     
             params["Tobs"] = np.array([Tobs[ii], Tobs[ii+1]])
@@ -360,7 +361,36 @@ if not os.path.isfile(schedulefile):
             if cnt == 0:
                 print('Skipping round %.2f-%.2f' % (Tobs[ii], Tobs[ii+1]))
                 continue
-        
+
+            config_struct = params["config"]["ZTF"]
+            location = EarthLocation(config_struct["longitude"],
+                                     config_struct["latitude"],
+                                     config_struct["elevation"])
+
+            #use middle time segment to determine RA slice range
+            mid = len(config_struct["exposurelist"])/2
+            seg = config_struct["exposurelist"][int(np.ceil(mid))]
+
+            mjds = np.linspace(seg[0], seg[1], 100)
+            tt = Time(mjds, format='mjd', scale='utc', location=location)
+            lst = tt.sidereal_time('mean')/u.hourangle
+            lst = np.mean(lst)
+
+            if lst < 6: lst+=24
+            elif lst > 18: lst-=24
+
+            #slice within 6-hour-angle range
+            ra_low = lst - 3
+            ra_high = lst + 3
+
+            ra = map_struct["ra"]
+            if ra_low <= ra_high:
+                ipix = np.where((ra_high*360.0/24.0 < ra) | (ra_low*360.0/24.0 > ra))[0]
+            else:
+                ipix = np.where((ra_high*360.0/24.0 < ra) & (ra_low*360.0/24.0 > ra))[0]
+
+            map_struct["prob"][ipix] = 0.0
+
             moc_structs = gwemopt.moc.create_moc(params)
             tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
         
@@ -400,7 +430,7 @@ if opts.doMovie:
     bands = {'g': 1, 'r': 2, 'i': 3, 'z': 4, 'J': 5}   
     schedule_table = pd.read_csv(schedulefile, delimiter = ' ', header=None,
                                  names = ('field', 'ra', 'dec', 'mjd',
-                                          'exposure_time', 'prob', 
+                                          'exposure_time', 'prob',
                                           'airmass', 'filt', 'program_id'))
 
     #schedule_table = schedule_table[:100]
@@ -571,8 +601,7 @@ fid.write('jd,fieldid,chid,progid,expid,filterid,limMag,status\n')
 bands = {'g': 1, 'r': 2, 'i': 3, 'z': 4, 'J': 5}   
 schedule_table = pd.read_csv(schedulefile, delimiter = ' ', header=None,
                              names = ('field', 'ra', 'dec',
-                                      'mjd', 'mag',
-                                      'exposure_time', 'prob',
+                                      'mjd', 'exposure_time', 'prob',
                                       'airmass', 'filt', 'program_id'))
 
 for ii, row1 in schedule_table.iterrows():
