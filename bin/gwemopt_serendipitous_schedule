@@ -376,8 +376,8 @@ if not os.path.isfile(schedulefile):
             lst = tt.sidereal_time('mean')/u.hourangle
             lst = np.mean(lst)
 
-            if lst < 6: lst+=24
-            elif lst > 18: lst-=24
+            if lst < 3: lst+=24
+            elif lst > 21: lst-=24
 
             #slice within 6-hour-angle range
             ra_low = lst - 3
