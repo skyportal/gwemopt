@@ -641,13 +641,13 @@ def summary(params, map_struct, coverage_struct):
             FOV = coverage_struct["FOV"][ii]
             area = coverage_struct["area"][ii]
             #rand = np.random.randint(2)
-            program_id = params["program_id"]            
 
             prob = np.sum(map_struct["prob"][ipix])
 
             ra, dec = data[0], data[1]
-            observ_time, exposure_time, field_id, prob, airmass = data[2], data[4], data[5], data[6], data[7]
-            fid.write('%d %.5f %.5f %.5f %d %.5f %.5f %s %d\n'%(field_id,ra,dec,observ_time,exposure_time,prob,airmass,filt,program_id))
+            observ_time, mag, exposure_time, field_id, prob, airmass = data[2], data[3], data[4], data[5], data[6], data[7]
+            program_id = data[8]
+            fid.write('%d %.5f %.5f %.5f %.5f %d %.5f %.5f %s %d\n'%(field_id,ra,dec,observ_time,mag,exposure_time,prob,airmass,filt,program_id))
 
             dist = angular_distance(data[0], data[1],
                                     config_struct["tesselation"][:,1],
