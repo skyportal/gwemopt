@@ -1229,7 +1229,7 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                 overlap = np.setdiff1d(galaxies, galaxies2)
                 if len(overlap) == 0:
                     if not 'epochs' in tile_struct[key]:
-                        tile_struct[key]["epochs"] = np.empty((0,8))
+                        tile_struct[key]["epochs"] = np.empty((0,9))
                     tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
     else:
         for ii, key in enumerate(keys):
@@ -1254,7 +1254,7 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                     tile_struct[key]["epochs_telescope"].append(coverage_struct["telescope"][jj])
 
                 if not 'epochs' in tile_struct[key]:
-                    tile_struct[key]["epochs"] = np.empty((0,8))
+                    tile_struct[key]["epochs"] = np.empty((0,9))
                     tile_struct[key]["epochs_overlap"] = []
                     tile_struct[key]["epochs_filters"]=[]
                     
