@@ -195,6 +195,7 @@ def parse_commandline():
 
     parser.add_option("--doRASlice",action="store_true",default=False)
     parser.add_option("--raslice",default="0.0,24.0")
+    parser.add_option("--program_id",default=-1,type=int)
 
     parser.add_option("--absmag",default=-15.0,type=float)
 
@@ -320,6 +321,7 @@ def params_struct(opts):
     params["treasuremap_token"] = opts.treasuremap_token
     params["treasuremap_status"] = opts.treasuremap_status.split(",")
     params["graceid"] = opts.graceid
+    params["program_id"] = opts.program_id
     params["doCalcTiles"] = opts.doCalcTiles
     params["doFootprint"] = opts.doFootprint
     params["footprint_ra"] = opts.footprint_ra
