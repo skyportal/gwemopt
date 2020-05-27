@@ -1192,6 +1192,8 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
             if count == 19 and np.min(p_difs)>0.15: #try setting it to original n_equal as final resort
                 optimized_max = n_1_og
 
+    for key in tile_struct_hold.keys():
+        tile_struct_hold[key]['prob'] = prob[key]
 
     return optimized_max,opt_coverage_struct,opt_tile_struct
 

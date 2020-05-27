@@ -139,8 +139,13 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
                 if (tile_struct[key]["dec"] < dec_min) or (tile_struct[key]["dec"] > dec_max):
                     continue
             if "epochs" in tile_struct[key]:
-                if np.any(np.abs(exposurelist[ii][0]-tile_struct[key]["epochs"][:,2]) < params["mindiff"]/86400.0):
-                    continue
+                if params["mindiff_filt"]:
+                    #take into account filter for mindiff
+                    idx = np.where(np.asarray(tile_struct[key]["epochs_filters"]) == params["filters"][0])[0]
+                    if np.any(np.abs(exposurelist[ii][0]-tile_struct[key]["epochs"][idx,2]) < params["mindiff"]/86400.0):
+                        continue
+                elif np.any(np.abs(exposurelist[ii][0]-tile_struct[key]["epochs"][:,2]) < params["mindiff"]/86400.0):
+                        continue
             if tilesegmentlist.intersects_segment(exposurelist[ii]):
                 exposureids.append(key)
                 probs.append(tile_struct[key]["prob"])
