@@ -3,7 +3,8 @@ import os, sys
 import copy
 import numpy as np
 import healpy as hp
-import gwemopt.plotting
+import pandas as pd
+
 from astropy.time import Time
 from astropy.coordinates import get_sun, SkyCoord
 from astropy import units as u
@@ -11,12 +12,14 @@ from astropy import units as u
 import gwemopt.utils, gwemopt.tiles
 import gwemopt.rankedTilesGenerator
 import gwemopt.scheduler
+import gwemopt.plotting
+
 import ligo.segments as segments
 
 def combine_coverage_structs(coverage_structs):
 
     coverage_struct_combined = {}
-    coverage_struct_combined["data"] = np.empty((0,8))
+    coverage_struct_combined["data"] = np.empty((0,9))
     coverage_struct_combined["filters"] = np.empty((0,1))
     coverage_struct_combined["ipix"] = []
     coverage_struct_combined["patch"] = []
@@ -40,47 +43,56 @@ def combine_coverage_structs(coverage_structs):
 
     return coverage_struct_combined
 
-def read_coverage(params, telescope, filename):
+def read_coverage(params, telescope, filename, moc_struct=None):
 
     nside = params["nside"]
     config_struct = params["config"][telescope]
 
-    lines = [line.rstrip('\n') for line in open(filename)]
-    lines = lines[1:]
-    lines = filter(None,lines)
-
+    schedule_table = pd.read_csv(filename, delimiter = ' ', header=None,
+                                 names = ('field', 'ra', 'dec', 'mjd', 'mag',
+                                          'exposure_time', 'prob',
+                                          'airmass', 'filt',
+                                          'program_id'))
     coverage_struct = {}
-    coverage_struct["data"] = np.empty((0,8))
+    coverage_struct["data"] = np.empty((0,9))
     coverage_struct["filters"] = []
     coverage_struct["ipix"] = []
     coverage_struct["patch"] = []
     coverage_struct["area"] = []
 
-    for line in lines:
-        lineSplit = line.split(",")
-        ra = float(lineSplit[2])
-        dec = float(lineSplit[3])
-        mjd = float(lineSplit[4])
-        filt = lineSplit[6]
-        mag = float(lineSplit[7])
+    for ii, row1 in schedule_table.iterrows():
+        ra, dec = row1.ra, row1.dec
+        mjd = row1.mjd
+        mag = row1.mag
+        exposureTime = row1.exposure_time
+        field = row1.field
+        prob = row1.prob
+        airmass = row1.airmass
+        filt = row1.filt 
+        program_id = row1.program_id 
 
-        coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[ra,dec,mjd,mag,config_struct["exposuretime"],-1,-1,-1]]),axis=0)
+        coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[ra,dec,mjd,mag,exposureTime,field,prob,airmass,program_id]]),axis=0)
         coverage_struct["filters"].append(filt)
 
-        if telescope == "ATLAS":
-            alpha=0.2
-            color='#6c71c4'
-        elif telescope == "PS1":
-            alpha=0.1
-            color='#859900'
-        else:
-            alpha=0.2
-            color='#6c71c4'
+        if moc_struct is not None:
+            if telescope == "ATLAS":
+                alpha=0.2
+                color='#6c71c4'
+            elif telescope == "PS1":
+                alpha=0.1
+                color='#859900'
+            else:
+                alpha=0.2
+                color='#6c71c4'
 
-        if config_struct["FOV_coverage_type"] == "square":
-            ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra, dec, config_struct["FOV_coverage"], nside, alpha=alpha, color=color)
-        elif config_struct["FOV_coverage_type"] == "circle":
-            ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra, dec, config_struct["FOV_coverage"], nside, alpha=alpha, color=color)
+            if config_struct["FOV_coverage_type"] == "square":
+                ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra, dec, config_struct["FOV_coverage"], nside, alpha=alpha, color=color)
+            elif config_struct["FOV_coverage_type"] == "circle":
+                 ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra, dec, config_struct["FOV_coverage"], nside, alpha=alpha, color=color)
+        else:
+            ipix = moc_struct[field]["ipix"]
+            patch = moc_struct[field]["patch"]
+            area = moc_struct[field]["area"]
 
         coverage_struct["patch"].append(patch)
         coverage_struct["ipix"].append(ipix)
@@ -89,6 +101,8 @@ def read_coverage(params, telescope, filename):
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
     coverage_struct["area"] = np.array(coverage_struct["area"])
     coverage_struct["FOV"] = config_struct["FOV_coverage"]*np.ones((len(coverage_struct["filters"]),))
+    coverage_struct["telescope"] = [config_struct["telescope"]]*len(coverage_struct["filters"])
+    coverage_struct["exposureused"] = []
 
     return coverage_struct
 
