@@ -139,7 +139,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
                 if (tile_struct[key]["dec"] < dec_min) or (tile_struct[key]["dec"] > dec_max):
                     continue
             if "epochs" in tile_struct[key]:
-                if params["mindiff_filt"]:
+                if params["doMindifFilt"]:
                     #take into account filter for mindiff
                     idx = np.where(np.asarray(tile_struct[key]["epochs_filters"]) == params["filters"][0])[0]
                     if np.any(np.abs(exposurelist[ii][0]-tile_struct[key]["epochs"][idx,2]) < params["mindiff"]/86400.0):
@@ -845,7 +845,7 @@ def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescop
                 if len(has_late) > 0:
                     minhas_late.append(np.min(has_late))
        
-            if (len(minhas_late) > 0) and (len(has_late) > 0): 
+            if (len(minhas_late) > 0) and (len(has_late) > 0):
                 #conditions for trying to schedule end of slice
                 if np.min(minhas_late) <= 5.0 and np.min(has) > 4.0 and not skip:
                     try_end = True

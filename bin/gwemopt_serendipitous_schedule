@@ -172,7 +172,7 @@ params["doBalanceExposure"] = True
 params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"] = 0.0, 0.9, 0.0
 params["gpstime"] = opts.gps
 params["mindiff"] = opts.mindiff
-params["mindiff_filt"] = True
+params["doMindifFilt"] = True
 params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
 params["filters"] = opts.filters.split(",")
 params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)

@@ -18,12 +18,9 @@
 
 """.
 Gravitational-wave Electromagnetic Optimization
-
 This script generates an optimized list of pointings and content for
 reviewing gravitational-wave skymap likelihoods.
-
 Comments should be e-mailed to michael.coughlin@ligo.org.
-
 """
 
 
@@ -93,7 +90,8 @@ def parse_commandline():
     parser.add_option("--doMovie",  action="store_true", default=False)
     parser.add_option("--doTiles",  action="store_true", default=False)
     parser.add_option("--tilesType", help="tiling type",default="moc")
-    
+    parser.add_option("--doMindifFilt",  action="store_true", default=False)
+
     parser.add_option("--doIterativeTiling",  action="store_true", default=False)
     parser.add_option("--doMinimalTiling",  action="store_true", default=False)
     parser.add_option("--doOverlappingScheduling",  action="store_true", default=False)
@@ -113,7 +111,7 @@ def parse_commandline():
     parser.add_option("--doSkybrightness",  action="store_true", default=False)
 
     parser.add_option("--doEfficiency",  action="store_true", default=False)
-    parser.add_option("-e", "--efficiencyOutput", help="Output file of the efficiency.", 
+    parser.add_option("-e", "--efficiencyOutput", help="Output file of the efficiency.",
                       default="efficiency.txt")
     parser.add_option("-m", "--modelType", help="(file, Bulla, Tophat, afterglow)",default="Tophat")
     parser.add_option("--mag", help="mag.", default=-16, type=float)
@@ -141,7 +139,7 @@ def parse_commandline():
     parser.add_option("--Tobs",default="0.0,1.0")
 
     parser.add_option("--mindiff",default=0.0,type=float)
-    
+
     parser.add_option("--powerlaw_cl",default=0.9,type=float)
     parser.add_option("--powerlaw_n",default=1.0,type=float)
     parser.add_option("--powerlaw_dist_exp",default=0,type=float)
@@ -163,7 +161,7 @@ def parse_commandline():
     parser.add_option("--doTransients",  action="store_true", default=False)
     parser.add_option("--transientsFile",default="../transients/ps1_objects.csv")
     parser.add_option("--dt",default=14.0,type=float)
-    
+
     parser.add_option("-a","--airmass",default=2.5,type=float)
 
     parser.add_option("--doSingleExposure",  action="store_true", default=False)
@@ -247,15 +245,15 @@ def params_struct(opts):
         if opts.doSingleExposure:
             exposuretime = np.array(opts.exposuretimes.split(","),dtype=np.float)[0]
 
-            params["config"][telescope]["magnitude_orig"] = params["config"][telescope]["magnitude"] 
-            params["config"][telescope]["exposuretime_orig"] = params["config"][telescope]["exposuretime"] 
+            params["config"][telescope]["magnitude_orig"] = params["config"][telescope]["magnitude"]
+            params["config"][telescope]["exposuretime_orig"] = params["config"][telescope]["exposuretime"]
 
             nmag = np.log(exposuretime/params["config"][telescope]["exposuretime"]) / np.log(2.5)
             params["config"][telescope]["magnitude"] = params["config"][telescope]["magnitude"] + nmag
-            params["config"][telescope]["exposuretime"] = exposuretime            
+            params["config"][telescope]["exposuretime"] = exposuretime
         if "tesselationFile" in params["config"][telescope]:
             if not os.path.isfile(params["config"][telescope]["tesselationFile"]):
-                if params["config"][telescope]["FOV_type"] == "circle": 
+                if params["config"][telescope]["FOV_type"] == "circle":
                     gwemopt.tiles.tesselation_spiral(params["config"][telescope])
                 elif params["config"][telescope]["FOV_type"] == "square":
                     gwemopt.tiles.tesselation_packing(params["config"][telescope])
@@ -314,6 +312,7 @@ def params_struct(opts):
     params["observedTiles"] = opts.observedTiles.split(",")
     params["doPlots"] = opts.doPlots
     params["doMovie"] = opts.doMovie
+    params["doMindifFilt"] = opts.doMindifFilt
     params["doObservability"] = opts.doObservability
     params["do3D"] = opts.do3D
     params["doDatabase"] = opts.doDatabase
@@ -372,7 +371,7 @@ def params_struct(opts):
 
     params["doChipGaps"] = opts.doChipGaps
     params["doUsePrimary"] = opts.doUsePrimary
- 
+
     params["doSplit"] = opts.doSplit
     params["splitType"] = opts.splitType
     params["Nregions"] = opts.Nregions
@@ -490,7 +489,7 @@ if opts.doTiles:
             for index in tiles_struct.keys():
                 ra, dec = tiles_struct[index]["ra"], tiles_struct[index]["dec"]
                 params["config"][telescope]["tesselation"] = np.append(params["config"][telescope]["tesselation"],[[index,ra,dec]],axis=0)
-            params["Ntiles"].append(len(tiles_struct.keys()))           
+            params["Ntiles"].append(len(tiles_struct.keys()))
 
     elif params["tilesType"] == "greedy":
         print("Generating greedy struct...")
@@ -518,7 +517,7 @@ if opts.doTiles:
     if opts.doPlots:
         print("Plotting tiles struct...")
         gwemopt.plotting.tiles(params, map_struct, tile_structs)
-    
+
 
 if opts.doSchedule:
     if opts.doTiles:
