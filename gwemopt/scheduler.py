@@ -415,7 +415,7 @@ def scheduler(params, config_struct, tile_struct):
     import gwemopt.segments
     #import gwemopt.segments_astroplan
     coverage_struct = {}
-    coverage_struct["data"] = np.empty((0,8))
+    coverage_struct["data"] = np.empty((0,9))
     coverage_struct["filters"] = []
     coverage_struct["ipix"] = []
     coverage_struct["patch"] = []
@@ -483,7 +483,7 @@ def scheduler(params, config_struct, tile_struct):
             mag = config_struct["magnitude"] + nmag
             exposureTime = (mjd_exposure_end-mjd_exposure_start)*86400.0
 
-            coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_start,mag,exposureTime,int(key),tile_struct_hold["prob"],airmass]]),axis=0)
+            coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_start,mag,exposureTime,int(key),tile_struct_hold["prob"],airmass,params["program_id"]]]),axis=0)
 
             coverage_struct["filters"].append(filt)
             coverage_struct["patch"].append(tile_struct_hold["patch"])
