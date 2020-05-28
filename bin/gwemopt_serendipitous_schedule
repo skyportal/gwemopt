@@ -36,7 +36,7 @@ import healpy as hp
 import pandas as pd
 from astropy.table import unique, vstack, Table
 from astropy import units as u
-from astropy.time import Time
+from astropy.time import Time, TimeDelta
 from astropy import cosmology
 from astropy.coordinates import Distance
 from astropy.coordinates import SkyCoord
@@ -58,6 +58,12 @@ import ligo.skymap.distance as ligodist
 import gwemopt.utils, gwemopt.plotting
 import gwemopt.moc, gwemopt.tiles 
 import gwemopt.coverage
+
+try:
+    import ligo.skymap.plot
+    cmap = "cylon"
+except:
+    cmap = 'PuBuGn'
 
 __author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
 __version__ = 1.0
@@ -103,6 +109,9 @@ def parse_commandline():
     parser.add_option("--doSchedule",  action="store_true", default=False)
     parser.add_option("--doPlots",  action="store_true", default=False)
     parser.add_option("--doMovie",  action="store_true", default=False)
+
+    parser.add_option("--doObservability",  action="store_true", default=False)
+    parser.add_option("--NFields",default=-1,type=int)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -241,6 +250,78 @@ map_struct = map_struct_1
 Tmin, Tmax, dt = opts.Tmin, opts.Tmax, opts.dt
 Tobs = np.arange(Tmin, Tmax+dt, dt)
 
+if opts.doObservability:
+    params["gpstime"] = (Time(opts.gps, format='gps') + TimeDelta(Tmin*u.day)).gps
+    observability_struct_1 = gwemopt.utils.observability(params, map_struct)
+
+    params["gpstime"] = (Time(opts.gps, format='gps') + TimeDelta(Tmax*u.day)).gps
+    observability_struct_2 = gwemopt.utils.observability(params, map_struct)
+
+    unit='Gravitational-wave probability'
+    cbar=False
+
+    for telescope in observability_struct_1.keys():
+        observability_map = observability_struct_1[telescope]["observability"]*observability_struct_2[telescope]["observability"]
+        idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
+        observability_map[idx] = 0.0
+        observability_map = observability_map/np.sum(observability_map)
+
+        if opts.doPlots:
+            plotName = os.path.join(params["outputDir"],'observability_%s.pdf'%telescope)
+            hp.mollview(observability_map,title='',unit=unit,cbar=cbar,cmap=cmap)
+            gwemopt.plotting.add_edges()
+            plt.show()
+            plt.savefig(plotName,dpi=200)
+            plt.close('all')
+
+        map_struct["prob"] = observability_map
+        tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs,
+                                         doSegments=False)
+
+        idxs, probs = [], []
+        for telescope in tile_structs:
+            tiles_struct = tile_structs[telescope]
+            for index in tiles_struct.keys():
+                if tiles_struct[index]["prob"] == 0.0: continue
+                idxs.append(index)
+                probs.append(tiles_struct[index]["prob"])
+        idxs, probs = np.array(idxs), np.array(probs)
+        idxsort = np.argsort(probs)[::-1]
+        idxfields = idxs[idxsort[:opts.NFields]]
+        params["config"][telescope]["tesselation"] = params["config"][telescope]["tesselation"][idxfields,:]
+        moc_structs = gwemopt.moc.create_moc(params)
+ 
+        if opts.doPlots:
+            print("Plotting tiles struct...")
+            gwemopt.plotting.tiles(params, map_struct, tile_structs)
+
+            unit='Gravitational-wave probability'
+            cbar=False
+
+            plotName = os.path.join(params["outputDir"],'tiles_observability.pdf')
+            plt.figure()
+            hp.mollview(np.zeros(map_struct["prob"].shape),title='',unit=unit,cbar=cbar,cmap=cmap)
+            ax = plt.gca()
+            for telescope in tile_structs:
+                tiles_struct = tile_structs[telescope]
+                for index in tiles_struct.keys():
+                    if tiles_struct[index]["prob"] == 0.0: continue
+                    ipix, corners, patch = tiles_struct[index]["ipix"], tiles_struct[index]["corners"], tiles_struct[index]["patch"]
+                    #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
+                    if not patch: continue
+                    patch_cpy = copy.copy(patch)
+                    patch_cpy.axes = None
+                    patch_cpy.figure = None
+                    patch_cpy.set_transform(ax.transData)
+                    if index in idxfields:
+                        patch_cpy.set_facecolor('blue')
+                    hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
+                    #tiles.plot()
+            gwemopt.plotting.add_edges()
+            plt.show()
+            plt.savefig(plotName,dpi=200)
+            plt.close('all')
+
 params["outputDir"] = baseoutputDir
 schedulefile = os.path.join(params["outputDir"],'schedule_ZTF.dat')
 
@@ -282,6 +363,7 @@ if not os.path.isfile(schedulefile):
                         prob_data[ipix] = 1.0
                         dt = mjd0 + Tobs[ii] - row2["mjd"]
                         prob_data[ipix] = np.exp(-dt)
+
                     prob_data[prob_data < 0.01] = 0.01
                     idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
                     prob_data[idx] = 0.0
@@ -291,7 +373,7 @@ if not os.path.isfile(schedulefile):
                     idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
                     prob_data[idx] = 0.0
                     prob_data = prob_data / np.sum(prob_data)
-    
+  
                 map_struct_2["prob"] = prob_data
                 
                 sort_idx = np.argsort(map_struct_2["prob"])[::-1]
@@ -303,11 +385,16 @@ if not os.path.isfile(schedulefile):
                 map_struct = map_struct_2
                 params["filters"] = ["g","r"]
                 params["exposuretimes"] = [180.0,180.0]
+                #params["exposuretimes"] = [30.0,30.0]
                 params["program_id"] = 2
     
                 params["doBlocks"] = False
                 params["Nblocks"] = 2
-    
+   
+                if opts.doObservability:
+                    params["doAlternatingFilters"] = False
+                    params["doBalanceExposure"] = False
+ 
                 if opts.doPlots:
                     print("Plotting skymap...")
                     gwemopt.plotting.skymap(params,map_struct_2)
@@ -337,7 +424,7 @@ if not os.path.isfile(schedulefile):
                 else:
                     prob_data = np.ones((npix,))
                     prob_data = prob_data / np.sum(prob_data)
-    
+
                 map_struct_1["prob"] = prob_data
     
                 sort_idx = np.argsort(map_struct_1["prob"])[::-1]
@@ -347,13 +434,22 @@ if not os.path.isfile(schedulefile):
                 map_struct_1["cumprob"] = csm
     
                 map_struct = map_struct_1
-                params["filters"] = ["g","r"]
-                params["exposuretimes"] = [30.0,30.0]
+                if opts.doObservability:
+                    params["filters"] = ["g","r"] * 10
+                    params["exposuretimes"] = [30.0,30.0] * 10
+                else:
+                    params["filters"] = ["g","r"]
+                    params["exposuretimes"] = [30.0,30.0]
+
                 params["program_id"] = 1    
     
                 params["doBlocks"] = False
                 params["Nblocks"] = 2
     
+                if opts.doObservability:
+                    params["doAlternatingFilters"] = False
+                    params["doBalanceExposure"] = False
+
             params["Tobs"] = np.array([Tobs[ii], Tobs[ii+1]])
             params = gwemopt.segments.get_telescope_segments(params)
     
@@ -407,73 +503,74 @@ if not os.path.isfile(schedulefile):
             
             #insert filler fields if dt >=5min
 
-            t2 = coverage_struct["data"][0,2]
-            filt2 = coverage_struct["filters"][0]
-            exposuretime = coverage_struct["data"][0,4]
-            gap_mjds = []
-
-            if os.path.isfile(schedulefile):
-                t1 = schedule_table['mjd'][len(schedule_table)-1] + schedule_table['exposure_time'][len(schedule_table)-1]/86400.
-                dt = (t2 - t1) * 1440.
-                if dt >= 5.0:
-                    gap_mjds.append(t2)
+            if (coverage_struct["data"].size > 0):
+                t2 = coverage_struct["data"][0,2]
+                filt2 = coverage_struct["filters"][0]
+                exposuretime = coverage_struct["data"][0,4]
+                gap_mjds = []
+    
+                if os.path.isfile(schedulefile) and (not schedule_table.empty):
+                    t1 = schedule_table['mjd'][len(schedule_table)-1] + schedule_table['exposure_time'][len(schedule_table)-1]/86400.
+                    dt = (t2 - t1) * 1440.
+                    if dt >= 5.0:
+                        gap_mjds.append(t2)
+                
+                for ii in range(len(coverage_struct["ipix"])):
+                    if ii == 0: continue
+                    data = coverage_struct["data"][ii,:]
+                    filt1 = coverage_struct["filters"][ii]
+    
+                    t1 = data[2]
+                    dt = (t1 - t2) * 1440.
+                    dt = dt - exposuretime/60.
+                    if filt1 != filt2 and "filt_change_time" in config_struct:
+                        dt -= config_struct["filt_change_time"]
+                    if dt >=5.0 and dt < 200:
+                        gap_mjds.append(t1)
+    
+                    exposuretime = data[4]
+                    t2 = t1
+                    filt2 = filt1
             
-            for ii in range(len(coverage_struct["ipix"])):
-                if ii == 0: continue
-                data = coverage_struct["data"][ii,:]
-                filt1 = coverage_struct["filters"][ii]
-
-                t1 = data[2]
-                dt = (t1 - t2) * 1440.
-                dt = dt - exposuretime/60.
-                if filt1 != filt2 and "filt_change_time" in config_struct:
-                    dt -= config_struct["filt_change_time"]
-                if dt >=5.0 and dt < 200:
-                    gap_mjds.append(t1)
-
-                exposuretime = data[4]
-                t2 = t1
-                filt2 = filt1
-        
-
-            for mjd in gap_mjds:
-
-                idx = np.where(coverage_struct["data"][:,2]==mjd)[0][0]
-                exposuretime = coverage_struct["data"][idx,4]
-                filt1 = coverage_struct["filters"][idx]
-                if idx == 0:
-                    t1 = schedule_table['mjd'][len(schedule_table)-1] + exposuretime/86400.
-                else:
-                    t1 = coverage_struct["data"][idx-1,2] + exposuretime/86400.
-                
-                Tobs1 = t1 - mjd0 #beginning of block
-                Tobs2 = mjd - mjd0 #end of block
-                params["Tobs"] = np.array([Tobs1,Tobs2])
-                params["filters"] = [filt1]
-                params["exposuretimes"] = [params["exposuretimes"][0]]
-                params["doMaxTiles"],params["doBalanceExposure"],params["doAlternatingFilters"] = False,False,False
-
-                params = gwemopt.segments.get_telescope_segments(params)
-                tile_structs["ZTF"] = gwemopt.utils.check_overlapping_tiles(params,tile_structs["ZTF"],coverage_struct)
-                tile_structs, coverage_struct_new = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
-
-                idx_keep = np.where((coverage_struct_new["data"][:,2] > t1) &
-                                    (coverage_struct_new["data"][:,2] < mjd - exposuretime/86400.))[0]
-                
-                coverage_struct["data"] = np.insert(coverage_struct["data"], idx, coverage_struct_new["data"][idx_keep,:],axis=0)
-                coverage_struct["filters"] = np.insert(coverage_struct["filters"], idx, coverage_struct_new["filters"][idx_keep])
-                coverage_struct["FOV"] = np.insert(coverage_struct["FOV"], idx, coverage_struct_new["FOV"][idx_keep])
-                coverage_struct["area"] = np.insert(coverage_struct["area"], idx, coverage_struct_new["area"][idx_keep])
-                coverage_struct["telescope"] = np.insert(coverage_struct["telescope"], idx, coverage_struct_new["telescope"][idx_keep])
-                coverage_struct["ipix"][idx:idx] = [coverage_struct_new["ipix"][jj] for jj in idx_keep]
-                coverage_struct["patch"][idx:idx] = [coverage_struct_new["patch"][jj] for jj in idx_keep]
-
-            if opts.doSchedule:
-                print("Summary of coverage...")
-                gwemopt.scheduler.summary(params,map_struct,coverage_struct)
-        
-                if opts.doPlots:
-                    gwemopt.plotting.coverage(params, map_struct, coverage_struct)
+    
+                for mjd in gap_mjds:
+    
+                    idx = np.where(coverage_struct["data"][:,2]==mjd)[0][0]
+                    exposuretime = coverage_struct["data"][idx,4]
+                    filt1 = coverage_struct["filters"][idx]
+                    if idx == 0:
+                        t1 = schedule_table['mjd'][len(schedule_table)-1] + exposuretime/86400.
+                    else:
+                        t1 = coverage_struct["data"][idx-1,2] + exposuretime/86400.
+                    
+                    Tobs1 = t1 - mjd0 #beginning of block
+                    Tobs2 = mjd - mjd0 #end of block
+                    params["Tobs"] = np.array([Tobs1,Tobs2])
+                    params["filters"] = [filt1]
+                    params["exposuretimes"] = [params["exposuretimes"][0]]
+                    params["doMaxTiles"],params["doBalanceExposure"],params["doAlternatingFilters"] = False,False,False
+    
+                    params = gwemopt.segments.get_telescope_segments(params)
+                    tile_structs["ZTF"] = gwemopt.utils.check_overlapping_tiles(params,tile_structs["ZTF"],coverage_struct)
+                    tile_structs, coverage_struct_new = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
+    
+                    idx_keep = np.where((coverage_struct_new["data"][:,2] > t1) &
+                                        (coverage_struct_new["data"][:,2] < mjd - exposuretime/86400.))[0]
+                    
+                    coverage_struct["data"] = np.insert(coverage_struct["data"], idx, coverage_struct_new["data"][idx_keep,:],axis=0)
+                    coverage_struct["filters"] = np.insert(coverage_struct["filters"], idx, coverage_struct_new["filters"][idx_keep])
+                    coverage_struct["FOV"] = np.insert(coverage_struct["FOV"], idx, coverage_struct_new["FOV"][idx_keep])
+                    coverage_struct["area"] = np.insert(coverage_struct["area"], idx, coverage_struct_new["area"][idx_keep])
+                    coverage_struct["telescope"] = np.insert(coverage_struct["telescope"], idx, coverage_struct_new["telescope"][idx_keep])
+                    coverage_struct["ipix"][idx:idx] = [coverage_struct_new["ipix"][jj] for jj in idx_keep]
+                    coverage_struct["patch"][idx:idx] = [coverage_struct_new["patch"][jj] for jj in idx_keep]
+    
+                if opts.doSchedule:
+                    print("Summary of coverage...")
+                    gwemopt.scheduler.summary(params,map_struct,coverage_struct)
+            
+                    if opts.doPlots:
+                        gwemopt.plotting.coverage(params, map_struct, coverage_struct)
     
         coverage_structs.append(coverage_struct)
 
