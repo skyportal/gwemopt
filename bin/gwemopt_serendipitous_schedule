@@ -662,7 +662,7 @@ params["outputDir"] = baseoutputDir
 
 obsfile = os.path.join(params["outputDir"],'obs.dat')
 fid = open(obsfile, 'w')
-fid.write('jd,fieldid,chid,progid,expid,filterid,limMag,status\n')
+fid.write('jd,fieldid,chid,progid,expid,filterid,limMag,exptime,status\n')
  
 bands = {'g': 1, 'r': 2, 'i': 3, 'z': 4, 'J': 5}   
 schedule_table = pd.read_csv(schedulefile, delimiter = ' ', header=None,
