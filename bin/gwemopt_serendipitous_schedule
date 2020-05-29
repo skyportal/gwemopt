@@ -30,6 +30,7 @@ Comments should be e-mailed to michael.coughlin@ligo.org.
 import os, sys, glob, optparse, shutil, warnings
 import copy
 import numpy as np
+from scipy.stats import norm, rv_discrete
 np.random.seed(0)
 
 import healpy as hp
@@ -51,7 +52,8 @@ matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 from matplotlib import patches
 from matplotlib.colors import LogNorm
 import matplotlib.pyplot as plt
-from matplotlib import cm
+from matplotlib import cm, colors
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import ligo.skymap.distance as ligodist
 
@@ -112,6 +114,8 @@ def parse_commandline():
 
     parser.add_option("--doObservability",  action="store_true", default=False)
     parser.add_option("--NFields",default=-1,type=int)
+
+    parser.add_option("--doEvaluate",  action="store_true", default=False)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -384,8 +388,8 @@ if not os.path.isfile(schedulefile):
     
                 map_struct = map_struct_2
                 params["filters"] = ["g","r"]
-                params["exposuretimes"] = [180.0,180.0]
-                #params["exposuretimes"] = [30.0,30.0]
+                #params["exposuretimes"] = [180.0,180.0]
+                params["exposuretimes"] = [30.0,30.0]
                 params["program_id"] = 2
     
                 params["doBlocks"] = False
@@ -661,7 +665,7 @@ if opts.doMovie:
             if dt > 2: continue
 
             field = row2["field"]
-            if not field in moc_structs: continue
+            if not field in moc_structs["ZTF"]: continue
             moc_struct = moc_structs[field]
             ras, decs = moc_struct["corners"][:,0], moc_struct["corners"][:,1]
             if len(ras) == 4:
@@ -751,53 +755,175 @@ if opts.doMovie:
     rm_command = "rm %s/*.png"%(moviedir)
     os.system(rm_command)
 
-all_obs_table = pd.read_csv(opts.observations, delimiter = ',')
-use_obs = all_obs_table['status'] == 1
-obstable = all_obs_table[use_obs]
-
-params["outputDir"] = baseoutputDir
-
 obsfile = os.path.join(params["outputDir"],'obs.dat')
-fid = open(obsfile, 'w')
-fid.write('jd,fieldid,chid,progid,expid,filterid,limMag,exptime,status\n')
- 
-bands = {'g': 1, 'r': 2, 'i': 3, 'z': 4, 'J': 5}   
-schedule_table = pd.read_csv(schedulefile, delimiter = ' ', header=None,
-                             names = ('field', 'ra', 'dec',
-                                      'mjd', 'mag',
-                                      'exposure_time', 'prob',
-                                      'airmass', 'filt', 'program_id'))
+if not os.path.isfile(obsfile):
+    all_obs_table = pd.read_csv(opts.observations, delimiter = ',')
+    use_obs = all_obs_table['status'] == 1
+    obstable = all_obs_table[use_obs]
+    
+    params["outputDir"] = baseoutputDir
+    
+    obsfile = os.path.join(params["outputDir"],'obs.dat')
+    fid = open(obsfile, 'w')
+    fid.write('jd,fieldid,chid,progid,expid,filterid,limMag,exptime,status\n')
+     
+    bands = {'g': 1, 'r': 2, 'i': 3, 'z': 4, 'J': 5}   
+    schedule_table = pd.read_csv(schedulefile, delimiter = ' ', header=None,
+                                 names = ('field', 'ra', 'dec',
+                                          'mjd', 'mag',
+                                          'exposure_time', 'prob',
+                                          'airmass', 'filt', 'program_id'))
+    
+    for ii, row1 in schedule_table.iterrows():
+        field = row1["field"]
+        mjd = row1["mjd"]
+        exptime = row1["exposure_time"]
+        filt = row1["filt"]
+        filter_id = bands[filt]
+        program_id = row1["program_id"]
+    
+        tt = Time(mjd, format='mjd')
+        jd = tt.jd
+    
+        obstable_field = []
+        cnt = 0
+        while len(obstable_field) == 0:
+            idx = np.where(field-cnt == obstable["fieldid"])[0]
+            obstable_field = obstable.iloc[idx]
+            if len(obstable_field) == 0:
+                print('No data for field %d...' % (field-cnt))
+                cnt = cnt+1
+    
+        idy = np.random.randint(len(obstable_field))
+        obstable_row = obstable_field.iloc[[idy]]
+        obstable_rows = obstable[obstable["jd"] == obstable_row["jd"].to_numpy()[0]]
+    
+        for ii, row in obstable_rows.iterrows():
+            # FIXME
+            #nmag = np.log(exptime/row.exptime)/np.log(2.5)
+            nmag = np.log(exptime/30.0)/np.log(2.5)
+    
+            fid.write('%.7f, %d, %d, %d, %d, %d, %.2f, %.0f, %d\n'%(jd, field, int(row.chid), program_id, int(row.expid), filter_id, row.limMag+nmag, exptime, int(row.status)))
+    
+    fid.close()
+   
+if opts.doEvaluate:
 
-for ii, row1 in schedule_table.iterrows():
-    field = row1["field"]
-    mjd = row1["mjd"]
-    exptime = row1["exposure_time"]
-    filt = row1["filt"]
-    filter_id = bands[filt]
-    program_id = row1["program_id"]
+    filename = os.path.join(baseoutputDir,'eff.dat')
+    if not os.path.isfile(filename):
 
-    tt = Time(mjd, format='mjd')
-    jd = tt.jd
+        nkilonovae = 10000
+        mindet = 2
+        absmag, dmag = -16, 0.5
+        maxdist = 500 # 1 Gpc
+        distbins = np.linspace(0,maxdist,1000)
+        distprob = distbins ** 2
+        distprob = distprob / np.sum(distprob)
+    
+        distn = rv_discrete(values=(distbins, distprob))
+        dists = distn.rvs(size=nkilonovae)
+    
+        jd_min = (Time(opts.gps, format='gps') + TimeDelta(Tmin*u.day)).jd
+        jd_max = (Time(opts.gps, format='gps') + TimeDelta(Tmax*u.day)).jd    
+    
+        fid = open(filename, 'w')
+    
+        df = pd.read_csv(obsfile)
+        df_group = df.groupby('fieldid')
+        fields, effs = [], []
+        for ii, (g, data1) in enumerate(df_group):
+            if np.mod(ii, 10) == 0:
+                print('Process field %d/%d' % (ii, len(df_group)))
+            df_sub = df_group.get_group(g)
+            df_jd = df_sub.groupby('jd')
+            fieldid = np.median(df_sub["fieldid"])
+    
+            jds, limmags = [], [] 
+            for jj, (h, data2) in enumerate(df_jd):
+                df_jd_sub = df_jd.get_group(h)
+                limMag = np.median(df_jd_sub["limMag"])
+                jds.append(np.median(df_jd_sub["jd"]))
+                limmags.append(limMag)
+            jds = np.array(jds)
+            limmags = np.array(limmags)
+    
+            ndet = 0
+            for jj in range(nkilonovae):
+                jd = np.random.uniform(jd_min, jd_max)
+                dt = jds-jd
+                mag = absmag + dmag*dt
+                mag[dt < 0] = 99.9 
+                dist_threshold = (10**(((limmags-mag)/5.0)+1.0))/1e6
+                det = len(np.where(dist_threshold >= dists[jj])[0])
+                if mindet <= det:
+                    ndet = ndet + 1
+    
+            fields.append(int(fieldid))
+            effs.append(ndet/nkilonovae)
+    
+            fid.write('%d %.5e\n' % (int(fieldid), ndet/nkilonovae))
+        fid.close()
 
-    obstable_field = []
-    cnt = 0
-    while len(obstable_field) == 0:
-        idx = np.where(field-cnt == obstable["fieldid"])[0]
-        obstable_field = obstable.iloc[idx]
-        if len(obstable_field) == 0:
-            print('No data for field %d...' % (field-cnt))
-            cnt = cnt+1
+    data_out = np.loadtxt(filename)
+    fields, effs = data_out[:,0], data_out[:,1]
 
-    idy = np.random.randint(len(obstable_field))
-    obstable_row = obstable_field.iloc[[idy]]
-    obstable_rows = obstable[obstable["jd"] == obstable_row["jd"].to_numpy()[0]]
+    if opts.doPlots:
 
-    for ii, row in obstable_rows.iterrows():
-        # FIXME
-        #nmag = np.log(exptime/row.exptime)/np.log(2.5)
-        nmag = np.log(exptime/30.0)/np.log(2.5)
+        cmapnorm = colors.Normalize(vmin=np.min(effs), vmax=np.max(effs))
+        cmap = cm.get_cmap('rainbow')
 
-        fid.write('%.7f, %d, %d, %d, %d, %d, %.2f, %.0f, %d\n'%(jd, field, int(row.chid), program_id, int(row.expid), filter_id, row.limMag+nmag, exptime, int(row.status)))
+        # load the data
+        hdulist = fits.open(opts.inputDir+'Gaia_hp8_densitymap.fits')
+        hist = hdulist[1].data['srcdens'][np.argsort(hdulist[1].data['hpx8'])]
 
-fid.close()
+        fig = plt.figure(figsize=(12, 8))
+        gs = fig.add_gridspec(8, 1)
+        ax1 = fig.add_subplot(gs[0:6, 0], projection='astro hours mollweide')
+        ax2 = fig.add_subplot(gs[7, 0])
+
+        plt.axes(ax1)
+        # plot the data in healpy
+        norm ='log'
+
+        ax1.imshow_hpx(hist, cmap='viridis', norm=LogNorm(), nested=True)
+        ax1.grid()
+
+        ra = ax1.coords[0]
+        dec = ax1.coords[1]
+
+        ra.set_ticks_visible(False)
+        dec.set_ticks_visible(False)
+
+        for field, eff in zip(fields, effs):
+            field = int(field)
+            if not field in moc_structs["ZTF"]: continue
+            moc_struct = moc_structs["ZTF"][field]
+            ras, decs = moc_struct["corners"][:,0], moc_struct["corners"][:,1]
+            if len(ras) == 4:
+                ras = [ras[0], ras[1], ras[3], ras[2], ras[0]]
+                decs = [decs[0], decs[1], decs[3], decs[2], decs[0]]
+                ras, decs = np.array(ras), np.array(decs)
+
+            if not eff > 0: continue
+            color = cmap(cmapnorm(eff))
+            alpha = 0.5 
+            linewidth = 3.0
+
+            idx1, idx2 = np.where(ras>=180.0)[0], np.where(ras<180.0)[0]
+            idx3, idx4 = np.where(ras>300.0)[0], np.where(ras<60.0)[0]
+            if (len(idx1)>0 and len(idx2)>0) and not (len(idx3)>0 and len(idx4)>0):
+                alpha = 0.0
+
+            poly = patches.Polygon(np.vstack((ras, decs)).T, transform=ax1.get_transform('world'), alpha=alpha, color=color)
+            ax1.plot(ras, decs, color=color, transform=ax1.get_transform('world'), alpha=alpha, linewidth=linewidth)
+            ax1.add_patch(poly)
+
+        cbar = matplotlib.colorbar.ColorbarBase(ax2, cmap=cmap,
+                                                norm=cmapnorm,
+                                                orientation='horizontal')
+        cbar.set_label('Efficiency')
+
+        plotName = os.path.join(baseoutputDir,'eff.pdf')
+        plt.savefig(plotName,dpi=200,bbox_inches='tight')
+        plt.close()
 
