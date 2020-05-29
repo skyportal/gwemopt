@@ -68,7 +68,7 @@ MultiNest and its Python wrapper PyMultiNest are required, but have slightly mor
 \subsection{Installing cmake}
 The MultiNest installation requires a C compiler. If you have one already, feel free to skip this subsection.
 \begin{enumerate}
-    \item If you are using macOS, first type into the terminal: \\{\tt \$ /bin/bash -c ``\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/ \\ install/master/install.sh)"} \\ then run {\tt \$ brew install cmake}. Otherwise, follow the instructions below.
+    \item If you are using macOS, first type into the terminal: \\{\tt \$ /bin/bash -c "\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/ \\ install/master/install.sh)"} \\ then run {\tt \$ brew install cmake}. Otherwise, follow the instructions below.
 	\item Go to \url{https://cmake.org/download/} and download the Unix .tar.gz tarball (cmake-3.17.3.tar.gz is the latest release at time of writing). I put it in my home directory.
 	\item To open up the tarball, run {\tt \$ tar -zxvf cmake-3.17.3.tar.gz}
 	\item {\tt \$ cd cmake-3.11-3}
@@ -99,7 +99,7 @@ Now you should have everything installed. To test this, we will run a command wh
 	\item In the next command, the {\tt --doEvent} flag uses the LIGO GraceDb database and hence requires a LIGO login certificate. Do this with {\tt \$ ligo-proxy-init}.
 	\item Now we will run the test command.
 	\begin{lstlisting}
-		$ python gwemopt_run -l ../lightcurves/Me2017_H4M050V20.dat --doEvent --do3D --doTiles --doPlots --doSchedule 	--tilesType hierarchical --timeallocationType powerlaw --scheduleType greedy --doEfficiency -o ../hierarchical_powerlaw_greedy --powerlaw_dist_exp -2.0 --Ninj 1000	
+		$ python gwemopt_run -l ../lightcurves/Me2017_H4M050V20.dat --doEvent --do3D --doTiles --doPlots --doSchedule 	--tilesType hierarchical --timeallocationType powerlaw --scheduleType greedy --doEfficiency -o ../output/hierarchical_powerlaw_greedy --powerlaw_dist_exp -2.0 --Ninj 1000	
 	\end{lstlisting}
 	\item This should return plots and skymaps in the /gwemopt/hierarchical\_powerlaw\_greedy/ directory.
 
