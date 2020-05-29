@@ -27,21 +27,22 @@
 }
 
 \begin{document}
-\title{Instructions for installing gwemopt on UNIX}
+\[\title{Instructions for installing gwemopt on UNIX}
 \date{\today}
 \author{Geoffrey Mo, Carleton College\\mog@carleton.edu}
 
 \maketitle
 
-These are instructions for setting up the gwemopt tool primarily written by Michael Coughlin. These instructions were written for a machine running Ubuntu 16.04, but should work for most UNIX distributions. As far as I know, these instructions are {\bf not} compatible with macOS.
+These are instructions for setting up the gwemopt tool primarily written by Michael Coughlin. These instructions were written for a machine running Ubuntu 16.04, but should work for most UNIX distributions. These instructions are compatible with macOS.
 
 In these instructions, {\tt \$ ls} means to run ls.
 
 \section{Installing Anaconda}
-Any Python 2.7 distribution will work, but Anaconda comes with many of the packages required and can be installed completely locally, so it is convenient to use. If you prefer not to use Anaconda, skip this step, but you may have to install additional packages not mentioned in these instructions.
+Any Python 3.7 distribution will work, but Anaconda comes with many of the packages required and can be installed completely locally, so it is convenient to use. If you prefer not to use Anaconda, skip this step, but you may have to install additional packages not mentioned in these instructions.
 
 \begin{enumerate}
-	\item Go to \url{https://www.anaconda.com/download/#linux} and download the Anaconda 2.7 installer. Put it in your home directory.
+	\item Go to \url{https://www.anaconda.com/download} and download the Anaconda 3.7 installer. Put it in your home directory.
+    \item If you are installing Anaconda on macOS, further instructions can be found in \url{https://docs.anaconda.com/anaconda/install/mac-os/}; otherwise, continue reading.
 	\item {\tt \$ cd $\sim$} 
 	\item {\tt \$ bash Anaconda-latest-Linux-x86\_64.sh}
 	\item Hold down the enter key to skip through all the licensing, then type ``yes" to agree to the terms. 
@@ -67,7 +68,8 @@ MultiNest and its Python wrapper PyMultiNest are required, but have slightly mor
 \subsection{Installing cmake}
 The MultiNest installation requires a C compiler. If you have one already, feel free to skip this subsection.
 \begin{enumerate}
-	\item Go to \url{https://cmake.org/download/} and download the Unix .tar.gz tarball (cmake-3.11.3.tar.gz is the latest release at time of writing). I put it in my home directory.
+    \item If you are using macOS, first type into the terminal: \\{\tt \$ /bin/bash -c ``\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"} \\ then run {\tt \$ brew install cmake}. Otherwise, follow the instructions below.
+	\item Go to \url{https://cmake.org/download/} and download the Unix .tar.gz tarball (cmake-3.17.3.tar.gz is the latest release at time of writing). I put it in my home directory.
 	\item To open up the tarball, run {\tt \$ tar -zxvf cmake-3.11.3.tar.gz}
 	\item {\tt \$ cd cmake-3.11-3}
 	\item {\tt \$ ./bootstrap \&\& make \&\& sudo make install}. This will take a few minutes, so go get some coffee.
@@ -75,6 +77,7 @@ The MultiNest installation requires a C compiler. If you have one already, feel 
 
 \subsection{Installing other dependencies for MultiNest}
 \begin{enumerate}
+    \item For macOS, run {\tt \$ brew install openblas}, and then run {\tt \$ brew install lapack}. Otherwise...
 	\item {\tt \$ sudo apt-get update} to update the list from where apt-get pulls.
 	\item {\tt \$ sudo apt-get install libblas-dev liblapack-dev}
 \end{enumerate}
@@ -102,15 +105,5 @@ Now you should have everything installed. To test this, we will run a command wh
 
 \end{enumerate}
 
+\]
 \end{document}
-
-
-
-
-
-
-
-
-
-
-
