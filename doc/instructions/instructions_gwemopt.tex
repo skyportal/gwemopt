@@ -27,7 +27,7 @@
 }
 
 \begin{document}
-\[\[\title{Instructions for installing gwemopt on UNIX}
+\[\title{Instructions for installing gwemopt on UNIX}
 \date{\today}
 \author{Geoffrey Mo, Carleton College\\mog@carleton.edu}
 
@@ -99,15 +99,14 @@ The MultiNest installation requires a C compiler. If you have one already, feel 
 Now you should have everything installed. To test this, we will run a command which will return skymaps.
 \begin{enumerate}
 	\item {\tt \$ cd $\sim$/gwemopt/bin/}
-        \item Now go to \url{https://gracedb.ligo.org/superevents/public/O3/} and scroll down to S190425z. Go to Data (under links) and download the LALInference.fits.gz file. Create a directory in gwemopt/data called "GW190425" and move the downloaded file there.
+        \item Now go to \url{https://gracedb.ligo.org/superevents/public/O3/} and scroll down to S190425z. Go to Data (under links) and download the LALInference.fits.gz file. Create a directory in gwemopt/data called ``GW190425" and move the downloaded file there.
 	\item Now we will run the test command.
 	\begin{lstlisting}
-		$ python gwemopt_run --telescopes ZTF --do3D --doTiles --doPlots --doSchedule --doSkymap --timeallocationType powerlaw --scheduleType greedy --doEfficiency -o "../output/hierarchical_powerlaw_greedy" --gpstime 1240215503.0171 --skymap "../data/GW190425/LALInference.fits.gz" --filters g,r --exposuretimes 30.0,30.0 --doSingleExposure --doAlternatingFilters
+		$ python gwemopt_run --telescopes ZTF --do3D --doTiles --doPlots --doSchedule --doSkymap --timeallocationType powerlaw --scheduleType greedy -o "../output/GW190425/powerlaw_greedy" --gpstime 1240215503.0171 --skymap "../data/GW190425/LALInference.fits.gz" --filters g,r --exposuretimes 30.0,30.0 --doSingleExposure --doAlternatingFilters
 	\end{lstlisting}
 	\item This should return plots and skymaps in the /gwemopt/output/hierarchical\_powerlaw\_greedy/ directory.
 
 \end{enumerate}
 
-\]
 \]
 \end{document}
