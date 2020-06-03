@@ -99,12 +99,12 @@ The MultiNest installation requires a C compiler. If you have one already, feel 
 Now you should have everything installed. To test this, we will run a command which will return skymaps.
 \begin{enumerate}
 	\item {\tt \$ cd $\sim$/gwemopt/bin/}
-	\item In the next command, the {\tt --doEvent} flag uses the LIGO GraceDb database and hence requires a LIGO login certificate. Do this with {\tt \$ ligo-proxy-init}.
+        \item Now go to \url{https://gracedb.ligo.org/superevents/public/O3/} and scroll down to S190425z. Go to Data (under links) and download the LALInference.fits.gz file. Create a directory in gwemopt/data called "GW190425" and move the downloaded file there.
 	\item Now we will run the test command.
 	\begin{lstlisting}
-		$ python gwemopt_run -l ../lightcurves/Me2017_H4M050V20.dat --doEvent --do3D --doTiles --doPlots --doSchedule 	--tilesType hierarchical --timeallocationType powerlaw --scheduleType greedy --doEfficiency -o ../output/hierarchical_powerlaw_greedy --powerlaw_dist_exp -2.0 --Ninj 1000	
+		$ python gwemopt_run --telescopes ZTF --do3D --doTiles --doPlots --doSchedule --doSkymap --timeallocationType powerlaw --scheduleType greedy --doEfficiency -o "../output/hierarchical_powerlaw_greedy" --gpstime 1240215503.0171 --skymap "../data/GW190425/LALInference.fits.gz" --filters g,r --exposuretimes 30.0,30.0 --doSingleExposure --doAlternatingFilters
 	\end{lstlisting}
-	\item This should return plots and skymaps in the /gwemopt/hierarchical\_powerlaw\_greedy/ directory.
+	\item This should return plots and skymaps in the /gwemopt/output/hierarchical\_powerlaw\_greedy/ directory.
 
 \end{enumerate}
 
