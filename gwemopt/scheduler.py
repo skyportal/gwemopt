@@ -223,15 +223,21 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
                 tilenexps[idx] = tilenexps[idx] - 1
                 tileexptime[idx] = exposurelist[ii][0]
 
-                num = int(np.round(tileexpdur[idx]/dt))
+                num = int(np.floor(tileexpdur[idx]/dt))
                 tilenexps[idx] = tilenexps[idx] - 1
                 tileexptime[idx] = exposurelist[ii][0]
                 if len(tilefilts[idx2]) > 0:
                     filt = tilefilts[idx2].pop(0)
                     for jj in range(num):
-                        filts[ii+jj] = filt
+                        try:
+                            filts[ii+jj] = filt
+                        except:
+                            pass
                 for jj in range(num):
-                    idxs[ii+jj] = idx2
+                    try:
+                        idxs[ii+jj] = idx2
+                    except:
+                        pass
             else:
                 idxs[ii] = idx2
 
