@@ -126,8 +126,8 @@ def params_checker(params):
     if "Tobs" not in params.keys():
         params["Tobs"] = np.array([0.0,1.0])
 
-    if "powerlaw_c1" not in params.keys():
-        params["powerlaw_c1"] = 0.9
+    if "powerlaw_cl" not in params.keys():
+        params["powerlaw_cl"] = 0.9
 
     if "powerlaw_n" not in params.keys():
         params["powerlaw_n"] = 1.0
@@ -1160,6 +1160,8 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
         params_hold = copy.copy(params)
         
         while count<20:
+            count+=1
+
             for key in tile_struct_hold.keys():
                 tile_struct_hold[key]['prob'] = prob[key]
 
@@ -1187,7 +1189,6 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
             n_equals.append(n_equal)
             p_difs.append(p_dif)
             unbalanced_tiles = unbalanced_tiles + params_hold["unbalanced_tiles"]
-            count+=1
 
             if count == 19 and np.min(p_difs)>0.15: #try setting it to original n_equal as final resort
                 optimized_max = n_1_og

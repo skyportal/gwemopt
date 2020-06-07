@@ -27,13 +27,13 @@
 }
 
 \begin{document}
-\title{Instructions for installing gwemopt on UNIX}
+\[\title{Instructions for installing gwemopt on UNIX}
 \date{\today}
 \author{Geoffrey Mo, Carleton College\\mog@carleton.edu}
 
 \maketitle
 
-These are instructions for setting up the gwemopt tool primarily written by Michael Coughlin. These instructions were written for a machine running Ubuntu 16.04, but should work for most UNIX distributions. These instructions are compatible with macOS.
+These are instructions for setting up the gwemopt tool primarily written by Michael Coughlin. These instructions were written for a machine running Ubuntu 16.04, but should work for most UNIX distributions. These instructions are also compatible with macOS.
 
 In these instructions, {\tt \$ ls} means to run ls.
 
@@ -42,24 +42,27 @@ Any Python 3.7 distribution will work, but Anaconda comes with many of the packa
 
 \begin{enumerate}
 	\item Go to \url{https://www.anaconda.com/download} and download the Anaconda 3.7 installer. Put it in your home directory.
-    \item If you are installing Anaconda on macOS, further instructions can be found in \url{https://docs.anaconda.com/anaconda/install/mac-os/}; otherwise, continue reading.
 	\item {\tt \$ cd $\sim$} 
 	\item {\tt \$ bash Anaconda-latest-Linux-x86\_64.sh}
 	\item Hold down the enter key to skip through all the licensing, then type ``yes" to agree to the terms. 
 	\item We want to install this locally, so the ~/anaconda2 location given by default is good.
 	\item When prompted, type ``yes" to prepending to PATH in ~/.bashrc. This is so when you type {\tt \$ python} in the command line you get this Anaconda distribution of Python.
+    \item If you are installing Anaconda on macOS, instructions can be found at \url{https://docs.anaconda.com/anaconda/install/mac-os/}.
+    \item Next, set up a virtual environment by following the instructions here: \url{https://uoa-eresearch.github.io/eresearch-cookbook/recipe/2014/11/20/conda/}. Name it `gwemopt' or something similar, and run {\tt \$ conda activate yourenvname} to ensure you are in your virtual environment.
+    \item Install pip by running {\tt \$ conda install pip}
 \end{enumerate}
 
 
 \section{Installing Python packages}
 \begin{enumerate}
-	\item {\tt \$ pip install --user lscsoft-glue healpy astroplan astropy ligo-gracedb pyephem mocpy astropy\_healpix pymultinest}
+	\item Python packages can be installed using pip or conda. We will be using pip. First find the path to the virtual environment's pip by running {\tt \$ which pip}. In my case, the path comes up as {/opt/anaconda3/envs/gwemopt/bin/pip}.
+    \item Using this path, run {\tt \$ /opt/anaconda3/envs/gwemopt/bin/pip install lscsoft-glue healpy astroplan astropy ligo-gracedb pyephem astropy\_pymultinest ligo-skymap}. Including the full path ensures everything is installed to your virtual environment, and not to the root env.
 \end{enumerate}
 
 \section{Downloading gwemopt}
 \begin{enumerate}
 	\item {\tt \$ git clone https://github.com/mcoughlin/gwemopt}. I did this in my home directory.
-	\item To install this, {\tt \$ cd gwemopt} and then {\tt \$ python setup.py install --user}
+	\item To install this, {\tt \$ cd gwemopt} and then {\tt \$ python setup.py install}
 \end{enumerate}
 
 \section{Installing MultiNest and PyMultiNest}
@@ -68,10 +71,10 @@ MultiNest and its Python wrapper PyMultiNest are required, but have slightly mor
 \subsection{Installing cmake}
 The MultiNest installation requires a C compiler. If you have one already, feel free to skip this subsection.
 \begin{enumerate}
-    \item If you are using macOS, first type into the terminal: \\{\tt \$ /bin/bash -c ``\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"} \\ then run {\tt \$ brew install cmake}. Otherwise, follow the instructions below.
+    \item If you are using macOS, first type into the terminal: \\{\tt \$ /bin/bash -c "\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/ \\ install/master/install.sh)"} then run {\tt \$ brew install cmake}. Otherwise, follow the instructions below.
 	\item Go to \url{https://cmake.org/download/} and download the Unix .tar.gz tarball (cmake-3.17.3.tar.gz is the latest release at time of writing). I put it in my home directory.
-	\item To open up the tarball, run {\tt \$ tar -zxvf cmake-3.11.3.tar.gz}
-	\item {\tt \$ cd cmake-3.11-3}
+	\item To open up the tarball, run {\tt \$ tar -zxvf cmake-3.17.3.tar.gz}
+	\item {\tt \$ cd cmake-3.17-3}
 	\item {\tt \$ ./bootstrap \&\& make \&\& sudo make install}. This will take a few minutes, so go get some coffee.
 \end{enumerate}
 
@@ -88,7 +91,7 @@ The MultiNest installation requires a C compiler. If you have one already, feel 
 	\item {\tt \$ cmake .. \&\& make}
 	\item To add MultiNest to your path right now and forever (by adding it to your ~/.bashrc), \\{\tt \$ export LD\_LIBRARY\_PATH=$\sim$/MultiNest/lib/:\$LD\_LIBRARY\_PATH} and \\{\tt \$ echo $'$export LD\_LIBRARY\_PATH=$\sim$/MultiNest/lib/:\$LD\_LIBRARY\_PATH$'$ $>>\sim$/.bashrc}
 	\item {\tt \$ cd $\sim$/PyMultiNest}
-	\item {\tt \$ python setup.py install --user}
+	\item {\tt \$ python setup.py install}
 	\item Adding PyMultiNest to your path right now and forever,\\{\tt \$ export PATH=\$PATH:\$HOME/.local/bin/} and \\{\tt \$ echo $'$export PATH=\$PATH:\$HOME/.local/bin/$'$ $>>\sim$/.bashrc}
 \end{enumerate}
 
@@ -96,13 +99,14 @@ The MultiNest installation requires a C compiler. If you have one already, feel 
 Now you should have everything installed. To test this, we will run a command which will return skymaps.
 \begin{enumerate}
 	\item {\tt \$ cd $\sim$/gwemopt/bin/}
-	\item In the next command, the {\tt --doEvent} flag uses the LIGO GraceDb database and hence requires a LIGO login certificate. Do this with {\tt \$ ligo-proxy-init}.
+        \item Now go to \url{https://gracedb.ligo.org/superevents/public/O3/} and scroll down to S190425z. Go to Data (under links) and download the LALInference.fits.gz file. Create a directory in gwemopt/data called ``GW190425" and move the downloaded file there.
 	\item Now we will run the test command.
 	\begin{lstlisting}
-		$ python gwemopt_run -l ../lightcurves/Me2017_H4M050V20.dat --doEvent --do3D --doTiles --doPlots --doSchedule 	--tilesType hierarchical --timeallocationType powerlaw --scheduleType greedy --doEfficiency -o ../hierarchical_powerlaw_greedy --powerlaw_dist_exp -2.0 --Ninj 1000	
+		$ python gwemopt_run --telescopes ZTF --do3D --doTiles --doPlots --doSchedule --doSkymap --timeallocationType powerlaw --scheduleType greedy -o "../output/GW190425/powerlaw_greedy" --gpstime 1240215503.0171 --skymap "../data/GW190425/LALInference.fits.gz" --filters g,r --exposuretimes 30.0,30.0 --doSingleExposure --doAlternatingFilters
 	\end{lstlisting}
-	\item This should return plots and skymaps in the /gwemopt/hierarchical\_powerlaw\_greedy/ directory.
+	\item This should return plots and skymaps in the /gwemopt/output/GW190425/powerlaw\_greedy/ directory.
 
 \end{enumerate}
 
+\]
 \end{document}
