@@ -559,7 +559,7 @@ if opts.doEfficiency:
             efficiency_structs[key] = efficiency_struct
             efficiency_structs[key]["legend_label"] = lightcurve_struct["legend_label"]
             if opts.do3D:
-                efficiency_structs[key]["3D"] = gwemopt.efficiency.compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
+                print(f'Percent detections out of {params["Ninj"]} injected KNe: {efficiency_structs[key]["3D"]*100}% ')
 
         if opts.doPlots:
             print("Plotting efficiency...")

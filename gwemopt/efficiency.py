@@ -86,7 +86,7 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct,
         eff_3D = compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
         efficiency_metric = [eff_3D, np.sqrt(eff_3D * (1 - eff_3D) / params["Ninj"])]
         save_efficiency_metric(params, os.path.join(params["outputDir"],"efficiency.txt"), efficiency_metric, lightcurve_struct)
-
+        efficiency_struct["3D"] = eff_3D
     return efficiency_struct
 
 def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
@@ -145,7 +145,6 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
 
         if single_detection: detections+=1
 
-    print(f'Percent detections out of {Ninj} injected KNe: {detections*100/Ninj}% ')
     return detections/Ninj
 
 def save_efficiency_data(params, efficiency_struct, lightcurve_struct):
