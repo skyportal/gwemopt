@@ -39,6 +39,7 @@ from astropy.table import unique, vstack, Table
 from astropy import units as u
 from astropy.time import Time, TimeDelta
 from astropy import cosmology
+import astropy.coordinates
 from astropy.coordinates import Distance
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import EarthLocation
@@ -247,94 +248,128 @@ map_struct_2["ra"] = ra
 map_struct_2["dec"] = dec
 
 params = gwemopt.utils.params_checker(params)
-moc_structs = gwemopt.moc.create_moc(params)
 
-map_struct = map_struct_1
+map_struct = copy.deepcopy(map_struct_1)
 
 Tmin, Tmax, dt = opts.Tmin, opts.Tmax, opts.dt
 Tobs = np.arange(Tmin, Tmax+dt, dt)
 
 if opts.doObservability:
-    params["gpstime"] = (Time(opts.gps, format='gps') + TimeDelta(Tmin*u.day)).gps
-    observability_struct_1 = gwemopt.utils.observability(params, map_struct)
+    rows = int(Tmax - Tmin)
+    cols = int(1/dt)
+    goodfields = np.zeros(shape=(rows,cols),dtype=object)
+    for ii in range(len(Tobs)-1):
+        row = int(np.floor(Tobs[ii]))
+        col = int((Tobs[ii] - row)/opts.dt)
+        
+        map_struct_hold = copy.deepcopy(map_struct)
+        airmass = params["airmass"]
+        nside = params["nside"]
+        npix = hp.nside2npix(nside)
+        gpstime = (Time(opts.gps, format='gps') + TimeDelta(Tobs[ii]*u.day)).gps
+        event_time = Time(gpstime, format='gps', scale='utc')
+        dts = np.arange(0,Tobs[ii+1],1.0/4.0)
+        moc_structs = gwemopt.moc.create_moc(params)
 
-    params["gpstime"] = (Time(opts.gps, format='gps') + TimeDelta(Tmax*u.day)).gps
-    observability_struct_2 = gwemopt.utils.observability(params, map_struct)
+        observatory_struct = {}
 
-    unit='Gravitational-wave probability'
-    cbar=False
+        config_struct = params["config"]["ZTF"]
 
-    for telescope in observability_struct_1.keys():
-        observability_map = observability_struct_1[telescope]["observability"]*observability_struct_2[telescope]["observability"]
+        observatory = EarthLocation(
+            lat=config_struct["latitude"]*u.deg, lon=config_struct["longitude"]*u.deg, height=config_struct["elevation"]*u.m)
+     
+        # Look up (celestial) spherical polar coordinates of HEALPix grid.
+        theta, phi = hp.pix2ang(nside, np.arange(npix))
+        # Convert to RA, Dec.
+        radecs = astropy.coordinates.SkyCoord(
+            ra=phi*u.rad, dec=(0.5*np.pi - theta)*u.rad)
+        
+        observatory_struct= {}
+        observatory_struct["prob"] = copy.deepcopy(map_struct_hold["prob"])
+        observatory_struct["observability"] = np.zeros((npix,))
+        observatory_struct["dts"] = {}
+        
+        for dt in dts:
+            time = event_time+TimeDelta(dt*u.day)
+
+            # Alt/az reference frame at observatory, now
+            frame = astropy.coordinates.AltAz(obstime=time, location=observatory)
+            # Transform grid to alt/az coordinates at observatory, now
+            altaz = radecs.transform_to(frame)
+            
+            # Where is the sun, now?
+            sun_altaz = astropy.coordinates.get_sun(time).transform_to(altaz)
+
+            # How likely is it that the (true, unknown) location of the source
+            # is within the area that is visible, now? Demand that sun is at
+            # least 18 degrees below the horizon and that the airmass
+            # (secant of zenith angle approximation) is at most 2.0.
+            idx = np.where((altaz.alt >= 30*u.deg) &  (sun_altaz.alt <= -18*u.deg) & (altaz.secz <= airmass))[0]
+            observatory_struct["dts"][dt] = np.zeros((npix,))
+            observatory_struct["dts"][dt][idx] = 1
+            observatory_struct["observability"][idx] = 1
+        observatory_struct["prob"] = observatory_struct["prob"]*observatory_struct["observability"]
+
+        observability_map = observatory_struct["observability"]
         idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
         observability_map[idx] = 0.0
         observability_map = observability_map/np.sum(observability_map)
 
-        if opts.doPlots:
-            plotName = os.path.join(params["outputDir"],'observability_%s.pdf'%telescope)
-            hp.mollview(observability_map,title='',unit=unit,cbar=cbar,cmap=cmap)
-            gwemopt.plotting.add_edges()
-            plt.show()
-            plt.savefig(plotName,dpi=200)
-            plt.close('all')
+        map_struct_hold["prob"] = observability_map
+        tile_structs = gwemopt.tiles.moc(params, map_struct_hold, moc_structs,
+                                            doSegments=False)
 
-        map_struct["prob"] = observability_map
-        tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs,
-                                         doSegments=False)
-
+        print("did",Tobs[ii])
         idxs, probs = [], []
-        for telescope in tile_structs:
-            tiles_struct = tile_structs[telescope]
-            for index in tiles_struct.keys():
-                if tiles_struct[index]["prob"] == 0.0: continue
-                idxs.append(index)
-                probs.append(tiles_struct[index]["prob"])
+        tiles_struct = tile_structs["ZTF"]
+        for index in tiles_struct.keys():
+            if tiles_struct[index]["prob"] == 0.0: continue
+            idxs.append(index)
+            probs.append(tiles_struct[index]["prob"])
         idxs, probs = np.array(idxs), np.array(probs)
         idxsort = np.argsort(probs)[::-1]
         idxfields = idxs[idxsort[:opts.NFields]]
-        params["config"][telescope]["tesselation"] = params["config"][telescope]["tesselation"][idxfields,:]
-        moc_structs = gwemopt.moc.create_moc(params)
- 
-        if opts.doPlots:
-            print("Plotting tiles struct...")
-            gwemopt.plotting.tiles(params, map_struct, tile_structs)
+        goodfields[row,col] = idxfields.tolist()
 
-            unit='Gravitational-wave probability'
-            cbar=False
+    sum = {}
+    for i in np.arange(rows):
+        keys = []
+        for j in np.arange(cols):
+            if type(goodfields[i,j]) is not list: continue
+            keys+=goodfields[i,j]
+        unique,freq=np.unique(keys,return_counts=True)
+        for ii,field in enumerate(unique):
+            if field not in sum:
+                sum[field] = 0
+            sum[field] += freq[ii]
 
-            plotName = os.path.join(params["outputDir"],'tiles_observability.pdf')
-            plt.figure()
-            hp.mollview(np.zeros(map_struct["prob"].shape),title='',unit=unit,cbar=cbar,cmap=cmap)
-            ax = plt.gca()
-            for telescope in tile_structs:
-                tiles_struct = tile_structs[telescope]
-                for index in tiles_struct.keys():
-                    if tiles_struct[index]["prob"] == 0.0: continue
-                    ipix, corners, patch = tiles_struct[index]["ipix"], tiles_struct[index]["corners"], tiles_struct[index]["patch"]
-                    #hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
-                    if not patch: continue
-                    patch_cpy = copy.copy(patch)
-                    patch_cpy.axes = None
-                    patch_cpy.figure = None
-                    patch_cpy.set_transform(ax.transData)
-                    if index in idxfields:
-                        patch_cpy.set_facecolor('blue')
-                    hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
-                    #tiles.plot()
-            gwemopt.plotting.add_edges()
-            plt.show()
-            plt.savefig(plotName,dpi=200)
-            plt.close('all')
+    fields,avgs = [],[]
+    for field in sum.keys():
+        avgs.append(sum[field]/rows)
+        fields.append(field)
+
+    fields,avgs = np.asarray(fields),np.asarray(avgs)
+    sortedidx = avgs.argsort()[::-1][:opts.NFields]
+    Ntop = fields[sortedidx]
+    print(Ntop,avgs[sortedidx])
+
 
 params["outputDir"] = baseoutputDir
 schedulefile = os.path.join(params["outputDir"],'schedule_ZTF.dat')
+moc_structs = gwemopt.moc.create_moc(params)
+
+map_struct = map_struct_1
+Tmin, Tmax, dt = opts.Tmin, opts.Tmax, opts.dt
 
 if not os.path.isfile(schedulefile):
+    epochs = {}
     coverage_structs = []
     for ii in range(len(Tobs)-1):
         print(f'Running block {ii}/{len(Tobs)-1}')
         params["doMaxTiles"],params["doBalanceExposure"],params["doAlternatingFilters"] = False,True,True
         params["outputDir"] = os.path.join(baseoutputDir, "%d" % ii)
+        moc_structs = gwemopt.moc.create_moc(params)
+
         if not os.path.isdir(params["outputDir"]):
             os.makedirs(params["outputDir"])
 
@@ -346,7 +381,7 @@ if not os.path.isfile(schedulefile):
                                                              moc_struct=moc_struct)
         else:
             if np.mod(ii,2) == 1:
-                schedule_table = pd.read_csv(schedulefile, 
+                schedule_table = pd.read_csv(schedulefile,
                                              delimiter = ' ', header=None,
                                              names = ('field', 'ra', 'dec',
                                                       'mjd', 'mag',
@@ -388,17 +423,13 @@ if not os.path.isfile(schedulefile):
     
                 map_struct = map_struct_2
                 params["filters"] = ["g","r"]
-                #params["exposuretimes"] = [180.0,180.0]
-                params["exposuretimes"] = [30.0,30.0]
+                params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
+#                params["exposuretimes"] = [300.0,300.0]
                 params["program_id"] = 2
     
                 params["doBlocks"] = False
                 params["Nblocks"] = 2
-   
-                if opts.doObservability:
-                    params["doAlternatingFilters"] = False
-                    params["doBalanceExposure"] = False
- 
+
                 if opts.doPlots:
                     print("Plotting skymap...")
                     gwemopt.plotting.skymap(params,map_struct_2)
@@ -438,21 +469,16 @@ if not os.path.isfile(schedulefile):
                 map_struct_1["cumprob"] = csm
     
                 map_struct = map_struct_1
-                if opts.doObservability:
-                    params["filters"] = ["g","r"] * 10
-                    params["exposuretimes"] = [30.0,30.0] * 10
-                else:
-                    params["filters"] = ["g","r"]
-                    params["exposuretimes"] = [30.0,30.0]
+#                if opts.doObservability:
+#                    params["filters"] = ["g","r"] * 10
+#                    params["exposuretimes"] = [30.0,30.0] * 10
+                params["filters"] = ["g","r"]
+                params["exposuretimes"] = [30.0,30.0]
 
                 params["program_id"] = 1    
     
                 params["doBlocks"] = False
                 params["Nblocks"] = 2
-    
-                if opts.doObservability:
-                    params["doAlternatingFilters"] = False
-                    params["doBalanceExposure"] = False
 
             params["Tobs"] = np.array([Tobs[ii], Tobs[ii+1]])
             params = gwemopt.segments.get_telescope_segments(params)
@@ -472,7 +498,7 @@ if not os.path.isfile(schedulefile):
 
             #use middle time segment to determine RA slice range
             mid = len(config_struct["exposurelist"])/2
-            seg = config_struct["exposurelist"][int(np.ceil(mid))]
+            seg = config_struct["exposurelist"][int(np.floor(mid))]
 
             mjds = np.linspace(seg[0], seg[1], 100)
             tt = Time(mjds, format='mjd', scale='utc', location=location)
@@ -488,11 +514,26 @@ if not os.path.isfile(schedulefile):
 
             ra = map_struct["ra"]
             if ra_low <= ra_high:
-                ipix = np.where((ra_high*360.0/24.0 < ra) | (ra_low*360.0/24.0 > ra))[0]
+                sliced_ipix = np.where((ra_high*360.0/24.0 < ra) | (ra_low*360.0/24.0 > ra))[0]
             else:
-                ipix = np.where((ra_high*360.0/24.0 < ra) & (ra_low*360.0/24.0 > ra))[0]
+                sliced_ipix = np.where((ra_high*360.0/24.0 < ra) & (ra_low*360.0/24.0 > ra))[0]
 
-            map_struct["prob"][ipix] = 0.0
+            map_struct["prob"][sliced_ipix] = 0.0
+
+            if params["program_id"] == 2 and opts.doObservability:
+                ipix_top = []
+                for field in Ntop:
+                    moc_struct = moc_structs["ZTF"][field]
+                    map_struct["prob"][moc_struct["ipix"]] = 1.0 - np.exp(-sum[field])
+                    ipix_top += list(moc_struct["ipix"])
+            
+                ipix_bottom = np.delete(np.arange(npix),ipix_top)
+                nonzero = np.where(map_struct["prob"] != 0.0)[0]
+                intersect = np.intersect1d(nonzero,ipix_bottom)
+                map_struct["prob"][intersect] = 0.01
+
+                map_struct["prob"] = map_struct["prob"] / np.sum(map_struct["prob"])
+
 
             moc_structs = gwemopt.moc.create_moc(params)
             tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
@@ -519,10 +560,10 @@ if not os.path.isfile(schedulefile):
                     if dt >= 5.0:
                         gap_mjds.append(t2)
                 
-                for ii in range(len(coverage_struct["ipix"])):
-                    if ii == 0: continue
-                    data = coverage_struct["data"][ii,:]
-                    filt1 = coverage_struct["filters"][ii]
+                for jj in range(len(coverage_struct["ipix"])):
+                    if jj == 0: continue
+                    data = coverage_struct["data"][jj,:]
+                    filt1 = coverage_struct["filters"][jj]
     
                     t1 = data[2]
                     dt = (t1 - t2) * 1440.
@@ -535,10 +576,20 @@ if not os.path.isfile(schedulefile):
                     exposuretime = data[4]
                     t2 = t1
                     filt2 = filt1
-            
-    
+
                 for mjd in gap_mjds:
-    
+                    if params["program_id"] == 2 and opts.doObservability:
+                        for field in Ntop:
+                            if field not in epochs: continue
+
+                            idx = np.where(coverage_struct["data"][:,5] == field)[0]
+                            deltat = mjd0 + Tobs[ii] - epochs[field][-1]
+                            if len(epochs[field]) == 1: continue
+                            elif (epochs[field][-1] - epochs[field][-2]) < 0.5 and deltat < 0.5:
+                                tile_structs["ZTF"][field]["prob"] = tile_structs["ZTF"][field]["prob"]/2
+
+#                        map_struct["prob"] = map_struct["prob"] / np.sum(map_struct["prob"])
+
                     idx = np.where(coverage_struct["data"][:,2]==mjd)[0][0]
                     exposuretime = coverage_struct["data"][idx,4]
                     filt1 = coverage_struct["filters"][idx]
@@ -626,7 +677,6 @@ if opts.doMovie:
     schedule_table["grfields"] = grfields
 
     moc_structs = gwemopt.moc.create_moc(params)
-    moc_structs = moc_structs["ZTF"]
 
     moviedir = os.path.join(baseoutputDir,'movie')
     if not os.path.isdir(moviedir):
@@ -666,7 +716,7 @@ if opts.doMovie:
 
             field = row2["field"]
             if not field in moc_structs["ZTF"]: continue
-            moc_struct = moc_structs[field]
+            moc_struct = moc_structs["ZTF"][field]
             ras, decs = moc_struct["corners"][:,0], moc_struct["corners"][:,1]
             if len(ras) == 4:
                 ras = [ras[0], ras[1], ras[3], ras[2], ras[0]]
@@ -794,10 +844,25 @@ if not os.path.isfile(obsfile):
                 print('No data for field %d...' % (field-cnt))
                 cnt = cnt+1
     
-        idy = np.random.randint(len(obstable_field))
-        obstable_row = obstable_field.iloc[[idy]]
-        obstable_rows = obstable[obstable["jd"] == obstable_row["jd"].to_numpy()[0]]
-    
+        jd_groups = obstable_field.groupby('jd')
+        limMags = []
+        jds = []
+        for jj, (g, data1) in enumerate(jd_groups):
+            jd_sub = jd_groups.get_group(g)
+            limMags.append(np.median(jd_sub["limMag"]))
+            jds.append(np.median(jd_sub["jd"]))
+        limMags = np.asarray(limMags)
+        jds = np.asarray(jds)
+        if len(jd_groups) == 1: jd_chosen = jds[0]
+        else:
+            sortedidx = np.argsort(limMags)[::-1][:int(np.floor(len(jd_groups)/2))]
+            if len(sortedidx) == 1:
+                idy = sortedidx[0]
+            else:
+                jds = jds[sortedidx]
+                idy = np.random.randint(len(jds))
+            jd_chosen = jds[idy]
+        obstable_rows = obstable[obstable["jd"] == jd_chosen]
         for ii, row in obstable_rows.iterrows():
             # FIXME
             #nmag = np.log(exptime/row.exptime)/np.log(2.5)
