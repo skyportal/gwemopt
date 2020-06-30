@@ -338,9 +338,11 @@ if not os.path.isfile(schedulefile):
                         prob_data[ipix] = 1.0
                         dt = mjd0 + Tobs[ii] - row2["mjd"]
                         prob_data[ipix] = np.exp(-dt)
-                        if field not in epochs:
-                            epochs[field] = []
-                        epochs[field].append(row2["mjd"])
+
+                        if row2["program_id"] == 2:
+                            if field not in epochs:
+                                epochs[field] = []
+                            epochs[field].append(row2["mjd"])
 
                     prob_data[prob_data < 0.01] = 0.01
                     idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
