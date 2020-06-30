@@ -61,6 +61,7 @@ import ligo.skymap.distance as ligodist
 import gwemopt.utils, gwemopt.plotting
 import gwemopt.moc, gwemopt.tiles 
 import gwemopt.coverage
+import time
 
 try:
     import ligo.skymap.plot
@@ -254,72 +255,27 @@ map_struct = copy.deepcopy(map_struct_1)
 Tmin, Tmax, dt = opts.Tmin, opts.Tmax, opts.dt
 Tobs = np.arange(Tmin, Tmax+dt, dt)
 
+start_time_og = time.time()
+timesfile = open(os.path.join(baseoutputDir,'timesfile.dat'),'w')
+
 if opts.doObservability:
-    rows = int(Tmax - Tmin)
-    cols = int(1/dt)
-    goodfields = np.zeros(shape=(rows,cols),dtype=object)
-    for ii in range(len(Tobs)-1):
-        row = int(np.floor(Tobs[ii]))
-        col = int((Tobs[ii] - row)/opts.dt)
+    params["gpstime"] = (Time(opts.gps, format='gps') + TimeDelta(Tmin*u.day)).gps
+    observability_struct_1 = gwemopt.utils.observability(params, map_struct)
         
-        map_struct_hold = copy.deepcopy(map_struct)
-        airmass = params["airmass"]
-        nside = params["nside"]
-        npix = hp.nside2npix(nside)
-        gpstime = (Time(opts.gps, format='gps') + TimeDelta(Tobs[ii]*u.day)).gps
-        event_time = Time(gpstime, format='gps', scale='utc')
-        dts = np.arange(0,Tobs[ii+1],1.0/4.0)
-        moc_structs = gwemopt.moc.create_moc(params)
+    params["gpstime"] = (Time(opts.gps, format='gps') + TimeDelta((Tmax-7)*u.day)).gps
+    observability_struct_2 = gwemopt.utils.observability(params, map_struct)
+    moc_structs = gwemopt.moc.create_moc(params)
 
-        observatory_struct = {}
-
-        config_struct = params["config"]["ZTF"]
-
-        observatory = EarthLocation(
-            lat=config_struct["latitude"]*u.deg, lon=config_struct["longitude"]*u.deg, height=config_struct["elevation"]*u.m)
-     
-        # Look up (celestial) spherical polar coordinates of HEALPix grid.
-        theta, phi = hp.pix2ang(nside, np.arange(npix))
-        # Convert to RA, Dec.
-        radecs = astropy.coordinates.SkyCoord(
-            ra=phi*u.rad, dec=(0.5*np.pi - theta)*u.rad)
-        
-        observatory_struct= {}
-        observatory_struct["prob"] = copy.deepcopy(map_struct_hold["prob"])
-        observatory_struct["observability"] = np.zeros((npix,))
-        observatory_struct["dts"] = {}
-        
-        for dt in dts:
-            time = event_time+TimeDelta(dt*u.day)
-
-            # Alt/az reference frame at observatory, now
-            frame = astropy.coordinates.AltAz(obstime=time, location=observatory)
-            # Transform grid to alt/az coordinates at observatory, now
-            altaz = radecs.transform_to(frame)
-            
-            # Where is the sun, now?
-            sun_altaz = astropy.coordinates.get_sun(time).transform_to(altaz)
-
-            # How likely is it that the (true, unknown) location of the source
-            # is within the area that is visible, now? Demand that sun is at
-            # least 18 degrees below the horizon and that the airmass
-            # (secant of zenith angle approximation) is at most 2.0.
-            idx = np.where((altaz.alt >= 30*u.deg) &  (sun_altaz.alt <= -18*u.deg) & (altaz.secz <= airmass))[0]
-            observatory_struct["dts"][dt] = np.zeros((npix,))
-            observatory_struct["dts"][dt][idx] = 1
-            observatory_struct["observability"][idx] = 1
-        observatory_struct["prob"] = observatory_struct["prob"]*observatory_struct["observability"]
-
-        observability_map = observatory_struct["observability"]
+    for telescope in observability_struct_1.keys():
+        observability_map = observability_struct_1[telescope]["observability"]*observability_struct_2[telescope]["observability"]
         idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
         observability_map[idx] = 0.0
         observability_map = observability_map/np.sum(observability_map)
+        
+        map_struct["prob"] = observability_map
+        tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs,
+                                         doSegments=False)
 
-        map_struct_hold["prob"] = observability_map
-        tile_structs = gwemopt.tiles.moc(params, map_struct_hold, moc_structs,
-                                            doSegments=False)
-
-        print("did",Tobs[ii])
         idxs, probs = [], []
         tiles_struct = tile_structs["ZTF"]
         for index in tiles_struct.keys():
@@ -328,31 +284,9 @@ if opts.doObservability:
             probs.append(tiles_struct[index]["prob"])
         idxs, probs = np.array(idxs), np.array(probs)
         idxsort = np.argsort(probs)[::-1]
-        idxfields = idxs[idxsort[:opts.NFields]]
-        goodfields[row,col] = idxfields.tolist()
-
-    sum = {}
-    for i in np.arange(rows):
-        keys = []
-        for j in np.arange(cols):
-            if type(goodfields[i,j]) is not list: continue
-            keys+=goodfields[i,j]
-        unique,freq=np.unique(keys,return_counts=True)
-        for ii,field in enumerate(unique):
-            if field not in sum:
-                sum[field] = 0
-            sum[field] += freq[ii]
-
-    fields,avgs = [],[]
-    for field in sum.keys():
-        avgs.append(sum[field]/rows)
-        fields.append(field)
-
-    fields,avgs = np.asarray(fields),np.asarray(avgs)
-    sortedidx = avgs.argsort()[::-1][:opts.NFields]
-    Ntop = fields[sortedidx]
-    print(Ntop,avgs[sortedidx])
-
+        Ntop = idxs[idxsort[:opts.NFields]]
+print(Ntop)
+params["gpstime"] = opts.gps
 
 params["outputDir"] = baseoutputDir
 schedulefile = os.path.join(params["outputDir"],'schedule_ZTF.dat')
@@ -365,6 +299,8 @@ if not os.path.isfile(schedulefile):
     epochs = {}
     coverage_structs = []
     for ii in range(len(Tobs)-1):
+        if np.mod(ii,5) == 0:
+            start_time = time.time()
         print(f'Running block {ii}/{len(Tobs)-1}')
         params["doMaxTiles"],params["doBalanceExposure"],params["doAlternatingFilters"] = False,True,True
         params["outputDir"] = os.path.join(baseoutputDir, "%d" % ii)
@@ -402,6 +338,9 @@ if not os.path.isfile(schedulefile):
                         prob_data[ipix] = 1.0
                         dt = mjd0 + Tobs[ii] - row2["mjd"]
                         prob_data[ipix] = np.exp(-dt)
+                        if field not in epochs:
+                            epochs[field] = []
+                        epochs[field].append(row2["mjd"])
 
                     prob_data[prob_data < 0.01] = 0.01
                     idx = np.where(np.abs(radecs.galactic.b.deg) <= 10.0)[0]
@@ -489,6 +428,10 @@ if not os.path.isfile(schedulefile):
                     cnt = cnt + 1
             if cnt == 0:
                 print('Skipping round %.2f-%.2f' % (Tobs[ii], Tobs[ii+1]))
+                if np.mod(ii+1,5) == 0:
+                    print(f"for {Tobs[ii]}:")
+                    print(f"--- {time.time() - start_time:.2f} seconds ---")
+                    timesfile.write(f"{time.time() - start_time:.2f} \n")
                 continue
 
             config_struct = params["config"]["ZTF"]
@@ -524,7 +467,11 @@ if not os.path.isfile(schedulefile):
                 ipix_top = []
                 for field in Ntop:
                     moc_struct = moc_structs["ZTF"][field]
-                    map_struct["prob"][moc_struct["ipix"]] = 1.0 - np.exp(-sum[field])
+                    if field in epochs:
+                        deltat = mjd0 + Tobs[ii] - epochs[field][-1]
+                    else:
+                        deltat = 99
+                    map_struct["prob"][moc_struct["ipix"]] = 1.0 - np.exp(-deltat)
                     ipix_top += list(moc_struct["ipix"])
             
                 ipix_bottom = np.delete(np.arange(npix),ipix_top)
@@ -638,7 +585,15 @@ if not os.path.isfile(schedulefile):
             if opts.doPlots:
                 if (np.mod(ii, 15) == 0) or (ii == len(Tobs)-2):
                     gwemopt.plotting.coverage(params, map_struct, coverage_struct_combined)
+        if np.mod(ii+1,5) == 0:
+            print(f"for {Tobs[ii]}:")
+            print(f"--- {time.time() - start_time:.2f} seconds ---")
+            timesfile.write(f"{time.time() - start_time:.2f} \n")
 
+print(f"final time (all): {time.time() - start_time_og:.2f}")
+timesfile.write(f"final time: {time.time() - start_time_og:.2f} \n")
+
+timesfile.close()
 if opts.doMovie:
 
     # load the data
