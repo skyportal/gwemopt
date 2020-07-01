@@ -763,7 +763,7 @@ if opts.doMovie:
     os.system(rm_command)
 
 obsfile = os.path.join(params["outputDir"],'obs.dat')
-if opts.doObsFile and not not os.path.isfile(obsfile):
+if opts.doObsFile and not os.path.isfile(obsfile):
     all_obs_table = pd.read_csv(opts.observations, delimiter = ',')
     use_obs = all_obs_table['status'] == 1
     obstable = all_obs_table[use_obs]
