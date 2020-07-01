@@ -116,8 +116,8 @@ def parse_commandline():
 
     parser.add_option("--doObservability",  action="store_true", default=False)
     parser.add_option("--NFields",default=-1,type=int)
-
     parser.add_option("--doEvaluate",  action="store_true", default=False)
+    parser.add_option("--doObsFile",  action="store_true", default=False)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -763,7 +763,7 @@ if opts.doMovie:
     os.system(rm_command)
 
 obsfile = os.path.join(params["outputDir"],'obs.dat')
-if not os.path.isfile(obsfile):
+if opts.doObsFile and not not os.path.isfile(obsfile):
     all_obs_table = pd.read_csv(opts.observations, delimiter = ',')
     use_obs = all_obs_table['status'] == 1
     obstable = all_obs_table[use_obs]
@@ -773,8 +773,8 @@ if not os.path.isfile(obsfile):
     obsfile = os.path.join(params["outputDir"],'obs.dat')
     fid = open(obsfile, 'w')
     fid.write('jd,fieldid,chid,progid,expid,filterid,limMag,exptime,status\n')
-     
-    bands = {'g': 1, 'r': 2, 'i': 3, 'z': 4, 'J': 5}   
+    
+    bands = {'g': 1, 'r': 2, 'i': 3, 'z': 4, 'J': 5}
     schedule_table = pd.read_csv(schedulefile, delimiter = ' ', header=None,
                                  names = ('field', 'ra', 'dec',
                                           'mjd', 'mag',
@@ -828,7 +828,7 @@ if not os.path.isfile(obsfile):
             fid.write('%.7f, %d, %d, %d, %d, %d, %.2f, %.0f, %d\n'%(jd, field, int(row.chid), program_id, int(row.expid), filter_id, row.limMag+nmag, exptime, int(row.status)))
     
     fid.close()
-   
+
 if opts.doEvaluate:
 
     filename = os.path.join(baseoutputDir,'eff.dat')
