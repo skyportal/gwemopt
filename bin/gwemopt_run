@@ -418,6 +418,10 @@ if not os.path.isdir(opts.outputDir): os.makedirs(opts.outputDir)
 
 params = params_struct(opts)
 
+if len(params["filters"]) != len(params["exposuretimes"]):
+    print("The number of filters specified must match the number of exposure times.")
+    exit(0)
+
 if opts.doEvent:
     params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)
     params["gpstime"] = eventinfo["gpstime"]
