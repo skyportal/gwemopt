@@ -257,11 +257,15 @@ def absmag_tiles_struct(params, config_struct, telescope, map_struct, tile_struc
         nexp = np.round(np.exp(nmag*np.log(2.5)))
         nexp[nexp<0] = 0.0
         nexp = nexp + 1
-      
+
     keys = tile_struct.keys()
     ranked_tile_times = np.zeros((len(ranked_tile_probs),len(params["exposuretimes"])))
     for ii in range(len(params["exposuretimes"])):
-        ranked_tile_times[ranked_tile_probs>0,ii] = config_struct["exposuretime_orig"]*nexp[ranked_tile_probs>0]
+        idx = np.where(ranked_tile_probs>0)[0]
+        ranked_tile_times[idx,ii] = config_struct["exposuretime_orig"]*nexp[idx]
+        if "max_exposure" in config_struct.keys():
+            idy = np.where(ranked_tile_times[idx,ii] > config_struct["max_exposure"])[0]
+            ranked_tile_times[idx[idy],ii] = config_struct["max_exposure"] 
 
     for key, prob, exposureTime, tileprob in zip(keys, ranked_tile_probs, ranked_tile_times, tile_probs):
 
