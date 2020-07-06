@@ -170,8 +170,8 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
         config_struct = params["config"][telescope]
         tile_struct = tile_structs[telescope]
 
-        # Try to load the minimum duration of time from telescope config file
-        # Otherwise set it to zero
+        # Try to load the minimum duration of time from telescope config file
+        # Otherwise set it to zero
         try:   
             min_obs_duration = config_struct["min_observability_duration"] / 24
         except:
@@ -231,12 +231,37 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
                 sat_sun_restriction = 0.0
             
             if not params["tilesType"] == "galaxy":
+
                 tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_hold, tile_struct)  
+
+                if sat_sun_restriction != 0.0:
+                    # Check that a given tile is not to close to the sun for the satelite
+                    # If it's to close set the proba associated to the tile to zero
+
+                    time = params['gpstime']
+                    time = Time(time, format='gps', scale='utc')
+                    sun_position = get_sun(time)
+                    
+                    #astropy don't like the output of get sun in the following separator function, need here to redefine the skycoord
+                    sun_position = SkyCoord(sun_position.ra, sun_position.dec, frame='gcrs') 
+           
+                    for key in tile_struct.keys():      
+                        if 'segmentlist' and 'prob' in tile_struct[key] and tile_struct[key]['segmentlist']:
     
+                            for counter in range(len(tile_struct[key]['segmentlist'])):
+    
+                                tile_position = SkyCoord(ra=tile_struct[key]['ra']*u.degree, dec=tile_struct[key]['dec']*u.degree, frame='icrs')
+                                ang_dist = sun_position.separation(tile_position).deg
+    
+                            if ang_dist < sat_sun_restriction:
+    
+                                tile_struct[key]['prob'] = 0.0
+
             elif sat_sun_restriction == 0.0:
+
                 for key in tile_struct.keys():
-                    # Check that a given tile is observable a minimum amount of time
-                    # If not set the proba associated to the tile to zero
+                    # Check that a given tile is observable a minimum amount of time
+                    # If not set the proba associated to the tile to zero
                     if 'segmentlist' and 'prob' in tile_struct[key] and tile_struct[key]['segmentlist'] and min_obs_duration > 0.0:
                         observability_duration = 0.0
                         for counter in range(len(tile_struct[key]['segmentlist'])):
@@ -245,11 +270,10 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
                             tile_struct[key]['prob'] = 0.0
             
             else:
-                # Check that a given tile is not to close to the sun for the satelite
-                # If it's to close set the proba associated to the tile to zero
-
-                time = map_struct["trigtime"]
-                time = Time(time, format='isot', scale='utc')
+                # Check that a given tile is not to close to the sun for the satelite
+                # If it's to close set the proba associated to the tile to zero
+                time = params['gpstime']
+                time = Time(time, format='gps', scale='utc')
                 sun_position = get_sun(time)
                 
                 #astropy don't like the output of get sun in the following separator function, need here to redefine the skycoord

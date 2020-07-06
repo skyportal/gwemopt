@@ -107,6 +107,7 @@ def parse_commandline():
                       type=str, default="S")
     parser.add_option("--writeCatalog",  action="store_true", default=False)
     parser.add_option("--catalog_n",default=1.0,type=float)
+    parser.add_option("--AGN_flag", action="store_true",default=False)
     parser.add_option("--doObservability",  action="store_true", default=False)
     parser.add_option("--doSkybrightness",  action="store_true", default=False)
 
@@ -370,6 +371,7 @@ def params_struct(opts):
     params["doCatalogDatabase"] = opts.doCatalogDatabase
     params["galaxy_grade"] = opts.galaxy_grade
     params["writeCatalog"] = opts.writeCatalog
+    params["AGN_flag"] = opts.AGN_flag
 
     params["doChipGaps"] = opts.doChipGaps
     params["doUsePrimary"] = opts.doUsePrimary
