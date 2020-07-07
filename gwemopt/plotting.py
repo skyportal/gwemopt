@@ -14,6 +14,7 @@ matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 
+from astropy.coordinates import get_sun, get_moon, SkyCoord
 from gwemopt.segments import angular_distance
 import gwemopt.coverage
 import gwemopt.utils
@@ -79,7 +80,7 @@ def tauprob(params,tau,prob):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
-def tiles(params,map_struct,tiles_structs):
+def tiles(params,map_struct,tiles_structs,plot_sun_moon=False):
 
     unit='Gravitational-wave probability'
     cbar=False
@@ -96,6 +97,40 @@ def tiles(params,map_struct,tiles_structs):
             if not patch: continue
             hp.projaxes.HpxMollweideAxes.add_patch(ax,patch)
             #tiles.plot()
+
+    if plot_sun_moon:
+        
+        #plot sun and moon position at the beginning of the observation
+        start_time = params['gpstime'] 
+        start_time = Time(start_time, format='gps', scale='utc')
+
+        sun_position = get_sun(start_time)
+        moon_position = get_moon(start_time)
+
+        hp.visufunc.projscatter(sun_position.ra, sun_position.dec,lonlat=True,color='yellow')
+        hp.visufunc.projscatter(moon_position.ra, moon_position.dec,lonlat=True,color='grey')
+
+        #also plot (in smaller scale) sun and moon position for the 7 following days
+        #This allow to show the path of both sun and moon for the coming days
+        
+        dt = 21600 #1/4 day
+        
+        for i in range(1,29): #29 is 4*7 
+            
+            new_time = params['gpstime'] + (dt*i)
+
+            new_time = Time(new_time, format='gps', scale='utc')
+
+
+            new_moon_position = get_moon(new_time)
+            hp.visufunc.projscatter(new_moon_position.ra, new_moon_position.dec,lonlat=True,color='black',marker='.',s=1)            
+            
+            if not i % 8: #only plot point for the sun every two days in order to avoid overlap
+                new_sun_position = get_sun(new_time)
+                hp.visufunc.projscatter(new_sun_position.ra, new_sun_position.dec,lonlat=True,color='black',marker='.',s=1)
+
+        
+
     add_edges()
     plt.show()
     plt.savefig(plotName,dpi=200)
@@ -245,7 +280,7 @@ def efficiency(params, map_struct, efficiency_structs):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
-def coverage(params, map_struct, coverage_struct, catalog_struct=None):
+def coverage(params, map_struct, coverage_struct, catalog_struct=None,plot_sun_moon=False):
 
     unit='Gravitational-wave probability'
     cbar=False
@@ -311,6 +346,38 @@ def coverage(params, map_struct, coverage_struct, catalog_struct=None):
         patch_cpy.set_transform(ax.transData)
         hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
         #tiles.plot()
+
+    if plot_sun_moon:
+        
+        #plot sun and moon position at the beginning of the observation
+        start_time = params['gpstime'] 
+        start_time = Time(start_time, format='gps', scale='utc')
+
+        sun_position = get_sun(start_time)
+        moon_position = get_moon(start_time)
+
+        hp.visufunc.projscatter(sun_position.ra, sun_position.dec,lonlat=True,color='yellow')
+        hp.visufunc.projscatter(moon_position.ra, moon_position.dec,lonlat=True,color='grey')
+
+        #also plot (in smaller scale) sun and moon position for the 7 following days
+        #This allow to show the path of both sun and moon for the coming days
+        
+        dt = 21600 #1/4 day
+        
+        for i in range(1,29): #29 is 4*7 
+            
+            new_time = params['gpstime'] + (dt*i)
+
+            new_time = Time(new_time, format='gps', scale='utc')
+
+
+            new_moon_position = get_moon(new_time)
+            hp.visufunc.projscatter(new_moon_position.ra, new_moon_position.dec,lonlat=True,color='black',marker='.',s=1)            
+            
+            if not i % 8: #only plot point for the sun every two days in order to avoid overlap
+                new_sun_position = get_sun(new_time)
+                hp.visufunc.projscatter(new_sun_position.ra, new_sun_position.dec,lonlat=True,color='black',marker='.',s=1)
+        
     plt.show()
     plt.savefig(plotName,dpi=200)
     plt.close('all')
@@ -540,6 +607,39 @@ def coverage(params, map_struct, coverage_struct, catalog_struct=None):
         ax2.legend(loc=1)
     else:
         ax2.legend(loc=1)
+        
+    if plot_sun_moon:
+        
+        #plot sun and moon position at the beginning of the observation
+        start_time = params['gpstime'] 
+        start_time = Time(start_time, format='gps', scale='utc')
+
+        sun_position = get_sun(start_time)
+        moon_position = get_moon(start_time)
+
+        hp.visufunc.projscatter(sun_position.ra, sun_position.dec,lonlat=True,color='yellow')
+        hp.visufunc.projscatter(moon_position.ra, moon_position.dec,lonlat=True,color='grey')
+
+        #also plot (in smaller scale) sun and moon position for the 7 following days
+        #This allow to show the path of both sun and moon for the coming days
+        
+        dt = 21600 #1/4 day
+        
+        for i in range(1,29): #29 is 4*7 
+            
+            new_time = params['gpstime'] + (dt*i)
+
+            new_time = Time(new_time, format='gps', scale='utc')
+
+
+            new_moon_position = get_moon(new_time)
+            hp.visufunc.projscatter(new_moon_position.ra, new_moon_position.dec,lonlat=True,color='black',marker='.',s=1)            
+            
+            if not i % 8: #only plot point for the sun every two days in order to avoid overlap
+                new_sun_position = get_sun(new_time)
+                hp.visufunc.projscatter(new_sun_position.ra, new_sun_position.dec,lonlat=True,color='black',marker='.',s=1)        
+        
+        
     plt.show()
     plt.savefig(plotName,dpi=200)
     plt.close('all')
@@ -582,6 +682,38 @@ def coverage(params, map_struct, coverage_struct, catalog_struct=None):
             patch_cpy.set_alpha(alpha)
         hp.projaxes.HpxMollweideAxes.add_patch(ax,patch_cpy)
         #tiles.plot()
+        
+    if plot_sun_moon:
+        
+        #plot sun and moon position at the beginning of the observation
+        start_time = params['gpstime'] 
+        start_time = Time(start_time, format='gps', scale='utc')
+
+        sun_position = get_sun(start_time)
+        moon_position = get_moon(start_time)
+
+        hp.visufunc.projscatter(sun_position.ra, sun_position.dec,lonlat=True,color='yellow')
+        hp.visufunc.projscatter(moon_position.ra, moon_position.dec,lonlat=True,color='grey')
+
+        #also plot (in smaller scale) sun and moon position for the 7 following days
+        #This allow to show the path of both sun and moon for the coming days
+        
+        dt = 21600 #1/4 day
+        
+        for i in range(1,29): #29 is 4*7 
+            
+            new_time = params['gpstime'] + (dt*i)
+
+            new_time = Time(new_time, format='gps', scale='utc')
+
+
+            new_moon_position = get_moon(new_time)
+            hp.visufunc.projscatter(new_moon_position.ra, new_moon_position.dec,lonlat=True,color='black',marker='.',s=1)            
+            
+            if not i % 8: #only plot point for the sun every two days in order to avoid overlap
+                new_sun_position = get_sun(new_time)
+                hp.visufunc.projscatter(new_sun_position.ra, new_sun_position.dec,lonlat=True,color='black',marker='.',s=1)
+         
     plt.show()
     plt.savefig(plotName,dpi=200)
     plt.close('all')

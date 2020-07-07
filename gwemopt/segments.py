@@ -280,6 +280,19 @@ def get_segments(params, config_struct):
     segmentlistdic = segments.segmentlistdict()
     segmentlistdic["observations"] = segmentlist
     segmentlistdic["night"] = nightsegmentlist
+
+    #load the sun retriction for a satelite
+    try:   
+        sat_sun_restriction = config_struct["sat_sun_restriction"]
+    except:
+        sat_sun_restriction = 0.0
+
+    #in the case of satellite use don't intersect with night segment and take all observation time available  
+    if sat_sun_restriction:
+        
+        segmentlist.coalesce()
+        return segmentlist    
+    
     segmentlist = segmentlistdic.intersection(["observations","night"])
     segmentlist.coalesce()
 
