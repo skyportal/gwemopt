@@ -80,7 +80,7 @@ def tauprob(params,tau,prob):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
-def tiles(params,map_struct,tiles_structs,plot_sun_moon=True):
+def tiles(params,map_struct,tiles_structs,plot_sun_moon=False):
 
     unit='Gravitational-wave probability'
     cbar=False
@@ -280,7 +280,7 @@ def efficiency(params, map_struct, efficiency_structs):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
-def coverage(params, map_struct, coverage_struct, catalog_struct=None,plot_sun_moon=True):
+def coverage(params, map_struct, coverage_struct, catalog_struct=None,plot_sun_moon=False):
 
     unit='Gravitational-wave probability'
     cbar=False

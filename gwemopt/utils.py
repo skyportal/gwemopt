@@ -183,6 +183,9 @@ def params_checker(params):
     if "galaxy_grade" not in params.keys():
         params["galaxy_grade"] = "S"
 
+    if "AGN_flag" not in params.keys():
+        params["AGN_flag"] = False
+
     if "splitType" not in params.keys():
         params["splitType"] = "regional"
 
