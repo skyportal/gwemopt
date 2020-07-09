@@ -343,6 +343,10 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
 
 def absmag(params, map_struct, tile_structs,previous_coverage_struct=None):
 
+    if not "distmu" in map_struct:
+        print("timeallocationType absmag requires --do3D")
+        exit(0)
+
     map_struct_hold = copy.deepcopy(map_struct)
 
     coverage_structs = []

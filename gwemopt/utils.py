@@ -905,7 +905,10 @@ def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
         map_struct_hold['prob'][moc_struct[key]["ipix"]] = -1
         ipix_keep = np.setdiff1d(ipix_keep, moc_struct[key]["ipix"])
 
-    tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+    if params["timeallocationType"] == "absmag":
+        tile_struct = gwemopt.tiles.absmag_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+    elif params["timeallocationType"] == "powerlaw":
+        tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
     tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
  
     return tile_struct

@@ -36,6 +36,7 @@ def find_tile(exposureids_tile, exposureids, probs, idxs=None,
               slew_rate=1, readout=1):
     # exposureids_tile: {expo id}-> list of the tiles available for observation
     # exposureids: list of tile ids for every exposure it is allocated to observe
+
     if idxs is not None:
         for idx in idxs:
             if len(exposureids_tile["exposureids"])-1 < idx: continue
@@ -63,7 +64,6 @@ def find_tile(exposureids_tile, exposureids, probs, idxs=None,
         else:
             idx = np.argmax(exposureids_tile["probs"])
         idx2 = exposureids_tile["exposureids"][idx]
-
         if exposureids:
             if idx2 in exposureids and not idx2 in exptimecheckkeys:
                 idx = exposureids.index(idx2)
@@ -215,6 +215,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
                                     params["mindiff"]/86400.0)[0]
             exptimecheckkeys = [keynames[x] for x in exptimecheck]
 
+            
             # find_tile finds the tile that covers the largest probablity
             # restricted by availability of tile and timeallocation
             idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,exptimecheckkeys=exptimecheckkeys)
@@ -223,7 +224,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
                 tilenexps[idx] = tilenexps[idx] - 1
                 tileexptime[idx] = exposurelist[ii][0]
 
-                num = int(np.floor(tileexpdur[idx]/dt))
+                num = int(np.ceil(tileexpdur[idx]/dt))
                 tilenexps[idx] = tilenexps[idx] - 1
                 tileexptime[idx] = exposurelist[ii][0]
                 if len(tilefilts[idx2]) > 0:
@@ -442,6 +443,7 @@ def scheduler(params, config_struct, tile_struct):
         tilesegmentlists.append(tile_struct[key]["segmentlist"]) 
     print("Generating schedule order...")
     keys, filts = get_order(params,tile_struct,tilesegmentlists,exposurelist,observatory, config_struct)
+
     if params["doPlots"]:
         gwemopt.plotting.scheduler(params,exposurelist,keys)
 

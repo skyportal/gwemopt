@@ -145,8 +145,11 @@ def galaxy(params, map_struct, catalog_struct):
         for ra, dec, Sloc, S, Smass in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"], catalog_struct_new["Smass"]):
             moc_struct[cnt] = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
             cnt = cnt + 1
-        
-        tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+       
+        if params["timeallocationType"] == "absmag":
+            tile_struct = absmag_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+        elif params["timeallocationType"] == "powerlaw":
+            tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
         tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
 
         cnt = 0
@@ -306,6 +309,7 @@ def absmag_tiles_struct(params, config_struct, telescope, map_struct, tile_struc
                     tile_struct[key]["nexposures"] = 0
                     tile_struct[key]["filt"] = []
             else:
+                print(exposureTime, len(params["exposuretimes"]), params["filters"])
                 tile_struct[key]["exposureTime"] = exposureTime
                 tile_struct[key]["nexposures"] = len(params["exposuretimes"])
                 tile_struct[key]["filt"] = params["filters"]
@@ -441,7 +445,7 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
                     observability_duration += tile_struct[key]['segmentlist'][counter][1] - tile_struct[key]['segmentlist'][counter][0]
                 if tile_struct[key]['prob'] > 0.0 and observability_duration < min_obs_duration: 
                     prob = 0.0
- 
+
             tile_struct[key]["prob"] = prob
             tile_struct[key]["exposureTime"] = exposureTime
             tile_struct[key]["nexposures"] = int(np.floor(exposureTime/config_struct["exposuretime"]))
@@ -457,7 +461,11 @@ def moc(params, map_struct, moc_structs, doSegments=True):
         config_struct = params["config"][telescope]
         moc_struct = moc_structs[telescope]
 
-        tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+        if params["timeallocationType"] == "absmag":
+            tile_struct = gwemopt.tiles.absmag_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+        elif params["timeallocationType"] == "powerlaw":
+            tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+
         if doSegments:
             tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
         tile_structs[telescope] = tile_struct
