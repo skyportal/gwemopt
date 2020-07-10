@@ -309,11 +309,10 @@ def absmag_tiles_struct(params, config_struct, telescope, map_struct, tile_struc
                     tile_struct[key]["nexposures"] = 0
                     tile_struct[key]["filt"] = []
             else:
-                print(exposureTime, len(params["exposuretimes"]), params["filters"])
                 tile_struct[key]["exposureTime"] = exposureTime
                 tile_struct[key]["nexposures"] = len(params["exposuretimes"])
                 tile_struct[key]["filt"] = params["filters"]
-            
+    
     return tile_struct
 
 
