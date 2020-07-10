@@ -822,9 +822,8 @@ if opts.doObsFile and not os.path.isfile(obsfile):
         obstable_rows = obstable[obstable["jd"] == jd_chosen]
         for ii, row in obstable_rows.iterrows():
             # FIXME
-            #nmag = np.log(exptime/row.exptime)/np.log(2.5)
-            nmag = np.log(exptime/30.0)/np.log(2.5)
-    
+            nmag = np.log(exptime/row.exptime)/np.log(2.5)
+
             fid.write('%.7f, %d, %d, %d, %d, %d, %.2f, %.0f, %d\n'%(jd, field, int(row.chid), program_id, int(row.expid), filter_id, row.limMag+nmag, exptime, int(row.status)))
     
     fid.close()
