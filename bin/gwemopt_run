@@ -468,7 +468,7 @@ if opts.doObservability:
     if opts.doObservabilityExit:
         for telescope in params["telescopes"]:
             if np.sum(observability_struct[telescope]["prob"]) < opts.observability_thresh:
-                print('Observability for %s: %.5f < %.5f... exiting.' % (telescope, np.sum(observability_struct[telescope]), opts.observability_thresh))
+                print('Observability for %s: %.5f < %.5f... exiting.' % (telescope, np.sum(observability_struct[telescope]["prob"]), opts.observability_thresh))
                 exit(0)
 
 if opts.doSamples:
