@@ -205,12 +205,10 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
                                                                        map_struct_hold,tile_struct,
                                                                        telescope,previous_coverage_struct)
             elif params["doBalanceExposure"]:
-                optimized_bool = False
                 if not params["doMaxTiles"]: #optimize max tiles (iff max tiles not already specified)
-                    optimized_bool = True
                     optimized_max,coverage_struct,tile_struct = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_hold)
                     params["max_nb_tiles"] = np.array([optimized_max],dtype=np.float)
-                if not optimized_bool:
+                else:
                     params_hold = copy.copy(params)
                     config_struct_hold = copy.copy(config_struct)
                     
@@ -395,33 +393,26 @@ def absmag(params, map_struct, tile_structs,previous_coverage_struct=None):
             config_struct_hold = copy.copy(config_struct)
             
             coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
-            
-            if params["doRASlices"] and params["do3D"]:
-
+            if params["doRASlices"]:
                 coverage_struct = gwemopt.scheduler.schedule_ra_splits(params,config_struct,
                                                                        map_struct_hold,tile_struct,
                                                                        telescope,previous_coverage_struct)
-
-  
-            elif params["doRASlices"]:
-                print("Need to enable --do3D if using --doRASlices")
-                exit(0)
             elif params["doBalanceExposure"]:
-                optimized_bool = False
                 if not params["doMaxTiles"]: #optimize max tiles (iff max tiles not already specified)
-                    optimized_bool = True
-                    optimized_max = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_hold)
+                    optimized_max,coverage_struct,tile_struct = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_hold)
                     params["max_nb_tiles"] = np.array([optimized_max],dtype=np.float)
 
-                params_hold = copy.copy(params)
-                config_struct_hold = copy.copy(config_struct)
-                
-                coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
-                doReschedule,balanced_fields = gwemopt.utils.balance_tiles(params_hold, tile_struct, coverage_struct)
-                config_struct_hold = copy.copy(config_struct)
+                else:
+                    params_hold = copy.copy(params)
+                    config_struct_hold = copy.copy(config_struct)
 
-                if doReschedule:
                     coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
+                    doReschedule,balanced_fields = gwemopt.utils.balance_tiles(params_hold, tile_struct, coverage_struct)
+
+                    if doReschedule:
+                        config_struct_hold = copy.copy(config_struct)
+                        coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
+                                        
                 
 #                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params_hold,coverage_struct)
         else:
