@@ -83,10 +83,11 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct,
     save_efficiency_data(params, efficiency_struct, lightcurve_struct)
 
     if do3D:
-        eff_3D = compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
+        eff_3D,dists_inj = compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
         efficiency_metric = [eff_3D, np.sqrt(eff_3D * (1 - eff_3D) / params["Ninj"])]
         save_efficiency_metric(params, os.path.join(params["outputDir"],"efficiency.txt"), efficiency_metric, lightcurve_struct)
         efficiency_struct["3D"] = eff_3D
+        efficiency_struct["dists_inj"] = dists_inj
     return efficiency_struct
 
 def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
@@ -107,7 +108,8 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
     mom_mean, mom_std, mom_norm = distance.parameters_to_moments(map_struct["distmu"],map_struct["distsigma"])
 
     detections = 0
-
+    dists_inj = {}
+    dists_inj["recovered"], dists_inj["tot"] = [],[]
     for pinpoint in ipix:
         dist = -1
         while (dist < 0):
@@ -116,6 +118,9 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
             else:
                 dist = mom_mean[pinpoint] + mom_std[pinpoint] * np.random.normal()
 
+        if dist != np.inf:
+            dists_inj["tot"].append(dist)
+        
         idxs = []
         for jj in range(len(coverage_struct["ipix"])):
             expPixels = coverage_struct["ipix"][jj]
@@ -143,9 +148,11 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
                 single_detection = True
                 break
 
-        if single_detection: detections+=1
+        if single_detection:
+            detections+=1
+            dists_inj["recovered"].append(dist)
 
-    return detections/Ninj
+    return detections/Ninj,dists_inj
 
 def save_efficiency_data(params, efficiency_struct, lightcurve_struct):
     for i in range(0, len(efficiency_struct["distances"])):

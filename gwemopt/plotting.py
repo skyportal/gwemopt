@@ -280,6 +280,25 @@ def efficiency(params, map_struct, efficiency_structs):
     plt.savefig(plotName,dpi=200)
     plt.close('all')
 
+    if params["do3D"]:
+        for key in efficiency_structs:
+            efficiency_struct = efficiency_structs[key]
+            plotName = os.path.join(params["outputDir"],f'3Deff_distbins_{efficiency_struct["legend_label"]}.pdf')
+            plt.figure()
+            
+            injected_KNe, recovered_KNe = efficiency_struct["dists_inj"]["tot"],efficiency_struct["dists_inj"]["recovered"]
+            plt.hist(injected_KNe,bins=10,range=(np.nanmin(injected_KNe),np.nanmax(injected_KNe)),color="r",label="Injected KNe",
+                     histtype='step',linewidth=2)
+            plt.hist(recovered_KNe,bins=10,range=(np.nanmin(injected_KNe),np.nanmax(injected_KNe)),label="Recovered KNe",color="g",
+                     histtype='step',linewidth=2)
+
+            plt.legend(loc="upper left", fancybox=True,edgecolor='k',prop={'size': 10})
+            plt.xlabel("Dist (Mpc)",fontsize=15)
+            plt.show()
+            plt.savefig(plotName,dpi=200)
+            plt.close('all')
+
+
 def coverage(params, map_struct, coverage_struct, catalog_struct=None,plot_sun_moon=False):
 
     unit='Gravitational-wave probability'
