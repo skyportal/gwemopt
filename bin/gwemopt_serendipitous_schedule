@@ -506,8 +506,7 @@ if not os.path.isfile(schedulefile):
                 airmass_weights = 10 ** (0.2 * (airmass - 1))
                 
                 map_struct["prob"] = np.divide(map_struct["prob"],airmass_weights)
-                print(airmass_weights[np.isnan(map_struct["prob"])])
-                    
+            
             # normalize 2D probability
             map_struct["prob"] = map_struct["prob"] / np.sum(map_struct["prob"])
 
