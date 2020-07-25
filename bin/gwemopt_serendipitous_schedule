@@ -113,8 +113,8 @@ def parse_commandline():
     parser.add_option("--doSchedule",  action="store_true", default=False)
     parser.add_option("--doPlots",  action="store_true", default=False)
     parser.add_option("--doMovie",  action="store_true", default=False)
-
     parser.add_option("--doObservability",  action="store_true", default=False)
+    parser.add_option("--doAirmassWeights",  action="store_true", default=False)
     parser.add_option("--NFields",default=-1,type=int)
     parser.add_option("--doEvaluate",  action="store_true", default=False)
     parser.add_option("--doObsFile",  action="store_true", default=False)
@@ -481,8 +481,35 @@ if not os.path.isfile(schedulefile):
                 intersect = np.intersect1d(nonzero,ipix_bottom)
                 map_struct["prob"][intersect] = 0.01
 
-                map_struct["prob"] = map_struct["prob"] / np.sum(map_struct["prob"])
-
+            if opts.doAirmassWeights:
+                # get airmass distribution
+                theta, phi = hp.pix2ang(opts.nside, np.arange(npix))
+                radecs = astropy.coordinates.SkyCoord(
+                                      ra=phi*u.rad, dec=(0.5*np.pi - theta)*u.rad)
+                observatory = astropy.coordinates.EarthLocation(
+                                                lat=config_struct["latitude"]*u.deg,
+                                                lon=config_struct["longitude"]*u.deg,
+                                                height=config_struct["elevation"]*u.m)
+                                                
+                # altaz @ halfway point of ~5 hr block
+                midpoint = Time(opts.gps, format='gps', scale='utc') + TimeDelta((Tobs[ii] + 0.2 * 0.5) * u.day)
+                frame = astropy.coordinates.AltAz(obstime=midpoint,
+                                                  location=observatory)
+                altaz = radecs.transform_to(frame)
+                airmass = altaz.secz
+                
+                horizon_mask = altaz.alt.degree <= 30.
+                below_horizon_mask = horizon_mask * 10.**100
+                airmass = airmass + below_horizon_mask
+                
+                # weight by airmass
+                airmass_weights = 10 ** (0.2 * (airmass - 1))
+                
+                map_struct["prob"] = np.divide(map_struct["prob"],airmass_weights)
+                print(airmass_weights[np.isnan(map_struct["prob"])])
+                    
+            # normalize 2D probability
+            map_struct["prob"] = map_struct["prob"] / np.sum(map_struct["prob"])
 
             moc_structs = gwemopt.moc.create_moc(params)
             tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
