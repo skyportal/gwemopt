@@ -603,16 +603,27 @@ if not os.path.isfile(schedulefile):
                         gwemopt.plotting.coverage(params, map_struct, coverage_struct)
     
         coverage_structs.append(coverage_struct)
+#        coverage_struct_combined = gwemopt.coverage.combine_coverage_structs(coverage_structs)
+        new_sched_file = os.path.join(params["outputDir"],"schedule_ZTF.dat")
+        OG_sched_file = os.path.join(baseoutputDir,"schedule_ZTF.dat")
+        
+        fin = open(new_sched_file, "r")
+        data = fin.read()
+        fout = open(OG_sched_file, "a")
+        fout.write(data)
+        
+        fin.close()
+        fout.close()
+        
+#        params["outputDir"] = baseoutputDir
 
-        coverage_struct_combined = gwemopt.coverage.combine_coverage_structs(coverage_structs)
-        params["outputDir"] = baseoutputDir
-        if opts.doSchedule:
-            print("Summary of coverage...")
-            gwemopt.scheduler.summary(params,map_struct,coverage_struct_combined)
-    
-            if opts.doPlots:
-                if (np.mod(ii, 15) == 0) or (ii == len(Tobs)-2):
-                    gwemopt.plotting.coverage(params, map_struct, coverage_struct_combined)
+#        if opts.doSchedule:
+#            print("Summary of coverage...")
+#            gwemopt.scheduler.summary(params,map_struct,coverage_struct_combined)
+
+#            if opts.doPlots:
+#                if (np.mod(ii, 15) == 0) or (ii == len(Tobs)-2):
+#                    gwemopt.plotting.coverage(params, map_struct, coverage_struct_combined)
         if np.mod(ii+1,5) == 0:
             print(f"for {Tobs[ii]}:")
             print(f"--- {time.time() - start_time:.2f} seconds ---")
