@@ -449,16 +449,13 @@ def read_skymap(params,is3D=False,map_struct=None):
         distsigma_down = hp.pixelfunc.ud_grade(map_struct["distsigma"],nside_down)
         distnorm_down = hp.pixelfunc.ud_grade(map_struct["distnorm"],nside_down)
 
+        map_struct["distmed"], mom_std, mom_norm = distance.parameters_to_moments(
+                                                                          map_struct["distmu"],
+                                                                        map_struct["distsigma"])
+
         distmu_down[distmu_down < -1e+30] = np.inf
 
-        r = np.linspace(0, 2000)
-        map_struct["distmed"] = np.zeros(distmu_down.shape)
-        for ipix in range(len(map_struct["distmed"])):
-            dp_dr = r**2 * distnorm_down[ipix] * norm(distmu_down[ipix],distsigma_down[ipix]).pdf(r)
-            dp_dr_norm = np.cumsum(dp_dr / np.sum(dp_dr))
-            idx = np.argmin(np.abs(dp_dr_norm-0.5))
-            map_struct["distmed"][ipix] = r[idx]
-        map_struct["distmed"] = hp.ud_grade(map_struct["distmu"],nside,power=-2)
+        map_struct["distmed"] = hp.ud_grade(map_struct["distmed"],nside,power=-2)
 
     npix = hp.nside2npix(nside)
     theta, phi = hp.pix2ang(nside, np.arange(npix))
