@@ -570,7 +570,10 @@ def compute_tiles_map(params, tile_struct, skymap, func=None, ipix_keep=[]):
                 vals[ii] = 0.0
             else:
                 vals_to_sum = prob[ipix]
-                vals_to_sum[vals_to_sum < 0] = 0
+                if func == 'np.nanmedian(x)':
+                    vals_to_sum[vals_to_sum < 0] = np.nan
+                else:
+                    vals_to_sum[vals_to_sum < 0] = 0
                 vals[ii] = f(vals_to_sum)
 
         ipix_keep = np.setdiff1d(ipix_keep, tile_struct[key]["ipix"])
