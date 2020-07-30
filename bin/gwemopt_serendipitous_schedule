@@ -285,7 +285,7 @@ if opts.doObservability:
         idxs, probs = np.array(idxs), np.array(probs)
         idxsort = np.argsort(probs)[::-1]
         Ntop = idxs[idxsort[:opts.NFields]]
-print(Ntop)
+    print(Ntop)
 params["gpstime"] = opts.gps
 
 params["outputDir"] = baseoutputDir
