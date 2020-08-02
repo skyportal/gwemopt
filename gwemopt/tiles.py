@@ -242,7 +242,7 @@ def absmag_tiles_struct(params, config_struct, telescope, map_struct, tile_struc
     ranked_tile_probs = ranked_tile_probs / np.nansum(ranked_tile_probs)
 
     if "distmed" in map_struct:
-        distmed = map_struct["distmed"]
+        distmed = map_struct["distmed"] + 2*map_struct["diststd"]
         distmed[distmed<=0] = np.nan
         distmed[~np.isfinite(distmed)] = np.nan
         #distmed[distmed<np.nanmedian(distmed)/4.0] = np.nanmedian(distmed)/4.0

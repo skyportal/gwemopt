@@ -449,13 +449,14 @@ def read_skymap(params,is3D=False,map_struct=None):
         distsigma_down = hp.pixelfunc.ud_grade(map_struct["distsigma"],nside_down)
         distnorm_down = hp.pixelfunc.ud_grade(map_struct["distnorm"],nside_down)
 
-        map_struct["distmed"], mom_std, mom_norm = ligodist.parameters_to_moments(
+        map_struct["distmed"], map_struct["diststd"], mom_norm = ligodist.parameters_to_moments(
                                                                           map_struct["distmu"],
                                                                         map_struct["distsigma"])
 
         distmu_down[distmu_down < -1e+30] = np.inf
 
         map_struct["distmed"] = hp.ud_grade(map_struct["distmed"],nside,power=-2)
+        map_struct["diststd"] = hp.ud_grade(map_struct["diststd"],nside,power=-2)
 
     npix = hp.nside2npix(nside)
     theta, phi = hp.pix2ang(nside, np.arange(npix))
