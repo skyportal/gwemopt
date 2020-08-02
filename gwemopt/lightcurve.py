@@ -107,7 +107,7 @@ def read_files(files,tmin=-100.0,tmax=100.0):
         #mag_d = mag_d[1:,:]
 
         t = mag_d[:,0]
-        g = mag_d[:,1]
+        g = mag_d[:,2]
         try:
             index = np.nanargmin(g)
             index = 0
@@ -115,6 +115,8 @@ def read_files(files,tmin=-100.0,tmax=100.0):
             index = 0
         t0 = t[index]
 
+        bands = ['u', 'g', 'r', 'i', 'z', 'y', 'J', 'H', 'K']
+        
         mags[name] = {}
         mags[name]["t"] = mag_d[:,0]
         indexes1 = np.where(mags[name]["t"]>=tmin)[0]
@@ -122,10 +124,9 @@ def read_files(files,tmin=-100.0,tmax=100.0):
         indexes = np.intersect1d(indexes1,indexes2)
 
         mags[name]["t"] = mag_d[indexes,0]
-        mags[name]["g"] = mag_d[indexes,1]
-        mags[name]["r"] = mag_d[indexes,2]
-        mags[name]["i"] = mag_d[indexes,3]
-        mags[name]["z"] = mag_d[indexes,4]
+
+        for ii,filt in enumerate(bands):
+            mags[name][filt] = mag_d[indexes,ii+1]
 
         mags[name]["c"] = (mags[name]["g"]+mags[name]["r"])/2.0
         mags[name]["o"] = (mags[name]["r"]+mags[name]["i"])/2.0
