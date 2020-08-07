@@ -638,6 +638,7 @@ def summary(params, map_struct, coverage_struct):
         else:
             fields = np.zeros((len(config_struct["tesselation"]),len(filts)+2))
 
+        totexp = 0
         fid = open(schedulefile,'w')
         for ii in range(len(coverage_struct["ipix"])):
             if not telescope == coverage_struct["telescope"][ii]:
@@ -666,6 +667,9 @@ def summary(params, map_struct, coverage_struct):
             fields[idx1,0] = config_struct["tesselation"][idx1,0]
             fields[idx1,1] = prob
             fields[idx1,idx2+2] = fields[idx1,idx2+2]+1
+
+            totexp = totexp + exposure_time
+ 
         fid.close()
 
         idx = np.where(fields[:,1]>0)[0]
@@ -679,8 +683,9 @@ def summary(params, map_struct, coverage_struct):
 
         print('Integrated probability, All: %.5f, 2+: %.5f'%(np.sum(fields[:,1]),np.sum(fields[idx,1])))
 
+        print('Expected time spent on exposures: ' + str(totexp/3600) + ' hr.')
         slew_readout_time = computeSlewReadoutTime(config_struct, coverage_struct)
-        print('Expected time spent on slewing and readout ' + str(slew_readout_time) + ' s.')
+        print('Expected time spent on slewing and readout: ' + str(slew_readout_time) + ' s.')
 
         coveragefile = os.path.join(params["outputDir"],'coverage_%s.dat'%telescope)
         fid = open(coveragefile,'w')
