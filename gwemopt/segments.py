@@ -291,6 +291,7 @@ def get_segments(params, config_struct):
     if sat_sun_restriction:
         
         segmentlist.coalesce()
+
         return segmentlist    
     
     segmentlist = segmentlistdic.intersection(["observations","night"])
@@ -419,6 +420,7 @@ def get_segments_tiles(params, config_struct, tile_struct):
                         radecs_computed = np.vstack((radecs_computed,[radec.ra.value, radec.dec.value]))
                         tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
                         tile_struct[key]["segmentlist"] = tilesegmentlist
+
             else:
                 tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
                 tile_struct[key]["segmentlist"] = tilesegmentlist

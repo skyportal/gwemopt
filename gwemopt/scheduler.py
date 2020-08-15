@@ -615,7 +615,7 @@ def write_xml(xmlfile,map_struct,coverage_struct,config_struct):
     fid.write(xmlnew)
     fid.close()
 
-def summary(params, map_struct, coverage_struct):
+def summary(params, map_struct, coverage_struct, catalog_struct=None):
 
     idx50 = len(map_struct["cumprob"])-np.argmin(np.abs(map_struct["cumprob"]-0.50))
     idx90 = len(map_struct["cumprob"])-np.argmin(np.abs(map_struct["cumprob"]-0.90))
@@ -651,12 +651,16 @@ def summary(params, map_struct, coverage_struct):
             FOV = coverage_struct["FOV"][ii]
             area = coverage_struct["area"][ii]
             #rand = np.random.randint(2)
-
             prob = np.sum(map_struct["prob"][ipix])
 
             ra, dec = data[0], data[1]
             observ_time, mag, exposure_time, field_id, prob, airmass = data[2], data[3], data[4], data[5], data[6], data[7]
             program_id = data[8]
+
+            if params["tilesType"] == "galaxy":
+                galaxies = coverage_struct["galaxies"][ii]
+                prob = np.sum(catalog_struct[params["galaxy_grade"]][galaxies])
+                      
             fid.write('%d %.5f %.5f %.5f %.5f %d %.5f %.5f %s %d\n'%(field_id,ra,dec,observ_time,mag,exposure_time,prob,airmass,filt,program_id))
 
             dist = angular_distance(data[0], data[1],
@@ -712,6 +716,9 @@ def summary(params, map_struct, coverage_struct):
         cum_prob = 0.0
         cum_area = 0.0
 
+        if params["tilesType"] == "galaxy":
+            galaxies = np.empty((0,2))
+
         for ii in range(len(coverage_struct["ipix"])):
             data = coverage_struct["data"][ii,:]
             filt = coverage_struct["filters"][ii]
@@ -727,8 +734,14 @@ def summary(params, map_struct, coverage_struct):
 
             ipixs = np.append(ipixs,ipix)
             ipixs = np.unique(ipixs).astype(int)
-
             cum_prob = np.sum(map_struct["prob"][ipixs])
+
+            if params["tilesType"] == "galaxy":
+                galaxies = np.append(galaxies,
+                                     coverage_struct["galaxies"][ii])
+                galaxies = np.unique(galaxies).astype(int)
+                cum_prob = np.sum(catalog_struct[params["galaxy_grade"]][galaxies])
+
             cum_area = len(ipixs) * map_struct["pixarea_deg2"]
             mjds.append(data[2])
             mjds_floor.append(int(np.floor(data[2])))

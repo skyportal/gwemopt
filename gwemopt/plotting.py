@@ -535,6 +535,8 @@ def coverage(params, map_struct, coverage_struct, catalog_struct=None,plot_sun_m
                             cum_prob = cum_prob + catalog_struct["Sloc"][galaxy]
                         elif params["galaxy_grade"] == "S":
                             cum_prob = cum_prob + catalog_struct["S"][galaxy]
+                        elif params["galaxy_grade"] == "Smass":
+                            cum_prob = cum_prob + catalog_struct["Smass"][galaxy]
                     cum_galaxies = np.append(cum_galaxies,galaxies)
                     cum_galaxies = np.unique(cum_galaxies).astype(int)
                 cum_area = len(cum_galaxies)
@@ -591,6 +593,8 @@ def coverage(params, map_struct, coverage_struct, catalog_struct=None,plot_sun_m
                         cum_prob = cum_prob + catalog_struct["Sloc"][galaxy]
                     elif params["galaxy_grade"] == "S":
                         cum_prob = cum_prob + catalog_struct["S"][galaxy]
+                    elif params["galaxy_grade"] == "Smass":
+                        cum_prob = cum_prob + catalog_struct["Smass"][galaxy]
                 cum_galaxies = np.append(cum_galaxies,galaxies)
                 cum_galaxies = np.unique(cum_galaxies).astype(int)
             cum_area = len(cum_galaxies)

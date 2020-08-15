@@ -538,6 +538,7 @@ if opts.doSchedule:
     if opts.doTiles:
         print("Generating coverage...")
         tile_structs, coverage_struct = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
+        print(coverage_struct)
     else:
         print("Need to enable --doTiles to use --doSchedule")
         exit(0)
@@ -547,7 +548,11 @@ elif opts.doCoverage:
 
 if opts.doSchedule or opts.doCoverage:
     print("Summary of coverage...")
-    gwemopt.scheduler.summary(params,map_struct,coverage_struct)
+    if opts.doCatalog:
+        gwemopt.scheduler.summary(params,map_struct,coverage_struct,
+                                  catalog_struct=catalog_struct)
+    else:
+        gwemopt.scheduler.summary(params,map_struct,coverage_struct)
 
     if opts.doPlots:
         print("Plotting coverage...")

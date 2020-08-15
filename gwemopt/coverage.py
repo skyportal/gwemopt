@@ -250,7 +250,6 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
     
                                 tile_position = SkyCoord(ra=tile_struct[key]['ra']*u.degree, dec=tile_struct[key]['dec']*u.degree, frame='icrs')
                                 ang_dist = sun_position.separation(tile_position).deg
-    
                             if ang_dist < sat_sun_restriction:
     
                                 tile_struct[key]['prob'] = 0.0

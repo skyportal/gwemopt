@@ -142,14 +142,16 @@ def galaxy(params, map_struct, catalog_struct):
 
         moc_struct = {}
         cnt = 0
-        for ra, dec, Sloc, S, Smass in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"], catalog_struct_new["Smass"]):
+        for ra, dec, Sloc, S, Smass, galaxies in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"], catalog_struct_new["Smass"], catalog_struct_new["galaxies"]):
             moc_struct[cnt] = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
+            moc_struct[cnt]["galaxies"] = galaxies
             cnt = cnt + 1
-       
+    
         if params["timeallocationType"] == "absmag":
             tile_struct = absmag_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
         elif params["timeallocationType"] == "powerlaw":
-            tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+            tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct, catalog_struct=catalog_struct)
+                
         tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
 
         cnt = 0
@@ -160,7 +162,7 @@ def galaxy(params, map_struct, catalog_struct):
                 tile_struct[cnt]['prob'] = S
             elif params["galaxy_grade"] == "Smass":
                 tile_struct[cnt]['prob'] = Smass
-                
+
             tile_struct[cnt]['galaxies'] = galaxies
             if config_struct["FOV_type"] == "square":
                 tile_struct[cnt]['area'] = params["config"][telescope]['FOV']**2
@@ -316,7 +318,9 @@ def absmag_tiles_struct(params, config_struct, telescope, map_struct, tile_struc
     return tile_struct
 
 
-def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
+def powerlaw_tiles_struct(params, config_struct, telescope,
+                          map_struct, tile_struct,
+                          catalog_struct=None):
 
     keys = tile_struct.keys()
     ntiles = len(keys)
@@ -331,9 +335,9 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
         prob = map_struct["prob"]
 
     n, cl, dist_exp = params["powerlaw_n"], params["powerlaw_cl"], params["powerlaw_dist_exp"]
-    
+   
     if params["tilesType"] == "galaxy":
-        tile_probs = compute_tiles_map(params, tile_struct, prob, func='center', ipix_keep=map_struct["ipix_keep"])
+        tile_probs = compute_tiles_map(params, tile_struct, prob, func='galaxy', ipix_keep=map_struct["ipix_keep"], catalog_struct=catalog_struct)
     else:
         tile_probs = compute_tiles_map(params, tile_struct, prob, func='np.sum(x)', ipix_keep=map_struct["ipix_keep"])
 
@@ -350,7 +354,7 @@ def powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_str
     prob_scaled = prob_scaled / np.nansum(prob_scaled)
    
     if params["tilesType"] == "galaxy":
-        ranked_tile_probs = compute_tiles_map(params, tile_struct, prob_scaled, func='center', ipix_keep=map_struct["ipix_keep"])
+        ranked_tile_probs = compute_tiles_map(params, tile_struct, prob_scaled, func='galaxy', ipix_keep=map_struct["ipix_keep"], catalog_struct=catalog_struct)
     else:
         ranked_tile_probs = compute_tiles_map(params, tile_struct, prob_scaled, func='np.sum(x)', ipix_keep=map_struct["ipix_keep"])
 
@@ -531,11 +535,11 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
     return tile_struct
 
-def compute_tiles_map(params, tile_struct, skymap, func=None, ipix_keep=[]):
+def compute_tiles_map(params, tile_struct, skymap, func=None, ipix_keep=[],
+                      catalog_struct=None):
 
     if func is None:
         f = lambda x: np.sum(x)
-        
     elif func == 'center':
         keys = tile_struct.keys()
         ntiles = len(keys)
@@ -546,7 +550,16 @@ def compute_tiles_map(params, tile_struct, skymap, func=None, ipix_keep=[]):
             val = skymap[pix_center]
             vals[ii] = val        
         return vals
-    
+    elif func == 'galaxy':
+        keys = tile_struct.keys()
+        ntiles = len(keys)
+        vals = np.nan*np.ones((ntiles,))
+        nside = hp.npix2nside(len(skymap))
+        for ii,key in enumerate(tile_struct.keys()):
+            galaxies = tile_struct[key]["galaxies"]
+            val = np.sum(catalog_struct[params["galaxy_grade"]][galaxies])    
+            vals[ii] = val
+        return vals
     else:
         f = lambda x: eval(func)
 
