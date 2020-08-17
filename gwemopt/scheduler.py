@@ -460,8 +460,6 @@ def scheduler(params, config_struct, tile_struct):
             mjd_exposure_start = exposurelist[0][0]
             nkeys = len(keys)
             for jj in range(nkeys):
-                if key == 771:
-                    print(exposurelist[jj][1], exposurelist[jj-1][1], exposurelist[jj+1][1])
                 if (keys[jj] == key) and (filts[jj] == filt) and not (nkeys == jj+1):
                     if np.abs(exposurelist[jj][1] - exposurelist[jj-1][1]) > 5.0/24:
                         mjd_exposure_end = exposurelist[jj-1][1]

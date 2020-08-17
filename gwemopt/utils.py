@@ -19,6 +19,7 @@ import astropy.coordinates
 from astropy.time import Time, TimeDelta
 import astropy.units as u
 from astropy.coordinates import SkyCoord
+from astropy import table
 
 import matplotlib
 #matplotlib.rc('text', usetex=True)
