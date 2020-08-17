@@ -460,8 +460,17 @@ def scheduler(params, config_struct, tile_struct):
             mjd_exposure_start = exposurelist[0][0]
             nkeys = len(keys)
             for jj in range(nkeys):
-                if (keys[jj] == key) and (filts[jj] == filt) and not (nkeys == jj+1) and not (np.abs(exposurelist[jj+1][1] - exposurelist[jj][1]) > 5.0/24):
-                    mjd_exposure_end = exposurelist[jj][1]
+                if key == 771:
+                    print(exposurelist[jj][1], exposurelist[jj-1][1], exposurelist[jj+1][1])
+                if (keys[jj] == key) and (filts[jj] == filt) and not (nkeys == jj+1):
+                    if np.abs(exposurelist[jj][1] - exposurelist[jj-1][1]) > 5.0/24:
+                        mjd_exposure_end = exposurelist[jj-1][1]
+                        nexp = jj + 1
+                        keys = keys[jj:]
+                        filts = filts[jj:]
+                        exposurelist = exposurelist[jj:]
+                    else:
+                        mjd_exposure_end = exposurelist[jj][1]
                 elif (keys[jj] == key) and (filts[jj] == filt) and (nkeys == jj+1):
                     mjd_exposure_end = exposurelist[jj][1]
                     nexp = jj + 1
@@ -474,7 +483,7 @@ def scheduler(params, config_struct, tile_struct):
                     filts = filts[jj:]
                     exposurelist = exposurelist[jj:]
                     break    
- 
+
             # the (middle) tile observation time is mjd_exposure_mid
             mjd_exposure_mid = (mjd_exposure_start+mjd_exposure_end)/2.0
 
