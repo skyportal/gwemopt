@@ -1,0 +1,4 @@
+#!/bin/sh
+#PBS -V -koed -l select=1:model=san
+python gwemopt_run --doEfficiency --telescope ZTF --doSchedule --doSkymap --doPlots --skymap ../data/GW190425/LALInference.fits.gz --gpstime 1240215503 -o ../output/GW190425/0.900_ZTF --doTiles --doSingleExposure --filters g --exposuretimes 90.0 --powerlaw_cl 0.900 --doChipGaps --doReferences --doMinimalTiling
+

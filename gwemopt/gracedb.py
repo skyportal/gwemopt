@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 import ligo.gracedb
 from ligo.gracedb.rest import GraceDb, HTTPError
-from ligo.gracedb.rest import GraceDbBasic
+#from ligo.gracedb.rest import GraceDbBasic
 
 url = 'https://gracedb.ligo.org/api/'
 #url = 'https://gracedb-test.ligo.org/apibasic/'
