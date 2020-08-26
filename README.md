@@ -35,3 +35,12 @@ References:
 
 - Coughlin and Stubbs: https://link.springer.com/article/10.1007/s10686-016-9503-4 
 
+Setting up the environment:
+
+```
+conda install numpy scipy matplotlib astropy h5py shapely
+conda install -c astropy astroquery
+conda install -c conda-forge voeventlib astropy-healpix
+```
+
+And then setup.py should take care of the rest.
