@@ -35,6 +35,11 @@ def create_moc(params, map_struct=None):
     else:
         doUsePrimary = False
 
+    if "doUseSecondary" in params:
+        doUseSecondary = params["doUseSecondary"]
+    else:
+        doUseSecondary = False
+
     moc_structs = {}
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
@@ -55,11 +60,15 @@ def create_moc(params, map_struct=None):
                 index, ra, dec = tess[0], tess[1], tess[2]
                 if (telescope == "ZTF") and doUsePrimary and (index > 880):
                     continue
+                if (telescope == "ZTF") and doUseSecondary and (index < 1000):
+                    continue
                 moc_struct[index] = moclists[ii]    
         else:
             for ii, tess in enumerate(tesselation):
                 index, ra, dec = tess[0], tess[1], tess[2]
                 if (telescope == "ZTF") and doUsePrimary and (index > 880):
+                    continue
+                if (telescope == "ZTF") and doUseSecondary and (index < 1000):
                     continue
                 index = index.astype(int)
                 moc_struct[index] = Fov2Moc(params, config_struct, telescope, ra, dec, nside)

@@ -185,6 +185,7 @@ def parse_commandline():
 
     parser.add_option("--doChipGaps",  action="store_true", default=False)
     parser.add_option("--doUsePrimary",  action="store_true", default=False)
+    parser.add_option("--doUseSecondary",  action="store_true", default=False)
 
     parser.add_option("--doSplit",action="store_true",default=False)
     parser.add_option("--splitType",default="regional")
@@ -377,6 +378,7 @@ def params_struct(opts):
 
     params["doChipGaps"] = opts.doChipGaps
     params["doUsePrimary"] = opts.doUsePrimary
+    params["doUseSecondary"] = opts.doUseSecondary
 
     params["doSplit"] = opts.doSplit
     params["splitType"] = opts.splitType
