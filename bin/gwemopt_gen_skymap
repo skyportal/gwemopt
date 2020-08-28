@@ -83,8 +83,8 @@ def parse_commandline():
     #parser.add_option("--decs",default="48.528,48.912,43.214,42.455")
 
     parser.add_option("--doTESS",  action="store_true", default=False)
-    #parser.add_option("--ras",default="324.5670,338.5766,19.4927,90.0042")
-    #parser.add_option("--decs",default="-33.1730,-55.0789,-71.9781,-66.5647")
+    parser.add_option("--ras",default="324.5670,338.5766,19.4927,90.0042")
+    parser.add_option("--decs",default="-33.1730,-55.0789,-71.9781,-66.5647")
     parser.add_option("--lon",default="10.94,10.94,10.94,10.94")
     parser.add_option("--lat",default="-18.0,-42.0,-66.0,-89.0")
 
@@ -103,6 +103,10 @@ def parse_commandline():
     parser.add_option("--fields_type", default='circle')
 
     parser.add_option("--level",default=90)
+
+    parser.add_option("--doRotate",  action="store_true", default=False)
+    parser.add_option("--theta",default=150.0,type=float)
+    parser.add_option("--phi",default=10.0,type=float)
 
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
@@ -356,6 +360,20 @@ if opts.doGetFields:
 #hp.fitsfunc.write_map(opts.skymap,healpix,overwrite=True)
 io.write_sky_map(opts.skymap, healpix, moc=True)
 
+if opts.doCandidate:
+    npix = hp.nside2npix(opts.nside)
+    theta, phi = hp.pix2ang(opts.nside, np.arange(npix))
+    ra = np.rad2deg(phi)
+    dec = np.rad2deg(0.5*np.pi - theta)
+
+    prob = healpix / np.sum(healpix)
+    idy = np.argsort(prob)[::-1]
+    cumprob = np.cumsum(prob[idy])
+    ipix = hp.ang2pix(opts.nside, opts.ra_candidate, opts.dec_candidate, 
+                      lonlat=True)
+    idz = np.where(ipix == idy)[0]
+    print('Transient is in the %.5f percentile' % (cumprob[idz]*100))
+
 unit='Gravitational-wave probability'
 cbar=False
 
@@ -363,7 +381,10 @@ plt.figure()
 if opts.doGalactic:
     hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix),coord=['C','G'])
 else:
-    hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix))
+    if opts.doRotate:
+        hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix),rot=[opts.theta, opts.phi])
+    else:
+        hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix))
     gwemopt.plotting.add_edges()
 if opts.doCandidate:
     hp.visufunc.projscatter(opts.ra_candidate, opts.dec_candidate, lonlat=True)
