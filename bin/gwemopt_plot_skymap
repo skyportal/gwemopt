@@ -244,10 +244,10 @@ plotName = os.path.join(params["outputDir"],'tiles.pdf')
 
 fig = plt.figure(figsize=(12, 8))
 
-gs = fig.add_gridspec(4, 1)
+gs = fig.add_gridspec(5, 1)
 ax1 = fig.add_subplot(gs[0:3, 0], projection='astro hours mollweide')
-ax2 = fig.add_subplot(gs[3, 0])
-ax3 = ax2.twinx()   # mirror them
+ax2 = fig.add_subplot(gs[3:5, 0])
+#ax3 = ax2.twinx()   # mirror them
 
 plt.axes(ax1)
 
@@ -383,7 +383,7 @@ for kk, telescope in enumerate(tiles_structs):
         ipixlist.append(ipix.tolist())
 
     ax2.plot(tts, cum_probs, color=color, linestyle='-', label=telescope)
-    ax3.plot(tts, cum_areas, color=color, linestyle='--')
+    #ax3.plot(tts, cum_areas, color=color, linestyle='--')
 
     if cnt == 0:
         tableall = table
@@ -415,11 +415,11 @@ for row in tableall:
 
 color, telescope = 'k', 'All'
 ax2.plot(tts, cum_probs, color=color, linestyle='-', label=telescope)
-ax3.plot(tts, cum_areas, color=color, linestyle='--')
+#ax3.plot(tts, cum_areas, color=color, linestyle='--')
 
 ax2.set_xlabel('Time since event [days]')
-ax2.set_ylabel('Integrated Probability')
-ax3.set_ylabel('Sky area [sq. deg.]')
+ax2.set_ylabel('2D Integrated Probability')
+#ax3.set_ylabel('Sky area [sq. deg.]')
 
 #for transient in transients:
 #    hp.visufunc.projplot(transient["ra"], transient["dec"], lonlat=True,
