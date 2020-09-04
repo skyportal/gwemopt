@@ -461,12 +461,13 @@ def scheduler(params, config_struct, tile_struct):
             nkeys = len(keys)
             for jj in range(nkeys):
                 if (keys[jj] == key) and (filts[jj] == filt) and not (nkeys == jj+1):
-                    if np.abs(exposurelist[jj][1] - exposurelist[jj-1][1]) > 5.0/24:
+                    if np.abs(exposurelist[jj][1] - mjd_exposure_start) > 5.0/24:
                         mjd_exposure_end = exposurelist[jj-1][1]
                         nexp = jj + 1
                         keys = keys[jj:]
                         filts = filts[jj:]
                         exposurelist = exposurelist[jj:]
+                        print(mjd_exposure_start, mjd_exposure_end)
                     else:
                         mjd_exposure_end = exposurelist[jj][1]
                 elif (keys[jj] == key) and (filts[jj] == filt) and (nkeys == jj+1):
@@ -492,13 +493,13 @@ def scheduler(params, config_struct, tile_struct):
             airmass = 1 / np.cos((90. - alt) * np.pi / 180)
 
             # total duration of the observation (?)
-
-
             exposureTime = (mjd_exposure_end-mjd_exposure_start)*86400.0
 
             nmag = np.log(exposureTime/config_struct["exposuretime"]) / np.log(2.5)
             mag = config_struct["magnitude"] + nmag
             
+            print(exposureTime, mag, nmag, mjd_exposure_start, mjd_exposure_end)
+
             coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_start,mag,exposureTime,int(key),tile_struct_hold["prob"],airmass,params["program_id"]]]),axis=0)
 
             coverage_struct["filters"].append(filt)
