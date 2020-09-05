@@ -291,6 +291,9 @@ def params_struct(opts):
         # observer.elevation = params["config"][telescope]["elevation"]
         # params["config"][telescope]["observer"] = observer
 
+    params["mag"] = opts.mag
+    params["dmag"] = opts.dmag
+    params["modelType"] = opts.modelType
     params["skymap"] = opts.skymap
     params["gpstime"] = opts.gpstime
     params["outputDir"] = opts.outputDir
