@@ -245,8 +245,8 @@ def params_checker(params):
             params["config"][telescope]["telescope"] = telescope
             if params["doSingleExposure"]:
                 exposuretime = np.array(opts.exposuretimes.split(","),dtype=np.float)[0]
-            
-                nmag = np.log(exposuretime/params["config"][telescope]["exposuretime"]) / np.log(2.5)
+           
+                nmag = -2.5*np.log10(np.sqrt(params["config"][telescope]["exposuretime"]/exposuretime))
                 params["config"][telescope]["magnitude"] = params["config"][telescope]["magnitude"] + nmag
                 params["config"][telescope]["exposuretime"] = exposuretime
             if "tesselationFile" in params["config"][telescope]:

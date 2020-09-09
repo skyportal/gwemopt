@@ -164,8 +164,8 @@ for configFile in configFiles:
 
     params["config"][telescope]["magnitude_orig"] = params["config"][telescope]["magnitude"]
     params["config"][telescope]["exposuretime_orig"] = params["config"][telescope]["exposuretime"]
-
-    nmag = np.log(exposuretime/params["config"][telescope]["exposuretime"]) / np.log(2.5)
+  
+    nmag = -2.5*np.log10(np.sqrt(params["config"][telescope]["exposuretime"]/exposuretime))
     params["config"][telescope]["magnitude"] = params["config"][telescope]["magnitude"] + nmag
     params["config"][telescope]["exposuretime"] = exposuretime  
 
