@@ -494,7 +494,7 @@ def scheduler(params, config_struct, tile_struct):
             # total duration of the observation (?)
             exposureTime = (mjd_exposure_end-mjd_exposure_start)*86400.0
 
-            nmag = np.log(exposureTime/config_struct["exposuretime"]) / np.log(2.5)
+            nmag = 2.5*np.log10(np.sqrt(1/config_struct["exposuretime"])))-2.5*np.log10(np.sqrt(1/exposureTime))
             mag = config_struct["magnitude"] + nmag
 
             coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[tile_struct_hold["ra"],tile_struct_hold["dec"],mjd_exposure_start,mag,exposureTime,int(key),tile_struct_hold["prob"],airmass,params["program_id"]]]),axis=0)
