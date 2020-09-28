@@ -88,7 +88,57 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct,
         save_efficiency_metric(params, os.path.join(params["outputDir"],"efficiency.txt"), efficiency_metric, lightcurve_struct)
         efficiency_struct["3D"] = eff_3D
         efficiency_struct["dists_inj"] = dists_inj
+
+    if params["doTrueLocation"]:
+        det = compute_true_efficiency(params, map_struct, lightcurve_struct, coverage_struct)
+        filename = os.path.join(params["outputDir"],'efficiency_true_' + lightcurve_struct['name'] + '.txt')
+   
+        fid = open(filename, 'w')
+        if det:
+            fid.write('1')
+        else:
+            fid.write('0') 
+        fid.close()
+
     return efficiency_struct
+
+def compute_true_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
+
+    nside = params["nside"]
+    npix = hp.nside2npix(nside)
+    Ninj = params["Ninj"]
+    gpstime = params["gpstime"]
+    mjd_inj = Time(gpstime, format='gps', scale='utc').mjd
+
+    ipix = hp.ang2pix(nside, params["true_ra"], params["true_dec"], lonlat=True)
+    dist = params["true_distance"]
+
+    idxs = []
+    for jj in range(len(coverage_struct["ipix"])):
+        expPixels = coverage_struct["ipix"][jj]
+
+        if ipix in expPixels:
+            idxs.append(jj)
+
+    mjds = coverage_struct["data"][idxs,2]
+    mags = coverage_struct["data"][idxs,3]
+    filts = coverage_struct["filters"][idxs]
+    single_detection = False
+    for mjd, mag, filt in zip(mjds,mags,filts):
+        lightcurve_t = lightcurve_struct["t"] + mjd_inj
+        lightcurve_mag = lightcurve_struct[filt]
+        idx = np.where(np.isfinite(lightcurve_mag))[0]
+
+        f = interp.interp1d(lightcurve_t[idx], lightcurve_mag[idx],fill_value='extrapolate')
+        lightcurve_mag_interp = f(mjd)
+        dist_threshold = (10**(((mag-lightcurve_mag_interp)/5.0)+1.0))/1e6
+
+        if dist<=dist_threshold:
+            single_detection = True
+            break
+
+    return single_detection
+
 
 def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
 
@@ -155,10 +205,12 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
     return detections/Ninj,dists_inj
 
 def save_efficiency_data(params, efficiency_struct, lightcurve_struct):
+
+    filename = os.path.join(params["outputDir"],'efficiency_' + lightcurve_struct['name'] + '.txt')
+
     for i in range(0, len(efficiency_struct["distances"])):
         dist = efficiency_struct["distances"][i]
         eff = efficiency_struct["efficiency"][i]
-        filename = os.path.join(params["outputDir"],'efficiency_' + lightcurve_struct['name'] + '.txt')
         if os.path.exists(filename):
             append_write = 'a'
             efficiency_file = open(filename, append_write)

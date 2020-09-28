@@ -61,7 +61,7 @@ def readParamsFromFile(file):
 
 def params_checker(params):
     """"Assigns defaults to params."""
-    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doUseSecondary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure","doBlocks","doUpdateScheduler","doTreasureMap","doRASlice","doRASlices","doRotate","doMindifFilt"]
+    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doUseSecondary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure","doBlocks","doUpdateScheduler","doTreasureMap","doRASlice","doRASlices","doRotate","doMindifFilt","doTrueLocation"]
  
     for parameter in do_Parameters:
         if parameter not in params.keys():
@@ -234,6 +234,13 @@ def params_checker(params):
 
     if "program_id" not in params.keys():
         params["program_id"] = -1
+
+    if "true_ra" not in params.keys():
+        params["true_ra"] = 30.0
+    if "true_dec" not in params.keys():
+        params["true_dec"] = 60.0
+    if "true_distance" not in params.keys():
+        params["true_distance"] = 100.0
 
     if "config" not in params.keys():
         params["config"] = {}

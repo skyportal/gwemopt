@@ -161,6 +161,11 @@ def parse_commandline():
     parser.add_option("--start_time",default=None)
     parser.add_option("--end_time",default=None)
 
+    parser.add_option("--doTrueLocation", action="store_true", default=False)
+    parser.add_option("--true_ra",default=30.0,type=float)
+    parser.add_option("--true_dec",default=60.0,type=float)
+    parser.add_option("--true_distance",default=100.0,type=float)
+
     parser.add_option("--doTransients",  action="store_true", default=False)
     parser.add_option("--transientsFile",default="../transients/ps1_objects.csv")
     parser.add_option("--dt",default=14.0,type=float)
@@ -400,6 +405,11 @@ def params_struct(opts):
     params["theta"] = opts.theta
 
     params["doZTFCoverage"] = opts.doZTFCoverage
+
+    params["doTrueLocation"] = opts.doTrueLocation
+    params["true_ra"] = opts.true_ra
+    params["true_dec"] = opts.true_dec
+    params["true_distance"] = opts.true_distance
 
     if opts.start_time is None:
         params["start_time"] = time.Time.now() - time.TimeDelta(1.0*u.day)
