@@ -111,6 +111,8 @@ def compute_true_efficiency(params, map_struct, lightcurve_struct, coverage_stru
     mjd_inj = Time(gpstime, format='gps', scale='utc').mjd
 
     ipix = hp.ang2pix(nside, params["true_ra"], params["true_dec"], lonlat=True)
+    #ipix = np.argmax(map_struct["prob"])
+    #lat, lon = hp.pix2ang(nside, ipix, lonlat=True)
     dist = params["true_distance"]
 
     idxs = []
