@@ -467,10 +467,15 @@ def scheduler(params, config_struct, tile_struct):
                         keys = keys[jj:]
                         filts = filts[jj:]
                         exposurelist = exposurelist[jj:]
+                        break
                     else:
                         mjd_exposure_end = exposurelist[jj][1]
+
                 elif (keys[jj] == key) and (filts[jj] == filt) and (nkeys == jj+1):
                     mjd_exposure_end = exposurelist[jj][1]
+
+                    exposureTime = (mjd_exposure_end-mjd_exposure_start)*86400.0
+
                     nexp = jj + 1
                     keys = []
                     filts = []

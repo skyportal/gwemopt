@@ -68,6 +68,7 @@ install_requires = [
     'ligo.skymap',
     'h5py',
     'munkres',
+    'pandas',
     'shapely'
 ]
 
