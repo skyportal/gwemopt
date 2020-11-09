@@ -171,7 +171,7 @@ def get_longitudecut(healpix, nside, longitude_low, longitude_high):
 
 def get_intersect(healpix,original_skymap,nside):
 
-    original_data = hp.read_map(original_skymap)
+    original_data = hp.read_map(original_skymap, verbose=True)
     nside_orig = hp.pixelfunc.get_nside(original_data)
     original_data = hp.ud_grade(original_data,nside,power=-2)
     
@@ -382,10 +382,15 @@ if opts.doGalactic:
     hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix),coord=['C','G'])
 else:
     if opts.doRotate:
-        hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix),rot=[opts.theta, opts.phi])
+        hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix),rot=[opts.theta, opts.phi],coord='C')
     else:
-        hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix))
+        hp.mollview(healpix,title='',unit=unit,cbar=False,min=0,max=np.max(healpix),coord='C')
     gwemopt.plotting.add_edges()
+    # galaxy
+    for gallat in [15,0,-15]:
+        theta = np.arange(0., 360, 0.036)
+        phi = gallat*np.ones_like(theta)
+        hp.projplot(theta, phi, 'w-', coord='G',lonlat=True,lw=2)
 if opts.doCandidate:
     hp.visufunc.projscatter(opts.ra_candidate, opts.dec_candidate, lonlat=True)
 plt.show()
