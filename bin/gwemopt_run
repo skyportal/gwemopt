@@ -212,6 +212,9 @@ def parse_commandline():
     parser.add_option("--theta", help="theta rotation.", default=0.0, type=float)
     parser.add_option("--phi", help="phi rotation.", default=0.0, type=float)
 
+    parser.add_option("--doAvoidGalacticPlane",  action="store_true", default=False)
+    parser.add_option("--galactic_limit", help="Galactic limit.", default=15.0, type=float)
+
     parser.add_option("-v", "--verbose", action="store_true", default=False,
                       help="Run verbosely. (Default: False)")
 
@@ -410,6 +413,9 @@ def params_struct(opts):
     params["true_ra"] = opts.true_ra
     params["true_dec"] = opts.true_dec
     params["true_distance"] = opts.true_distance
+
+    params["doAvoidGalacticPlane"] = opts.doAvoidGalacticPlane
+    params["galactic_limit"] = opts.galactic_limit
 
     if opts.start_time is None:
         params["start_time"] = time.Time.now() - time.TimeDelta(1.0*u.day)

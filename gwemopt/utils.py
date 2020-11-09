@@ -61,7 +61,7 @@ def readParamsFromFile(file):
 
 def params_checker(params):
     """"Assigns defaults to params."""
-    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doUseSecondary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure","doBlocks","doUpdateScheduler","doTreasureMap","doRASlice","doRASlices","doRotate","doMindifFilt","doTrueLocation"]
+    do_Parameters = ["do3D","doEvent","doSuperSched","doMovie_supersched","doSkymap","doSamples","doCoverage","doSchedule","doPlots","doDatabase","doMovie","doTiles","doIterativeTiling","doMinimalTiling","doOverlappingScheduling","doPerturbativeTiling","doOrderByObservability","doCatalog","doUseCatalog","doCatalogDatabase","doObservability","doSkybrightness","doEfficiency","doCalcTiles","doTransients","doSingleExposure","doAlternatingFilters","doMaxTiles","doReferences","doChipGaps","doUsePrimary","doUseSecondary","doSplit","doParallel","writeCatalog","doFootprint","doBalanceExposure","doBlocks","doUpdateScheduler","doTreasureMap","doRASlice","doRASlices","doRotate","doMindifFilt","doTrueLocation","doAvoidGalacticPlane"]
  
     for parameter in do_Parameters:
         if parameter not in params.keys():
@@ -234,6 +234,9 @@ def params_checker(params):
 
     if "program_id" not in params.keys():
         params["program_id"] = -1
+
+    if "galactic_limit" not in params.keys():
+        params["galactic_limit"] = 15.0
 
     if "true_ra" not in params.keys():
         params["true_ra"] = 30.0
@@ -480,6 +483,12 @@ def read_skymap(params,is3D=False,map_struct=None):
             ipix = np.where((ra_high*360.0/24.0 < ra) | (ra_low*360.0/24.0 > ra))[0]
         else:
             ipix = np.where((ra_high*360.0/24.0 < ra) & (ra_low*360.0/24.0 > ra))[0]
+        map_struct["prob"][ipix] = 0.0
+        map_struct["prob"] = map_struct["prob"] / np.sum(map_struct["prob"])
+
+    if params["doAvoidGalacticPlane"]:
+        coords = SkyCoord(ra=ra*u.deg, dec=dec*u.deg)
+        ipix = np.where(np.abs(coords.galactic.b.deg) <= params["galactic_limit"])[0] 
         map_struct["prob"][ipix] = 0.0
         map_struct["prob"] = map_struct["prob"] / np.sum(map_struct["prob"])
 
