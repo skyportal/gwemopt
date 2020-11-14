@@ -192,6 +192,11 @@ def skymap(params,map_struct):
         hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,min=np.percentile(map_struct["prob"],1),max=np.percentile(map_struct["prob"],99),cmap=cmap)
     else:
         hp.mollview(map_struct["prob"],title='',unit=unit,cbar=cbar,min=np.percentile(map_struct["prob"],1),cmap=cmap)
+    
+    if params["doTrueLocation"]:
+        hp.projplot(params["true_ra"], params["true_dec"], lonlat=True, coord='G', marker='D', c='blue', linestyle='None', label='true location')
+        plt.legend()
+    
     add_edges()
     plt.show()
     plt.savefig(plotName,dpi=200)
