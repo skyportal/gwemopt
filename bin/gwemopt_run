@@ -82,7 +82,7 @@ def parse_commandline():
     parser.add_option("--doCoverage",  action="store_true", default=False)
 
     parser.add_option("--doSchedule",  action="store_true", default=False)
-    parser.add_option("--scheduleType", help="schedule type",default="greedy")
+    parser.add_option("--scheduleType", help="schedule type",default="greedy_slew")
     parser.add_option("--timeallocationType", help="time allocation type",default="powerlaw")
 
     parser.add_option("--doPlots",  action="store_true", default=False)

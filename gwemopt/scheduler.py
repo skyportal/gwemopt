@@ -206,8 +206,8 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
             tilematrix[ii, :] = np.array(probs/airmass_weight)
             probmatrix[ii, :] = np.array(probs * (True^horizon_mask))
 
+    dt = (exposurelist[1][0] - exposurelist[0][0]) * 86400
     if params["scheduleType"] == "greedy":
-        dt = (exposurelist[1][0] - exposurelist[0][0]) * 86400
         for ii in np.arange(len(exposurelist)):
             if idxs[ii] > 0: continue
 
@@ -219,6 +219,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
             # find_tile finds the tile that covers the largest probablity
             # restricted by availability of tile and timeallocation
             idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,exptimecheckkeys=exptimecheckkeys)
+            print(idx2, exposureids, probs)
             if idx2 in keynames:
                 idx = keynames.index(idx2)
                 tilenexps[idx] = tilenexps[idx] - 1
@@ -257,13 +258,26 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
                 idx = keynames.index(idx2)
                 tilenexps[idx] = tilenexps[idx] - 1
                 tileexptime[idx] = exposurelist[ii][0]
+
+                num = int(np.ceil(tileexpdur[idx]/dt))
+                tilenexps[idx] = tilenexps[idx] - 1
+                tileexptime[idx] = exposurelist[ii][0]
                 if len(tilefilts[idx2]) > 0:
                     filt = tilefilts[idx2].pop(0)
-                    filts[ii] = filt
+                    for jj in range(num):
+                        try:
+                            filts[ii+jj] = filt
+                        except:
+                            pass
+                for jj in range(num):
+                    try:
+                        idxs[ii+jj] = idx2
+                    except:
+                        pass
                 current_ra = tile_struct[idx2]["ra"]
                 current_dec = tile_struct[idx2]["dec"]
-
-            idxs[ii] = idx2
+            else:
+                idxs[ii] = idx2
 
             if not exposureids: break
     elif params["scheduleType"] == "sear":
