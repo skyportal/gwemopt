@@ -67,6 +67,7 @@ def parse_commandline():
     parser.add_option("--nside",default=512,type=int)
 
     parser.add_option("--doCircle",  action="store_true", default=False)
+    parser.add_option("--doCircleZero",  action="store_true", default=False)
     parser.add_option("--doAnnulus",  action="store_true", default=False)
     parser.add_option("--doExcise",  action="store_true", default=False)
     parser.add_option("--excise_file",default="/Users/mcoughlin/Code/ZTF/growth-too-marshal/pixels")
@@ -224,6 +225,43 @@ def gen_circle(ra,dec,error,nside):
 
     return healpix
 
+def angular_distance(ra1, dec1, ra2, dec2):
+
+    delt_lon = (ra1 - ra2)*np.pi/180.
+    delt_lat = (dec1 - dec2)*np.pi/180.
+    dist = 2.0*np.arcsin( np.sqrt( np.sin(delt_lat/2.0)**2 + \
+         np.cos(dec1*np.pi/180.)*np.cos(dec2*np.pi/180.)*np.sin(delt_lon/2.0)**2 ) )
+
+    return dist/np.pi*180.
+
+def gen_circle_zero(ra, dec, error, nside):
+
+    npix = hp.nside2npix(nside)
+    theta, phi = hp.pix2ang(nside, np.arange(npix))
+    ras = np.rad2deg(phi)
+    decs = np.rad2deg(0.5*np.pi - theta)
+
+    n = np.ones(npix)
+
+    if type(ra) == str and ',' in ra:
+        list_params = np.array([list(map(float,ra.split(","))),list(map(float,dec.split(",")))])
+    else:
+        list_params = np.array([[float(ra)],[float(dec)]])
+    if len(list_params[0]) != len(list_params[1]):
+        print("Need equal number of RAs and decs")
+        return None
+    else:
+        params = np.transpose(list_params)
+        params = params.tolist()
+
+    for pair in params:
+        dist = angular_distance(ras, decs, pair[0], pair[1])
+        idx = np.where(dist <= error)[0]
+        n[idx] = 0
+    healpix = n / np.sum(n)
+    
+    return healpix
+
 def gen_square(ras,decs,nside):
 
     if ',' in ras:
@@ -322,6 +360,8 @@ opts = parse_commandline()
 
 if opts.doCircle:
     healpix = gen_circle(opts.ra,opts.dec,opts.radius,opts.nside)
+elif opts.doCircleZero:
+    healpix = gen_circle_zero(opts.ra,opts.dec,opts.radius,opts.nside)
 elif opts.doSquare:
     ras = [float(x) for x in opts.ras.split(",")]
     decs = [float(x) for x in opts.decs.split(",")]
