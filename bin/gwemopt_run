@@ -167,7 +167,8 @@ def parse_commandline():
     parser.add_option("--true_distance",default=100.0,type=float)
 
     parser.add_option("--doTransients",  action="store_true", default=False)
-    parser.add_option("--transientsFile",default="../transients/ps1_objects.csv")
+    parser.add_option("--transientsFile",default="../data/GW190425/transients.dat")
+    parser.add_option("--transients_to_catalog",type=float,default=0.8)
     parser.add_option("--dt",default=14.0,type=float)
 
     parser.add_option("-a","--airmass",default=2.5,type=float)
@@ -348,6 +349,7 @@ def params_struct(opts):
 
     params["doTransients"] = opts.doTransients
     params["transientsFile"] = opts.transientsFile
+    params["transients_to_catalog"] = opts.transients_to_catalog
     params["dt"] = opts.dt
 
     params["galaxy_catalog"] = opts.galaxy_catalog
@@ -475,6 +477,15 @@ if opts.doCatalog:
     print("Generating catalog...")
     map_struct, catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
 
+if opts.doTransients:
+    print("Loading transients list...")
+    transients_struct = gwemopt.transients.read_transients(params, map_struct)
+  
+    if opts.doCatalog:
+        catalog_struct = gwemopt.transients.combine_catalog_transients(params, catalog_struct, transients_struct)
+    else:
+        catalog_struct = transients_struct
+
 if opts.doPlots:
     print("Plotting skymap...")
     gwemopt.plotting.skymap(params,map_struct)
@@ -569,7 +580,7 @@ elif opts.doCoverage:
 
 if opts.doSchedule or opts.doCoverage:
     print("Summary of coverage...")
-    if opts.doCatalog:
+    if opts.doCatalog or opts.doTransients:
         gwemopt.scheduler.summary(params,map_struct,coverage_struct,
                                   catalog_struct=catalog_struct)
     else:
@@ -577,7 +588,7 @@ if opts.doSchedule or opts.doCoverage:
 
     if opts.doPlots:
         print("Plotting coverage...")
-        if opts.doCatalog:
+        if opts.doCatalog or opts.doTransients:
             gwemopt.plotting.coverage(params, map_struct, coverage_struct,
                                       catalog_struct=catalog_struct)
         else:
@@ -606,17 +617,3 @@ if opts.doEfficiency:
     else:
         print("Need to enable --doSchedule or --doCoverage for --doEfficiency")
         exit(0)
-
-if opts.doTransients:
-    print("Loading transients list...")
-    transients_struct = gwemopt.transients.read_transients(params, map_struct)
-
-    transientsfile = os.path.join(params["outputDir"],'transients.dat')
-    fid = open(transientsfile,'w')
-    for data,name,classification in zip(transients_struct["data"],transients_struct["name"],transients_struct["classification"]):
-        fid.write("%s %.5f %.5f %.5e\n"%(name,data[0],data[1],data[7]))
-    fid.close()
-
-    if opts.doPlots:
-        print("Plotting transients struct...")
-        gwemopt.plotting.transients(params, map_struct, transients_struct)

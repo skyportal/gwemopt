@@ -149,7 +149,10 @@ def params_checker(params):
         params["footprint_radius"] = 10.0
 
     if "transientsFile" not in params.keys():
-        params["transientsFile"] = "../transients/ps1_objects.csv"
+        params["transientsFile"] = "../data/GW190425/transients.dat"
+
+    if "transients_to_catalog" not in params.keys():
+        params["transients_to_catalog"] = 0.8
 
     if "dt" not in params.keys():
         params["dt"] = 14.0
