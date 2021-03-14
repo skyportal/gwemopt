@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches
 if not os.getenv("DISPLAY", None):
     import matplotlib
-    matplotlib.use("agg", warn=False)
+    matplotlib.use("agg")
 
 __author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
 __version__ = 1.0
