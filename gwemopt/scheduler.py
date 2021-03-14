@@ -219,7 +219,6 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
             # find_tile finds the tile that covers the largest probablity
             # restricted by availability of tile and timeallocation
             idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,exptimecheckkeys=exptimecheckkeys)
-            print(idx2, exposureids, probs)
             if idx2 in keynames:
                 idx = keynames.index(idx2)
                 tilenexps[idx] = tilenexps[idx] - 1
@@ -865,6 +864,8 @@ def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescop
     while len(raslices) != 0:
         params["unbalanced_tiles"] = []
         config_struct["exposurelist"] = segments.segmentlist(config_struct["exposurelist"][maxidx:])
+        if len(config_struct["exposurelist"]) < 2: break
+        
         map_struct_slice = copy.deepcopy(map_struct_hold)
         
         exposurelist = np.array_split(config_struct["exposurelist"],len(raslices))[0]
