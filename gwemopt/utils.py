@@ -32,6 +32,8 @@ import matplotlib.path
 
 import ligo.segments as segments
 import ligo.skymap.distance as ligodist
+from ligo.skymap.io import read_sky_map
+from ligo.skymap.bayestar import rasterize
 
 import gwemopt.moc
 import gwemopt.tiles
@@ -415,13 +417,20 @@ def read_skymap(params,is3D=False,map_struct=None):
             filename = params["skymap"]
         
             if is3D:
-                healpix_data, header = hp.read_map(filename, field=(0,1,2,3), verbose=False,h=True)
-        
+                try:
+                    healpix_data, header = hp.read_map(filename, field=(0,1,2,3), verbose=False,h=True)
+                except:
+                    table = read_sky_map(filename, moc=True, distances=True)
+                    order = hp.nside2order(params["nside"])
+                    t = rasterize(table, order)
+                    result = t['PROB'], t['DISTMU'], t['DISTSIGMA'], t['DISTNORM']
+                    healpix_data = hp.reorder(result, 'NESTED', 'RING')
+
                 distmu_data = healpix_data[1]
                 distsigma_data = healpix_data[2]
                 prob_data = healpix_data[0]
                 norm_data = healpix_data[3]
-        
+
                 map_struct["distmu"] = distmu_data / params["DScale"]
                 map_struct["distsigma"] = distsigma_data / params["DScale"]
                 map_struct["prob"] = prob_data
