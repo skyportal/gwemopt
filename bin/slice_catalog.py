@@ -1,5 +1,6 @@
 
 import h5py
+import numpy as np
 import astropy.io.fits
 from astropy.table import Table
 from astropy import units as u
@@ -20,7 +21,12 @@ t['distmpc'].unit = u.Mpc
 
 t.write('../catalog/CLU.hdf5', path='/data', format='hdf5', serialize_meta=True, overwrite=True)
 
-t2 = t[:10]
+idx = np.where((t['dec'] >= 0) & (t['distmpc'] >= 40))[0]
+t2 = t[idx]
+t2 = t2[:10]
+t2.pprint_all()
+
+print(stop)
 
 t2.write('../catalog/CLU_mini.hdf5', path='/data', format='hdf5', serialize_meta=True, overwrite=True)
 
