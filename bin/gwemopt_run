@@ -266,7 +266,8 @@ def params_struct(opts):
             params["config"][telescope]["magnitude"] = params["config"][telescope]["magnitude"] + nmag
             params["config"][telescope]["exposuretime"] = exposuretime
         if "tesselationFile" in params["config"][telescope]:
-            if not os.path.isfile(params["config"][telescope]["tesselationFile"]):
+            tessfile = os.path.join(opts.configDirectory,params["config"][telescope]["tesselationFile"])
+            if not os.path.isfile(tessfile):
                 if params["config"][telescope]["FOV_type"] == "circle":
                     gwemopt.tiles.tesselation_spiral(params["config"][telescope])
                 elif params["config"][telescope]["FOV_type"] == "square":
@@ -274,11 +275,12 @@ def params_struct(opts):
             if opts.tilesType == "galaxy":
                 params["config"][telescope]["tesselation"] = np.empty((3,))
             else:
-                params["config"][telescope]["tesselation"] = np.loadtxt(params["config"][telescope]["tesselationFile"],usecols=(0,1,2),comments='%')
+                params["config"][telescope]["tesselation"] = np.loadtxt(tessfile,usecols=(0,1,2),comments='%')
 
         if "referenceFile" in params["config"][telescope]:
+            reffile = os.path.join(opts.configDirectory,params["config"][telescope]["referenceFile"])
             refs = table.unique(table.Table.read(
-                params["config"][telescope]["referenceFile"],
+                reffile,
                 format='ascii', data_start=2, data_end=-1)['field', 'fid'])
             reference_images =\
                 {group[0]['field']: group['fid'].astype(int).tolist()
@@ -501,6 +503,14 @@ if opts.doObservability:
         for telescope in params["telescopes"]:
             if np.sum(observability_struct[telescope]["prob"]) < opts.observability_thresh:
                 print('Observability for %s: %.5f < %.5f... exiting.' % (telescope, np.sum(observability_struct[telescope]["prob"]), opts.observability_thresh))
+
+                if params["doTrueLocation"]:
+                    lightcurve_structs = gwemopt.lightcurve.read_files(params["lightcurveFiles"])
+                    for key in lightcurve_structs.keys():
+                        filename = os.path.join(params["outputDir"],'efficiency_true_' + lightcurve_structs[key]['name'] + '.txt')
+                        fid = open(filename, 'w')
+                        fid.write('0')
+                        fid.close()
                 exit(0)
 
 if opts.doSamples:

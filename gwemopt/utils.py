@@ -32,6 +32,8 @@ import matplotlib.path
 
 import ligo.segments as segments
 import ligo.skymap.distance as ligodist
+from ligo.skymap.io import read_sky_map
+from ligo.skymap.bayestar import rasterize
 
 import gwemopt.moc
 import gwemopt.tiles
@@ -415,13 +417,20 @@ def read_skymap(params,is3D=False,map_struct=None):
             filename = params["skymap"]
         
             if is3D:
-                healpix_data, header = hp.read_map(filename, field=(0,1,2,3), verbose=False,h=True)
-        
+                try:
+                    healpix_data, header = hp.read_map(filename, field=(0,1,2,3), verbose=False,h=True)
+                except:
+                    table = read_sky_map(filename, moc=True, distances=True)
+                    order = hp.nside2order(params["nside"])
+                    t = rasterize(table, order)
+                    result = t['PROB'], t['DISTMU'], t['DISTSIGMA'], t['DISTNORM']
+                    healpix_data = hp.reorder(result, 'NESTED', 'RING')
+
                 distmu_data = healpix_data[1]
                 distsigma_data = healpix_data[2]
                 prob_data = healpix_data[0]
                 norm_data = healpix_data[3]
-        
+
                 map_struct["distmu"] = distmu_data / params["DScale"]
                 map_struct["distsigma"] = distsigma_data / params["DScale"]
                 map_struct["prob"] = prob_data
@@ -1109,6 +1118,8 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
     for ii,max_trial in enumerate(max_trials):
         for key in tile_struct_hold.keys():
             tile_struct_hold[key]['prob'] = prob[key]
+            if "epochs" in tile_struct_hold[key]:
+                tile_struct_hold[key]['epochs'] = np.empty((0,9))
         params["max_nb_tiles"] = np.array([max_trial],dtype=np.float)
         params_hold = copy.copy(params)
         config_struct_hold = copy.copy(config_struct)
@@ -1150,6 +1161,8 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
         if optimized_max==-1: break #breaks if no max tiles restriction should be imposed
         for key in tile_struct_hold.keys():
             tile_struct_hold[key]['prob'] = prob[key]
+            if "epochs" in tile_struct_hold[key]:
+                tile_struct_hold[key]['epochs'] = np.empty((0,9))
         params["max_nb_tiles"] = np.array([max_trial],dtype=np.float)
         params_hold = copy.copy(params)
         config_struct_hold = copy.copy(config_struct)
@@ -1188,7 +1201,8 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
 
             for key in tile_struct_hold.keys():
                 tile_struct_hold[key]['prob'] = prob[key]
-
+                if "epochs" in tile_struct_hold[key]:
+                    tile_struct_hold[key]['epochs'] = np.empty((0,9))
             doReschedule,balanced_fields = balance_tiles(params_hold, opt_tile_struct, opt_coverage_struct)
             params_hold["unbalanced_tiles"] = unbalanced_tiles + params_hold["unbalanced_tiles"]
             if not doReschedule: break
@@ -1286,6 +1300,17 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                 tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
                 tile_struct[key]["epochs_overlap"].append(len(overlap))
                 tile_struct[key]["epochs_filters"].append(coverage_struct["filters"][jj])
+
+    return tile_struct
+
+def append_tile_epochs(tile_struct,coverage_struct):
+    for key in tile_struct.keys():
+        if key not in coverage_struct["data"][:,5]: continue
+        if not 'epochs' in tile_struct[key]:
+            tile_struct[key]["epochs"] = np.empty((0,9))
+        idx = np.where(coverage_struct["data"][:,5] == key)[0]
+        for jj in idx:
+            tile_struct[key]["epochs"] = np.append(tile_struct[key]["epochs"],np.atleast_2d(coverage_struct["data"][jj,:]),axis=0)
 
     return tile_struct
 

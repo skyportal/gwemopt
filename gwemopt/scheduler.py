@@ -145,7 +145,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
                     if np.any(np.abs(exposurelist[ii][0]-tile_struct[key]["epochs"][idx,2]) < params["mindiff"]/86400.0):
                         continue
                 elif np.any(np.abs(exposurelist[ii][0]-tile_struct[key]["epochs"][:,2]) < params["mindiff"]/86400.0):
-                        continue
+                    continue
             if tilesegmentlist.intersects_segment(exposurelist[ii]):
                 exposureids.append(key)
                 probs.append(tile_struct[key]["prob"])
@@ -830,6 +830,13 @@ def schedule_alternating(params, config_struct, telescope, map_struct, tile_stru
         if params["doBalanceExposure"] and params["unbalanced_tiles"]:
             for key in params["unbalanced_tiles"]:
                 tile_struct[key]['prob'] = 0.0
+
+        if coverage_structs and params["mindiff"]:
+            if len(coverage_structs) > 1:
+                tile_struct = gwemopt.utils.append_tile_epochs(tile_struct,gwemopt.coverage.combine_coverage_structs(coverage_structs))
+            elif len(coverage_structs) == 1:
+                tile_struct = gwemopt.utils.append_tile_epochs(tile_struct,coverage_structs[0])
+
             
         coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
         if params["doMaxTiles"]:
