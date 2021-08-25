@@ -585,7 +585,7 @@ if opts.doSchedule:
         exit(0)
 elif opts.doCoverage:
     print("Reading coverage from file...")
-    coverage_struct = gwemopt.coverage.read_coverage_files(params)
+    coverage_struct = gwemopt.coverage.read_coverage_files(params, moc_structs=moc_structs)
 
 if opts.doSchedule or opts.doCoverage:
     print("Summary of coverage...")

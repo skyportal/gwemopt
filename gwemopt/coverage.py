@@ -48,11 +48,41 @@ def read_coverage(params, telescope, filename, moc_struct=None):
     nside = params["nside"]
     config_struct = params["config"][telescope]
 
-    schedule_table = pd.read_csv(filename, delimiter = ' ', header=None,
-                                 names = ('field', 'ra', 'dec', 'mjd', 'mag',
-                                          'exposure_time', 'prob',
-                                          'airmass', 'filt',
-                                          'program_id'))
+    try:
+        schedule_table = pd.read_csv(filename, delimiter = ',')
+        schedule_table = schedule_table.rename(columns={'field_id': 'field'})
+
+        ras, decs, mjds, exposure_times, mags = [], [], [], [], []
+        for ii, row1 in schedule_table.iterrows():
+            field = row1.field
+            ra, dec = moc_struct[field]["ra"], moc_struct[field]["dec"]
+            mjd = Time(params["gpstime"] + row1.time, format='gps').mjd
+            exposureTime = schedule_table["time"].iloc[1] - schedule_table["time"].iloc[0]
+            nmag = -2.5*np.log10(np.sqrt(config_struct["exposuretime"]/exposureTime))
+            mag = config_struct["magnitude"] + nmag
+
+            ras.append(ra)
+            decs.append(dec)
+            mjds.append(mjd)
+            exposure_times.append(exposureTime)
+            mags.append(mag)
+
+        schedule_table["ra"] = ras
+        schedule_table["dec"] = decs
+        schedule_table["mjd"] = mjds
+        schedule_table["exposure_time"] = exposure_times
+        schedule_table["mag"] = mags
+        schedule_table["airmass"] = np.zeros(len(ras))
+        schedule_table["program_id"] = np.zeros(len(ras))
+        schedule_table["prob"] = np.zeros(len(ras))
+
+    except:
+        schedule_table = pd.read_csv(filename, delimiter = ' ', header=None,
+                                     names = ('field', 'ra', 'dec',
+                                              'mjd', 'mag',
+                                              'exposure_time', 'prob',
+                                              'airmass', 'filt',
+                                              'program_id'))
     coverage_struct = {}
     coverage_struct["data"] = np.empty((0,9))
     coverage_struct["filters"] = []
@@ -74,7 +104,7 @@ def read_coverage(params, telescope, filename, moc_struct=None):
         coverage_struct["data"] = np.append(coverage_struct["data"],np.array([[ra,dec,mjd,mag,exposureTime,field,prob,airmass,program_id]]),axis=0)
         coverage_struct["filters"].append(filt)
 
-        if moc_struct is not None:
+        if moc_struct is None:
             if telescope == "ATLAS":
                 alpha=0.2
                 color='#6c71c4'
@@ -106,11 +136,11 @@ def read_coverage(params, telescope, filename, moc_struct=None):
 
     return coverage_struct
 
-def read_coverage_files(params):
+def read_coverage_files(params,moc_structs):
 
     coverage_structs = []
     for telescope, coverageFile in zip(params["telescopes"],params["coverageFiles"]):
-        coverage_struct = read_coverage(params,telescope,coverageFile)
+        coverage_struct = read_coverage(params,telescope,coverageFile,moc_struct=moc_structs[telescope])
         coverage_structs.append(coverage_struct)
 
     return combine_coverage_structs(coverage_structs)
