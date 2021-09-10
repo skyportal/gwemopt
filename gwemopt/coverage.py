@@ -88,8 +88,6 @@ def read_coverage(params, telescope, filename, moc_struct=None):
     coverage_struct["patch"] = []
     coverage_struct["area"] = []
 
-
-    print(schedule_table)
     for ii, row1 in enumerate(schedule_table):
         ra, dec = row1['ra'], row1['dec']
         mjd = row1['mjd']
