@@ -49,28 +49,25 @@ def read_coverage(params, telescope, filename, moc_struct=None):
     config_struct = params["config"][telescope]
 
     try:
-        schedule_table = pd.read_csv(filename, delimiter = ',')
-        schedule_table = schedule_table.rename(columns={'field_id': 'field'})
+        schedule_table = ascii.read(filename)
+        schedule_table['field_id'].name = 'field'
+        schedule_table['time'].name = 'mjd'
+        schedule_table['exposure'].name = 'exposure_time'
 
-        ras, decs, mjds, exposure_times, mags = [], [], [], [], []
-        for ii, row1 in schedule_table.iterrows():
-            field = row1.field
+        ras, decs, mags = [], [], []
+        for ii, row1 in enumerate(schedule_table):
+            field = row1['field']
             ra, dec = moc_struct[field]["ra"], moc_struct[field]["dec"]
-            mjd = Time(params["gpstime"] + row1.time, format='gps').mjd
-            exposureTime = schedule_table["time"].iloc[1] - schedule_table["time"].iloc[0]
+            exposureTime = row1['exposure_time']
             nmag = -2.5*np.log10(np.sqrt(config_struct["exposuretime"]/exposureTime))
             mag = config_struct["magnitude"] + nmag
 
             ras.append(ra)
             decs.append(dec)
-            mjds.append(mjd)
-            exposure_times.append(exposureTime)
             mags.append(mag)
 
         schedule_table["ra"] = ras
         schedule_table["dec"] = decs
-        schedule_table["mjd"] = mjds
-        schedule_table["exposure_time"] = exposure_times
         schedule_table["mag"] = mags
         schedule_table["airmass"] = np.zeros(len(ras))
         schedule_table["program_id"] = np.zeros(len(ras))
