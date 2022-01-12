@@ -1,0 +1,94 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<voe:VOEvent
+      ivorn="ivo://nasa.gsfc.gcn/Fermi#GBM_Alert_2018-10-20T19:00:33.30_561754838_1-666"
+      role="observation" version="2.0"
+      xmlns:voe="http://www.ivoa.net/xml/VOEvent/v2.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.ivoa.net/xml/VOEvent/v2.0  http://www.ivoa.net/xml/VOEvent/VOEvent-v2.0.xsd" >
+  <Who>
+    <AuthorIVORN>ivo://nasa.gsfc.tan/gcn</AuthorIVORN>
+    <Author>
+      <shortName>Fermi (via VO-GCN)</shortName>
+      <contactName>Julie McEnery</contactName>
+      <contactPhone>+1-301-286-1632</contactPhone>
+      <contactEmail>Julie.E.McEnery@nasa.gov</contactEmail>
+    </Author>
+    <Date>2018-10-20T19:00:39</Date>
+    <Description>This VOEvent message was created with GCN VOE version: 1.29 09aug18</Description>
+  </Who>
+  <What>
+    <Param name="Packet_Type"     value="110" />
+    <Param name="Pkt_Ser_Num"     value="2" />
+    <Param name="TrigID"          value="561754838" ucd="meta.id" />
+    <Param name="Sequence_Num"    value="1" ucd="meta.id.part" />
+    <Param name="Burst_TJD"       value="18411" unit="days" ucd="time" />
+    <Param name="Burst_SOD"       value="68433.30" unit="sec" ucd="time" />
+    <Param name="Trig_Signif"     value="6.0" unit="sigma" ucd="stat.snr" />
+    <Param name="Trig_Dur"        value="0.256" unit="sec" ucd="time.interval" />
+    <Param name="Lo_Chan_Index"   value="3" unit="dn" />
+    <Param name="Hi_Chan_Index"   value="4" unit="dn" />
+    <Param name="Lo_Chan_Energy"  value="47" unit="keV" ucd="em.gamma" />
+    <Param name="Hi_Chan_Energy"  value="291" unit="keV" ucd="em.gamma" />
+    <Param name="ADC_Lo_Chan"     value="259" unit="dn" />
+    <Param name="ADC_Hi_Chan"     value="1352" unit="dn" />
+    <Param name="Algorithm"       value="8" />
+    <Param name="Dets"            value="0x880" />
+    <Param name="Misc_flags"      value="0x0" />
+    <Param name="SC_Long"         value="189.767" unit="deg" ucd="pos.earth.lon" />
+    <Param name="SC_Lat"          value="-22.417" unit="deg" ucd="pos.earth.lat" />
+    <Group name="Misc_Flags" >
+      <Param name="Values_Out_of_Range"     value="false" />
+      <Param name="Near_Bright_Star"        value="false" />
+      <Param name="Err_Circle_in_Galaxy"    value="false" />
+      <Param name="Galaxy_in_Err_Circle"    value="false" />
+      <Param name="TOO_Generated"           value="false" />
+      <Param name="Trig_time_is_SecHdrTime" value="false" />
+      <Param name="Delayed_Transmission"    value="false" />
+      <Param name="Updated_Notice"          value="false" />
+      <Param name="Flt_Generated"           value="true" />
+      <Param name="Gnd_Generated"           value="false" />
+      <Param name="Temporal_Prox_Match"     value="false" />
+      <Param name="CRC_Error"               value="false" />
+    </Group>
+    <Param name="LightCurve_URL" value="http://heasarc.gsfc.nasa.gov/FTP/fermi/data/gbm/triggers/2018/bn181020792/quicklook/glg_lc_medres34_bn181020792.gif" ucd="meta.ref.url" />
+    <Param name="Coords_Type"   value="0" unit="dn" />
+    <Param name="Coords_String" value="unavailable/inappropriate" />
+    <Description>A heads-up alert that the Fermi-GBM instrument found a transient.</Description>
+  </What>
+  <WhereWhen>
+    <ObsDataLocation>
+      <ObservatoryLocation id="GEOLUN" />
+      <ObservationLocation>
+        <AstroCoordSystem id="UTC-FK5-GEO" />
+        <AstroCoords coord_system_id="UTC-FK5-GEO">
+          <Time unit="s">
+            <TimeInstant>
+              <ISOTime>2018-10-20T19:00:33.30</ISOTime>
+            </TimeInstant>
+          </Time>
+          <Position2D unit="deg">
+            <Name1>RA</Name1>
+            <Name2>Dec</Name2>
+            <Value2>
+              <C1>0.0000</C1>
+              <C2>0.0000</C2>
+            </Value2>
+            <Error2Radius>0.0000</Error2Radius>
+          </Position2D>
+        </AstroCoords>
+      </ObservationLocation>
+    </ObsDataLocation>
+  <Description>The RA,Dec coordinates are of the type: unavailable/inappropriate.</Description>
+  </WhereWhen>
+  <How>
+    <Description>Fermi Satellite, GBM Instrument</Description>
+    <Reference uri="http://gcn.gsfc.nasa.gov/fermi.html" type="url" />
+  </How>
+  <Why importance="0.5">
+    <Inference probability="0.5">
+      <Concept>process.variation.burst;em.gamma</Concept>
+    </Inference>
+  </Why>
+  <Description>
+  </Description>
+</voe:VOEvent>

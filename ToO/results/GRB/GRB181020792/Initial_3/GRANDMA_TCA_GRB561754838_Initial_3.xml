@@ -1,0 +1,68 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<voe:VOEvent xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:voe="http://www.ivoa.net/xml/VOEvent/v2.0" xsi:schemaLocation="http://www.ivoa.net/xml/VOEvent/v2.0 http://www.ivoa.net/xml/VOEvent/VOEvent-v2.0.xsd" version="2.0" role="observation" ivorn="ivo://grandma.lal.in2p3.fr/GRANDMA_Alert#GRANDMA20220112TCA3">
+  <Who>
+    <Description>VOEvent created with voevent-parse, version 1.0.3. See https://github.com/timstaley/voevent-parse for details.</Description>
+    <AuthorIVORN>ivo://GRANDMA_Alert</AuthorIVORN>
+    <Date>2022-01-12T20:33:41</Date>
+    <Author>
+      <contactName>Nicolas  Leroy</contactName>
+      <shortName>GRANDMA</shortName>
+      <contactPhone>+33-1-64-46-83-73</contactPhone>
+      <contactEmail>leroy@ijclab.in2p3.fr</contactEmail>
+    </Author>
+  </Who>
+  <What>
+    <Param name="Event_type" value="GRB" ucd="meta.id" dataType="string">
+      <Description>Type of the alert</Description>
+    </Param>
+    <Param name="Event_ID" value="GRB181020792" ucd="meta.id" dataType="string">
+      <Description>Name event, given by external observatory</Description>
+    </Param>
+    <Param name="Trigger_ID" value="561754838" ucd="meta.id" dataType="string">
+      <Description>Trigger ID, given by external observatory</Description>
+    </Param>
+    <Param name="Event_status" value="Initial" ucd="meta.version" dataType="string">
+      <Description>Event status (preliminary, initial, update, retraction)</Description>
+    </Param>
+    <Param name="Pkt_ser_num" value="3" ucd="meta.number" dataType="int">
+      <Description>Packet serial number since beginning, increase by 1 for every revision received</Description>
+    </Param>
+    <Param name="Instruments" value="GBM" ucd="meta.code" dataType="string">
+      <Description>Instruments which originated of the alert</Description>
+    </Param>
+    <Param name="LongShort" value="False" ucd="meta.id" dataType="string">
+      <Description>Long-short classification, given by external observatory</Description>
+    </Param>
+    <Param name="Hratio" value="0.54" ucd="meta.number" dataType="float">
+      <Description>Hardness ratio classification, given by external observatory</Description>
+    </Param>
+    <Param name="Sun_distance" value="112.46" ucd="meta.number" dataType="float">
+      <Description>Sun distance from space, given by external observatory</Description>
+    </Param>
+    <Param name="Moon_distance" value="48.88" ucd="meta.number" dataType="float">
+      <Description>Moon distance from space, given by external observatory</Description>
+    </Param>
+    <Param name="Moon_illum" value="84.90" ucd="meta.number" dataType="float">
+      <Description>Moon illumination from space, given by external observatory</Description>
+    </Param>
+  </What>
+  <WhereWhen>
+    <ObsDataLocation>
+      <ObservatoryLocation id="GBM"/>
+      <ObservationLocation>
+        <AstroCoordSystem id="UTC-FK5-GEO"/>
+        <AstroCoords coord_system_id="UTC-FK5-GEO">
+          <Time unit="s">
+            <TimeInstant>
+              <ISOTime>2018-10-20T19:00:33.300000</ISOTime>
+            </TimeInstant>
+          </Time>
+          <Position2D unit="deg"><Name1>RA</Name1><Name2>Dec</Name2><Value2><C1>7.5333</C1>
+              <C2>-55.4833</C2>
+            </Value2><Error2Radius>4.4833</Error2Radius>
+          </Position2D>
+        </AstroCoords>
+      </ObservationLocation>
+    </ObsDataLocation>
+  </WhereWhen>
+</voe:VOEvent>
