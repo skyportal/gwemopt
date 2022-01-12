@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<voe:VOEvent xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:voe="http://www.ivoa.net/xml/VOEvent/v2.0" xsi:schemaLocation="http://www.ivoa.net/xml/VOEvent/v2.0 http://www.ivoa.net/xml/VOEvent/VOEvent-v2.0.xsd" version="2.0" role="observation" ivorn="ivo://gwnet/LVC#S200308e-3-Retraction">
+  <Who>
+    <Date>2020-03-08T01:31:38</Date>
+    <Author>
+      <contactName>LIGO Scientific Collaboration and Virgo Collaboration</contactName>
+    </Author>
+  </Who>
+  <What>
+    <Param dataType="int" name="Packet_Type" value="164">
+      <Description>The Notice Type number is assigned/used within GCN, eg type=164 is an LVC_RETRACTION notice</Description>
+    </Param>
+    <Param dataType="int" name="internal" value="0">
+      <Description>Indicates whether this event should be distributed to LSC/Virgo members only</Description>
+    </Param>
+    <Param dataType="int" name="Pkt_Ser_Num" value="3">
+      <Description>A number that increments by 1 each time a new revision is issued for this event</Description>
+    </Param>
+    <Param dataType="string" name="GraceID" ucd="meta.id" value="S200308e">
+      <Description>Identifier in GraceDB</Description>
+    </Param>
+    <Param dataType="string" name="AlertType" ucd="meta.version" value="Retraction">
+      <Description>VOEvent alert type</Description>
+    </Param>
+    <Param dataType="int" name="HardwareInj" ucd="meta.number" value="0">
+      <Description>Indicates that this event is a hardware injection if 1, no if 0</Description>
+    </Param>
+    <Param dataType="int" name="OpenAlert" ucd="meta.number" value="1">
+      <Description>Indicates that this event is an open alert if 1, no if 0</Description>
+    </Param>
+    <Param dataType="string" name="EventPage" ucd="meta.ref.url" value="https://gracedb.ligo.org/superevents/S200308e/view/">
+      <Description>Web page for evolving status of this GW candidate</Description>
+    </Param>
+  </What>
+  <WhereWhen>
+    <ObsDataLocation>
+      <ObservatoryLocation id="LIGO Virgo"/>
+      <ObservationLocation>
+        <AstroCoordSystem id="UTC-FK5-GEO"/>
+        <AstroCoords coord_system_id="UTC-FK5-GEO">
+          <Time unit="s">
+            <TimeInstant>
+              <ISOTime>2020-03-08T01:19:27.595546</ISOTime>
+            </TimeInstant>
+          </Time>
+        </AstroCoords>
+      </ObservationLocation>
+    </ObsDataLocation>
+  </WhereWhen>
+  <Citations>
+    <EventIVORN cite="retraction">ivo://gwnet/LVC#S200308e-2-Preliminary</EventIVORN>
+    <EventIVORN cite="retraction">ivo://gwnet/LVC#S200308e-1-Preliminary</EventIVORN>
+    <Description>Determined to not be a viable GW event candidate</Description>
+  </Citations>
+</voe:VOEvent>

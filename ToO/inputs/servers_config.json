@@ -1,0 +1,24 @@
+{
+
+  "broker_path": "comet-sendvo",
+  "in_host": "134.158.75.163",
+  "in_port": 21501,
+  "out_host": "127.0.0.1",
+  "out_port": 21002,
+
+  "db_host": "localhost",
+  "db_user": "root",
+  "db_password": "test",
+  "database_name": "test",
+
+  "Experiment": "GRANDMA",
+  "stream_address": "grandma.lal.in2p3.fr",
+  "vo_ivorn": "ivo://grandma.lal.in2p3.fr/LV#GRANDMA",
+  "contactName": "Nicolas  Leroy",
+  "contactPhone": "+33-1-64-46-83-73",
+  "contactEmail": "leroy@ijclab.in2p3.fr",
+
+  "selection": "../inputs/selection.json",
+
+  "output_dir": "./results/"
+}

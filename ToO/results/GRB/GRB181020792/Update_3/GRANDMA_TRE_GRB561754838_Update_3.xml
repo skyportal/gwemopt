@@ -1,0 +1,241 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<voe:VOEvent xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:voe="http://www.ivoa.net/xml/VOEvent/v2.0" xsi:schemaLocation="http://www.ivoa.net/xml/VOEvent/v2.0 http://www.ivoa.net/xml/VOEvent/VOEvent-v2.0.xsd" version="2.0" role="observation" ivorn="ivo://grandma.lal.in2p3.fr/GRANDMA_Alert#GRANDMA20220112TRE3">
+  <Who>
+    <Description>VOEvent created with voevent-parse, version 1.0.3. See https://github.com/timstaley/voevent-parse for details.</Description>
+    <AuthorIVORN>ivo://GRANDMA_Alert</AuthorIVORN>
+    <Date>2022-01-12T20:34:33</Date>
+    <Author>
+      <contactName>Nicolas  Leroy</contactName>
+      <shortName>GRANDMA</shortName>
+      <contactPhone>+33-1-64-46-83-73</contactPhone>
+      <contactEmail>leroy@ijclab.in2p3.fr</contactEmail>
+    </Author>
+  </Who>
+  <What>
+    <Param name="Event_type" value="GRB" ucd="meta.id" dataType="string">
+      <Description>Type of the alert</Description>
+    </Param>
+    <Param name="Event_ID" value="GRB181020792" ucd="meta.id" dataType="string">
+      <Description>Name event, given by external observatory</Description>
+    </Param>
+    <Param name="Trigger_ID" value="561754838" ucd="meta.id" dataType="string">
+      <Description>Trigger ID, given by external observatory</Description>
+    </Param>
+    <Param name="Event_status" value="Update" ucd="meta.version" dataType="string">
+      <Description>Event status (preliminary, initial, update, retraction)</Description>
+    </Param>
+    <Param name="Pkt_ser_num" value="3" ucd="meta.number" dataType="int">
+      <Description>Packet serial number since beginning, increase by 1 for every revision received</Description>
+    </Param>
+    <Param name="Instruments" value="GBM" ucd="meta.code" dataType="string">
+      <Description>Instruments which originated of the alert</Description>
+    </Param>
+    <Param name="LongShort" value="Long" ucd="meta.id" dataType="string">
+      <Description>Long-short classification, given by external observatory</Description>
+    </Param>
+    <Param name="Hratio" value="0.54" ucd="meta.number" dataType="float">
+      <Description>Hardness ratio classification, given by external observatory</Description>
+    </Param>
+    <Param name="Sun_distance" value="122.82" ucd="meta.number" dataType="float">
+      <Description>Sun distance from space, given by external observatory</Description>
+    </Param>
+    <Param name="Moon_distance" value="46.59" ucd="meta.number" dataType="float">
+      <Description>Moon distance from space, given by external observatory</Description>
+    </Param>
+    <Param name="Moon_illum" value="84.94" ucd="meta.number" dataType="float">
+      <Description>Moon illumination from space, given by external observatory</Description>
+    </Param>
+    <Param name="Loc_url" value="https://heasarc.gsfc.nasa.gov/FTP/fermi/data/gbm/triggers/2018/bn181020792/quicklook/glg_healpix_all_bn181020792.fit" ucd="meta.ref.url" dataType="string">
+      <Description>URL to retrieve location of the healpix skymap</Description>
+    </Param>
+    <Param name="Name_tel" value="TRE" ucd="instr" dataType="string">
+      <Description>Name of the telescope used for the observation strategy</Description>
+    </Param>
+    <Table name="Obs_plan">
+      <Description>Tiles for the observation plan</Description>
+      <Field name="Field_id" ucd="" unit="" dataType="string">
+        <Description>ID of the field of FOV</Description>
+      </Field>
+      <Field name="RA" ucd="pos.eq.ra " unit="deg" dataType="float">
+        <Description>The right ascension at center of fov in equatorial coordinates</Description>
+      </Field>
+      <Field name="Dec" ucd="pos.eq.ra " unit="deg" dataType="float">
+        <Description>The declination at center of fov in equatorial coordinates</Description>
+      </Field>
+      <Field name="Os_score" ucd="meta.number" unit="None" dataType="float">
+        <Description>Gives the importance of the tile/galaxy to observe</Description>
+      </Field>
+      <Data>
+        <TR>
+          <TD>1.0</TD>
+          <TD>17.4194</TD>
+          <TD>-45.0</TD>
+          <TD>0.1436000019311905</TD>
+        </TR>
+        <TR>
+          <TD>2.0</TD>
+          <TD>18.9474</TD>
+          <TD>-49.0909</TD>
+          <TD>0.11659999936819077</TD>
+        </TR>
+        <TR>
+          <TD>3.0</TD>
+          <TD>11.6129</TD>
+          <TD>-45.0</TD>
+          <TD>0.11050000041723251</TD>
+        </TR>
+        <TR>
+          <TD>4.0</TD>
+          <TD>12.6316</TD>
+          <TD>-49.0909</TD>
+          <TD>0.09380000084638596</TD>
+        </TR>
+        <TR>
+          <TD>5.0</TD>
+          <TD>23.2258</TD>
+          <TD>-45.0</TD>
+          <TD>0.05739999935030937</TD>
+        </TR>
+        <TR>
+          <TD>6.0</TD>
+          <TD>16.3636</TD>
+          <TD>-40.9091</TD>
+          <TD>0.05570000037550926</TD>
+        </TR>
+        <TR>
+          <TD>7.0</TD>
+          <TD>10.9091</TD>
+          <TD>-40.9091</TD>
+          <TD>0.04859999939799309</TD>
+        </TR>
+        <TR>
+          <TD>8.0</TD>
+          <TD>25.2632</TD>
+          <TD>-49.0909</TD>
+          <TD>0.04039999842643738</TD>
+        </TR>
+        <TR>
+          <TD>9.0</TD>
+          <TD>13.8462</TD>
+          <TD>-53.1818</TD>
+          <TD>0.033799998462200165</TD>
+        </TR>
+        <TR>
+          <TD>10.0</TD>
+          <TD>21.8182</TD>
+          <TD>-40.9091</TD>
+          <TD>0.033799998462200165</TD>
+        </TR>
+        <TR>
+          <TD>11.0</TD>
+          <TD>5.8064</TD>
+          <TD>-45.0</TD>
+          <TD>0.030400000512599945</TD>
+        </TR>
+        <TR>
+          <TD>12.0</TD>
+          <TD>20.7692</TD>
+          <TD>-53.1818</TD>
+          <TD>0.028300000354647636</TD>
+        </TR>
+        <TR>
+          <TD>13.0</TD>
+          <TD>6.3158</TD>
+          <TD>-49.0909</TD>
+          <TD>0.024000000208616257</TD>
+        </TR>
+        <TR>
+          <TD>14.0</TD>
+          <TD>5.4546</TD>
+          <TD>-40.9091</TD>
+          <TD>0.014800000004470348</TD>
+        </TR>
+        <TR>
+          <TD>15.0</TD>
+          <TD>29.0323</TD>
+          <TD>-45.0</TD>
+          <TD>0.012799999676644802</TD>
+        </TR>
+        <TR>
+          <TD>16.0</TD>
+          <TD>10.2857</TD>
+          <TD>-36.8182</TD>
+          <TD>0.012299999594688416</TD>
+        </TR>
+        <TR>
+          <TD>17.0</TD>
+          <TD>6.9231</TD>
+          <TD>-53.1818</TD>
+          <TD>0.012199999764561653</TD>
+        </TR>
+        <TR>
+          <TD>18.0</TD>
+          <TD>15.4286</TD>
+          <TD>-36.8182</TD>
+          <TD>0.012199999764561653</TD>
+        </TR>
+        <TR>
+          <TD>19.0</TD>
+          <TD>27.6923</TD>
+          <TD>-53.1818</TD>
+          <TD>0.011599999852478504</TD>
+        </TR>
+        <TR>
+          <TD>20.0</TD>
+          <TD>27.2727</TD>
+          <TD>-40.9091</TD>
+          <TD>0.01119999960064888</TD>
+        </TR>
+        <TR>
+          <TD>21.0</TD>
+          <TD>31.579</TD>
+          <TD>-49.0909</TD>
+          <TD>0.008799999952316284</TD>
+        </TR>
+        <TR>
+          <TD>22.0</TD>
+          <TD>20.5714</TD>
+          <TD>-36.8182</TD>
+          <TD>0.008200000040233135</TD>
+        </TR>
+        <TR>
+          <TD>23.0</TD>
+          <TD>15.3192</TD>
+          <TD>-57.2727</TD>
+          <TD>0.007400000002235174</TD>
+        </TR>
+        <TR>
+          <TD>24.0</TD>
+          <TD>0.0</TD>
+          <TD>-49.0909</TD>
+          <TD>0.006399999838322401</TD>
+        </TR>
+        <TR>
+          <TD>25.0</TD>
+          <TD>0.0</TD>
+          <TD>-45.0</TD>
+          <TD>0.006300000008195639</TD>
+        </TR>
+      </Data>
+    </Table>
+  </What>
+  <WhereWhen>
+    <ObsDataLocation>
+      <ObservatoryLocation id="GBM"/>
+      <ObservationLocation>
+        <AstroCoordSystem id="UTC-FK5-GEO"/>
+        <AstroCoords coord_system_id="UTC-FK5-GEO">
+          <Time unit="s">
+            <TimeInstant>
+              <ISOTime>2018-10-20T19:00:33.300000</ISOTime>
+            </TimeInstant>
+          </Time>
+          <Position2D unit="deg"><Name1>RA</Name1><Name2>Dec</Name2><Value2><C1>18.5100</C1>
+              <C2>-46.4400</C2>
+            </Value2><Error2Radius>3.2700</Error2Radius>
+          </Position2D>
+        </AstroCoords>
+      </ObservationLocation>
+    </ObsDataLocation>
+  </WhereWhen>
+</voe:VOEvent>

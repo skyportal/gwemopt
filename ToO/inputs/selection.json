@@ -1,0 +1,17 @@
+{
+  "config_gwemopt": "../configs_gwemopt/",
+
+  "space_delay": 12,
+  "space_score": 0.9,
+  "ground_delay": -1,
+
+  "BBH_thresh": 0.1,
+  "Dist_cut": 400,
+
+  "Tels_tiling": ["TCH","TRE"],
+  "Tels_tiling_tilesnb": [50,50],
+  "Tels_galaxy": ["Makes-60"],
+  "Tels_followup": ["Makes-60","TCA"],
+  "nb_galaxies": [2000],
+  "nside_flat": 512
+}
