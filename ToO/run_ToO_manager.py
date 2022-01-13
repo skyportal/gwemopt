@@ -50,12 +50,12 @@ def test_GRB(filename=None):
 
 
 #Swift examples
-#folder = "./examples/swift/"
-#files=["event_1540061972.4229486_97.xml","event_1540061973.5148437_61.xml","event_1540062039.5789688_67.xml"]
+folder = "./examples/swift/"
+files=["event_1540061972.4229486_97.xml","event_1540061973.5148437_61.xml","event_1540062039.5789688_67.xml"]
 
 #Fermi examples
-folder = "./examples/fermi/"
-files = ["event_1540061961.5382793_110.xml","event_1540061991.4968317_111.xml", "event_1540062040.1148593_112.xml","event_1540062511.1510792_115.xml"]#,"event_1540034131.3183208_119.xml"]
+#folder = "./examples/fermi/"
+#files = ["event_1540061961.5382793_110.xml","event_1540061991.4968317_111.xml", "event_1540062040.1148593_112.xml","event_1540062511.1510792_115.xml"]#,"event_1540034131.3183208_119.xml"]
 
 
 #LVK examples
