@@ -10,19 +10,19 @@ import gwemopt.utils
 def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
 
     import pymultinest
-    
+
     if params["doCalcTiles"]:
         hpx = map_struct["prob"]
         i = np.flipud(np.argsort(hpx)) #sort pixels by descending probability, cumsum then return to original order
         sorted_credible_levels = np.cumsum(hpx[i])
         credible_levels = np.empty_like(sorted_credible_levels)
         credible_levels[i] = sorted_credible_levels
-        
+
         if config_struct["FOV_type"] == "circle":
             FOV = np.pi * config_struct["FOV"]**2
         else:
             FOV = config_struct["FOV"]**2
-        
+
         sky_area = np.sum(credible_levels <= params["Ntiles_cr"])*map_struct["pixarea_deg2"] #calculate skyarea
         Ntiles = int(np.ceil(sky_area/FOV))
     else:
@@ -39,7 +39,7 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
         dec = cube[1]
 
         ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra, dec, config_struct["FOV"], nside)
-        
+
         if len(ipix) == 0:
             prob = -np.inf
         else:
@@ -137,7 +137,7 @@ def greedy_tiles_struct(params, config_struct, telescope, map_struct, Ntiles = 1
     greedy_struct = PlaceTile(skymapData, config_struct, numtiles = Ntiles)
     tile_struct = greedy_struct.getSamples()
 
-    return tile_struct   
+    return tile_struct
 
 def getRandomPos(ra, dec, nums=1):
     '''
@@ -166,7 +166,7 @@ class PlaceTile:
             return -np.inf
         else:
             return 0
- 
+
 
     def lnlikelihood(self, skyposition_cent):
         reshaped_skyposition = np.reshape(skyposition_cent, (2, self.numtiles))
@@ -174,7 +174,7 @@ class PlaceTile:
         config_struct = self.config_struct
         pVal = copy.deepcopy(self.pVal)
         npix = len(pVal)
-        nside = hp.npix2nside(npix) 
+        nside = hp.npix2nside(npix)
 
         ra_centers = reshaped_skyposition[0]
         dec_centers= reshaped_skyposition[1]
@@ -198,12 +198,12 @@ class PlaceTile:
         if not np.isfinite(lp):
             return -np.inf
         return lp + self.lnlikelihood(skypos)
-        
-        
-    
+
+
+
     def getSamples(self):
 
-        import emcee        
+        import emcee
 
         config_struct = self.config_struct
         pVal = copy.copy(self.pVal)
@@ -217,7 +217,7 @@ class PlaceTile:
         dec_included = self.dec_map[include]
         p0 = []
         [p0.append(getRandomPos(self.ra_map, self.dec_map, nums=self.numtiles)) for _ in range(nwalkers)]
-                    
+
         sampler = emcee.EnsembleSampler(nwalkers, ndim, self.lnpost)
         start = time.time()
         pos, prob, state = sampler.run_mcmc(p0, 100)
@@ -249,16 +249,16 @@ class PlaceTile:
             elif config_struct["FOV_type"] == "circle":
                 ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8)
 
-        tile_struct[ii]["ra"] = ra_pointing
-        tile_struct[ii]["dec"] = dec_pointing
-        tile_struct[ii]["ipix"] = ipix
-        tile_struct[ii]["corners"] = radecs
-        tile_struct[ii]["patch"] = patch
-        tile_struct[ii]["area"] = area
-
+            tile_struct[ii]["ra"] = ra_pointing
+            tile_struct[ii]["dec"] = dec_pointing
+            tile_struct[ii]["ipix"] = ipix
+            tile_struct[ii]["corners"] = radecs
+            tile_struct[ii]["patch"] = patch
+            tile_struct[ii]["area"] = area
+        
         return tile_struct
-        
-        
+
+
     def optimizeBins(self, ra, dec, masked_points=np.array([])):
         config_struct = self.config_struct
 
@@ -267,11 +267,11 @@ class PlaceTile:
             pVal[masked_points.astype(int)] = 0.0
         npix = len(pVal)
         nside = hp.npix2nside(npix)
- 
+
         binTrials = int(np.sqrt(len(ra)))
         bins_array = np.arange(2, binTrials + 1)
         probs_allChosenTiles = np.array([])
-    
+
         for bins in bins_array:
 
             [hist, ra_bin, dec_bin] = np.histogram2d(ra, dec, bins)
@@ -290,14 +290,14 @@ class PlaceTile:
 
             prob_encl = np.sum(pVal[ipix])
             probs_allChosenTiles = np.append(probs_allChosenTiles, prob_encl)
-        
+
         bin_max = bins_array[np.argmax(probs_allChosenTiles)]
 
         [hist_max, ra_bin_max, dec_bin_max] = np.histogram2d(ra, dec, bin_max)
         ra_bin_cent = 0.5*(ra_bin_max[1:] + ra_bin_max[:-1])
         dec_bin_cent = 0.5*(dec_bin_max[1:] + dec_bin_max[:-1])
 
-    
+
         y = np.argmax(hist_max)%bin_max
         x = int(np.argmax(hist_max)/bin_max)
         ra_peak = ra_bin_cent[x]
@@ -307,11 +307,11 @@ class PlaceTile:
             ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_peak, dec_peak, config_struct["FOV"], nside)
         elif config_struct["FOV_type"] == "circle":
             ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_peak, dec_peak, config_struct["FOV"], nside)
-    
+
         return ra_peak, dec_peak, ipix
 
     def localizeTC(self, reference=None, samples=None, verbose=False):
-    
+
         if samples is None:
             samples = self.getSamples()
         else:
@@ -335,16 +335,3 @@ class PlaceTile:
             Dec_Peak_list.append(dec_peak)
 
         return [RA_Peak_list, Dec_Peak_list]
-
-
-    
-    
-
-
-
-
-
-
-
-
-
