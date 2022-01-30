@@ -1,10 +1,13 @@
 import time
 import copy
 
+import mocpy
 from mocpy import MOC
 from astropy.table import Table
 import healpy as hp
 import numpy as np
+
+import ligo.segments as segments
 from ligo.skymap.bayestar import rasterize
 
 import gwemopt.tiles
@@ -53,7 +56,6 @@ def create_moc_from_skyportal(params, map_struct=None):
         else:
             ipixs = []
             for ii, tess in enumerate(tesselation):
-                print(ii, len(tesselation))
                 ipixs.append(skyportal2FOV(tess, nside))
 
         for ii, tess in enumerate(tesselation):
@@ -64,9 +66,10 @@ def create_moc_from_skyportal(params, map_struct=None):
             if (telescope == "ZTF") and doUseSecondary and (index < 1000):
                 continue
 
-            moc_struct[index] = {}
             ipix = ipixs[ii]
+            if len(ipix) == 0: continue
 
+            moc_struct[index] = {}
             moc_struct[index]["ra"] = np.median(ra[ipix])
             moc_struct[index]["dec"] = np.median(dec[ipix])
             moc_struct[index]["ipix"] = ipix
@@ -78,7 +81,7 @@ def create_moc_from_skyportal(params, map_struct=None):
             moc_struct[index]["area"] = len(ipix)*pixarea
 
         if map_struct is not None:
-             ipix_keep = map_struct["ipix_keep"]
+            ipix_keep = map_struct["ipix_keep"]
         else:
             ipix_keep = []
 
@@ -111,14 +114,23 @@ def create_moc_from_skyportal(params, map_struct=None):
 
 def skyportal2FOV(tess, nside):
 
-    uniq = np.asarray([tile.uniq for tile in tess.tiles], dtype=np.int64)
-
-    tab = Table([uniq, np.ones(uniq.shape)],
-        names=['UNIQ', 'PROBDENSITY'],
-    )
-
-    order = hp.nside2order(nside)
-    result = rasterize(tab, order)['PROB']
-    ipix = np.where(hp.reorder(result, 'NESTED', 'RING') > 0)[0]
+    moc = moc_from_tiles([tile.healpix for tile in tess.tiles], 2**29)
+    pix_id = mocpy.mocpy.flatten_pixels(moc._interval_set._intervals, int(np.log2(nside)))
+    if len(pix_id) > 0:
+        ipix = hp.nest2ring(int(nside), pix_id.tolist())
+    else:
+        ipix = []
 
     return ipix
+
+def moc_from_tiles(rangeSet, nside):
+    depth = int(np.log2(nside))
+    segmentlist = segments.segmentlist()
+    for x in rangeSet:
+        segment = segments.segment(x.lower, x.upper-1)
+        segmentlist = segmentlist + segments.segmentlist([segment])
+    segmentlist.coalesce()
+
+    MOCstr = f'{depth}/' + ' '.join(map(lambda x: f'{x[0]}-{x[1]}',
+                                        segmentlist))
+    return MOC.from_string(MOCstr)
