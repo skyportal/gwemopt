@@ -206,7 +206,7 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
             tilematrix[ii, :] = np.array(probs/airmass_weight)
             probmatrix[ii, :] = np.array(probs * (True^horizon_mask))
 
-    dt = (exposurelist[1][0] - exposurelist[0][0]) * 86400
+    dt = int(np.ceil((exposurelist[1][0] - exposurelist[0][0]) * 86400))
     if params["scheduleType"] == "greedy":
         for ii in np.arange(len(exposurelist)):
             if idxs[ii] > 0: continue
@@ -215,8 +215,6 @@ def get_order(params, tile_struct, tilesegmentlists, exposurelist, observatory, 
                                     params["mindiff"]/86400.0)[0]
             exptimecheckkeys = [keynames[x] for x in exptimecheck]
 
-            
-            # find_tile finds the tile that covers the largest probablity
             # restricted by availability of tile and timeallocation
             idx2, exposureids, probs = find_tile(exposureids_tiles[ii],exposureids,probs,exptimecheckkeys=exptimecheckkeys)
             if idx2 in keynames:
