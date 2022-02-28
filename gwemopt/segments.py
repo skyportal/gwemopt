@@ -41,6 +41,8 @@ def get_moon_segments(config_struct,segmentlist,observer,fxdbdy,radec):
     moonsegmentlist = segments.segmentlist()
     dt = 1.0/24.0
     tt = np.arange(segmentlist[0][0],segmentlist[-1][1]+dt,dt)
+    conv = - 2400000.5 + 2415020.0 # conversion between MJD (tt) and DJD (what ephem uses)
+    tt_DJD = tt - conv
 
     ra2 = radec.ra.radian
     d2 = radec.dec.radian
@@ -48,7 +50,7 @@ def get_moon_segments(config_struct,segmentlist,observer,fxdbdy,radec):
     # Where is the moon?
     moon = ephem.Moon()
     for ii in range(len(tt)-1):
-        observer.date = ephem.Date(Time(tt[ii], format='mjd', scale='utc').iso)
+        observer.date = ephem.Date(tt_DJD[ii])
         moon.compute(observer)
         fxdbdy.compute(observer)
 
