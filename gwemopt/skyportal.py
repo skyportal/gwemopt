@@ -6,11 +6,155 @@ from mocpy import MOC
 from astropy.table import Table
 import healpy as hp
 import numpy as np
+from regions import Regions, CircleSkyRegion, RectangleSkyRegion, PolygonSkyRegion
 
 import ligo.segments as segments
 from ligo.skymap.bayestar import rasterize
 
 import gwemopt.tiles
+from gwemopt.tiles import powerlaw_tiles_struct, absmag_tiles_struct, get_rectangle, angular_distance
+
+def create_galaxy_from_skyportal(params, map_struct, catalog_struct, regions=None):
+    nside = params["nside"]
+
+    tile_structs = {}
+    for telescope in params["telescopes"]:
+
+        config_struct = params["config"][telescope]
+        if type(regions[0]) == RectangleSkyRegion:
+             config_struct["FOV_type"] = "square"
+             config_struct["FOV"] = np.max([regions[0].width.value, regions[0].height.value])
+        elif type(regions[0]) == CircleSkyRegion:   
+             config_struct["FOV_type"] = "circle"
+             config_struct["FOV"] = regions[0].radius.value
+        elif type(regions[0]) == PolygonSkyRegion:
+             ra = np.array([regions[0].vertices.ra for reg in regions])
+             dec = np.array([regions[0].vertices.dec for reg in regions])
+             min_ra, max_ra = np.min(ra), np.max(ra)
+             min_dec, max_dec = np.min(dec), np.max(dec)
+             config_struct["FOV_type"] = "square"
+             config_struct["FOV"] = np.max([max_ra-min_ra, max_dec-min_dec])
+
+        # Combine in a single pointing, galaxies that are distant by
+        # less than FoV * params['galaxies_FoV_sep']
+        # Take galaxy with highest proba at the center of new pointing
+        FoV = params["config"][telescope]['FOV'] * params['galaxies_FoV_sep']
+        if 'FOV_center' in params["config"][telescope]:
+            FoV_center = params["config"][telescope]['FOV_center'] * params['galaxies_FoV_sep']
+        else:
+            FoV_center = params["config"][telescope]['FOV'] * params['galaxies_FoV_sep']
+
+        new_ra = []
+        new_dec = []
+        new_Sloc = []
+        new_Smass = []
+        new_S = []
+        galaxies = []
+        idxRem = np.arange(len(catalog_struct["ra"])).astype(int)
+
+        while len(idxRem) > 0:
+            ii = idxRem[0]
+            ra, dec, Sloc, S, Smass = catalog_struct["ra"][ii], catalog_struct["dec"][ii], catalog_struct["Sloc"][ii], catalog_struct["S"][ii], catalog_struct["Smass"][ii]
+
+            if config_struct["FOV_type"] == "square":
+                decCorners = (dec - FoV, dec + FoV)
+                # assume small enough to use average dec for corners
+                raCorners = (ra - FoV/np.cos(np.deg2rad(dec)) , ra + FoV / np.cos(np.deg2rad(dec)))
+                idx1 = np.where((catalog_struct["ra"][idxRem]>=raCorners[0]) & (catalog_struct["ra"][idxRem]<=raCorners[1]))[0]
+                idx2 = np.where((catalog_struct["dec"][idxRem]>=decCorners[0]) & (catalog_struct["dec"][idxRem]<=decCorners[1]))[0]
+                mask = np.intersect1d(idx1,idx2)
+
+                if len(mask) > 1:
+                    ra_center, dec_center = get_rectangle(catalog_struct["ra"][idxRem][mask], catalog_struct["dec"][idxRem][mask], FoV/np.cos(np.deg2rad(dec)), FoV)
+
+                    decCorners = (dec_center - FoV/2.0, dec_center + FoV/2.0)
+                    raCorners = (ra_center - FoV/(2.0*np.cos(np.deg2rad(dec))) , ra_center + FoV/(2.0*np.cos(np.deg2rad(dec))))
+                    idx1 = np.where((catalog_struct["ra"][idxRem]>=raCorners[0]) & (catalog_struct["ra"][idxRem]<=raCorners[1]))[0]
+                    idx2 = np.where((catalog_struct["dec"][idxRem]>=decCorners[0]) & (catalog_struct["dec"][idxRem]<=decCorners[1]))[0]
+                    mask2 = np.intersect1d(idx1,idx2)
+
+                    decCorners = (dec_center - FoV_center/2.0, dec_center + FoV_center/2.0)
+                    raCorners = (ra_center - FoV_center/(2.0*np.cos(np.deg2rad(dec))) , ra_center + FoV_center/(2.0*np.cos(np.deg2rad(dec))))
+                    idx1 = np.where((catalog_struct["ra"][idxRem]>=raCorners[0]) & (catalog_struct["ra"][idxRem]<=raCorners[1]))[0]
+                    idx2 = np.where((catalog_struct["dec"][idxRem]>=decCorners[0]) & (catalog_struct["dec"][idxRem]<=decCorners[1]))[0]
+                    mask3 = np.intersect1d(idx1,idx2)
+
+                    # did the optimization help?
+                    if (len(mask2) > 2) and (len(mask3) > 0):
+                        mask = mask2
+                else:
+                    ra_center, dec_center = np.mean(catalog_struct["ra"][idxRem][mask]), np.mean(catalog_struct["dec"][idxRem][mask])
+
+            elif config_struct["FOV_type"] == "circle":
+                dist = angular_distance(ra, dec,
+                                        catalog_struct["ra"][idxRem],
+                                        catalog_struct["dec"][idxRem])
+                mask = np.where((2 * FoV) >= dist)[0]
+                if len(mask) > 1:
+                    ra_center, dec_center = get_rectangle(catalog_struct["ra"][idxRem][mask], catalog_struct["dec"][idxRem][mask], (FoV/np.sqrt(2))/np.cos(np.deg2rad(dec)), FoV/np.sqrt(2))
+
+                    dist = angular_distance(ra_center, dec_center,
+                                            catalog_struct["ra"][idxRem],
+                                            catalog_struct["dec"][idxRem])
+                    mask2 = np.where(FoV >= dist)[0]
+                    # did the optimization help?
+                    if len(mask2) > 2:
+                        mask = mask2
+                else:
+                    ra_center, dec_center = np.mean(catalog_struct["ra"][idxRem][mask]), np.mean(catalog_struct["dec"][idxRem][mask])
+
+            new_ra.append(ra_center)
+            new_dec.append(dec_center)
+            new_Sloc.append(np.sum(catalog_struct["Sloc"][idxRem][mask]))
+            new_S.append(np.sum(catalog_struct["S"][idxRem][mask]))
+            new_Smass.append(np.sum(catalog_struct["Smass"][idxRem][mask]))
+            galaxies.append(idxRem[mask])
+
+            idxRem = np.setdiff1d(idxRem, idxRem[mask])
+
+        # redefine catalog_struct
+        catalog_struct_new = {}
+        catalog_struct_new["ra"] = new_ra
+        catalog_struct_new["dec"] = new_dec
+        catalog_struct_new["Sloc"] = new_Sloc
+        catalog_struct_new["S"] = new_S
+        catalog_struct_new["Smass"] = new_Smass
+        catalog_struct_new["galaxies"] = galaxies
+
+        moc_struct = {}
+        cnt = 0
+        for ra, dec, Sloc, S, Smass, galaxies in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"], catalog_struct_new["Smass"], catalog_struct_new["galaxies"]):
+            moc_struct[int(cnt)] = gwemopt.moc.Fov2Moc(params, config_struct, telescope, ra, dec, nside)
+            moc_struct[int(cnt)]["galaxies"] = galaxies
+            cnt = cnt + 1
+   
+        if params["timeallocationType"] == "absmag":
+            tile_struct = absmag_tiles_struct(params, config_struct, telescope, map_struct, moc_struct)
+        elif params["timeallocationType"] == "powerlaw":
+            tile_struct = powerlaw_tiles_struct(params, config_struct, telescope, map_struct, moc_struct, catalog_struct=catalog_struct)
+
+        tile_struct = gwemopt.segments.get_segments_tiles(params, config_struct, tile_struct)
+
+        cnt = 0
+        for ra, dec, Sloc, S, Smass,  galaxies in zip(catalog_struct_new["ra"], catalog_struct_new["dec"], catalog_struct_new["Sloc"], catalog_struct_new["S"],catalog_struct_new["Smass"], catalog_struct_new["galaxies"]):
+            if params["galaxy_grade"] == "Sloc":
+                tile_struct[cnt]['prob'] = Sloc
+            elif params["galaxy_grade"] == "S":
+                tile_struct[cnt]['prob'] = S
+            elif params["galaxy_grade"] == "Smass":
+                tile_struct[cnt]['prob'] = Smass
+
+            tile_struct[cnt]['galaxies'] = galaxies
+            if config_struct["FOV_type"] == "square":
+                tile_struct[cnt]['area'] = params["config"][telescope]['FOV']**2
+            elif config_struct["FOV_type"] == "circle":
+                tile_struct[cnt]['area'] = 4*np.pi*params["config"][telescope]['FOV']**2
+            cnt = cnt + 1
+
+        tile_structs[telescope] = tile_struct
+
+    return tile_structs
+
 
 def create_moc_from_skyportal(params, map_struct=None):
 
