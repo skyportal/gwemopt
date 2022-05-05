@@ -16,5 +16,5 @@ readout  5
 horizon 30
 overhead_per_exposure 10.0
 min_observability_duration  
-filt_change_time  4-5
+filt_change_time  5
 max_exposure 1800.0
