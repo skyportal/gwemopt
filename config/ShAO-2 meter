@@ -1,15 +1,19 @@
-Magnitude minimum mag 17
-exposure time 1800 seconds
-latitude 48 35` 04"
-longitude 40 46` 20"
-elevation  1500m
+magnitude 17.0
+filt Rc, Ic, B, V
+exposuretime 1800.0
+latitude 48.584444
+longitude 40.772222
+elevation  1500.0
+FOV_coverage 6.86
+FOV 6.86
 FOV_coverage_type  circular
 FOV_type circular
-tessellation File   
-slew_rate 
-readout  5 seconds
-filt Rc, Ic, B, V
-horizon 
-overhead_per_exposure 
+tesselationFile ../input/ZTF.tess
+quadrantsFile ../input/ZTF.quadrants
+referenceFile ../input/ZTF.ref
+slew_rate 2.6
+readout  5 
+horizon 30
+overhead_per_exposure 10.0
 min_observability_duration  
-filt_change_time  4-5 seconds
+filt_change_time  4-5
