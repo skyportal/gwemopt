@@ -301,12 +301,13 @@ def get_segments(params, config_struct):
 
     return segmentlist
 
-def get_segments_tile(config_struct, observatory, radec, segmentlist):
+def get_segments_tile(config_struct, observatory, radec, segmentlist, airmass):
     observer = ephem.Observer()
     observer.lat = str(config_struct["latitude"])
     observer.lon = str(config_struct["longitude"])
     observer.horizon = str(config_struct["horizon"])
     observer.elevation = config_struct["elevation"]
+    observer.horizon = ephem.degrees(str(90-np.arccos(1/airmass)*180/np.pi))
 
     fxdbdy = ephem.FixedBody()
     fxdbdy._ra = ephem.degrees(str(radec.ra.degree))
@@ -406,7 +407,7 @@ def get_segments_tiles(params, config_struct, tile_struct):
                 if ii == 0:
                     keys_computed = [key]
                     radecs_computed = np.atleast_2d([radec.ra.value, radec.dec.value])
-                    tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
+                    tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist, params["airmass"])
                     tile_struct[key]["segmentlist"] = tilesegmentlist
                 else:
                     seps = angular_distance(radec.ra.value, radec.dec.value,
@@ -420,11 +421,11 @@ def get_segments_tiles(params, config_struct, tile_struct):
                     else:
                         keys_computed.append(key)
                         radecs_computed = np.vstack((radecs_computed,[radec.ra.value, radec.dec.value]))
-                        tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
+                        tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist, params["airmass"])
                         tile_struct[key]["segmentlist"] = tilesegmentlist
 
             else:
-                tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist)
+                tilesegmentlist = get_segments_tile(config_struct, observatory, radec, segmentlist, params["airmass"])
                 tile_struct[key]["segmentlist"] = tilesegmentlist
 
     return tile_struct
