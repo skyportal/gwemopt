@@ -156,7 +156,7 @@ def create_galaxy_from_skyportal(params, map_struct, catalog_struct, regions=Non
     return tile_structs
 
 
-def create_moc_from_skyportal(params, map_struct=None):
+def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
 
     nside = params["nside"]
     npix = hp.nside2npix(nside)
@@ -200,8 +200,11 @@ def create_moc_from_skyportal(params, map_struct=None):
         else:
             ipixs = []
             for ii, tess in enumerate(tesselation):
+                if field_ids is not None:
+                    if tess.field_id not in field_ids[telescope]:
+                        ipixs.append([])
+                        continue
                 ipixs.append(skyportal2FOV(tess, nside))
-
         for ii, tess in enumerate(tesselation):
             index = tess.field_id
 
