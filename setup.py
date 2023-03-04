@@ -57,7 +57,7 @@ install_requires = [
     'astropy>=1.1.1',
     'astropy-healpix',
     'python-dateutil',
-    'mocpy',
+    'mocpy>=0.12.2',
     'astroquery',
     'astroplan',
     'ephem',
