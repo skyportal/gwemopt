@@ -257,7 +257,7 @@ def params_struct(opts):
         params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
         params["config"][telescope]["telescope"] = telescope
         if opts.doSingleExposure:
-            exposuretime = np.array(opts.exposuretimes.split(","),dtype=np.float)[0]
+            exposuretime = np.array(opts.exposuretimes.split(","),dtype=float)[0]
 
             params["config"][telescope]["magnitude_orig"] = params["config"][telescope]["magnitude"]
             params["config"][telescope]["exposuretime_orig"] = params["config"][telescope]["exposuretime"]
@@ -323,7 +323,7 @@ def params_struct(opts):
     params["Ntiles_cr"] = opts.Ntiles_cr
     params["DScale"] = opts.DScale
     params["nside"] = opts.nside
-    params["Tobs"] = np.array(opts.Tobs.split(","),dtype=np.float)
+    params["Tobs"] = np.array(opts.Tobs.split(","),dtype=float)
     params["powerlaw_cl"] = opts.powerlaw_cl
     params["powerlaw_n"] = opts.powerlaw_n
     params["powerlaw_dist_exp"] = opts.powerlaw_dist_exp
@@ -347,7 +347,7 @@ def params_struct(opts):
     params["footprint_radius"] = opts.footprint_radius
 
     params["doRASlice"] = opts.doRASlice
-    params["raslice"] = np.array(opts.raslice.split(","),dtype=np.float)
+    params["raslice"] = np.array(opts.raslice.split(","),dtype=float)
 
     params["doTransients"] = opts.doTransients
     params["transientsFile"] = opts.transientsFile
@@ -360,12 +360,12 @@ def params_struct(opts):
     params["doBalanceExposure"] = opts.doBalanceExposure
     params["unbalanced_tiles"] = None
     params["filters"] = opts.filters.split(",")
-    params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=np.float)
+    params["exposuretimes"] = np.array(opts.exposuretimes.split(","),dtype=float)
     params["doMovie_supersched"] = False
     params["doSuperSched"] = False
     params["doUpdateScheduler"] = False
     params["doMaxTiles"] = opts.doMaxTiles
-    params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","),dtype=np.float)
+    params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","),dtype=float)
     params["mindiff"] = opts.mindiff
     params["doAlternatingFilters"] = opts.doAlternatingFilters
     params["doReferences"] = opts.doReferences
