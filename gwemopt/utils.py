@@ -259,7 +259,7 @@ def params_checker(params):
             params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
             params["config"][telescope]["telescope"] = telescope
             if params["doSingleExposure"]:
-                exposuretime = np.array(opts.exposuretimes.split(","),dtype=np.float)[0]
+                exposuretime = np.array(opts.exposuretimes.split(","),dtype=float)[0]
            
                 nmag = -2.5*np.log10(np.sqrt(params["config"][telescope]["exposuretime"]/exposuretime))
                 params["config"][telescope]["magnitude"] = params["config"][telescope]["magnitude"] + nmag
@@ -1120,7 +1120,7 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
             tile_struct_hold[key]['prob'] = prob[key]
             if "epochs" in tile_struct_hold[key]:
                 tile_struct_hold[key]['epochs'] = np.empty((0,9))
-        params["max_nb_tiles"] = np.array([max_trial],dtype=np.float)
+        params["max_nb_tiles"] = np.array([max_trial],dtype=float)
         params_hold = copy.copy(params)
         config_struct_hold = copy.copy(config_struct)
         coverage_struct_hold,tile_struct_hold = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold,
@@ -1163,7 +1163,7 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
             tile_struct_hold[key]['prob'] = prob[key]
             if "epochs" in tile_struct_hold[key]:
                 tile_struct_hold[key]['epochs'] = np.empty((0,9))
-        params["max_nb_tiles"] = np.array([max_trial],dtype=np.float)
+        params["max_nb_tiles"] = np.array([max_trial],dtype=float)
         params_hold = copy.copy(params)
         config_struct_hold = copy.copy(config_struct)
 
@@ -1207,7 +1207,7 @@ def optimize_max_tiles(params,opt_tile_struct,opt_coverage_struct,config_struct,
             params_hold["unbalanced_tiles"] = unbalanced_tiles + params_hold["unbalanced_tiles"]
             if not doReschedule: break
             config_struct_hold = copy.copy(config_struct)
-            params_hold["max_nb_tiles"] = np.array([np.ceil(optimized_max)],dtype=np.float)
+            params_hold["max_nb_tiles"] = np.array([np.ceil(optimized_max)],dtype=float)
             coverage_struct,tile_struct_hold = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope,
                                                                                     map_struct_hold, tile_struct_hold)
             keys_scheduled = coverage_struct["data"][:,5]

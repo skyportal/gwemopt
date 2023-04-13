@@ -235,7 +235,7 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
             elif params["doBalanceExposure"]:
                 if not params["doMaxTiles"]: #optimize max tiles (iff max tiles not already specified)
                     optimized_max,coverage_struct,tile_struct = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_hold)
-                    params["max_nb_tiles"] = np.array([optimized_max],dtype=np.float)
+                    params["max_nb_tiles"] = np.array([optimized_max],dtype=float)
                 else:
                     params_hold = copy.copy(params)
                     config_struct_hold = copy.copy(config_struct)
@@ -427,7 +427,7 @@ def absmag(params, map_struct, tile_structs,previous_coverage_struct=None):
             elif params["doBalanceExposure"]:
                 if not params["doMaxTiles"]: #optimize max tiles (iff max tiles not already specified)
                     optimized_max,coverage_struct,tile_struct = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_hold)
-                    params["max_nb_tiles"] = np.array([optimized_max],dtype=np.float)
+                    params["max_nb_tiles"] = np.array([optimized_max],dtype=float)
 
                 else:
                     params_hold = copy.copy(params)
