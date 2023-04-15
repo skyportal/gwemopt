@@ -257,7 +257,6 @@ def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
 
         moc_structs[telescope] = moc_struct
 
-    print(stop)
     return moc_structs
 
 
