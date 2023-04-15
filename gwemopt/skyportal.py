@@ -186,7 +186,7 @@ def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
     pixarea = hp.nside2pixarea(nside)
 
     theta, phi = hp.pix2ang(nside, np.arange(npix))
-    ra = np.rad2deg(phi)*24.0/360.0
+    ra = np.rad2deg(phi)
     dec = np.rad2deg(0.5*np.pi - theta)
 
     moc_structs = {}
@@ -217,8 +217,9 @@ def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
             if len(ipix) == 0: continue
 
             moc_struct[index] = {}
-            moc_struct[index]["ra"] = np.median(ra[ipix])
-            moc_struct[index]["dec"] = np.median(dec[ipix])
+            moc_struct[index]["ra"] = tess.ra
+            moc_struct[index]["dec"] = tess.dec
+
             moc_struct[index]["ipix"] = ipix
             moc_struct[index]["corners"] = [[np.min(ra[ipix]), np.min(dec[ipix])],
                                             [np.min(ra[ipix]), np.max(dec[ipix])],
@@ -256,6 +257,7 @@ def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
 
         moc_structs[telescope] = moc_struct
 
+    print(stop)
     return moc_structs
 
 
