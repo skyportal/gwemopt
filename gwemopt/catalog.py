@@ -104,11 +104,11 @@ def get_catalog(params, map_struct):
                 f.create_dataset('magk', data=magk)
                 f.create_dataset('z', data=z)
                 # Add galaxy identifier
-                f.create_dataset('GWGC', data=GWGC)
-                f.create_dataset('PGC', data=PGC)
-                f.create_dataset('HyperLEDA', data=HyperLEDA)
-                f.create_dataset('2MASS', data=_2MASS)
-                f.create_dataset('SDSS', data=SDSS)
+                f.create_dataset('GWGC', data=GWGC.astype('S'))
+                f.create_dataset('PGC', data=PGC.astype('S'))
+                f.create_dataset('HyperLEDA', data=HyperLEDA.astype('S'))
+                f.create_dataset('2MASS', data=_2MASS.astype('S'))
+                f.create_dataset('SDSS', data=SDSS.astype('S'))
 
         else:
             with h5py.File(catalogFile, 'r') as f:
