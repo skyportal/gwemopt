@@ -99,7 +99,6 @@ setup(
     # dependencies
     cmdclass=CMDCLASS,
     install_requires=install_requires,
-    tests_require=tests_require,
 
     # classifiers
     classifiers=[
