@@ -171,6 +171,8 @@ def params_struct(skymap, gpstime, filt=['r'],
         raise ValueError('Need to enable --doEvent, --doFootprint, '
                          '--doSkymap, or --doDatabase')
 
+    params["Tobs"] = event_time.gps
+
     params["doSingleExposure"] = True
     if filterScheduleType == "block":
         params["doAlternatingFilters"] = True
