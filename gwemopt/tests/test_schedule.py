@@ -171,7 +171,7 @@ def params_struct(skymap, gpstime, filt=['r'],
         raise ValueError('Need to enable --doEvent, --doFootprint, '
                          '--doSkymap, or --doDatabase')
 
-    params["Tobs"] = 1.
+    params["Tobs"] = np.array([0., 1.])
 
     params["doSingleExposure"] = True
     if filterScheduleType == "block":
