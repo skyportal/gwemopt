@@ -21,7 +21,6 @@ from pathlib import Path
 from gwemopt.read_output import read_schedule
 import pandas as pd
 import tempfile
-from astropy.time import Time
 
 test_dir = Path(__file__).parent.absolute()
 test_data_dir = test_dir.joinpath("data")
@@ -29,7 +28,7 @@ expected_results_dir = test_data_dir.joinpath("expected_results")
 gwemopt_root_dir = test_dir.parent.parent
 
 
-def params_struct(skymap, gpstime, tobs=1, filt=['r'],
+def params_struct(skymap, gpstime, filt=['r'],
                   exposuretimes=[60.0],
                   mindiff=30.0*60.0, probability=0.9, tele='ZTF',
                   schedule_type='greedy',
@@ -240,8 +239,8 @@ def test_scheduler():
 
     :return: None
     """
-    skymap = Path(__file__).parent.absolute().joinpath(
-        "data/S190425z_2_LALInference.fits.gz"
+    skymap = test_data_dir.joinpath(
+        "S190425z_2_LALInference.fits.gz"
     )
     gpstime = 1235311089.400738
 
