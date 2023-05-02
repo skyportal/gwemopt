@@ -69,19 +69,13 @@ install_requires = [
     'h5py',
     'munkres',
     'pandas',
-    'shapely'
-]
-
-# test dependencies
-tests_require = [
+    'shapely',
     'pytest>=3.1',
     'pytest-runner',
     'freezegun',
     'sqlparse',
     'bs4',
 ]
-if sys.version < '3':
-    tests_require.append('mock')
 
 # -- run setup ----------------------------------------------------------------
 
@@ -105,7 +99,6 @@ setup(
     # dependencies
     cmdclass=CMDCLASS,
     install_requires=install_requires,
-    tests_require=tests_require,
 
     # classifiers
     classifiers=[

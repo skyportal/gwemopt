@@ -1,7 +1,5 @@
-import datetime
 import os
 import glob
-import copy
 
 from astropy import table
 from astropy import time
@@ -18,23 +16,32 @@ import gwemopt.plotting
 import gwemopt.tiles
 import gwemopt.segments
 import gwemopt.catalog
-import healpy as hp
-from ligo import segments
 import numpy as np
+from pathlib import Path
+from gwemopt.read_output import read_schedule
+import pandas as pd
+import tempfile
 
-def params_struct(skymap, gpstime, tobs=None, filt=['r'],
+np.random.seed(42)
+
+test_dir = Path(__file__).parent.absolute()
+test_data_dir = test_dir.joinpath("data")
+expected_results_dir = test_data_dir.joinpath("expected_results")
+gwemopt_root_dir = test_dir.parent.parent
+
+
+def params_struct(skymap, gpstime, filt=['r'],
                   exposuretimes=[60.0],
                   mindiff=30.0*60.0, probability=0.9, tele='ZTF',
                   schedule_type='greedy',
                   doReferences=True,
                   filterScheduleType='block'):
 
-    gwemoptpath = os.path.dirname(gwemopt.__file__)
-    config_directory = os.path.join(gwemoptpath, '../config')
-    tiling_directory = os.path.join(gwemoptpath, '../tiling')
-    catalog_directory = os.path.join(gwemoptpath, '../catalog')
+    config_directory = gwemopt_root_dir.joinpath("config")
+    tiling_directory = gwemopt_root_dir.joinpath("tiling")
+    catalog_directory = gwemopt_root_dir.joinpath("catalog")
 
-    params = {}
+    params = dict()
     params["config"] = {}
     config_files = glob.glob("%s/*.config" % config_directory)
     for config_file in config_files:
@@ -85,7 +92,6 @@ def params_struct(skymap, gpstime, tobs=None, filt=['r'],
 
     params["skymap"] = skymap
     params["gpstime"] = gpstime
-    params["outputDir"] = "./" 
     params["tilingDir"] = tiling_directory
     params["event"] = ""
     params["telescopes"] = [tele]
@@ -167,13 +173,7 @@ def params_struct(skymap, gpstime, tobs=None, filt=['r'],
         raise ValueError('Need to enable --doEvent, --doFootprint, '
                          '--doSkymap, or --doDatabase')
 
-    if tobs is None:
-        now_time = time.Time.now()
-        timediff = now_time.gps - event_time.gps
-        timediff_days = timediff / 86400.0
-        params["Tobs"] = np.array([timediff_days, timediff_days+1])
-    else:
-        params["Tobs"] = tobs
+    params["Tobs"] = np.array([0., 1.])
 
     params["doSingleExposure"] = True
     if filterScheduleType == "block":
@@ -200,6 +200,8 @@ def gen_structs(params):
     # Function to read maps
     map_struct = gwemopt.utils.read_skymap(params, is3D=params["do3D"],
                                            map_struct=params['map_struct'])
+
+    catalog_struct = None
 
     if params["tilesType"] == "galaxy":
         print("Generating catalog...")
@@ -232,25 +234,61 @@ def gen_structs(params):
                                                       map_struct,
                                                       tile_structs)
 
-    if params["doPlots"]:
-        gwemopt.plotting.skymap(params, map_struct)
-        gwemopt.plotting.tiles(params, map_struct, tile_structs)
-        gwemopt.plotting.coverage(params, map_struct, coverage_struct)
-
-    return map_struct, tile_structs, coverage_struct
+    return map_struct, tile_structs, coverage_struct, catalog_struct
 
 
 def test_scheduler():
-    # Read test GCN
+    """
+    Test scheduler
 
-    gwemoptpath = os.path.dirname(gwemopt.__file__)
-    testpath = config_directory = os.path.join(gwemoptpath, 'tests')
-    skymap = os.path.join(testpath, 'data/MS190227n_bayestar.fits.gz')
+    :return: None
+    """
+    skymap = test_data_dir.joinpath(
+        "S190425z_2_LALInference.fits.gz"
+    )
     gpstime = 1235311089.400738
 
-    teles=['ZTF','KPED', 'TRE', 'TNT']
-    doReferences_list = [True,False, False, False]
-    for tele,doReferences in zip(teles,doReferences_list): 
-        params = params_struct(skymap, gpstime, tele=tele,
-                               doReferences=doReferences)
-        map_struct, tile_structs, coverage_struct = gen_structs(params)
+    telescope_list = [
+        ('ZTF', True),
+        ('KPED', False),
+        # ('TRE', False),
+        # ('TNT', False),
+        # ("WINTER", False)
+    ]
+
+    for telescope, do_references in telescope_list:
+
+        params = params_struct(skymap, gpstime, tele=telescope,
+                               doReferences=do_references)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # To regenerate the test data, uncomment the following lines
+            # temp_dir = Path(__file__).parent.absolute().joinpath("temp")
+            # temp_dir.mkdir(exist_ok=True)
+
+            params["outputDir"] = temp_dir
+
+            map_struct, tile_structs, coverage_struct, catalog_struct = gen_structs(params)
+
+            tile_structs, coverage_struct = gwemopt.coverage.timeallocation(
+                params, map_struct, tile_structs
+            )
+
+            gwemopt.plotting.skymap(params, map_struct)
+            gwemopt.plotting.tiles(params, map_struct, tile_structs)
+            gwemopt.plotting.coverage(params, map_struct, coverage_struct)
+            gwemopt.scheduler.summary(
+                params, map_struct, coverage_struct, catalog_struct=catalog_struct
+            )
+
+            new_schedule = read_schedule(
+                Path(temp_dir).joinpath(f"schedule_{telescope}.dat")
+            )
+            expected_schedule = read_schedule(
+                expected_results_dir.joinpath(f"schedule_{telescope}.dat")
+            )
+
+            pd.testing.assert_frame_equal(
+                new_schedule.reset_index(drop=True),
+                expected_schedule.reset_index(drop=True)
+            )
