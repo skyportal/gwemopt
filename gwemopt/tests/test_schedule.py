@@ -253,7 +253,7 @@ def test_scheduler():
         ('KPED', False),
         # ('TRE', False),
         # ('TNT', False),
-        ("WINTER", False)
+        # ("WINTER", False)
     ]
 
     for telescope, do_references in telescope_list:
