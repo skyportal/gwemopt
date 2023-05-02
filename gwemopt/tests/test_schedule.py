@@ -22,6 +22,8 @@ from gwemopt.read_output import read_schedule
 import pandas as pd
 import tempfile
 
+np.random.seed(42)
+
 test_dir = Path(__file__).parent.absolute()
 test_data_dir = test_dir.joinpath("data")
 expected_results_dir = test_data_dir.joinpath("expected_results")
