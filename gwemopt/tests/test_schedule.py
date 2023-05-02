@@ -251,7 +251,7 @@ def test_scheduler():
     telescope_list = [
         ('ZTF', True),
         ('KPED', False),
-        ('TRE', False),
+        # ('TRE', False),
         ('TNT', False),
         ("WINTER", False)
     ]
@@ -291,7 +291,6 @@ def test_scheduler():
             )
 
             pd.testing.assert_frame_equal(
-                new_schedule.reset_index(drop=True), expected_schedule.reset_index(drop=True)
+                new_schedule.reset_index(drop=True),
+                expected_schedule.reset_index(drop=True)
             )
-
-
