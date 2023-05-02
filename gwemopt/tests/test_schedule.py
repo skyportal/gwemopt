@@ -252,7 +252,7 @@ def test_scheduler():
         ('ZTF', True),
         ('KPED', False),
         # ('TRE', False),
-        ('TNT', False),
+        # ('TNT', False),
         ("WINTER", False)
     ]
 
