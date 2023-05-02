@@ -258,8 +258,6 @@ def test_scheduler():
 
     for telescope, do_references in telescope_list:
 
-        print(telescope)
-
         params = params_struct(skymap, gpstime, tele=telescope,
                                doReferences=do_references)
 
