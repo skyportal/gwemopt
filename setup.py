@@ -75,6 +75,7 @@ install_requires = [
     'freezegun',
     'sqlparse',
     'bs4',
+    "coveralls"
 ]
 
 # -- run setup ----------------------------------------------------------------
