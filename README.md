@@ -1,6 +1,10 @@
 # gwemopt
 Gravitational-wave Electromagnetic Optimization
 
+[![Coverage Status](https://coveralls.io/repos/github/skyportal/gwemopt/badge.svg?branch=main)](https://coveralls.io/github/skyportal/gwemopt?branch=main)
+[![CI](https://github.com/skyportal/gwemopt/actions/workflows/continous_integration.yml/badge.svg)](https://github.com/skyportal/gwemopt/actions/workflows/continous_integration.yml)
+[![PyPI version](https://badge.fury.io/py/gwemopt.svg)](https://badge.fury.io/py/gwemopt)
+
 The code currently can:
 - interact with gracedb, download the skymaps, read them etc. 
 - read telescope configuration files with location, FOV, limiting magnitude, exposure times, etc.
