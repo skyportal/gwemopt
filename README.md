@@ -1,8 +1,8 @@
 # gwemopt
 Gravitational-wave Electromagnetic Optimization
 
-[![Coverage Status](https://coveralls.io/repos/github/mcoughlin/gwemopt/badge.svg?branch=main)](https://coveralls.io/github/mcoughlin/gwemopt?branch=main)
-[![CI](https://github.com/mcoughlin/gwemopt/actions/workflows/continous_integration.yml/badge.svg)](https://github.com/mcoughlin/gwemopt/actions/workflows/continous_integration.yml)
+[![Coverage Status](https://coveralls.io/repos/github/skyportal/gwemopt/badge.svg?branch=main)](https://coveralls.io/github/skyportal/gwemopt?branch=main)
+[![CI](https://github.com/skyportal/gwemopt/actions/workflows/continous_integration.yml/badge.svg)](https://github.com/skyportal/gwemopt/actions/workflows/continous_integration.yml)
 [![PyPI version](https://badge.fury.io/py/gwemopt.svg)](https://badge.fury.io/py/gwemopt)
 
 The code currently can:
