@@ -90,7 +90,7 @@ setup(
     author='Michael Coughlin',
     author_email='michael.coughlin@ligo.org',
     license='GPLv3',
-    url='https://github.com/mcoughlin/gwemopt/',
+    url='https://github.com/skyportal/gwemopt/',
 
     # package content
     packages=find_packages(),
@@ -108,6 +108,8 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         'Intended Audience :: Science/Research',
         'Intended Audience :: End Users/Desktop',
         'Intended Audience :: Developers',
