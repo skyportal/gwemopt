@@ -44,7 +44,7 @@ Setting up the environment:
 ```
 conda install numpy scipy matplotlib astropy h5py shapely
 conda install -c astropy astroquery
-conda install -c conda-forge voeventlib astropy-healpix python-ligo-lw ligo-segments
+conda install -c conda-forge voeventlib astropy-healpix python-ligo-lw ligo-segments ligo.skymap ffmpeg
 ```
 
 And then setup.py should take care of the rest.
