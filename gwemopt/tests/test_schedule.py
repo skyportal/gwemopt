@@ -21,6 +21,7 @@ from pathlib import Path
 from gwemopt.read_output import read_schedule
 import pandas as pd
 import tempfile
+from gwemopt.paths import test_skymap
 
 np.random.seed(42)
 
@@ -243,9 +244,7 @@ def test_scheduler():
 
     :return: None
     """
-    skymap = test_data_dir.joinpath(
-        "S190425z_2_LALInference.fits.gz"
-    )
+    skymap = test_skymap
     gpstime = 1235311089.400738
 
     telescope_list = [
