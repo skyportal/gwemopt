@@ -23,7 +23,6 @@ reviewing gravitational-wave skymap likelihoods.
 Comments should be e-mailed to michael.coughlin@ligo.org.
 """
 
-import glob
 import optparse
 import os
 import warnings
