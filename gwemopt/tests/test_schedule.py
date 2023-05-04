@@ -21,7 +21,7 @@ from pathlib import Path
 from gwemopt.read_output import read_schedule
 import pandas as pd
 import tempfile
-from gwemopt.paths import test_skymap
+from gwemopt.paths import test_skymap, DEFAULT_CONFIG_DIR, DEFAULT_TILING_DIR
 
 np.random.seed(42)
 
@@ -38,8 +38,8 @@ def params_struct(skymap, gpstime, filt=['r'],
                   doReferences=True,
                   filterScheduleType='block'):
 
-    config_directory = gwemopt_root_dir.joinpath("config")
-    tiling_directory = gwemopt_root_dir.joinpath("tiling")
+    config_directory = DEFAULT_CONFIG_DIR
+    tiling_directory = DEFAULT_TILING_DIR
     catalog_directory = gwemopt_root_dir.joinpath("catalog")
 
     params = dict()
