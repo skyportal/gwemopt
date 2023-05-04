@@ -90,4 +90,4 @@ ENV/
 
 gwemopt/version.py
 .DS_Store
-input/FAKE.tess
+gwemopt/input/FAKE.tess

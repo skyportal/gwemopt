@@ -21,6 +21,7 @@ from pathlib import Path
 from gwemopt.read_output import read_schedule
 import pandas as pd
 import tempfile
+from gwemopt.paths import test_skymap, DEFAULT_CONFIG_DIR, DEFAULT_TILING_DIR, REFS_DIR, TESSELATION_DIR
 
 np.random.seed(42)
 
@@ -37,8 +38,8 @@ def params_struct(skymap, gpstime, filt=['r'],
                   doReferences=True,
                   filterScheduleType='block'):
 
-    config_directory = gwemopt_root_dir.joinpath("config")
-    tiling_directory = gwemopt_root_dir.joinpath("tiling")
+    config_directory = DEFAULT_CONFIG_DIR
+    tiling_directory = DEFAULT_TILING_DIR
     catalog_directory = gwemopt_root_dir.joinpath("catalog")
 
     params = dict()
@@ -51,9 +52,7 @@ def params_struct(skymap, gpstime, filt=['r'],
             gwemopt.utils.readParamsFromFile(config_file)
         params["config"][telescope]["telescope"] = telescope
         if "tesselationFile" in params["config"][telescope]:
-            params["config"][telescope]["tesselationFile"] =\
-                os.path.join(config_directory,
-                             params["config"][telescope]["tesselationFile"])
+            params["config"][telescope]["tesselationFile"] = TESSELATION_DIR.joinpath(params["config"][telescope]["tesselationFile"])
             tesselation_file = params["config"][telescope]["tesselationFile"]
             if not os.path.isfile(tesselation_file):
                 if params["config"][telescope]["FOV_type"] == "circle":
@@ -64,13 +63,11 @@ def params_struct(skymap, gpstime, filt=['r'],
                         params["config"][telescope])
 
             params["config"][telescope]["tesselation"] =\
-                np.loadtxt(params["config"][telescope]["tesselationFile"],
-                           usecols=(0, 1, 2), comments='%')
+                np.loadtxt(tesselation_file, usecols=(0, 1, 2), comments='%')
 
         if "referenceFile" in params["config"][telescope]:
             params["config"][telescope]["referenceFile"] =\
-                os.path.join(config_directory,
-                             params["config"][telescope]["referenceFile"])
+                REFS_DIR.joinpath(params["config"][telescope]["referenceFile"])
             refs = table.unique(table.Table.read(
                 params["config"][telescope]["referenceFile"],
                 format='ascii', data_start=2, data_end=-1)['field', 'fid'])
@@ -243,9 +240,7 @@ def test_scheduler():
 
     :return: None
     """
-    skymap = test_data_dir.joinpath(
-        "S190425z_2_LALInference.fits.gz"
-    )
+    skymap = test_skymap
     gpstime = 1235311089.400738
 
     telescope_list = [

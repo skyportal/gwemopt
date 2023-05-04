@@ -39,7 +39,23 @@ References:
 
 - Coughlin and Stubbs: https://link.springer.com/article/10.1007/s10686-016-9503-4 
 
-Setting up the environment:
+# Setting up the environment
+
+If you want the latest version, we recommend creating a clean environment:
+
+```commandline
+conda create -n gwemopt python=3.11
+git clone git@github.com:skyportal/gwemopt.git
+pip install -e gwemopt
+```
+
+or if you just want the latest version on Github:
+
+```commandline
+pip install gwemopt
+```
+
+If you run into dependency issues, you can try installing dependencies via conda:
 
 ```
 conda install numpy scipy matplotlib astropy h5py shapely
@@ -47,4 +63,14 @@ conda install -c astropy astroquery
 conda install -c conda-forge voeventlib astropy-healpix python-ligo-lw ligo-segments ligo.skymap ffmpeg
 ```
 
-And then setup.py should take care of the rest.
+And then run `pip install -e gwemopt` again.
+
+# Usage
+
+Once installed, You can use gwemopt via the command line:
+
+```commandline
+python -m gwemopt ....
+```
+
+where ... corresponds to the various arguments. 
