@@ -66,6 +66,7 @@ install_requires = [
     'joblib',
     'ligo-segments',
     'ligo.skymap',
+    "lxml",
     'h5py',
     'munkres',
     'pandas',
