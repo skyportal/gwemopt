@@ -10,4 +10,6 @@ DEFAULT_TILING_DIR = DATA_DIR.joinpath("tiling")
 DEFAULT_LIGHTCURVE_DIR = DATA_DIR.joinpath("lightcurves")
 DEFAULT_BASE_OUTPUT_DIR = Path.home().joinpath("Data/gwemopt/")
 
+TESSELATION_DIR = DATA_DIR.joinpath("tesselations")
+
 test_skymap = DATA_DIR.joinpath("skymaps/S190425z_2_LALInference.fits.gz")

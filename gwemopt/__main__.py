@@ -49,7 +49,7 @@ import gwemopt.segments
 import gwemopt.tiles
 import gwemopt.utils
 import gwemopt.waw
-from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR, DEFAULT_CONFIG_DIR, DEFAULT_TILING_DIR, DEFAULT_LIGHTCURVE_DIR, test_skymap
+from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR, DEFAULT_CONFIG_DIR, DEFAULT_TILING_DIR, DEFAULT_LIGHTCURVE_DIR, TESSELATION_DIR, test_skymap
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -273,9 +273,8 @@ def params_struct(opts):
 
     params = {}
     params["config"] = {}
-    configFiles = glob.glob("%s/*.config" % opts.configDirectory)
-    for configFile in configFiles:
-        telescope = configFile.split("/")[-1].replace(".config", "")
+    for telescope in telescopes:
+        configFile = DEFAULT_CONFIG_DIR.joinpath(telescope + ".config")
         params["config"][telescope] = gwemopt.utils.readParamsFromFile(configFile)
         params["config"][telescope]["telescope"] = telescope
         if opts.doSingleExposure:
@@ -296,8 +295,8 @@ def params_struct(opts):
             )
             params["config"][telescope]["exposuretime"] = exposuretime
         if "tesselationFile" in params["config"][telescope]:
-            tessfile = os.path.join(
-                opts.configDirectory, params["config"][telescope]["tesselationFile"]
+            tessfile = TESSELATION_DIR.joinpath(
+                params["config"][telescope]["tesselationFile"]
             )
             if not os.path.isfile(tessfile):
                 if params["config"][telescope]["FOV_type"] == "circle":
@@ -307,6 +306,7 @@ def params_struct(opts):
             if opts.tilesType == "galaxy":
                 params["config"][telescope]["tesselation"] = np.empty((3,))
             else:
+
                 params["config"][telescope]["tesselation"] = np.loadtxt(
                     tessfile, usecols=(0, 1, 2), comments="%"
                 )
@@ -357,7 +357,7 @@ def params_struct(opts):
     params["event"] = opts.event
     params["coverageFiles"] = opts.coverageFiles.split(",")
     params["telescopes"] = telescopes
-    params["lightcurveFiles"] = opts.lightcurveFiles.split(",")
+    params["lightcurveFiles"] = str(opts.lightcurveFiles).split(",")
     params["tilesType"] = opts.tilesType
     params["scheduleType"] = opts.scheduleType
     params["timeallocationType"] = opts.timeallocationType
@@ -497,6 +497,8 @@ if opts.doEvent:
     params["gpstime"] = eventinfo["gpstime"]
 elif opts.doFootprint:
     params["skymap"] = gwemopt.footprint.get_skymap(params)
+elif opts.doSkymap:
+    pass
 else:
     print("Need to enable --doEvent, --doFootprint or --doSkymap")
     exit(0)
