@@ -279,8 +279,7 @@ if len(params["filters"]) != len(params["exposuretimes"]):
     exit(0)
 
 if opts.doEvent:
-    params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)
-    params["gpstime"] = eventinfo["gpstime"]
+    params["skymap"] = gwemopt.gracedb.get_event(params)
 elif opts.doFootprint:
     params["skymap"] = gwemopt.footprint.get_skymap(params)
 elif opts.doSkymap:

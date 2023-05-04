@@ -26,28 +26,6 @@ def get_event(
     :param rev: revision number of the event
     """
 
-    # g = GraceDb()
-    #
-    # event = g.superevent(event_name)
-    # preferred_event = g.event(event.json()["preferred_event"])
-    # jsonfile = output_dir.joinpath('data.json')
-    # with open(jsonfile, 'w') as outfile:
-    #     json.dump(preferred_event.json(), outfile)
-    #
-    # with open(jsonfile, 'r') as f:
-    #     eventinfo = json.load(f)
-    #
-    # event_files = g.files(event_name).json()
-    # for filename in list(event_files):
-    #     assert "fits.gz" in filename
-    #     outfilename = os.path.join(params["outputDir"], filename)
-    #     with open(outfilename,'wb') as outfile:
-    #         r = g.files(params["event"], filename)
-    #         outfile.write(r.read())
-    #     skymapfile = outfilename
-    #
-    # return skymapfile, eventinfo
-
     ligo_client = GraceDb()
 
     voevents = ligo_client.voevents(event_name).json()["voevents"]
@@ -93,6 +71,4 @@ def get_event(
         with open(savepath, "wb") as f:
             f.write(response.content)
 
-    return savepath, event_name
-
- 
+    return savepath
