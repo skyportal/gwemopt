@@ -4,7 +4,6 @@ import glob
 from astropy import table
 from astropy import time
 import ephem
-import gwemopt.utils.utils
 import gwemopt.moc
 import gwemopt.gracedb
 import gwemopt.rankedTilesGenerator
@@ -21,6 +20,7 @@ from pathlib import Path
 from gwemopt.read_output import read_schedule
 import pandas as pd
 import tempfile
+from gwemopt.utils import readParamsFromFile, read_skymap
 from gwemopt.paths import test_skymap, DEFAULT_CONFIG_DIR, DEFAULT_TILING_DIR, REFS_DIR, TESSELATION_DIR
 
 np.random.seed(42)
@@ -195,8 +195,7 @@ def gen_structs(params):
 
     print('Loading skymap')
     # Function to read maps
-    map_struct = gwemopt.utils.utils.read_skymap(params, is3D=params["do3D"],
-                                                 map_struct=params['map_struct'])
+    map_struct = read_skymap(params, is3D=params["do3D"], map_struct=params['map_struct'])
 
     catalog_struct = None
 
