@@ -1,8 +1,7 @@
 
-import os, sys
+import os
 import copy
 import numpy as np
-import healpy as hp
 import pandas as pd
 
 from astropy.time import Time
@@ -10,12 +9,17 @@ from astropy.coordinates import get_sun, SkyCoord
 from astropy import units as u
 from astropy.io import ascii
 
-import gwemopt.utils, gwemopt.tiles
+import gwemopt.tiles
 import gwemopt.rankedTilesGenerator
 import gwemopt.scheduler
 import gwemopt.plotting
 
+from gwemopt.utils.pixels import getSquarePixels, getCirclePixels
+from gwemopt.utils.tile_utils import slice_galaxy_tiles, perturb_tiles, optimize_max_tiles, balance_tiles, check_overlapping_tiles, eject_tiles, slice_number_tiles, slice_map_tiles, order_by_observability
+from gwemopt.utils.treasuremap import get_treasuremap_pointings
+
 import ligo.segments as segments
+
 
 def combine_coverage_structs(coverage_structs):
 
@@ -114,9 +118,9 @@ def read_coverage(params, telescope, filename, moc_struct=None):
                 color='#6c71c4'
 
             if config_struct["FOV_coverage_type"] == "square":
-                ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra, dec, config_struct["FOV_coverage"], nside, alpha=alpha, color=color)
+                ipix, radecs, patch, area = getSquarePixels(ra, dec, config_struct["FOV_coverage"], nside, alpha=alpha, color=color)
             elif config_struct["FOV_coverage_type"] == "circle":
-                 ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra, dec, config_struct["FOV_coverage"], nside, alpha=alpha, color=color)
+                 ipix, radecs, patch, area = getCirclePixels(ra, dec, config_struct["FOV_coverage"], nside, alpha=alpha, color=color)
         else:
             ipix = moc_struct[field]["ipix"]
             patch = moc_struct[field]["patch"]
@@ -209,17 +213,17 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
         else: filt_change_time = 0
 
         if params["doIterativeTiling"] and (params["tilesType"] == "galaxy"):
-            tile_struct = gwemopt.utils.slice_galaxy_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))
+            tile_struct = slice_galaxy_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))
 
         if params["doPerturbativeTiling"] and (jj>0) and (not params["tilesType"] == "galaxy"):
-            tile_struct = gwemopt.utils.perturb_tiles(params, config_struct, telescope, map_struct_hold, tile_struct)
+            tile_struct = perturb_tiles(params, config_struct, telescope, map_struct_hold, tile_struct)
  
         if params["doOverlappingScheduling"]:
-            tile_struct = gwemopt.utils.check_overlapping_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))
+            tile_struct = check_overlapping_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))
 
         if params["doAlternatingFilters"]:
             if params["doBlocks"]:
-                tile_struct = gwemopt.utils.eject_tiles(params,telescope,tile_struct)
+                tile_struct = eject_tiles(params, telescope, tile_struct)
                    
             params_hold = copy.copy(params)
             config_struct_hold = copy.copy(config_struct)
@@ -234,14 +238,14 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
                                                                        telescope,previous_coverage_struct)
             elif params["doBalanceExposure"]:
                 if not params["doMaxTiles"]: #optimize max tiles (iff max tiles not already specified)
-                    optimized_max,coverage_struct,tile_struct = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_hold)
+                    optimized_max,coverage_struct,tile_struct = optimize_max_tiles(params, tile_struct, coverage_struct, config_struct, telescope, map_struct_hold)
                     params["max_nb_tiles"] = np.array([optimized_max],dtype=float)
                 else:
                     params_hold = copy.copy(params)
                     config_struct_hold = copy.copy(config_struct)
                     
                     coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
-                    doReschedule,balanced_fields = gwemopt.utils.balance_tiles(params_hold, tile_struct, coverage_struct)
+                    doReschedule,balanced_fields = balance_tiles(params_hold, tile_struct, coverage_struct)
 
                     if doReschedule:
                         config_struct_hold = copy.copy(config_struct)
@@ -338,7 +342,7 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
             if params["doBalanceExposure"]:
                 cnt,ntrials = 0,10
                 while cnt < ntrials:
-                    doReschedule,balanced_fields = gwemopt.utils.balance_tiles(params, tile_struct, coverage_struct)
+                    doReschedule,balanced_fields = balance_tiles(params, tile_struct, coverage_struct)
                     if doReschedule:
                         for key in params["unbalanced_tiles"]:
                             tile_struct[key]['prob'] = 0.0
@@ -349,7 +353,7 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
 #                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params,coverage_struct)
 
             if params["doMaxTiles"]:
-                tile_struct, doReschedule = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct, coverage_struct)    
+                tile_struct, doReschedule = slice_number_tiles(params, telescope, tile_struct, coverage_struct)
                 if doReschedule:
                     coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
 
@@ -357,7 +361,7 @@ def powerlaw(params, map_struct, tile_structs,previous_coverage_struct=None):
         coverage_structs.append(coverage_struct)
 
         if params["doIterativeTiling"]:
-            map_struct_hold = gwemopt.utils.slice_map_tiles(params, map_struct_hold, coverage_struct)
+            map_struct_hold = slice_map_tiles(params, map_struct_hold, coverage_struct)
                
     map_struct["prob"] = full_prob_map
 
@@ -400,21 +404,23 @@ def absmag(params, map_struct, tile_structs,previous_coverage_struct=None):
         except:
             min_obs_duration = 0.0
 
-        if "filt_change_time" in config_struct.keys(): filt_change_time = config_struct["filt_change_time"]
-        else: filt_change_time = 0
+        if "filt_change_time" in config_struct.keys():
+            filt_change_time = config_struct["filt_change_time"]
+        else:
+            filt_change_time = 0
 
         if params["doIterativeTiling"] and (params["tilesType"] == "galaxy"):
-            tile_struct = gwemopt.utils.slice_galaxy_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))
+            tile_struct = slice_galaxy_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))
 
         if params["doPerturbativeTiling"] and (jj>0) and (not params["tilesType"] == "galaxy"):
-            tile_struct = gwemopt.utils.perturb_tiles(params, config_struct, telescope, map_struct_hold, tile_struct)
+            tile_struct = perturb_tiles(params, config_struct, telescope, map_struct_hold, tile_struct)
  
         if params["doOverlappingScheduling"]:
-            tile_struct = gwemopt.utils.check_overlapping_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))
+            tile_struct = check_overlapping_tiles(params, tile_struct, combine_coverage_structs(coverage_structs))
 
         if params["doAlternatingFilters"]:
             if params["doBlocks"]:
-                tile_struct = gwemopt.utils.eject_tiles(params,telescope,tile_struct)
+                tile_struct = eject_tiles(params, telescope, tile_struct)
                    
             params_hold = copy.copy(params)
             config_struct_hold = copy.copy(config_struct)
@@ -426,7 +432,7 @@ def absmag(params, map_struct, tile_structs,previous_coverage_struct=None):
                                                                        telescope,previous_coverage_struct)
             elif params["doBalanceExposure"]:
                 if not params["doMaxTiles"]: #optimize max tiles (iff max tiles not already specified)
-                    optimized_max,coverage_struct,tile_struct = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_hold)
+                    optimized_max,coverage_struct,tile_struct = optimize_max_tiles(params, tile_struct, coverage_struct, config_struct, telescope, map_struct_hold)
                     params["max_nb_tiles"] = np.array([optimized_max],dtype=float)
 
                 else:
@@ -434,7 +440,7 @@ def absmag(params, map_struct, tile_structs,previous_coverage_struct=None):
                     config_struct_hold = copy.copy(config_struct)
 
                     coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params_hold, config_struct_hold, telescope, map_struct_hold, tile_struct,previous_coverage_struct)
-                    doReschedule,balanced_fields = gwemopt.utils.balance_tiles(params_hold, tile_struct, coverage_struct)
+                    doReschedule,balanced_fields = balance_tiles(params_hold, tile_struct, coverage_struct)
 
                     if doReschedule:
                         config_struct_hold = copy.copy(config_struct)
@@ -509,7 +515,7 @@ def absmag(params, map_struct, tile_structs,previous_coverage_struct=None):
             if params["doBalanceExposure"]:
                 cnt,ntrials = 0,10
                 while cnt < ntrials:
-                    doReschedule,balanced_fields = gwemopt.utils.balance_tiles(params, tile_struct, coverage_struct)
+                    doReschedule,balanced_fields = balance_tiles(params, tile_struct, coverage_struct)
                     if doReschedule:
                         for key in params["unbalanced_tiles"]:
                             tile_struct[key]['prob'] = 0.0
@@ -520,7 +526,7 @@ def absmag(params, map_struct, tile_structs,previous_coverage_struct=None):
 #                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params,coverage_struct)
 
             if params["doMaxTiles"]:
-                tile_struct, doReschedule = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct, coverage_struct)    
+                tile_struct, doReschedule = slice_number_tiles(params, telescope, tile_struct, coverage_struct)
                 if doReschedule:
                     coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
 
@@ -528,7 +534,7 @@ def absmag(params, map_struct, tile_structs,previous_coverage_struct=None):
         coverage_structs.append(coverage_struct)
 
         if params["doIterativeTiling"]:
-            map_struct_hold = gwemopt.utils.slice_map_tiles(params, map_struct_hold, coverage_struct)
+            map_struct_hold = slice_map_tiles(params, map_struct_hold, coverage_struct)
                
     map_struct["prob"] = full_prob_map
 
@@ -563,7 +569,7 @@ def pem(params, map_struct, tile_structs):
         coverage_structs.append(coverage_struct)
 
         if params["doIterativeTiling"]:
-            map_struct_hold = gwemopt.utils.slice_map_tiles(map_struct_hold, coverage_struct)
+            map_struct_hold = slice_map_tiles(map_struct_hold, coverage_struct)
 
     return combine_coverage_structs(coverage_structs)
 
@@ -579,7 +585,7 @@ def erase_observed_tiles(params,tile_struct,telescope): #only for run_gwemopt_su
         prevtelescopes = params["alltelescopes"][ii].split(",")
         coverage_struct = params["coverage_structs"][f'coverage_struct_{ii}']
         if not coverage_struct: continue
-        tile_struct_hold = gwemopt.utils.check_overlapping_tiles(params,tile_struct,coverage_struct)
+        tile_struct_hold = check_overlapping_tiles(params, tile_struct, coverage_struct)
 
         for prevtelescope in prevtelescopes:
             if prevtelescope in done_telescopes: continue #to prevent setting tiles to 0 redundantly
@@ -604,7 +610,7 @@ def erase_observed_tiles(params,tile_struct,telescope): #only for run_gwemopt_su
 def update_observed_tiles(params,tile_struct,previous_coverage_struct):
     
     if not params["doAlternatingFilters"]:
-        tile_struct = gwemopt.utils.check_overlapping_tiles(params,tile_struct,previous_coverage_struct) #maps field ids to tile_struct
+        tile_struct = check_overlapping_tiles(params, tile_struct, previous_coverage_struct) #maps field ids to tile_struct
 
     for key in tile_struct.keys(): #sets tile to 0 if previously observed
         if 'epochs' not in tile_struct[key]: continue
@@ -628,7 +634,7 @@ def update_observed_tiles(params,tile_struct,previous_coverage_struct):
 def timeallocation(params, map_struct, tile_structs,previous_coverage_struct=None):
     
     if len(params["telescopes"]) > 1 and params["doOrderByObservability"]:
-        gwemopt.utils.order_by_observability(params,tile_structs)
+        order_by_observability(params, tile_structs)
 
     if (params["timeallocationType"] == "powerlaw") or (params["timeallocationType"] == "absmag"):
         print("Generating powerlaw schedule...")
@@ -637,7 +643,7 @@ def timeallocation(params, map_struct, tile_structs,previous_coverage_struct=Non
             if not params["treasuremap_token"]:
                 print("Must provide Treasure Map API Token.")
                 exit(0)
-            treasuremap_coverage = gwemopt.utils.get_treasuremap_pointings(params)
+            treasuremap_coverage = get_treasuremap_pointings(params)
         
             if previous_coverage_struct and treasuremap_coverage["data"]:
                 previous_coverage_struct["data"] = np.append(previous_coverage_struct["data"],treasuremap_coverage["data"],axis=0)

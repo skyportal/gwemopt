@@ -29,23 +29,14 @@ import warnings
 
 import numpy as np
 
-import gwemopt.catalog
-import gwemopt.coverage
-import gwemopt.efficiency
-import gwemopt.footprint
-import gwemopt.gracedb
-import gwemopt.lightcurve
-import gwemopt.mapsplit
-import gwemopt.moc
-import gwemopt.plotting
-import gwemopt.rankedTilesGenerator
+from gwemopt.footprint import get_skymap
+from gwemopt.gracedb import get_event
 import gwemopt.segments
-import gwemopt.tiles
-import gwemopt.utils
-import gwemopt.waw
+import gwemopt.coverage
+import gwemopt.plotting
 from gwemopt.params import params_struct
 from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR, DEFAULT_CONFIG_DIR, \
-    DEFAULT_TILING_DIR, DEFAULT_LIGHTCURVE_DIR, TESSELATION_DIR, test_skymap
+    DEFAULT_TILING_DIR, DEFAULT_LIGHTCURVE_DIR, test_skymap
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -279,9 +270,9 @@ if len(params["filters"]) != len(params["exposuretimes"]):
     exit(0)
 
 if opts.doEvent:
-    params["skymap"] = gwemopt.gracedb.get_event(params)
+    params["skymap"] = get_event(params)
 elif opts.doFootprint:
-    params["skymap"] = gwemopt.footprint.get_skymap(params)
+    params["skymap"] = get_skymap(params)
 elif opts.doSkymap:
     pass
 else:
@@ -293,9 +284,9 @@ params = gwemopt.segments.get_telescope_segments(params)
 print("Loading skymap...")
 # Function to read maps
 if opts.do3D:
-    map_struct = gwemopt.utils.read_skymap(params, is3D=True)
+    params, map_struct = gwemopt.utils.read_skymap(params, is3D=True)
 else:
-    map_struct = gwemopt.utils.read_skymap(params, is3D=False)
+    params, map_struct = gwemopt.utils.read_skymap(params, is3D=False)
 
 if opts.doCatalog:
     print("Generating catalog...")

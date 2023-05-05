@@ -4,7 +4,7 @@ import glob
 from astropy import table
 from astropy import time
 import ephem
-import gwemopt.utils
+import gwemopt.utils.utils
 import gwemopt.moc
 import gwemopt.gracedb
 import gwemopt.rankedTilesGenerator
@@ -49,7 +49,7 @@ def params_struct(skymap, gpstime, filt=['r'],
         telescope = config_file.split("/")[-1].replace(".config", "")
         if not telescope == tele: continue
         params["config"][telescope] =\
-            gwemopt.utils.readParamsFromFile(config_file)
+            gwemopt.utils.utils.readParamsFromFile(config_file)
         params["config"][telescope]["telescope"] = telescope
         if "tesselationFile" in params["config"][telescope]:
             params["config"][telescope]["tesselationFile"] = TESSELATION_DIR.joinpath(params["config"][telescope]["tesselationFile"])
@@ -195,8 +195,8 @@ def gen_structs(params):
 
     print('Loading skymap')
     # Function to read maps
-    map_struct = gwemopt.utils.read_skymap(params, is3D=params["do3D"],
-                                           map_struct=params['map_struct'])
+    map_struct = gwemopt.utils.utils.read_skymap(params, is3D=params["do3D"],
+                                                 map_struct=params['map_struct'])
 
     catalog_struct = None
 

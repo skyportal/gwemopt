@@ -1,4 +1,3 @@
-import time
 import copy
 
 from mocpy import MOC
@@ -7,9 +6,7 @@ from joblib import Parallel, delayed
 import healpy as hp
 import numpy as np
 
-import shapely.geometry
-
-import gwemopt.utils
+from gwemopt.utils.pixels import getSquarePixels, getCirclePixels
 import gwemopt.tiles
 import gwemopt.ztf_tiling
 import gwemopt.decam_tiling
@@ -123,9 +120,9 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
         rotation=None
  
     if config_struct["FOV_type"] == "square": 
-        ipix, radecs, patch, area = gwemopt.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, rotation=rotation)
+        ipix, radecs, patch, area = getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, rotation=rotation)
     elif config_struct["FOV_type"] == "circle":
-        ipix, radecs, patch, area = gwemopt.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, rotation=rotation)
+        ipix, radecs, patch, area = getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, rotation=rotation)
 
     if params["doChipGaps"]:
         if telescope == "ZTF":
