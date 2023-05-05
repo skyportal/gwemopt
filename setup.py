@@ -102,6 +102,11 @@ setup(
     cmdclass=CMDCLASS,
     install_requires=install_requires,
 
+    package_data={
+        'gwemopt': [
+            'data/*/*'
+        ]},
+
     # classifiers
     classifiers=[
         'Development Status :: 4 - Beta',

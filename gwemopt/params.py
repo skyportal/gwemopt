@@ -20,9 +20,6 @@ def params_struct(opts):
 
     params["config"] = {}
     for telescope in telescopes:
-
-        print(telescope)
-
         config_file = DEFAULT_CONFIG_DIR.joinpath(telescope + ".config")
         params["config"][telescope] = gwemopt.utils.readParamsFromFile(config_file)
         params["config"][telescope]["telescope"] = telescope
