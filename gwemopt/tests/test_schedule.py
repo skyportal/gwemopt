@@ -195,11 +195,7 @@ def gen_structs(params):
 
     print('Loading skymap')
     # Function to read maps
-<<<<<<< HEAD
     params, map_struct = read_skymap(params, is3D=params["do3D"], map_struct=params['map_struct'])
-=======
-    map_struct = read_skymap(params, is3D=params["do3D"], map_struct=params['map_struct'])
->>>>>>> 7a07e6b (Update test)
 
     catalog_struct = None
 
