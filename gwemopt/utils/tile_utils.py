@@ -4,7 +4,6 @@ import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
-from gwemopt.moc import Fov2Moc
 from astropy.time import Time
 import ligo.segments as segments
 from gwemopt.tiles import absmag_tiles_struct, powerlaw_tiles_struct
@@ -583,7 +582,7 @@ def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
         tile_struct = powerlaw_tiles_struct(
             params, config_struct, telescope, map_struct, moc_struct
         )
-    tile_struct = get_segments_tiles(
+    tile_struct = gwemopt.segments.get_segments_tiles(
         params, config_struct, tile_struct
     )
 
