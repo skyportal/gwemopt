@@ -1,13 +1,11 @@
 
-import os, sys
+import os
 import copy
 
 import numpy as np
 import healpy as hp
 
 from scipy.stats import norm
-
-from astropy.time import Time
 
 from shapely.geometry import MultiPoint
 
@@ -17,7 +15,8 @@ import gwemopt.samplers, gwemopt.segments
 import gwemopt.quadrants
 import gwemopt.moc
 
-from gwemopt.segments import angular_distance
+from gwemopt.utils.rotate import angular_distance
+
 
 def get_rectangle(ras, decs, ra_size, dec_size):
 
@@ -45,6 +44,7 @@ def get_rectangle(ras, decs, ra_size, dec_size):
         height = maxy - miny
 
     return np.mod((minx+maxx)/2.0, 360.0), (miny+maxy)/2.0    
+
 
 def galaxy(params, map_struct, catalog_struct):
     nside = params["nside"]
@@ -174,6 +174,7 @@ def galaxy(params, map_struct, catalog_struct):
 
     return tile_structs
 
+
 def greedy(params, map_struct):
 
     tile_structs = {}
@@ -187,6 +188,7 @@ def greedy(params, map_struct):
 
     return tile_structs
 
+
 def hierarchical(params, map_struct):
 
     tile_structs = {}
@@ -199,6 +201,7 @@ def hierarchical(params, map_struct):
         tile_structs[telescope] = tile_struct
 
     return tile_structs
+
 
 def absmag_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
@@ -428,7 +431,7 @@ def powerlaw_tiles_struct(params, config_struct, telescope,
                     tile_struct[key]["nexposures"] = len(params["exposuretimes"])
                     tile_struct[key]["filt"] = params["filters"]
     else:
-        ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
+        ranked_tile_times = gwemopt.utils.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
 
         keys = tile_struct.keys()
 
@@ -456,6 +459,7 @@ def powerlaw_tiles_struct(params, config_struct, telescope,
             
     return tile_struct
 
+
 def moc(params, map_struct, moc_structs, doSegments=True):
 
     tile_structs = {}
@@ -475,6 +479,7 @@ def moc(params, map_struct, moc_structs, doSegments=True):
 
     return tile_structs
 
+
 def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
     tot_obs_time = config_struct["tot_obs_time"]
@@ -485,7 +490,7 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
         prob = map_struct["prob"]
 
     ranked_tile_probs = compute_tiles_map(params, tile_struct, prob, func='np.sum(x)', ipix_keep=map_struct["ipix_keep"])
-    ranked_tile_times = gwemopt.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
+    ranked_tile_times = gwemopt.utils.utils.integrationTime(tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"])
 
     lim_mag = config_struct["magnitude"]
     lim_time = config_struct["exposuretime"]

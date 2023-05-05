@@ -1,5 +1,5 @@
 
-import os, sys
+import os
 import numpy as np
 import healpy as hp
 from astropy.time import Time
@@ -11,11 +11,9 @@ import matplotlib
 matplotlib.use('Agg')
 matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
-import matplotlib.pyplot as plt
 
 from ligo.skymap import distance
 
-import gwemopt.utils
 
 def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct,
                        do3D=False):

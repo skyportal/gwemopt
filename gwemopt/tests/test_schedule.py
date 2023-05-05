@@ -4,7 +4,6 @@ import glob
 from astropy import table
 from astropy import time
 import ephem
-import gwemopt.utils
 import gwemopt.moc
 import gwemopt.gracedb
 import gwemopt.rankedTilesGenerator
@@ -21,6 +20,7 @@ from pathlib import Path
 from gwemopt.read_output import read_schedule
 import pandas as pd
 import tempfile
+from gwemopt.utils import readParamsFromFile, read_skymap, params_checker
 from gwemopt.paths import test_skymap, DEFAULT_CONFIG_DIR, DEFAULT_TILING_DIR, REFS_DIR, TESSELATION_DIR
 
 np.random.seed(42)
@@ -49,7 +49,7 @@ def params_struct(skymap, gpstime, filt=['r'],
         telescope = config_file.split("/")[-1].replace(".config", "")
         if not telescope == tele: continue
         params["config"][telescope] =\
-            gwemopt.utils.readParamsFromFile(config_file)
+            readParamsFromFile(config_file)
         params["config"][telescope]["telescope"] = telescope
         if "tesselationFile" in params["config"][telescope]:
             params["config"][telescope]["tesselationFile"] = TESSELATION_DIR.joinpath(params["config"][telescope]["tesselationFile"])
@@ -148,7 +148,7 @@ def params_struct(skymap, gpstime, filt=['r'],
     params["doMinimalTiling"] = False
     params["doOverlappingScheduling"] = False
 
-    params = gwemopt.utils.params_checker(params)
+    params = params_checker(params)
 
     if params["doEvent"]:
         params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)
@@ -195,8 +195,7 @@ def gen_structs(params):
 
     print('Loading skymap')
     # Function to read maps
-    map_struct = gwemopt.utils.read_skymap(params, is3D=params["do3D"],
-                                           map_struct=params['map_struct'])
+    params, map_struct = read_skymap(params, is3D=params["do3D"], map_struct=params['map_struct'])
 
     catalog_struct = None
 

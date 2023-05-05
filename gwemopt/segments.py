@@ -1,24 +1,23 @@
-
-import os, sys
 import numpy as np
-import healpy as hp
 import copy
 
 import astropy.coordinates
-from astropy.time import Time, TimeDelta
+from astropy.time import Time
 import astropy.units as u
 from joblib import Parallel, delayed
 import ephem
 
 import ligo.segments as segments
-import gwemopt.utils
+from gwemopt.utils.misc import get_exposures
+from gwemopt.utils.rotate import angular_distance
+
 
 def get_telescope_segments(params):
 
     for telescope in params["telescopes"]:
 
         params["config"][telescope]["segmentlist"] = get_segments(params, params["config"][telescope])
-        params["config"][telescope]["exposurelist"] = gwemopt.utils.get_exposures(params, params["config"][telescope], params["config"][telescope]["segmentlist"])
+        params["config"][telescope]["exposurelist"] = get_exposures(params, params["config"][telescope], params["config"][telescope]["segmentlist"])
         if len(params["config"][telescope]["exposurelist"]) == 0:
             params["config"][telescope]["n_windows"] = 0
             params["config"][telescope]["tot_obs_time"] = 0.0
@@ -30,6 +29,7 @@ def get_telescope_segments(params):
         params["config"][telescope]["tot_obs_time"] = tot_obs_time
 
     return params
+
 
 def get_moon_segments(config_struct,segmentlist,observer,fxdbdy,radec):
 
@@ -87,6 +87,7 @@ def get_moon_segments(config_struct,segmentlist,observer,fxdbdy,radec):
     moonsegmentlist.coalesce()
 
     return moonsegmentlist
+
 
 def get_skybrightness(config_struct,segmentlist,observer,fxdbdy,radec):
 
@@ -207,6 +208,7 @@ def get_skybrightness(config_struct,segmentlist,observer,fxdbdy,radec):
     #print("Keeping %.2f %% of data"%(100.0*np.sum(np.diff(moonsegmentlist))/np.sum(np.diff(segmentlist))))
 
     return moonsegmentlist
+
 
 def get_ha_segments(config_struct,segmentlist,observer,fxdbdy,radec):
 
@@ -429,12 +431,3 @@ def get_segments_tiles(params, config_struct, tile_struct):
                 tile_struct[key]["segmentlist"] = tilesegmentlist
 
     return tile_struct
-
-def angular_distance(ra1, dec1, ra2, dec2):
-
-    delt_lon = (ra1 - ra2)*np.pi/180.
-    delt_lat = (dec1 - dec2)*np.pi/180.
-    dist = 2.0*np.arcsin( np.sqrt( np.sin(delt_lat/2.0)**2 + \
-         np.cos(dec1*np.pi/180.)*np.cos(dec2*np.pi/180.)*np.sin(delt_lon/2.0)**2 ) )  
-
-    return dist/np.pi*180.

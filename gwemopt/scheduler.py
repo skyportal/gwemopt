@@ -1,20 +1,20 @@
 
-import os, sys, copy
+import os, copy
 import numpy as np
-import healpy as hp
 
 from VOEventLib.VOEvent import Table, Field, What
-from VOEventLib.Vutil import utilityTable, stringVOEvent, VOEventExportClass
+from VOEventLib.Vutil import utilityTable, stringVOEvent
 
 import astropy.coordinates
-from astropy.time import Time, TimeDelta
+from astropy.time import Time
 import astropy.units as u
 import ligo.segments as segments
-import gwemopt.utils
-import gwemopt.rankedTilesGenerator
-import gwemopt.coverage
-from gwemopt.segments import angular_distance
+from gwemopt.utils.rotate import angular_distance
 from munkres import Munkres, make_cost_matrix
+
+from gwemopt.utils.tile_utils import balance_tiles, optimize_max_tiles, schedule_alternating
+import gwemopt.tiles
+
 
 def get_altaz_tiles(ras, decs, observatory, obstime):
 
@@ -785,75 +785,6 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
 
     fid.close()
 
-def schedule_alternating(params, config_struct, telescope, map_struct, tile_struct, previous_coverage_struct=None):
-
-    if "filt_change_time" in config_struct.keys(): filt_change_time = config_struct["filt_change_time"]
-    else: filt_change_time = 0
-    if (params["doUpdateScheduler"] or params["doTreasureMap"]) and previous_coverage_struct:
-        tile_struct_hold = gwemopt.utils.check_overlapping_tiles(params,tile_struct,previous_coverage_struct) #maps field ids to tile_struct
-
-    filters, exposuretimes = params["filters"], params["exposuretimes"]
-    coverage_structs = []
-    maxidx = 0
-
-    for i in range(len(exposuretimes)):
-        params["filters"] = [filters[i]]
-        params["exposuretimes"] = [exposuretimes[i]]
-        config_struct["exposurelist"] = segments.segmentlist(config_struct["exposurelist"][maxidx:])
-        total_nexps  = len(config_struct["exposurelist"])
-
-        # if the duration of a single block is less than 30 min, shift by additional time to add up to 30 min
-        if i > 0:
-            start = Time(coverage_struct["data"][0][2], format='mjd')
-            end =  Time(coverage_struct["data"][-1][2], format='mjd')
-
-            delta = end - start
-            delta.format = 'sec'
-            duration = delta.value + exposuretimes[i] + filt_change_time
-            extra_time = (30 * 60) - duration
-            if extra_time > 0: extra_time = extra_time + filt_change_time
-            elif extra_time <= 0: extra_time = filt_change_time
-            config_struct["exposurelist"] = config_struct["exposurelist"].shift(extra_time / 86400.)
-        
-        if not params["tilesType"] == "galaxy":
-            if params["timeallocationType"] == "absmag":
-                tile_struct = gwemopt.tiles.absmag_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
-            else:
-                tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct, tile_struct)
-
-        if (params["doUpdateScheduler"] or params["doTreasureMap"]) and previous_coverage_struct: #erases tiles from a previous round
-            tile_struct = gwemopt.coverage.update_observed_tiles(params,tile_struct_hold,previous_coverage_struct)
-        
-        # set unbalanced fields to 0
-        if params["doBalanceExposure"] and params["unbalanced_tiles"]:
-            for key in params["unbalanced_tiles"]:
-                tile_struct[key]['prob'] = 0.0
-
-        if coverage_structs and params["mindiff"]:
-            if len(coverage_structs) > 1:
-                tile_struct = gwemopt.utils.append_tile_epochs(tile_struct,gwemopt.coverage.combine_coverage_structs(coverage_structs))
-            elif len(coverage_structs) == 1:
-                tile_struct = gwemopt.utils.append_tile_epochs(tile_struct,coverage_structs[0])
-
-            
-        coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
-        if params["doMaxTiles"]:
-            tile_struct,doReschedule = gwemopt.utils.slice_number_tiles(params, telescope, tile_struct, coverage_struct)
-            
-            if doReschedule:
-                coverage_struct = gwemopt.scheduler.scheduler(params, config_struct, tile_struct)
-
-        if len(coverage_struct["exposureused"]) > 0:
-            maxidx = int(coverage_struct["exposureused"][-1])
-            deltaL = total_nexps - maxidx
-        elif len(coverage_struct["exposureused"]) == 0: deltaL = 0
-
-        coverage_structs.append(coverage_struct)
-
-        if deltaL <= 1: break
-    params["filters"], params["exposuretimes"] = filters, exposuretimes
-
-    return gwemopt.coverage.combine_coverage_structs(coverage_structs),tile_struct
 
 def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescope,previous_coverage_struct):
     
@@ -861,7 +792,7 @@ def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescop
                                                  config_struct["latitude"],
                                                  config_struct["elevation"])
 
-    raslices = gwemopt.utils.auto_rasplit(params,map_struct_hold,params["nside_down"])
+    raslices = gwemopt.utils.utils.auto_rasplit(params, map_struct_hold, params["nside_down"])
 
     maxidx = 0
     coverage_structs = []
@@ -933,18 +864,18 @@ def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescop
             tile_struct = gwemopt.tiles.powerlaw_tiles_struct(params, config_struct, telescope, map_struct_slice, tile_struct)
 
         config_struct_hold = copy.copy(config_struct)
-        coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params, config_struct_hold,
+        coverage_struct,tile_struct = schedule_alternating(params, config_struct_hold,
                                                                              telescope,map_struct_slice,
                                                                              tile_struct,previous_coverage_struct)
         if len(coverage_struct["ipix"]) == 0: continue
-        optimized_max,coverage_struct,tile_struct = gwemopt.utils.optimize_max_tiles(params,tile_struct,coverage_struct,config_struct,telescope,map_struct_slice)
+        optimized_max,coverage_struct,tile_struct = optimize_max_tiles(params, tile_struct, coverage_struct, config_struct, telescope, map_struct_slice)
         params["max_nb_tiles"] = np.array([optimized_max],dtype=np.float)
         balanced_fields = 0
-        coverage_struct,tile_struct = gwemopt.scheduler.schedule_alternating(params, config_struct, telescope,
+        coverage_struct,tile_struct = schedule_alternating(params, config_struct, telescope,
                                                                              map_struct_slice, tile_struct,
                                                                              previous_coverage_struct)
 
-        doReschedule, balanced_fields = gwemopt.utils.balance_tiles(params, tile_struct, coverage_struct)
+        doReschedule, balanced_fields = balance_tiles(params, tile_struct, coverage_struct)
         config_struct_hold = copy.copy(config_struct)
 
         if balanced_fields == 0:
@@ -958,7 +889,7 @@ def schedule_ra_splits(params,config_struct,map_struct_hold,tile_struct,telescop
         if len(coverage_struct["exposureused"]) > 0:
             maxidx = int(coverage_struct["exposureused"][-1])
 
-        coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params, coverage_struct)
+        coverage_struct = gwemopt.utils.utils.erase_unbalanced_tiles(params, coverage_struct)
 
         #limit to max number of filter sets
         if len(coverage_structs)<params["max_filter_sets"]:

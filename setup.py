@@ -68,6 +68,7 @@ install_requires = [
     'ligo.skymap',
     "lxml",
     'h5py',
+    "healpy",
     'munkres',
     'pandas',
     'shapely',

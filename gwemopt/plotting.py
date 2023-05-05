@@ -1,10 +1,8 @@
 
-import os, sys, copy
+import os, copy
 import numpy as np
 import healpy as hp
 from astropy.time import Time
-
-from scipy.stats import norm
 
 import matplotlib
 #matplotlib.rc('text', usetex=True)
@@ -14,10 +12,8 @@ matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 
-from astropy.coordinates import get_sun, get_moon, SkyCoord
-from gwemopt.segments import angular_distance
-import gwemopt.coverage
-import gwemopt.utils
+from astropy.coordinates import get_sun, get_moon
+from gwemopt.utils.rotate import angular_distance
 
 try:
     import ligo.skymap.plot
