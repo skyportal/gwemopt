@@ -16,4 +16,7 @@ REFS_DIR = DATA_DIR.joinpath("refs")
 SKYMAP_DIR = DEFAULT_BASE_OUTPUT_DIR.joinpath("skymaps")
 SKYMAP_DIR.mkdir(exist_ok=True, parents=True)
 
+CATALOG_DIR = DATA_DIR.joinpath("catalogs")
+CATALOG_DIR.mkdir(exist_ok=True, parents=True)
+
 test_skymap = DATA_DIR.joinpath("skymaps/S190425z_2_LALInference.fits.gz")
