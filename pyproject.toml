@@ -1,0 +1,116 @@
+[build-system]
+requires = ["setuptools>=45", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gwemopt"
+authors = [
+    {name = "Michael Coughlin", email = "michael.coughlin@ligo.org"},
+]
+description = "A python package for GW-EM Followup Optimization"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "GPLv3"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Intended Audience :: Science/Research',
+    'Intended Audience :: End Users/Desktop',
+    'Intended Audience :: Developers',
+    'Natural Language :: English',
+    'Topic :: Scientific/Engineering',
+    'Topic :: Scientific/Engineering :: Astronomy',
+    'Topic :: Scientific/Engineering :: Physics',
+    'Operating System :: POSIX',
+    'Operating System :: Unix',
+    'Operating System :: MacOS',
+    'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+]
+dependencies = [
+    'numpy>=1.7.1',
+    'scipy>=1.2.1',
+    'matplotlib>=1.2.0',
+    'astropy>=1.1.1',
+    'astropy-healpix',
+    'python-dateutil',
+    'mocpy>=0.12.2',
+    'astroquery',
+    'astroplan',
+    'ephem',
+    'pyyaml',
+    'VOEventLib',
+    'joblib',
+    'ligo-segments',
+    'ligo.skymap',
+    "lxml",
+    'h5py',
+    "healpy",
+    'munkres',
+    'pandas',
+    'shapely',
+    'pytest>=3.1',
+    'pytest-runner',
+    'freezegun',
+    'sqlparse',
+    'bs4',
+    "coveralls",
+    "black",
+    "isort"
+]
+dynamic = ["version"]
+
+[tool.setuptools_scm]
+write_to = "gwemopt/_version.py"
+
+[tool.setuptools]
+packages = ["gwemopt"]
+
+[tool.setuptools.package-data]
+gwemopt = ['data/*/*']
+
+[tool.coverage.run]
+source = ["gwemopt"]
+omit = [
+    "gwemopt/tests/*",
+    "gwemopt/__main__.py",
+]
+
+[tool.coverage.report]
+# Regexes for lines to exclude from consideration
+exclude_lines = [
+    # Have to re-enable the standard pragma
+    "pragma: no cover",
+    # Don't complain about missing debug-only code:
+    "def __repr__",
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "raise KeyError",
+    "except KeyError",
+    "raise ValueError",
+    "except JSONDecodeError:",
+    "raise requests.exceptions.RequestException",
+    # Don't complain if non-runnable code isn't run:
+    "if 0:",
+    "if False:",
+    'if __name__ == "__main__":',
+    "err =",
+    "logger.error",
+    "raise"
+    ]
+ignore_errors = true
+
+[tool.isort]
+profile = "black"
+
+[tool.versioneer]
+VCS = "git"
+style = "pep440"
+versionfile_source = "gwemopt/_version.py"
+versionfile_build = "gwemopt/_version.py"
+tag_prefix = "v"
+parentdir_prefix = "gwemopt-"
+
+[tool.pytest.ini_options]
+addopts = "--verbose -r s"
