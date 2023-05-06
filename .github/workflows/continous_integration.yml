@@ -46,7 +46,7 @@ jobs:
           pip install -e .
 
       - name: Run tests
-        run: coverage run -m pytest -v
+        run: coverage run -m pytest -v -s
 
       - name: Run Coveralls
         if: ${{ success() }}
