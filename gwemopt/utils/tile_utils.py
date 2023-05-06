@@ -8,6 +8,7 @@ from astropy.time import Time
 import ligo.segments as segments
 from gwemopt.tiles import absmag_tiles_struct, powerlaw_tiles_struct
 import gwemopt
+from gwemopt.segments import get_segments_tiles
 
 
 def slice_map_tiles(params, map_struct, coverage_struct):

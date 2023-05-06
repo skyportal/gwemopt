@@ -35,6 +35,7 @@ import gwemopt.segments
 import gwemopt.coverage
 import gwemopt.plotting
 from gwemopt.params import params_struct
+from gwemopt.utils import read_skymap
 from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR, DEFAULT_CONFIG_DIR, \
     DEFAULT_TILING_DIR, DEFAULT_LIGHTCURVE_DIR, test_skymap
 
@@ -67,9 +68,10 @@ def parse_commandline():
     )
     parser.add_option("-s", "--skymap", help="GW skymap.", default=test_skymap)
     parser.add_option(
-        "-g", "--gpstime", help="GPS time.", default=1167559936.0, type=float
+        "-g", "--gpstime", help="GPS time.", default=None, type=float
     )
     parser.add_option("--do3D", action="store_true", default=False)
+    parser.add_option("--do2D", action="store_true", default=False)
 
     parser.add_option(
         "-o", "--outputDir", help="output directory", default=DEFAULT_BASE_OUTPUT_DIR
@@ -269,6 +271,16 @@ if len(params["filters"]) != len(params["exposuretimes"]):
     print("The number of filters specified must match the number of exposure times.")
     exit(0)
 
+# Can force 3D, or 2D, or just work out from the map
+if opts.do3D and opts.do2D:
+    raise ValueError("Cannot do both 2D and 3D skymaps.")
+elif opts.do3D:
+    do_3d = True
+elif opts.do2D:
+    do_3d = False
+else:
+    do_3d = None
+
 if opts.doEvent:
     params["skymap"] = get_event(params)
 elif opts.doFootprint:
@@ -282,11 +294,9 @@ else:
 params = gwemopt.segments.get_telescope_segments(params)
 
 print("Loading skymap...")
+
 # Function to read maps
-if opts.do3D:
-    params, map_struct = gwemopt.utils.read_skymap(params, is3D=True)
-else:
-    params, map_struct = gwemopt.utils.read_skymap(params, is3D=False)
+params, map_struct = read_skymap(params, do_3d=do_3d)
 
 if opts.doCatalog:
     print("Generating catalog...")
