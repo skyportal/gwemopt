@@ -8,9 +8,39 @@ from gwemopt.utils.rotate import rotate_map
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from scipy import stats
+from astropy.io import fits
+from astropy.time import Time
 
 
-def read_skymap(params, is3D=False, map_struct=None):
+def read_skymap(params, do_3d: bool | None = None, map_struct=None):
+
+    # Let's just figure out what's in the skymap first
+
+    skymap_path = params["skymap"]
+    is_3d = False
+    t_obs = Time.now()
+
+    with fits.open(skymap_path) as hdul:
+        for x in hdul:
+            if "DATE-OBS" in x.header:
+                t_obs = Time(x.header["DATE-OBS"], format="isot")
+
+            elif "EVENTMJD" in x.header:
+                t_obs_mjd = x.header["EVENTMJD"]
+                t_obs = Time(t_obs_mjd, format="mjd")
+
+            if ("DISTMEAN" in x.header) | ("DISTSTD" in x.header):
+                is_3d = True
+
+    # Set GPS time from skymap, if not specified. Defaults to today
+    params["eventtime"] = t_obs
+    if params["gpstime"] is None:
+        params["gpstime"] = t_obs.gps
+
+    # "Do 3D" based on map, if not specified
+    if do_3d is None:
+        do_3d = is_3d
+
     header = []
     if map_struct is None:
         map_struct = {}
@@ -40,11 +70,11 @@ def read_skymap(params, is3D=False, map_struct=None):
                     map_struct["distmu"] = np.array(distmu)
                     map_struct["distsigma"] = np.array(distsigma)
                     map_struct["distnorm"] = np.array(distnorm)
-                    is3D = True
+                    do_3d = True
         else:
             filename = params["skymap"]
 
-            if is3D:
+            if do_3d:
                 try:
                     healpix_data, header = hp.read_map(
                         filename, field=(0, 1, 2, 3), verbose=False, h=True
@@ -87,10 +117,10 @@ def read_skymap(params, is3D=False, map_struct=None):
     print("natural_nside =", natural_nside)
     print("nside =", nside)
 
-    if not is3D:
+    if not do_3d:
         map_struct["prob"] = hp.ud_grade(map_struct["prob"], nside, power=-2)
 
-    if is3D:
+    if do_3d:
         if natural_nside != nside:
             map_struct["prob"] = hp.pixelfunc.ud_grade(
                 map_struct["prob"], nside, power=-2
