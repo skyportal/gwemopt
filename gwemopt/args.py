@@ -4,15 +4,17 @@ Module for parsing command line arguments
 import argparse
 
 from gwemopt.paths import (
+    CATALOG_DIR,
     DEFAULT_BASE_OUTPUT_DIR,
     DEFAULT_CONFIG_DIR,
     DEFAULT_LIGHTCURVE_DIR,
     DEFAULT_TILING_DIR,
+    SKYMAP_DIR,
 )
 
 
 def parse_args(args):
-    parser = argparse.ArgumentParser(args)
+    parser = argparse.ArgumentParser()
 
     parser.add_argument(
         "-c",
@@ -60,7 +62,7 @@ def parse_args(args):
     parser.add_argument("--doCatalog", action="store_true", default=False)
     parser.add_argument("--doUseCatalog", action="store_true", default=False)
     parser.add_argument("--doCatalogDatabase", action="store_true", default=False)
-    parser.add_argument("--catalogDir", help="catalog directory", default="../catalogs")
+    parser.add_argument("--catalogDir", help="catalog directory", default=CATALOG_DIR)
     parser.add_argument("--galaxy_catalog", help="Source catalog", default="GLADE")
     parser.add_argument(
         "--galaxy_grade",
@@ -199,4 +201,4 @@ def parse_args(args):
         help="Run verbosely. (Default: False)",
     )
 
-    return parser.parse_args()
+    return parser.parse_args(args=args)

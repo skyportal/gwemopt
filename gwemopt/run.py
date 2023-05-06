@@ -1,5 +1,7 @@
 import os
 
+import numpy as np
+
 import gwemopt.coverage
 import gwemopt.plotting
 import gwemopt.segments
