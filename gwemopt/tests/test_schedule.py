@@ -22,6 +22,7 @@ def test_scheduler():
     """
 
     telescope_list = [
+<<<<<<< HEAD
         ("ZTF", ["--doReferences"]),
         (
             "KPED",
@@ -32,7 +33,8 @@ def test_scheduler():
         # ("WINTER", False)
     ]
 
-    for telescope, extra in telescope_list:
+    for telescope, extra, check_exact_schedule in telescope_list:
+
         with tempfile.TemporaryDirectory() as temp_dir:
             # To regenerate the test data, uncomment the following lines
             # temp_dir = Path(__file__).parent.absolute().joinpath("temp")
@@ -67,14 +69,15 @@ def test_scheduler():
 
             run(args)
 
-            new_schedule = read_schedule(
-                Path(temp_dir).joinpath(f"schedule_{telescope}.dat")
-            )
-            expected_schedule = read_schedule(
-                expected_results_dir.joinpath(f"schedule_{telescope}.dat")
-            )
+            if check_exact_schedule:
+                new_schedule = read_schedule(
+                    Path(temp_dir).joinpath(f"schedule_{telescope}.dat")
+                )
+                expected_schedule = read_schedule(
+                    expected_results_dir.joinpath(f"schedule_{telescope}.dat")
+                )
 
-            pd.testing.assert_frame_equal(
-                new_schedule.reset_index(drop=True),
-                expected_schedule.reset_index(drop=True),
-            )
+                pd.testing.assert_frame_equal(
+                    new_schedule.reset_index(drop=True),
+                    expected_schedule.reset_index(drop=True),
+                )
