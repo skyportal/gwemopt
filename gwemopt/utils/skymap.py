@@ -19,8 +19,6 @@ def read_skymap(params, do_3d=None, map_struct=None):
     is_3d = False
     t_obs = Time.now()
 
-    print(skymap_path)
-
     with fits.open(skymap_path) as hdul:
         for x in hdul:
             if "DATE-OBS" in x.header:
