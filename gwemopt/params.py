@@ -1,11 +1,13 @@
-import numpy as np
-import gwemopt
 import os
+
+import astroplan
 import astropy
+import numpy as np
 from astropy import table, time
 from astropy import units as u
-import astroplan
-from gwemopt.paths import DEFAULT_CONFIG_DIR, TESSELATION_DIR, REFS_DIR
+
+import gwemopt
+from gwemopt.paths import DEFAULT_CONFIG_DIR, REFS_DIR, TESSELATION_DIR
 
 
 def params_struct(opts):
@@ -52,7 +54,6 @@ def params_struct(opts):
             if opts.tilesType == "galaxy":
                 params["config"][telescope]["tesselation"] = np.empty((3,))
             else:
-
                 params["config"][telescope]["tesselation"] = np.loadtxt(
                     tessfile, usecols=(0, 1, 2), comments="%"
                 )

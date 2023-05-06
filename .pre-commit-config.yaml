@@ -1,0 +1,22 @@
+default_language_version:
+    python: python3.11
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.3.0
+    hooks:
+    -   id: check-yaml
+    -   id: end-of-file-fixer
+-   repo: local
+    hooks:
+    -   id: black
+        name: black
+        entry: black
+        language: system
+        types: [ python ]
+-   repo: local
+    hooks:
+      - id: isort
+        name: isort (python)
+        entry: isort
+        language: system
+        types: [ python ]

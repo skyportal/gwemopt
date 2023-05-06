@@ -1,44 +1,50 @@
-
+import copy
 import os
 import time
-import copy
-import numpy as np
+
 import healpy as hp
+import numpy as np
 
 import gwemopt.utils
 
-def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
 
+def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
     import pymultinest
 
     if params["doCalcTiles"]:
         hpx = map_struct["prob"]
-        i = np.flipud(np.argsort(hpx)) #sort pixels by descending probability, cumsum then return to original order
+        i = np.flipud(
+            np.argsort(hpx)
+        )  # sort pixels by descending probability, cumsum then return to original order
         sorted_credible_levels = np.cumsum(hpx[i])
         credible_levels = np.empty_like(sorted_credible_levels)
         credible_levels[i] = sorted_credible_levels
 
         if config_struct["FOV_type"] == "circle":
-            FOV = np.pi * config_struct["FOV"]**2
+            FOV = np.pi * config_struct["FOV"] ** 2
         else:
-            FOV = config_struct["FOV"]**2
+            FOV = config_struct["FOV"] ** 2
 
-        sky_area = np.sum(credible_levels <= params["Ntiles_cr"])*map_struct["pixarea_deg2"] #calculate skyarea
-        Ntiles = int(np.ceil(sky_area/FOV))
+        sky_area = (
+            np.sum(credible_levels <= params["Ntiles_cr"]) * map_struct["pixarea_deg2"]
+        )  # calculate skyarea
+        Ntiles = int(np.ceil(sky_area / FOV))
     else:
         Ntiles = params["Ntiles"]
 
     map_struct_copy = copy.deepcopy(map_struct)
 
     def myprior(cube, ndim, nparams):
-        cube[0] = cube[0]*360.0
-        cube[1] = cube[1]*180.0 - 90.0
+        cube[0] = cube[0] * 360.0
+        cube[1] = cube[1] * 180.0 - 90.0
 
     def myloglike_square(cube, ndim, nparams):
         ra = cube[0]
         dec = cube[1]
 
-        ipix, radecs, patch, area = gwemopt.utils.utils.getSquarePixels(ra, dec, config_struct["FOV"], nside)
+        ipix, radecs, patch, area = gwemopt.utils.utils.getSquarePixels(
+            ra, dec, config_struct["FOV"], nside
+        )
 
         if len(ipix) == 0:
             prob = -np.inf
@@ -50,7 +56,7 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
         if prob == 0:
             prob = -np.inf
 
-        #if np.isfinite(prob):
+        # if np.isfinite(prob):
         #    print(ra, dec, prob)
 
         return prob
@@ -59,7 +65,9 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
         ra = cube[0]
         dec = cube[1]
 
-        ipix, radecs, patch, area = gwemopt.utils.utils.getCirclePixels(ra, dec, config_struct["FOV"], nside)
+        ipix, radecs, patch, area = gwemopt.utils.utils.getCirclePixels(
+            ra, dec, config_struct["FOV"], nside
+        )
 
         if len(ipix) == 0:
             prob = -np.inf
@@ -74,27 +82,52 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
 
         return prob
 
-    plotDir = os.path.join(params["outputDir"],"multinest")
+    plotDir = os.path.join(params["outputDir"], "multinest")
     if not os.path.isdir(plotDir):
         os.mkdir(plotDir)
 
     nside = params["nside"]
     tile_struct = {}
     for ii in range(Ntiles):
-
-        parameters = ["ra","dec"]
+        parameters = ["ra", "dec"]
         n_params = len(parameters)
         if config_struct["FOV_type"] == "square":
-             pymultinest.run(myloglike_square, myprior, n_params, importance_nested_sampling = False, resume = True, verbose = False, sampling_efficiency = 'parameter', n_live_points = 1000, outputfiles_basename='%s/2-'%plotDir, evidence_tolerance = 0.05, multimodal = False, seed = 1)
+            pymultinest.run(
+                myloglike_square,
+                myprior,
+                n_params,
+                importance_nested_sampling=False,
+                resume=True,
+                verbose=False,
+                sampling_efficiency="parameter",
+                n_live_points=1000,
+                outputfiles_basename="%s/2-" % plotDir,
+                evidence_tolerance=0.05,
+                multimodal=False,
+                seed=1,
+            )
         elif config_struct["FOV_type"] == "circle":
-             pymultinest.run(myloglike_circle, myprior, n_params, importance_nested_sampling = False, resume = True, verbose = False, sampling_efficiency = 'parameter', n_live_points = 1000, outputfiles_basename='%s/2-'%plotDir, evidence_tolerance = 0.5, multimodal = False, seed = 1)
+            pymultinest.run(
+                myloglike_circle,
+                myprior,
+                n_params,
+                importance_nested_sampling=False,
+                resume=True,
+                verbose=False,
+                sampling_efficiency="parameter",
+                n_live_points=1000,
+                outputfiles_basename="%s/2-" % plotDir,
+                evidence_tolerance=0.5,
+                multimodal=False,
+                seed=1,
+            )
 
-        multifile= os.path.join(plotDir,'2-post_equal_weights.dat')
-        lines = [line.rstrip('\n') for line in open(multifile)]
+        multifile = os.path.join(plotDir, "2-post_equal_weights.dat")
+        lines = [line.rstrip("\n") for line in open(multifile)]
         ra_pointing, dec_pointing = np.nan, np.nan
         loglikelihood = -np.inf
         for line in lines:
-            lineSplit = list(filter(None,line.split(" ")))
+            lineSplit = list(filter(None, line.split(" ")))
             try:
                 thisloglikelihood = float(lineSplit[2])
             except:
@@ -109,9 +142,13 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
         tile_struct[ii] = {}
 
         if config_struct["FOV_type"] == "square":
-            ipix, radecs, patch, area = gwemopt.utils.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8)
+            ipix, radecs, patch, area = gwemopt.utils.utils.getSquarePixels(
+                ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8
+            )
         elif config_struct["FOV_type"] == "circle":
-            ipix, radecs, patch, area = gwemopt.utils.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8)
+            ipix, radecs, patch, area = gwemopt.utils.utils.getCirclePixels(
+                ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8
+            )
 
         tile_struct[ii]["ra"] = ra_pointing
         tile_struct[ii]["dec"] = dec_pointing
@@ -121,12 +158,12 @@ def hierarchical_tiles_struct(params, config_struct, telescope, map_struct):
         tile_struct[ii]["area"] = area
 
         map_struct_copy["prob"][ipix] = -1.0
-        os.system("rm %s/*"%plotDir)
+        os.system("rm %s/*" % plotDir)
 
     return tile_struct
 
-def greedy_tiles_struct(params, config_struct, telescope, map_struct, Ntiles = 10):
 
+def greedy_tiles_struct(params, config_struct, telescope, map_struct, Ntiles=10):
     Ntiles = params["Ntiles"]
 
     map_struct_copy = copy.deepcopy(map_struct)
@@ -134,16 +171,17 @@ def greedy_tiles_struct(params, config_struct, telescope, map_struct, Ntiles = 1
     skymapData.append(map_struct_copy["ra"])
     skymapData.append(map_struct_copy["dec"])
     skymapData.append(map_struct_copy["prob"])
-    greedy_struct = PlaceTile(skymapData, config_struct, numtiles = Ntiles)
+    greedy_struct = PlaceTile(skymapData, config_struct, numtiles=Ntiles)
     tile_struct = greedy_struct.getSamples()
 
     return tile_struct
 
+
 def getRandomPos(ra, dec, nums=1):
-    '''
+    """
     Return one or more random ra and dec from the list of ras and decs supplied
     pattern of return array [RA, RA, RA, Dec, Dec, Dec] for nums=3
-    '''
+    """
     return np.hstack([np.random.choice(ra, nums), np.random.choice(dec, nums)])
 
 
@@ -156,17 +194,21 @@ class PlaceTile:
         self.config_struct = config_struct
         self.numtiles = numtiles
 
-    def lnprior(self, skyposition): ### Basic uniform prior across the sky
+    def lnprior(self, skyposition):  ### Basic uniform prior across the sky
         reshaped_skyposition = np.reshape(skyposition, (2, self.numtiles))
         ra_centers = reshaped_skyposition[0]
-        dec_centers= reshaped_skyposition[1]
+        dec_centers = reshaped_skyposition[1]
 
-        ignore = (ra_centers > 360.) | (ra_centers < 0.) | (dec_centers > 90.) | (dec_centers < -90.)
+        ignore = (
+            (ra_centers > 360.0)
+            | (ra_centers < 0.0)
+            | (dec_centers > 90.0)
+            | (dec_centers < -90.0)
+        )
         if np.sum(ignore):
             return -np.inf
         else:
             return 0
-
 
     def lnlikelihood(self, skyposition_cent):
         reshaped_skyposition = np.reshape(skyposition_cent, (2, self.numtiles))
@@ -177,21 +219,24 @@ class PlaceTile:
         nside = hp.npix2nside(npix)
 
         ra_centers = reshaped_skyposition[0]
-        dec_centers= reshaped_skyposition[1]
+        dec_centers = reshaped_skyposition[1]
         probabilitySum = 0.0
         for ii in range(self.numtiles):
             if config_struct["FOV_type"] == "square":
-                ipix, radecs, patch, area = gwemopt.utils.utils.getSquarePixels(ra_centers[ii], dec_centers[ii], config_struct["FOV"], nside)
+                ipix, radecs, patch, area = gwemopt.utils.utils.getSquarePixels(
+                    ra_centers[ii], dec_centers[ii], config_struct["FOV"], nside
+                )
             elif config_struct["FOV_type"] == "circle":
-                ipix, radecs, patch, area = gwemopt.utils.utils.getCirclePixels(ra_centers[ii], dec_centers[ii], config_struct["FOV"], nside)
+                ipix, radecs, patch, area = gwemopt.utils.utils.getCirclePixels(
+                    ra_centers[ii], dec_centers[ii], config_struct["FOV"], nside
+                )
 
             prob = np.sum(pVal[ipix])
             pVal[ipix] = 0.0
 
             probabilitySum += prob
 
-        return 4*np.log(probabilitySum)
-
+        return 4 * np.log(probabilitySum)
 
     def lnpost(self, skypos):
         lp = self.lnprior(skypos)
@@ -199,10 +244,7 @@ class PlaceTile:
             return -np.inf
         return lp + self.lnlikelihood(skypos)
 
-
-
     def getSamples(self):
-
         import emcee
 
         config_struct = self.config_struct
@@ -210,32 +252,35 @@ class PlaceTile:
         npix = len(pVal)
         nside = hp.npix2nside(npix)
 
-        ndim, nwalkers = 2*self.numtiles, 4*self.numtiles
+        ndim, nwalkers = 2 * self.numtiles, 4 * self.numtiles
         include = np.cumsum(self.pVal) < 0.9
-        #include[np.sum(include)] = True
+        # include[np.sum(include)] = True
         ra_included = self.ra_map[include]
         dec_included = self.dec_map[include]
         p0 = []
-        [p0.append(getRandomPos(self.ra_map, self.dec_map, nums=self.numtiles)) for _ in range(nwalkers)]
+        [
+            p0.append(getRandomPos(self.ra_map, self.dec_map, nums=self.numtiles))
+            for _ in range(nwalkers)
+        ]
 
         sampler = emcee.EnsembleSampler(nwalkers, ndim, self.lnpost)
         start = time.time()
         pos, prob, state = sampler.run_mcmc(p0, 100)
-        print('Burned in...')
-        print('Time taken to burn in = ' + str(time.time() - start))
+        print("Burned in...")
+        print("Time taken to burn in = " + str(time.time() - start))
         sampler.reset()
         start = time.time()
         result = sampler.run_mcmc(pos, 1000)
         end = time.time()
-        print('Acceptance fraction = ' + str(np.mean(sampler.acceptance_fraction[:])))
-        print('Time taken to finish the MCMC = ' + str(end - start))
+        print("Acceptance fraction = " + str(np.mean(sampler.acceptance_fraction[:])))
+        print("Time taken to finish the MCMC = " + str(end - start))
         tileCenters = sampler.flatchain
-        samples    = tileCenters.copy()
+        samples = tileCenters.copy()
 
         peak_ras, peak_decs = self.localizeTC(samples=samples)
 
         tile_struct = {}
-        #for ii in range(self.numtiles):
+        # for ii in range(self.numtiles):
         #    ra_pointing = samples[0,ii]
         #    dec_pointing = samples[0,ii+self.numtiles]
         for ii in range(len(peak_ras)):
@@ -245,9 +290,13 @@ class PlaceTile:
             tile_struct[ii] = {}
 
             if config_struct["FOV_type"] == "square":
-                ipix, radecs, patch, area = gwemopt.utils.utils.getSquarePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8)
+                ipix, radecs, patch, area = gwemopt.utils.utils.getSquarePixels(
+                    ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8
+                )
             elif config_struct["FOV_type"] == "circle":
-                ipix, radecs, patch, area = gwemopt.utils.utils.getCirclePixels(ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8)
+                ipix, radecs, patch, area = gwemopt.utils.utils.getCirclePixels(
+                    ra_pointing, dec_pointing, config_struct["FOV"], nside, alpha=0.8
+                )
 
             tile_struct[ii]["ra"] = ra_pointing
             tile_struct[ii]["dec"] = dec_pointing
@@ -255,9 +304,8 @@ class PlaceTile:
             tile_struct[ii]["corners"] = radecs
             tile_struct[ii]["patch"] = patch
             tile_struct[ii]["area"] = area
-        
-        return tile_struct
 
+        return tile_struct
 
     def optimizeBins(self, ra, dec, masked_points=np.array([])):
         config_struct = self.config_struct
@@ -273,20 +321,23 @@ class PlaceTile:
         probs_allChosenTiles = np.array([])
 
         for bins in bins_array:
-
             [hist, ra_bin, dec_bin] = np.histogram2d(ra, dec, bins)
-            ra_bin_cent = 0.5*(ra_bin[1:] + ra_bin[:-1])
-            dec_bin_cent = 0.5*(dec_bin[1:] + dec_bin[:-1])
-            max_pos =np.argmax(hist)
-            x = int(np.argmax(hist)/bins)
-            y = np.argmax(hist)%bins
+            ra_bin_cent = 0.5 * (ra_bin[1:] + ra_bin[:-1])
+            dec_bin_cent = 0.5 * (dec_bin[1:] + dec_bin[:-1])
+            max_pos = np.argmax(hist)
+            x = int(np.argmax(hist) / bins)
+            y = np.argmax(hist) % bins
             ra_peak = ra_bin_cent[x]
             dec_peak = dec_bin_cent[y]
 
             if config_struct["FOV_type"] == "square":
-                ipix, radecs, patch, area = gwemopt.utils.utils.getSquarePixels(ra_peak, dec_peak, config_struct["FOV"], nside)
+                ipix, radecs, patch, area = gwemopt.utils.utils.getSquarePixels(
+                    ra_peak, dec_peak, config_struct["FOV"], nside
+                )
             elif config_struct["FOV_type"] == "circle":
-                ipix, radecs, patch, area = gwemopt.utils.utils.getCirclePixels(ra_peak, dec_peak, config_struct["FOV"], nside)
+                ipix, radecs, patch, area = gwemopt.utils.utils.getCirclePixels(
+                    ra_peak, dec_peak, config_struct["FOV"], nside
+                )
 
             prob_encl = np.sum(pVal[ipix])
             probs_allChosenTiles = np.append(probs_allChosenTiles, prob_encl)
@@ -294,41 +345,45 @@ class PlaceTile:
         bin_max = bins_array[np.argmax(probs_allChosenTiles)]
 
         [hist_max, ra_bin_max, dec_bin_max] = np.histogram2d(ra, dec, bin_max)
-        ra_bin_cent = 0.5*(ra_bin_max[1:] + ra_bin_max[:-1])
-        dec_bin_cent = 0.5*(dec_bin_max[1:] + dec_bin_max[:-1])
+        ra_bin_cent = 0.5 * (ra_bin_max[1:] + ra_bin_max[:-1])
+        dec_bin_cent = 0.5 * (dec_bin_max[1:] + dec_bin_max[:-1])
 
-
-        y = np.argmax(hist_max)%bin_max
-        x = int(np.argmax(hist_max)/bin_max)
+        y = np.argmax(hist_max) % bin_max
+        x = int(np.argmax(hist_max) / bin_max)
         ra_peak = ra_bin_cent[x]
         dec_peak = dec_bin_cent[y]
 
         if config_struct["FOV_type"] == "square":
-            ipix, radecs, patch, area = gwemopt.utils.utils.getSquarePixels(ra_peak, dec_peak, config_struct["FOV"], nside)
+            ipix, radecs, patch, area = gwemopt.utils.utils.getSquarePixels(
+                ra_peak, dec_peak, config_struct["FOV"], nside
+            )
         elif config_struct["FOV_type"] == "circle":
-            ipix, radecs, patch, area = gwemopt.utils.utils.getCirclePixels(ra_peak, dec_peak, config_struct["FOV"], nside)
+            ipix, radecs, patch, area = gwemopt.utils.utils.getCirclePixels(
+                ra_peak, dec_peak, config_struct["FOV"], nside
+            )
 
         return ra_peak, dec_peak, ipix
 
     def localizeTC(self, reference=None, samples=None, verbose=False):
-
         if samples is None:
             samples = self.getSamples()
         else:
-            print('\n\nReading data from pickled files...')
+            print("\n\nReading data from pickled files...")
 
         ra_samples = []
         dec_samples = []
         for ii in range(0, self.numtiles):
-            ra_samples.append(samples[:,ii])
-            dec_samples.append(samples[:,ii+self.numtiles])
+            ra_samples.append(samples[:, ii])
+            dec_samples.append(samples[:, ii + self.numtiles])
 
-        masked_points=np.array([])
+        masked_points = np.array([])
         probabilitySum = 0.0
         RA_Peak_list = []
         Dec_Peak_list = []
         for ii in range(self.numtiles):
-            ra_peak, dec_peak, points_to_be_masked = self.optimizeBins(ra_samples[ii], dec_samples[ii], masked_points)
+            ra_peak, dec_peak, points_to_be_masked = self.optimizeBins(
+                ra_samples[ii], dec_samples[ii], masked_points
+            )
 
             masked_points = np.hstack((masked_points, points_to_be_masked))
             RA_Peak_list.append(ra_peak)

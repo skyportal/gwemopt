@@ -47,6 +47,7 @@ If you want the latest version, we recommend creating a clean environment:
 conda create -n gwemopt python=3.11
 git clone git@github.com:skyportal/gwemopt.git
 pip install -e gwemopt
+pre-commit install
 ```
 
 or if you just want the latest version on Github:

@@ -1,19 +1,18 @@
 import healpy as hp
 import ligo.skymap.distance as ligodist
 import numpy as np
-from ligo.skymap.bayestar import rasterize
-from ligo.skymap.io import read_sky_map
-
-from gwemopt.utils.rotate import rotate_map
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-from scipy import stats
 from astropy.io import fits
 from astropy.time import Time
+from ligo.skymap.bayestar import rasterize
+from ligo.skymap.io import read_sky_map
+from scipy import stats
+
+from gwemopt.utils.rotate import rotate_map
 
 
-def read_skymap(params, do_3d = None, map_struct=None):
-
+def read_skymap(params, do_3d=None, map_struct=None):
     # Let's just figure out what's in the skymap first
 
     skymap_path = params["skymap"]
