@@ -58,7 +58,8 @@ dependencies = [
     'bs4',
     "coveralls",
     "black",
-    "isort"
+    "isort",
+    "pre-commit",
 ]
 dynamic = ["version"]
 
