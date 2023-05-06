@@ -26,10 +26,15 @@ def rotate_map(hmap, rot_theta, rot_phi):
 
 
 def angular_distance(ra1, dec1, ra2, dec2):
+    delt_lon = (ra1 - ra2) * np.pi / 180.0
+    delt_lat = (dec1 - dec2) * np.pi / 180.0
+    dist = 2.0 * np.arcsin(
+        np.sqrt(
+            np.sin(delt_lat / 2.0) ** 2
+            + np.cos(dec1 * np.pi / 180.0)
+            * np.cos(dec2 * np.pi / 180.0)
+            * np.sin(delt_lon / 2.0) ** 2
+        )
+    )
 
-    delt_lon = (ra1 - ra2)*np.pi/180.
-    delt_lat = (dec1 - dec2)*np.pi/180.
-    dist = 2.0*np.arcsin( np.sqrt( np.sin(delt_lat/2.0)**2 + \
-         np.cos(dec1*np.pi/180.)*np.cos(dec2*np.pi/180.)*np.sin(delt_lon/2.0)**2 ) )
-
-    return dist/np.pi*180.
+    return dist / np.pi * 180.0

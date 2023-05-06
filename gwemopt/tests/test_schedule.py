@@ -1,27 +1,33 @@
-import os
 import glob
+import os
+import tempfile
+from pathlib import Path
 
-from astropy import table
-from astropy import time
 import ephem
-import gwemopt.moc
-import gwemopt.gracedb
-import gwemopt.rankedTilesGenerator
-import gwemopt.waw
-import gwemopt.lightcurve
+import numpy as np
+import pandas as pd
+from astropy import table, time
+
+import gwemopt.catalog
 import gwemopt.coverage
 import gwemopt.efficiency
+import gwemopt.gracedb
+import gwemopt.lightcurve
+import gwemopt.moc
 import gwemopt.plotting
-import gwemopt.tiles
+import gwemopt.rankedTilesGenerator
 import gwemopt.segments
-import gwemopt.catalog
-import numpy as np
-from pathlib import Path
+import gwemopt.tiles
+import gwemopt.waw
+from gwemopt.paths import (
+    DEFAULT_CONFIG_DIR,
+    DEFAULT_TILING_DIR,
+    REFS_DIR,
+    TESSELATION_DIR,
+    test_skymap,
+)
 from gwemopt.read_output import read_schedule
-import pandas as pd
-import tempfile
-from gwemopt.utils import readParamsFromFile, read_skymap, params_checker
-from gwemopt.paths import test_skymap, DEFAULT_CONFIG_DIR, DEFAULT_TILING_DIR, REFS_DIR, TESSELATION_DIR
+from gwemopt.utils import params_checker, read_skymap, readParamsFromFile
 
 np.random.seed(42)
 
@@ -31,13 +37,18 @@ expected_results_dir = test_data_dir.joinpath("expected_results")
 gwemopt_root_dir = test_dir.parent.parent
 
 
-def params_struct(skymap, gpstime, filt=['r'],
-                  exposuretimes=[60.0],
-                  mindiff=30.0*60.0, probability=0.9, tele='ZTF',
-                  schedule_type='greedy',
-                  doReferences=True,
-                  filterScheduleType='block'):
-
+def params_struct(
+    skymap,
+    gpstime,
+    filt=["r"],
+    exposuretimes=[60.0],
+    mindiff=30.0 * 60.0,
+    probability=0.9,
+    tele="ZTF",
+    schedule_type="greedy",
+    doReferences=True,
+    filterScheduleType="block",
+):
     config_directory = DEFAULT_CONFIG_DIR
     tiling_directory = DEFAULT_TILING_DIR
     catalog_directory = gwemopt_root_dir.joinpath("catalog")
@@ -47,37 +58,46 @@ def params_struct(skymap, gpstime, filt=['r'],
     config_files = glob.glob("%s/*.config" % config_directory)
     for config_file in config_files:
         telescope = config_file.split("/")[-1].replace(".config", "")
-        if not telescope == tele: continue
-        params["config"][telescope] =\
-            readParamsFromFile(config_file)
+        if not telescope == tele:
+            continue
+        params["config"][telescope] = readParamsFromFile(config_file)
         params["config"][telescope]["telescope"] = telescope
         if "tesselationFile" in params["config"][telescope]:
-            params["config"][telescope]["tesselationFile"] = TESSELATION_DIR.joinpath(params["config"][telescope]["tesselationFile"])
+            params["config"][telescope]["tesselationFile"] = TESSELATION_DIR.joinpath(
+                params["config"][telescope]["tesselationFile"]
+            )
             tesselation_file = params["config"][telescope]["tesselationFile"]
             if not os.path.isfile(tesselation_file):
                 if params["config"][telescope]["FOV_type"] == "circle":
-                    gwemopt.tiles.tesselation_spiral(
-                        params["config"][telescope])
+                    gwemopt.tiles.tesselation_spiral(params["config"][telescope])
                 elif params["config"][telescope]["FOV_type"] == "square":
-                    gwemopt.tiles.tesselation_packing(
-                        params["config"][telescope])
+                    gwemopt.tiles.tesselation_packing(params["config"][telescope])
 
-            params["config"][telescope]["tesselation"] =\
-                np.loadtxt(tesselation_file, usecols=(0, 1, 2), comments='%')
+            params["config"][telescope]["tesselation"] = np.loadtxt(
+                tesselation_file, usecols=(0, 1, 2), comments="%"
+            )
 
         if "referenceFile" in params["config"][telescope]:
-            params["config"][telescope]["referenceFile"] =\
-                REFS_DIR.joinpath(params["config"][telescope]["referenceFile"])
-            refs = table.unique(table.Table.read(
-                params["config"][telescope]["referenceFile"],
-                format='ascii', data_start=2, data_end=-1)['field', 'fid'])
-            reference_images =\
-                {group[0]['field']: group['fid'].astype(int).tolist()
-                 for group in refs.group_by('field').groups}
-            reference_images_map = {1: 'g', 2: 'r', 3: 'i', 4: 'z', 5: 'J'}
+            params["config"][telescope]["referenceFile"] = REFS_DIR.joinpath(
+                params["config"][telescope]["referenceFile"]
+            )
+            refs = table.unique(
+                table.Table.read(
+                    params["config"][telescope]["referenceFile"],
+                    format="ascii",
+                    data_start=2,
+                    data_end=-1,
+                )["field", "fid"]
+            )
+            reference_images = {
+                group[0]["field"]: group["fid"].astype(int).tolist()
+                for group in refs.group_by("field").groups
+            }
+            reference_images_map = {1: "g", 2: "r", 3: "i", 4: "z", 5: "J"}
             for key in reference_images:
-                reference_images[key] = [reference_images_map.get(n, n)
-                                         for n in reference_images[key]]
+                reference_images[key] = [
+                    reference_images_map.get(n, n) for n in reference_images[key]
+                ]
             params["config"][telescope]["reference_images"] = reference_images
 
         observer = ephem.Observer()
@@ -100,9 +120,9 @@ def params_struct(skymap, gpstime, filt=['r'],
         params["writeCatalog"] = False
         params["catalog_n"] = 1.0
         params["powerlaw_dist_exp"] = 1.0
-    elif tele in ['TRE']:
+    elif tele in ["TRE"]:
         params["tilesType"] = "moc"
-    elif tele in ['TNT']:
+    elif tele in ["TNT"]:
         params["tilesType"] = "galaxy"
         params["catalogDir"] = catalog_directory
         params["galaxy_catalog"] = "GLADE"
@@ -153,24 +173,24 @@ def params_struct(skymap, gpstime, filt=['r'],
     if params["doEvent"]:
         params["skymap"], eventinfo = gwemopt.gracedb.get_event(params)
         params["gpstime"] = eventinfo["gpstime"]
-        event_time = time.Time(params["gpstime"], format='gps', scale='utc')
+        event_time = time.Time(params["gpstime"], format="gps", scale="utc")
         params["dateobs"] = event_time.iso
     elif params["doSkymap"]:
-        event_time = time.Time(params["gpstime"], format='gps', scale='utc')
+        event_time = time.Time(params["gpstime"], format="gps", scale="utc")
         params["dateobs"] = event_time.iso
     elif params["doFootprint"]:
         params["skymap"] = gwemopt.footprint.get_skymap(params)
-        event_time = time.Time(params["gpstime"], format='gps', scale='utc')
+        event_time = time.Time(params["gpstime"], format="gps", scale="utc")
         params["dateobs"] = event_time.iso
     elif params["doDatabase"]:
-        event_time = time.Time(params["dateobs"], format='datetime',
-                               scale='utc')
+        event_time = time.Time(params["dateobs"], format="datetime", scale="utc")
         params["gpstime"] = event_time.gps
     else:
-        raise ValueError('Need to enable --doEvent, --doFootprint, '
-                         '--doSkymap, or --doDatabase')
+        raise ValueError(
+            "Need to enable --doEvent, --doFootprint, " "--doSkymap, or --doDatabase"
+        )
 
-    params["Tobs"] = np.array([0., 1.])
+    params["Tobs"] = np.array([0.0, 1.0])
 
     params["doSingleExposure"] = True
     if filterScheduleType == "block":
@@ -182,7 +202,7 @@ def params_struct(skymap, gpstime, filt=['r'],
     params["mindiff"] = mindiff
 
     params = gwemopt.segments.get_telescope_segments(params)
-    params['map_struct'] = None
+    params["map_struct"] = None
 
     if params["doPlots"]:
         if not os.path.isdir(params["outputDir"]):
@@ -192,43 +212,41 @@ def params_struct(skymap, gpstime, filt=['r'],
 
 
 def gen_structs(params):
-
-    print('Loading skymap')
+    print("Loading skymap")
     # Function to read maps
-    params, map_struct = read_skymap(params, do_3d=params["do3D"], map_struct=params['map_struct'])
+    params, map_struct = read_skymap(
+        params, do_3d=params["do3D"], map_struct=params["map_struct"]
+    )
 
     catalog_struct = None
 
     if params["tilesType"] == "galaxy":
         print("Generating catalog...")
-        map_struct, catalog_struct =\
-            gwemopt.catalog.get_catalog(params, map_struct)
+        map_struct, catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
 
     if params["tilesType"] == "moc":
-        print('Generating MOC struct')
+        print("Generating MOC struct")
         moc_structs = gwemopt.moc.create_moc(params)
         tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
     elif params["tilesType"] == "ranked":
-        print('Generating ranked struct')
-        moc_structs = gwemopt.rankedTilesGenerator.create_ranked(params,
-                                                                 map_struct)
+        print("Generating ranked struct")
+        moc_structs = gwemopt.rankedTilesGenerator.create_ranked(params, map_struct)
         tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
     elif params["tilesType"] == "hierarchical":
-        print('Generating hierarchical struct')
+        print("Generating hierarchical struct")
         tile_structs = gwemopt.tiles.hierarchical(params, map_struct)
     elif params["tilesType"] == "greedy":
-        print('Generating greedy struct')
+        print("Generating greedy struct")
         tile_structs = gwemopt.tiles.greedy(params, map_struct)
     elif params["tilesType"] == "galaxy":
         print("Generating galaxy struct...")
         tile_structs = gwemopt.tiles.galaxy(params, map_struct, catalog_struct)
     else:
         raise ValueError(
-            'Need tilesType to be moc, greedy, hierarchical, galaxy or ranked')
+            "Need tilesType to be moc, greedy, hierarchical, galaxy or ranked"
+        )
 
-    coverage_struct = gwemopt.coverage.timeallocation(params,
-                                                      map_struct,
-                                                      tile_structs)
+    coverage_struct = gwemopt.coverage.timeallocation(params, map_struct, tile_structs)
 
     return map_struct, tile_structs, coverage_struct, catalog_struct
 
@@ -243,17 +261,17 @@ def test_scheduler():
     gpstime = 1235311089.400738
 
     telescope_list = [
-        ('ZTF', True),
-        ('KPED', False),
+        ("ZTF", True),
+        ("KPED", False),
         # ('TRE', False),
         # ('TNT', False),
         # ("WINTER", False)
     ]
 
     for telescope, do_references in telescope_list:
-
-        params = params_struct(skymap, gpstime, tele=telescope,
-                               doReferences=do_references)
+        params = params_struct(
+            skymap, gpstime, tele=telescope, doReferences=do_references
+        )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             # To regenerate the test data, uncomment the following lines
@@ -262,7 +280,9 @@ def test_scheduler():
 
             params["outputDir"] = temp_dir
 
-            map_struct, tile_structs, coverage_struct, catalog_struct = gen_structs(params)
+            map_struct, tile_structs, coverage_struct, catalog_struct = gen_structs(
+                params
+            )
 
             tile_structs, coverage_struct = gwemopt.coverage.timeallocation(
                 params, map_struct, tile_structs
@@ -284,5 +304,5 @@ def test_scheduler():
 
             pd.testing.assert_frame_equal(
                 new_schedule.reset_index(drop=True),
-                expected_schedule.reset_index(drop=True)
+                expected_schedule.reset_index(drop=True),
             )

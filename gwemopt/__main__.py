@@ -29,15 +29,20 @@ import warnings
 
 import numpy as np
 
-from gwemopt.footprint import get_skymap
-from gwemopt.gracedb import get_event
-import gwemopt.segments
 import gwemopt.coverage
 import gwemopt.plotting
+import gwemopt.segments
+from gwemopt.footprint import get_skymap
+from gwemopt.gracedb import get_event
 from gwemopt.params import params_struct
+from gwemopt.paths import (
+    DEFAULT_BASE_OUTPUT_DIR,
+    DEFAULT_CONFIG_DIR,
+    DEFAULT_LIGHTCURVE_DIR,
+    DEFAULT_TILING_DIR,
+    test_skymap,
+)
 from gwemopt.utils import read_skymap
-from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR, DEFAULT_CONFIG_DIR, \
-    DEFAULT_TILING_DIR, DEFAULT_LIGHTCURVE_DIR, test_skymap
 
 if not os.getenv("DISPLAY", None):
     import matplotlib
@@ -63,13 +68,13 @@ def parse_commandline():
     parser = optparse.OptionParser(usage=__doc__, version=__version__)
 
     parser.add_option(
-        "-c", "--configDirectory", help="GW-EM config file directory.",
+        "-c",
+        "--configDirectory",
+        help="GW-EM config file directory.",
         default=DEFAULT_CONFIG_DIR,
     )
     parser.add_option("-s", "--skymap", help="GW skymap.", default=test_skymap)
-    parser.add_option(
-        "-g", "--gpstime", help="GPS time.", default=None, type=float
-    )
+    parser.add_option("-g", "--gpstime", help="GPS time.", default=None, type=float)
     parser.add_option("--do3D", action="store_true", default=False)
     parser.add_option("--do2D", action="store_true", default=False)
 

@@ -1,22 +1,21 @@
 """
 Module to fetch event info and skymap from GraceDB
 """
-import os
 import json
-
+import os
 from pathlib import Path
 
-from ligo.gracedb.rest import GraceDb
-import requests
 import lxml.etree
+import requests
+from ligo.gracedb.rest import GraceDb
 
 from gwemopt.paths import SKYMAP_DIR
 
 
 def get_event(
-        event_name: str,
-        output_dir: Path = SKYMAP_DIR,
-        rev = None,
+    event_name: str,
+    output_dir: Path = SKYMAP_DIR,
+    rev=None,
 ):
     """
     Fetches the event info and skymap from GraceDB
@@ -49,8 +48,7 @@ def get_event(
 
     root = lxml.etree.fromstring(response.content)
     params = {
-        elem.attrib["name"]: elem.attrib["value"]
-        for elem in root.iterfind(".//Param")
+        elem.attrib["name"]: elem.attrib["value"] for elem in root.iterfind(".//Param")
     }
 
     latest_skymap = params["skymap_fits"]
