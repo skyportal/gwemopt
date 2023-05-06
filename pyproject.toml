@@ -9,10 +9,12 @@ authors = [
 ]
 description = "A python package for GW-EM Followup Optimization"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.8"
 license = {text = "GPLv3"}
 classifiers = [
     "Programming Language :: Python :: 3",
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
     'Intended Audience :: Science/Research',
