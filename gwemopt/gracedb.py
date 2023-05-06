@@ -16,7 +16,7 @@ from gwemopt.paths import SKYMAP_DIR
 def get_event(
         event_name: str,
         output_dir: Path = SKYMAP_DIR,
-        rev: int | None = None,
+        rev = None,
 ):
     """
     Fetches the event info and skymap from GraceDB

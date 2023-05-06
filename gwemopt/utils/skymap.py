@@ -12,7 +12,7 @@ from astropy.io import fits
 from astropy.time import Time
 
 
-def read_skymap(params, do_3d: bool | None = None, map_struct=None):
+def read_skymap(params, do_3d = None, map_struct=None):
 
     # Let's just figure out what's in the skymap first
 

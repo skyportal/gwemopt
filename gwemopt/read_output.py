@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 
 
-def read_schedule(schedule_path: str | Path):
+def read_schedule(schedule_path):
     """
     Reads a schedule file and returns a pandas dataframe
 
