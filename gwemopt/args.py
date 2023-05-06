@@ -27,9 +27,7 @@ def parse_args(args):
     parser.add_argument("--do3D", action="store_true", default=False)
     parser.add_argument("--do2D", action="store_true", default=False)
 
-    parser.add_argument(
-        "-o", "--outputDir", help="output directory", default=DEFAULT_BASE_OUTPUT_DIR
-    )
+    parser.add_argument("-o", "--outputDir", help="output directory", default=None)
     parser.add_argument("-n", "--event", help="event name", default="G268556")
     parser.add_argument(
         "--tilingDir", help="tiling directory", default=DEFAULT_TILING_DIR

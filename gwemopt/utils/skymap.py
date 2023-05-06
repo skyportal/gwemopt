@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import healpy as hp
 import ligo.skymap.distance as ligodist
 import numpy as np
@@ -16,6 +18,9 @@ def read_skymap(params, do_3d=None, map_struct=None):
     # Let's just figure out what's in the skymap first
 
     skymap_path = params["skymap"]
+
+    params["name"] = Path(skymap_path).stem
+
     is_3d = False
     t_obs = Time.now()
 
