@@ -21,5 +21,10 @@
 """
 
 __author__ = 'Michael Coughlin <michael.coughlin@ligo.org>'
-from . import _version
-__version__ = _version.get_versions()['version']
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("gwemopt")
+except PackageNotFoundError:
+    # package is not installed
+    pass
