@@ -4,7 +4,7 @@ from gwemopt.utils.misc import (
     integrationTime,
     observability,
 )
-from gwemopt.utils.param_utils import params_checker, readParamsFromFile
+from gwemopt.utils.param_utils import readParamsFromFile
 from gwemopt.utils.pixels import (
     get_ellipse_coords,
     getCirclePixels,
