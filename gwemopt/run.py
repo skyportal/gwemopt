@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import numpy as np
 
@@ -9,15 +10,12 @@ from gwemopt.args import parse_args
 from gwemopt.footprint import get_skymap
 from gwemopt.gracedb import get_event
 from gwemopt.params import params_struct
+from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR
 from gwemopt.utils import read_skymap
 
 
 def run(args):
     args = parse_args(args)
-
-    # Parse command line
-    if not os.path.isdir(args.outputDir):
-        os.makedirs(args.outputDir)
 
     params = params_struct(args)
 
@@ -49,6 +47,18 @@ def run(args):
 
     # Function to read maps
     params, map_struct = read_skymap(params, do_3d=do_3d)
+
+    # Set output directory
+    if args.outputDir is not None:
+        output_dir = Path(args.outputDir)
+    else:
+        output_dir = DEFAULT_BASE_OUTPUT_DIR.joinpath(
+            f"{params['name']}/{'+'.join(params['telescopes'])}/"
+        )
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    params["outputDir"] = output_dir
+    print(f"Output directory: {output_dir}")
 
     params = gwemopt.segments.get_telescope_segments(params)
 
