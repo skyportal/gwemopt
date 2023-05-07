@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
+import gwemopt.catalog
 import gwemopt.coverage
 import gwemopt.plotting
 import gwemopt.segments
@@ -126,40 +127,6 @@ def run(args):
             print("Generating MOC struct...")
             moc_structs = gwemopt.moc.create_moc(params, map_struct=map_struct)
             tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
-        elif params["tilesType"] == "ranked":
-            print("Generating ranked struct...")
-            # tile_structs = gwemopt.tiles.rankedTiles(params, map_struct)
-            moc_structs = gwemopt.rankedTilesGenerator.create_ranked(params, map_struct)
-            tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
-        elif params["tilesType"] == "hierarchical":
-            print("Generating hierarchical struct...")
-            tile_structs = gwemopt.tiles.hierarchical(params, map_struct)
-            params["Ntiles"] = []
-            for telescope in params["telescopes"]:
-                params["config"][telescope]["tesselation"] = np.empty((0, 3))
-                tiles_struct = tile_structs[telescope]
-                for index in tiles_struct.keys():
-                    ra, dec = tiles_struct[index]["ra"], tiles_struct[index]["dec"]
-                    params["config"][telescope]["tesselation"] = np.append(
-                        params["config"][telescope]["tesselation"],
-                        [[index, ra, dec]],
-                        axis=0,
-                    )
-                params["Ntiles"].append(len(tiles_struct.keys()))
-
-        elif params["tilesType"] == "greedy":
-            print("Generating greedy struct...")
-            tile_structs = gwemopt.tiles.greedy(params, map_struct)
-            for telescope in params["telescopes"]:
-                params["config"][telescope]["tesselation"] = np.empty((0, 3))
-                tiles_struct = tile_structs[telescope]
-                for index in tiles_struct.keys():
-                    ra, dec = tiles_struct[index]["ra"], tiles_struct[index]["dec"]
-                    params["config"][telescope]["tesselation"] = np.append(
-                        params["config"][telescope]["tesselation"],
-                        [[index, ra, dec]],
-                        axis=0,
-                    )
 
         elif params["tilesType"] == "galaxy":
             print("Generating galaxy struct...")
@@ -175,8 +142,7 @@ def run(args):
                         axis=0,
                     )
         else:
-            print("Need tilesType to be moc, greedy, hierarchical, ranked or galaxy")
-            exit(0)
+            raise ValueError(f"Unknown tilesType: {params['tilesType']}")
 
         if args.doPlots:
             print("Plotting tiles struct...")

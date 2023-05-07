@@ -1,34 +1,11 @@
-import glob
-import os
 import tempfile
 from pathlib import Path
 
-import ephem
 import numpy as np
 import pandas as pd
-from astropy import table, time
 
-import gwemopt.catalog
-import gwemopt.coverage
-import gwemopt.efficiency
-import gwemopt.gracedb
-import gwemopt.lightcurve
-import gwemopt.moc
-import gwemopt.plotting
-import gwemopt.rankedTilesGenerator
-import gwemopt.segments
-import gwemopt.tiles
-import gwemopt.waw
-from gwemopt.paths import (
-    DEFAULT_CONFIG_DIR,
-    DEFAULT_TILING_DIR,
-    REFS_DIR,
-    TESSELATION_DIR,
-    test_skymap,
-)
 from gwemopt.read_output import read_schedule
 from gwemopt.run import run
-from gwemopt.utils import params_checker, read_skymap, readParamsFromFile
 
 np.random.seed(42)
 

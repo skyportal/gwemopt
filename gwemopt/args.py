@@ -5,23 +5,17 @@ import argparse
 
 from gwemopt.paths import (
     CATALOG_DIR,
+    CONFIG_DIR,
     DEFAULT_BASE_OUTPUT_DIR,
-    DEFAULT_CONFIG_DIR,
     DEFAULT_LIGHTCURVE_DIR,
-    DEFAULT_TILING_DIR,
     SKYMAP_DIR,
+    TILING_DIR,
 )
 
 
 def parse_args(args):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "-c",
-        "--configDirectory",
-        help="GW-EM config file directory.",
-        default=DEFAULT_CONFIG_DIR,
-    )
     parser.add_argument("-s", "--skymap", help="GW skymap.", default=None)
     parser.add_argument("-g", "--gpstime", help="GPS time.", default=None)
     parser.add_argument("--do3D", action="store_true", default=False)
@@ -29,9 +23,6 @@ def parse_args(args):
 
     parser.add_argument("-o", "--outputDir", help="output directory", default=None)
     parser.add_argument("-n", "--event", help="event name", default="G268556")
-    parser.add_argument(
-        "--tilingDir", help="tiling directory", default=DEFAULT_TILING_DIR
-    )
 
     parser.add_argument("--doSkymap", action="store_true", default=False)
     parser.add_argument("--doSamples", action="store_true", default=False)

@@ -10,7 +10,6 @@ from astropy.io import ascii
 from astropy.time import Time
 
 import gwemopt.plotting
-import gwemopt.rankedTilesGenerator
 import gwemopt.scheduler
 import gwemopt.tiles
 from gwemopt.utils.pixels import getCirclePixels, getSquarePixels
