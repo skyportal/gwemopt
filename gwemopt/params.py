@@ -105,9 +105,9 @@ def params_struct(opts):
     params["doUpdateScheduler"] = False
     params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","), dtype=float)
 
-    if params["tileTypes"] not in TILE_TYPES:
+    if params["tilesType"] not in TILE_TYPES:
         err = (
-            f"Unrecognised tilesType: {params['tileTypes']}. "
+            f"Unrecognised tilesType: {params['tilesType']}. "
             f"Accepted values: {TILE_TYPES}"
         )
         raise ValueError(err)
