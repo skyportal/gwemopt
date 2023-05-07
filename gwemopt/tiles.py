@@ -14,6 +14,8 @@ import gwemopt.segments
 import gwemopt.utils
 from gwemopt.utils.rotate import angular_distance
 
+TILE_TYPES = ["moc", "galaxy"]
+
 
 def get_rectangle(ras, decs, ra_size, dec_size):
     ras[ras > 180.0] = ras[ras > 180.0] - 360.0
@@ -246,40 +248,6 @@ def galaxy(params, map_struct, catalog_struct):
                     4 * np.pi * params["config"][telescope]["FOV"] ** 2
                 )
             cnt = cnt + 1
-
-        tile_structs[telescope] = tile_struct
-
-    return tile_structs
-
-
-def greedy(params, map_struct):
-    tile_structs = {}
-    for telescope in params["telescopes"]:
-        config_struct = params["config"][telescope]
-
-        tile_struct = gwemopt.samplers.greedy_tiles_struct(
-            params, config_struct, telescope, map_struct
-        )
-        tile_struct = gwemopt.segments.get_segments_tiles(
-            params, config_struct, tile_struct
-        )
-
-        tile_structs[telescope] = tile_struct
-
-    return tile_structs
-
-
-def hierarchical(params, map_struct):
-    tile_structs = {}
-    for telescope in params["telescopes"]:
-        config_struct = params["config"][telescope]
-
-        tile_struct = gwemopt.samplers.hierarchical_tiles_struct(
-            params, config_struct, telescope, map_struct
-        )
-        tile_struct = gwemopt.segments.get_segments_tiles(
-            params, config_struct, tile_struct
-        )
 
         tile_structs[telescope] = tile_struct
 
@@ -632,7 +600,7 @@ def powerlaw_tiles_struct(
                     tile_struct[key]["nexposures"] = len(params["exposuretimes"])
                     tile_struct[key]["filt"] = params["filters"]
     else:
-        ranked_tile_times = gwemopt.utils.utils.integrationTime(
+        ranked_tile_times = gwemopt.utils.integrationTime(
             tot_obs_time,
             ranked_tile_probs,
             func=None,

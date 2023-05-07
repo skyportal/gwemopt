@@ -7,7 +7,8 @@ from astropy import table, time
 from astropy import units as u
 
 import gwemopt
-from gwemopt.paths import DEFAULT_CONFIG_DIR, REFS_DIR, TESSELATION_DIR
+from gwemopt.paths import CONFIG_DIR, REFS_DIR, TESSELATION_DIR
+from gwemopt.tiles import TILE_TYPES
 
 
 def params_struct(opts):
@@ -22,7 +23,7 @@ def params_struct(opts):
 
     params["config"] = {}
     for telescope in telescopes:
-        config_file = DEFAULT_CONFIG_DIR.joinpath(telescope + ".config")
+        config_file = CONFIG_DIR.joinpath(telescope + ".config")
         params["config"][telescope] = gwemopt.utils.readParamsFromFile(config_file)
         params["config"][telescope]["telescope"] = telescope
         if opts.doSingleExposure:
@@ -103,6 +104,13 @@ def params_struct(opts):
     params["doSuperSched"] = False
     params["doUpdateScheduler"] = False
     params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","), dtype=float)
+
+    if params["tileTypes"] not in TILE_TYPES:
+        err = (
+            f"Unrecognised tilesType: {params['tileTypes']}. "
+            f"Accepted values: {TILE_TYPES}"
+        )
+        raise ValueError(err)
 
     if opts.start_time is None:
         params["start_time"] = time.Time.now() - time.TimeDelta(1.0 * u.day)
