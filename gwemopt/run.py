@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
+import gwemopt.catalog
 import gwemopt.coverage
 import gwemopt.plotting
 import gwemopt.segments
