@@ -4,7 +4,6 @@ import healpy as hp
 import numpy as np
 from joblib import Parallel, delayed
 
-import gwemopt.chipgaps.ztf
 import gwemopt.tiles
 from gwemopt.chipgaps import get_decam_quadrant_ipix, get_ztf_quadrant_ipix
 from gwemopt.utils.pixels import getCirclePixels, getSquarePixels
