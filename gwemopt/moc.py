@@ -11,7 +11,6 @@ from gwemopt.utils.pixels import getCirclePixels, getSquarePixels
 
 def create_moc(params, map_struct=None):
     nside = params["nside"]
-    npix = hp.nside2npix(nside)
 
     if params["doMinimalTiling"]:
         prob = map_struct["prob"]
@@ -27,16 +26,6 @@ def create_moc(params, map_struct=None):
         prob_cumsum = np.cumsum(prob_sorted)
         index = np.argmin(np.abs(prob_cumsum - cl)) + 1
         prob_indexes = prob_indexes[: index + 1]
-
-    if "doUsePrimary" in params:
-        doUsePrimary = params["doUsePrimary"]
-    else:
-        doUsePrimary = False
-
-    if "doUseSecondary" in params:
-        doUseSecondary = params["doUseSecondary"]
-    else:
-        doUseSecondary = False
 
     moc_structs = {}
     for telescope in params["telescopes"]:
@@ -63,17 +52,17 @@ def create_moc(params, map_struct=None):
             )
             for ii, tess in enumerate(tesselation):
                 index, ra, dec = tess[0], tess[1], tess[2]
-                if (telescope == "ZTF") and doUsePrimary and (index > 880):
+                if (telescope == "ZTF") and params["doUsePrimary"] and (index > 880):
                     continue
-                if (telescope == "ZTF") and doUseSecondary and (index < 1000):
+                if (telescope == "ZTF") and params["doUseSecondary"] and (index < 1000):
                     continue
                 moc_struct[index] = moclists[ii]
         else:
             for ii, tess in enumerate(tesselation):
                 index, ra, dec = tess[0], tess[1], tess[2]
-                if (telescope == "ZTF") and doUsePrimary and (index > 880):
+                if (telescope == "ZTF") and params["doUsePrimary"] and (index > 880):
                     continue
-                if (telescope == "ZTF") and doUseSecondary and (index < 1000):
+                if (telescope == "ZTF") and params["doUseSecondary"] and (index < 1000):
                     continue
                 index = index.astype(int)
                 moc_struct[index] = Fov2Moc(
@@ -102,7 +91,6 @@ def create_moc(params, map_struct=None):
             csm[sort_idx] = np.cumsum(tile_probs[sort_idx])
             ipix_keep = np.where(csm <= cl)[0]
 
-            probs = []
             moc_struct = {}
             cnt = 0
             for ii, key in enumerate(keys):
