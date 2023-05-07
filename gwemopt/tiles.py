@@ -8,7 +8,6 @@ from shapely.geometry import MultiPoint
 
 import gwemopt.moc
 import gwemopt.quadrants
-import gwemopt.rankedTilesGenerator
 import gwemopt.samplers
 import gwemopt.segments
 import gwemopt.utils
