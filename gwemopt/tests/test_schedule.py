@@ -22,14 +22,15 @@ def test_scheduler():
     """
 
     telescope_list = [
-        ("ZTF", ["--doReferences"]),
+        ("ZTF", ["--doReferences", "--doChipGaps"]),
         (
             "KPED",
             ["--tilesType", "galaxy", "--powerlaw_dist_exp", "1.0", "--doCatalog"],
         ),
-        # ('TRE', False),
-        # ('TNT', False),
-        # ("WINTER", False)
+        ("DECam", ["--doChipGaps"]),
+        # ('TRE', []),
+        # ("WINTER", []),
+        # ('TNT', ["--tilesType", "galaxy", "--powerlaw_dist_exp", "1.0", "--doCatalog", "--galaxy_grade", "Sloc"]),
     ]
 
     for telescope, extra in telescope_list:
