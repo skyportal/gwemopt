@@ -1112,7 +1112,7 @@ def schedule_ra_splits(
             telescope,
             map_struct_slice,
         )
-        params["max_nb_tiles"] = np.array([optimized_max], dtype=np.float)
+        params["max_nb_tiles"] = np.array([optimized_max], dtype=float)
         balanced_fields = 0
         coverage_struct, tile_struct = schedule_alternating(
             params,
