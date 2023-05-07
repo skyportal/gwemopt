@@ -22,7 +22,7 @@ def test_scheduler():
     """
 
     telescope_list = [
-        ("ZTF", ["--doReferences"]),
+        ("ZTF", ["--doReferences", "--doChipGaps"]),
         (
             "KPED",
             ["--tilesType", "galaxy", "--powerlaw_dist_exp", "1.0", "--doCatalog"],
