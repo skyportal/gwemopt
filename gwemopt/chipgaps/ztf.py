@@ -14,21 +14,16 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-from __future__ import print_function
-
-import os
-
-# import cPickle as pickle
-import pickle
+"""
+This module contains the ZTFtile class, which is used to calculate
+ZTF chip gaps and overlaps.
+"""
 
 import astropy
-import healpy
 import healpy as hp
 import numpy as np
-from astropy import constants as c
 from astropy import units as u
 from astropy.coordinates import ICRS, SkyCoord
-from astropy.table import Table
 from astropy.wcs import WCS
 
 
@@ -282,7 +277,7 @@ def get_ztf_quadrants():
     return np.transpose(offsets, (2, 0, 1))
 
 
-def get_quadrant_ipix(nside, ra, dec, subfield_ids=None):
+def get_ztf_quadrant_ipix(nside, ra, dec, subfield_ids=None):
     quadrant_coords = get_ztf_quadrants()
 
     skyoffset_frames = SkyCoord(ra, dec, unit=u.deg).skyoffset_frame()
@@ -295,8 +290,8 @@ def get_quadrant_ipix(nside, ra, dec, subfield_ids=None):
 
     ipixs = []
     for subfield_id, xyz in enumerate(quadrant_xyz):
-        if not subfield_ids is None:
-            if not subfield_id in subfield_ids:
+        if subfield_ids is not None:
+            if subfield_id not in subfield_ids:
                 continue
         ipix = hp.query_polygon(nside, xyz)
         ipixs.append(ipix.tolist())

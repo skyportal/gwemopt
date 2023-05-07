@@ -2,13 +2,11 @@ import copy
 
 import healpy as hp
 import numpy as np
-from astropy.table import Table
 from joblib import Parallel, delayed
-from mocpy import MOC
 
-import gwemopt.decam_tiling
+import gwemopt.chipgaps.ztf
 import gwemopt.tiles
-import gwemopt.ztf_tiling
+from gwemopt.chipgaps import get_decam_quadrant_ipix, get_ztf_quadrant_ipix
 from gwemopt.utils.pixels import getCirclePixels, getSquarePixels
 
 
@@ -148,17 +146,13 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
 
     if params["doChipGaps"]:
         if telescope == "ZTF":
-            ipixs = gwemopt.ztf_tiling.get_quadrant_ipix(
-                nside, ra_pointing, dec_pointing
-            )
+            ipixs = get_ztf_quadrant_ipix(nside, ra_pointing, dec_pointing)
             ipix = list({y for x in ipixs for y in x})
         elif telescope == "DECam":
-            ipixs = gwemopt.decam_tiling.get_quadrant_ipix(
-                nside, ra_pointing, dec_pointing
-            )
+            ipixs = get_decam_quadrant_ipix(nside, ra_pointing, dec_pointing)
             ipix = list({y for x in ipixs for y in x})
-        # else:
-        #    print("Requested chip gaps with non-ZTF detector, will use moc.")
+        else:
+            raise ValueError("Chip gaps only available for DECam and ZTF")
 
     moc_struct["ra"] = ra_pointing
     moc_struct["dec"] = dec_pointing
@@ -167,24 +161,6 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
     moc_struct["patch"] = patch
     moc_struct["area"] = area
 
-    if False:
-        # if len(ipix) > 0:
-        # from index to polar coordinates
-        theta, phi = hp.pix2ang(nside, ipix)
-
-        # converting these to right ascension and declination in degrees
-        ra = np.rad2deg(phi)
-        dec = np.rad2deg(0.5 * np.pi - theta)
-
-        box_ipix = Table(
-            [ra, dec], names=("RA[deg]", "DEC[deg]"), meta={"ipix": "ipix table"}
-        )
-
-        moc_order = int(np.log(nside) / np.log(2))
-        moc = MOC.from_table(box_ipix, "RA[deg]", "DEC[deg]", moc_order)
-
-        moc_struct["moc"] = moc
-    else:
-        moc_struct["moc"] = []
+    moc_struct["moc"] = []
 
     return moc_struct
