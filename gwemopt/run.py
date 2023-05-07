@@ -126,11 +126,6 @@ def run(args):
             print("Generating MOC struct...")
             moc_structs = gwemopt.moc.create_moc(params, map_struct=map_struct)
             tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
-        elif params["tilesType"] == "ranked":
-            print("Generating ranked struct...")
-            # tile_structs = gwemopt.tiles.rankedTiles(params, map_struct)
-            moc_structs = gwemopt.rankedTilesGenerator.create_ranked(params, map_struct)
-            tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
 
         elif params["tilesType"] == "galaxy":
             print("Generating galaxy struct...")
