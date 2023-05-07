@@ -2,19 +2,15 @@ import copy
 
 import healpy as hp
 import numpy as np
-from astropy.table import Table
 from joblib import Parallel, delayed
-from mocpy import MOC
 
-import gwemopt.decam_tiling
 import gwemopt.tiles
-import gwemopt.ztf_tiling
+from gwemopt.chipgaps import get_decam_quadrant_ipix, get_ztf_quadrant_ipix
 from gwemopt.utils.pixels import getCirclePixels, getSquarePixels
 
 
 def create_moc(params, map_struct=None):
     nside = params["nside"]
-    npix = hp.nside2npix(nside)
 
     if params["doMinimalTiling"]:
         prob = map_struct["prob"]
@@ -30,16 +26,6 @@ def create_moc(params, map_struct=None):
         prob_cumsum = np.cumsum(prob_sorted)
         index = np.argmin(np.abs(prob_cumsum - cl)) + 1
         prob_indexes = prob_indexes[: index + 1]
-
-    if "doUsePrimary" in params:
-        doUsePrimary = params["doUsePrimary"]
-    else:
-        doUsePrimary = False
-
-    if "doUseSecondary" in params:
-        doUseSecondary = params["doUseSecondary"]
-    else:
-        doUseSecondary = False
 
     moc_structs = {}
     for telescope in params["telescopes"]:
@@ -66,17 +52,17 @@ def create_moc(params, map_struct=None):
             )
             for ii, tess in enumerate(tesselation):
                 index, ra, dec = tess[0], tess[1], tess[2]
-                if (telescope == "ZTF") and doUsePrimary and (index > 880):
+                if (telescope == "ZTF") and params["doUsePrimary"] and (index > 880):
                     continue
-                if (telescope == "ZTF") and doUseSecondary and (index < 1000):
+                if (telescope == "ZTF") and params["doUseSecondary"] and (index < 1000):
                     continue
                 moc_struct[index] = moclists[ii]
         else:
             for ii, tess in enumerate(tesselation):
                 index, ra, dec = tess[0], tess[1], tess[2]
-                if (telescope == "ZTF") and doUsePrimary and (index > 880):
+                if (telescope == "ZTF") and params["doUsePrimary"] and (index > 880):
                     continue
-                if (telescope == "ZTF") and doUseSecondary and (index < 1000):
+                if (telescope == "ZTF") and params["doUseSecondary"] and (index < 1000):
                     continue
                 index = index.astype(int)
                 moc_struct[index] = Fov2Moc(
@@ -105,7 +91,6 @@ def create_moc(params, map_struct=None):
             csm[sort_idx] = np.cumsum(tile_probs[sort_idx])
             ipix_keep = np.where(csm <= cl)[0]
 
-            probs = []
             moc_struct = {}
             cnt = 0
             for ii, key in enumerate(keys):
@@ -148,17 +133,13 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
 
     if params["doChipGaps"]:
         if telescope == "ZTF":
-            ipixs = gwemopt.ztf_tiling.get_quadrant_ipix(
-                nside, ra_pointing, dec_pointing
-            )
+            ipixs = get_ztf_quadrant_ipix(nside, ra_pointing, dec_pointing)
             ipix = list({y for x in ipixs for y in x})
         elif telescope == "DECam":
-            ipixs = gwemopt.decam_tiling.get_quadrant_ipix(
-                nside, ra_pointing, dec_pointing
-            )
+            ipixs = get_decam_quadrant_ipix(nside, ra_pointing, dec_pointing)
             ipix = list({y for x in ipixs for y in x})
-        # else:
-        #    print("Requested chip gaps with non-ZTF detector, will use moc.")
+        else:
+            raise ValueError("Chip gaps only available for DECam and ZTF")
 
     moc_struct["ra"] = ra_pointing
     moc_struct["dec"] = dec_pointing
@@ -167,24 +148,6 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
     moc_struct["patch"] = patch
     moc_struct["area"] = area
 
-    if False:
-        # if len(ipix) > 0:
-        # from index to polar coordinates
-        theta, phi = hp.pix2ang(nside, ipix)
-
-        # converting these to right ascension and declination in degrees
-        ra = np.rad2deg(phi)
-        dec = np.rad2deg(0.5 * np.pi - theta)
-
-        box_ipix = Table(
-            [ra, dec], names=("RA[deg]", "DEC[deg]"), meta={"ipix": "ipix table"}
-        )
-
-        moc_order = int(np.log(nside) / np.log(2))
-        moc = MOC.from_table(box_ipix, "RA[deg]", "DEC[deg]", moc_order)
-
-        moc_struct["moc"] = moc
-    else:
-        moc_struct["moc"] = []
+    moc_struct["moc"] = []
 
     return moc_struct

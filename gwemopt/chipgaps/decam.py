@@ -14,22 +14,15 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-from __future__ import print_function
-
-import os
-
-# import cPickle as pickle
-import pickle
+"""
+This module contains the DECamtile class, which is used to calculate decam chip gaps
+"""
 
 import astropy
-import healpy
 import healpy as hp
 import numpy as np
-from astropy import constants as c
 from astropy import units as u
-from astropy.coordinates import FK5, ICRS, SkyCoord
-from astropy.io import fits
-from astropy.table import Table
+from astropy.coordinates import ICRS, SkyCoord
 from astropy.wcs import WCS
 
 
@@ -172,18 +165,6 @@ class DECamtile:
         return ccd_cent_xy
 
 
-class CCDProb:
-    """
-    Class :: Instantiate a CCDProb object that will allow us to calculate the
-             probability content in a single CCD.
-    """
-
-    def __init__(self, RA, Dec):
-        self.RA = RA
-        self.Dec = Dec
-        self.ccd_size = np.array([2046, 4094])
-
-
 def get_decam_ccds(ra, dec, save_footprint=False):
     """Calculate DECam CCD footprints as offsets from the telescope
     boresight. Also optionally saves the footprints in a region file
@@ -229,7 +210,7 @@ def get_decam_ccds(ra, dec, save_footprint=False):
     return np.transpose(offsets, (2, 0, 1))
 
 
-def get_quadrant_ipix(nside, ra, dec):
+def get_decam_quadrant_ipix(nside, ra, dec):
     ccd_coords = get_decam_ccds(0, 0)
 
     skyoffset_frames = SkyCoord(ra, dec, unit=u.deg).skyoffset_frame()
@@ -245,69 +226,6 @@ def get_quadrant_ipix(nside, ra, dec):
         ipix = hp.query_polygon(nside, xyz)
         ipixs.append(ipix.tolist())
     return ipixs
-
-
-def get_ccdcenters_radec(filename):
-    hdul = fits.open(filename)
-    nccds = len(hdul) - 1
-    ccd_centers = dict()
-    for i in range(1, nccds + 1):
-        w = WCS(hdul[i].header)
-        ccdnum = hdul[i].header["CCDNUM"]
-        coords = np.array(
-            w.wcs_pix2world(
-                hdul[i].header["NAXIS1"] / 2, hdul[i].header["NAXIS2"] / 2, 0
-            )
-        )
-        ccd_centers[str(ccdnum)] = coords
-    hdul.close()
-    return ccd_centers
-
-
-def create_region_file(filename):
-    hdul = fits.open(filename)
-    nccds = len(hdul) - 1
-    for i in range(1, nccds + 1):
-        w = WCS(hdul[i].header)
-        w.footprint_to_file(
-            filename="region_files/footprint_" + str(hdul[i].header["CCDNUM"]) + ".reg"
-        )
-    hdul.close()
-
-
-def get_cd(filename):
-    hdul = fits.open(filename)
-    w = WCS(hdul[1].header)
-    hdul.close()
-    return w.wcs.cd
-
-
-def get_ccdcenters_xy(filename):
-    "Calculates the x,y coordinates of the CCD center given the RA,Dec of the center and reference point.Uses Calabretta and Greisen(2002) eqns. 5,12,13,54"
-    ccd_centers_xy = dict()
-    phi_p = 180 * u.deg
-    ccd_centers_radec = get_ccdcenters_radec(filename)
-    hdul = fits.open(filename)
-    alpha_p = hdul[1].header["CRVAL1"] * u.deg
-    delta_p = hdul[1].header["CRVAL2"] * u.deg
-    ccdnums = ccd_centers_radec.keys()
-    for ccdnum in ccdnums:
-        alpha = ccd_centers_radec[ccdnum][0] * u.deg
-        delta = ccd_centers_radec[ccdnum][1] * u.deg
-        phi = phi_p + np.arctan2(
-            -np.cos(delta) * np.sin(alpha - alpha_p),
-            np.sin(delta) * np.cos(delta_p)
-            - np.cos(delta) * np.sin(delta_p) * np.cos(alpha - alpha_p),
-        )
-        theta = np.arcsin(
-            np.sin(delta) * np.sin(delta_p)
-            + np.cos(delta) * np.cos(delta_p) * np.cos(alpha - alpha_p)
-        )
-        R_theta = (1 * u.rad / np.tan(theta)).to(u.deg)
-        x = R_theta * np.sin(phi)
-        y = -R_theta * np.cos(phi)
-        ccd_centers_xy[ccdnum] = [x.value, y.value]
-    return ccd_centers_xy
 
 
 def ccd_xy_to_radec(alpha_p, delta_p, ccd_centers_xy):
@@ -352,15 +270,3 @@ def ccd_xy_to_radec(alpha_p, delta_p, ccd_centers_xy):
         alpha[alpha < 0 * u.deg] += 360 * u.deg
         ccd_centers_radec[ccdnum] = np.array([alpha.value, delta.value])
     return ccd_centers_radec
-
-
-def calculate_residuals(ccd_cent_code, ccd_cent_wcs):
-    residuals = np.empty([len(ccd_cent_code), 2])
-    for i, ccdnum in enumerate(ccd_cent_code.keys()):
-        residuals[i] = np.array(
-            [
-                np.abs(ccd_cent_code[ccdnum][0] - ccd_cent_wcs[ccdnum][0]),
-                np.abs(ccd_cent_code[ccdnum][1] - ccd_cent_wcs[ccdnum][1]),
-            ]
-        )
-    return residuals
