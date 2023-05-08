@@ -28,7 +28,6 @@ def parse_args(args):
     )
 
     parser.add_argument("--doPlots", action="store_true", default=False)
-    parser.add_argument("--doDatabase", action="store_true", default=False)
     parser.add_argument("--doMovie", action="store_true", default=False)
     parser.add_argument("--doTiles", action="store_true", default=False)
     parser.add_argument("--tilesType", help="tiling type", default="moc")
@@ -42,7 +41,6 @@ def parse_args(args):
 
     parser.add_argument("--doCatalog", action="store_true", default=False)
     parser.add_argument("--doUseCatalog", action="store_true", default=False)
-    parser.add_argument("--doCatalogDatabase", action="store_true", default=False)
     parser.add_argument("--catalogDir", help="catalog directory", default=CATALOG_DIR)
     parser.add_argument("--galaxy_catalog", help="Source catalog", default="GLADE")
     parser.add_argument(
@@ -104,10 +102,6 @@ def parse_args(args):
 
     parser.add_argument("--galaxies_FoV_sep", default=1.0, type=float)
 
-    parser.add_argument("--doFootprint", action="store_true", default=False)
-    parser.add_argument("--footprint_ra", default=30.0, type=float)
-    parser.add_argument("--footprint_dec", default=60.0, type=float)
-    parser.add_argument("--footprint_radius", default=10.0, type=float)
     parser.add_argument("--doTreasureMap", action="store_true", default=False)
     parser.add_argument(
         "--treasuremap_token", help="Treasure Map API Token.", default=""

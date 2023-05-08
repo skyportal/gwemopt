@@ -8,7 +8,6 @@ import gwemopt.coverage
 import gwemopt.plotting
 import gwemopt.segments
 from gwemopt.args import parse_args
-from gwemopt.footprint import get_skymap
 from gwemopt.gracedb import get_event
 from gwemopt.params import params_struct
 from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR
@@ -38,12 +37,10 @@ def run(args):
 
     if args.event is not None:
         params["skymap"] = get_event(event_name=args.event)
-    elif args.doFootprint:
-        params["skymap"] = get_skymap(params)
     elif args.doSkymap:
         pass
     else:
-        print("Need to enable --doEvent, --doFootprint or --doSkymap")
+        print("Need to enable --doEvent or --doSkymap")
         exit(0)
 
     # Function to read maps
