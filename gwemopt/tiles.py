@@ -6,7 +6,6 @@ from scipy.stats import norm
 from shapely.geometry import MultiPoint
 
 import gwemopt.moc
-import gwemopt.quadrants
 import gwemopt.segments
 import gwemopt.utils
 from gwemopt.utils.rotate import angular_distance
