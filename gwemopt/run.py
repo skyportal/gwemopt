@@ -5,6 +5,8 @@ import numpy as np
 
 import gwemopt.catalog
 import gwemopt.coverage
+import gwemopt.efficiency
+import gwemopt.lightcurve
 import gwemopt.plotting
 import gwemopt.segments
 from gwemopt.args import parse_args
