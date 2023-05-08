@@ -3,14 +3,7 @@ Module for parsing command line arguments
 """
 import argparse
 
-from gwemopt.paths import (
-    CATALOG_DIR,
-    CONFIG_DIR,
-    DEFAULT_BASE_OUTPUT_DIR,
-    DEFAULT_LIGHTCURVE_DIR,
-    SKYMAP_DIR,
-    TILING_DIR,
-)
+from gwemopt.paths import CATALOG_DIR, DEFAULT_LIGHTCURVE_DIR
 
 
 def parse_args(args):

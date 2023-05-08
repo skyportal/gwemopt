@@ -1,7 +1,6 @@
 """
 Module to fetch event info and skymap from GraceDB
 """
-import json
 import os
 from pathlib import Path
 

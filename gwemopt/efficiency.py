@@ -1,18 +1,11 @@
 import os
 
 import healpy as hp
-import matplotlib
 import numpy as np
 import scipy.stats
 from astropy.time import Time
-from scipy.interpolate import interpolate as interp
-
-# matplotlib.rc('text', usetex=True)
-matplotlib.use("Agg")
-matplotlib.rcParams.update({"font.size": 16})
-matplotlib.rcParams["contour.negative_linestyle"] = "solid"
-
 from ligo.skymap import distance
+from scipy.interpolate import interpolate as interp
 
 
 def compute_efficiency(

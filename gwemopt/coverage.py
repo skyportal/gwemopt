@@ -1,5 +1,4 @@
 import copy
-import os
 
 import ligo.segments as segments
 import numpy as np
