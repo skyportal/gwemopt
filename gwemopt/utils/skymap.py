@@ -49,64 +49,35 @@ def read_skymap(params, do_3d=None, map_struct=None):
     if map_struct is None:
         map_struct = {}
 
-        if params["doDatabase"]:
-            models = params["models"]
-            localizations_all = models.Localization.query.all()
-            localizations = models.Localization.query.filter_by(
-                dateobs=params["dateobs"], localization_name=params["localization_name"]
-            ).all()
-            if localizations == None:
-                raise ValueError("No localization with dateobs=%s" % params["dateobs"])
-            else:
-                prob_data = localizations[0].healpix
-                prob_data = prob_data / np.sum(prob_data)
-                map_struct["prob"] = prob_data
+        filename = params["skymap"]
 
-                distmu = localizations[0].distmu
-                distsigma = localizations[0].distsigma
-                distnorm = localizations[0].distnorm
-
-                if distmu is None:
-                    map_struct["distmu"] = None
-                    map_struct["distsigma"] = None
-                    map_struct["distnorm"] = None
-                else:
-                    map_struct["distmu"] = np.array(distmu)
-                    map_struct["distsigma"] = np.array(distsigma)
-                    map_struct["distnorm"] = np.array(distnorm)
-                    do_3d = True
-        else:
-            filename = params["skymap"]
-
-            if do_3d:
-                try:
-                    healpix_data, header = hp.read_map(
-                        filename, field=(0, 1, 2, 3), verbose=False, h=True
-                    )
-                except:
-                    table = read_sky_map(filename, moc=True, distances=True)
-                    order = hp.nside2order(params["nside"])
-                    t = rasterize(table, order)
-                    result = t["PROB"], t["DISTMU"], t["DISTSIGMA"], t["DISTNORM"]
-                    healpix_data = hp.reorder(result, "NESTED", "RING")
-
-                distmu_data = healpix_data[1]
-                distsigma_data = healpix_data[2]
-                prob_data = healpix_data[0]
-                norm_data = healpix_data[3]
-
-                map_struct["distmu"] = distmu_data / params["DScale"]
-                map_struct["distsigma"] = distsigma_data / params["DScale"]
-                map_struct["prob"] = prob_data
-                map_struct["distnorm"] = norm_data
-
-            else:
-                prob_data, header = hp.read_map(
-                    filename, field=0, verbose=False, h=True
+        if do_3d:
+            try:
+                healpix_data, header = hp.read_map(
+                    filename, field=(0, 1, 2, 3), verbose=False, h=True
                 )
-                prob_data = prob_data / np.sum(prob_data)
+            except:
+                table = read_sky_map(filename, moc=True, distances=True)
+                order = hp.nside2order(params["nside"])
+                t = rasterize(table, order)
+                result = t["PROB"], t["DISTMU"], t["DISTSIGMA"], t["DISTNORM"]
+                healpix_data = hp.reorder(result, "NESTED", "RING")
 
-                map_struct["prob"] = prob_data
+            distmu_data = healpix_data[1]
+            distsigma_data = healpix_data[2]
+            prob_data = healpix_data[0]
+            norm_data = healpix_data[3]
+
+            map_struct["distmu"] = distmu_data / params["DScale"]
+            map_struct["distsigma"] = distsigma_data / params["DScale"]
+            map_struct["prob"] = prob_data
+            map_struct["distnorm"] = norm_data
+
+        else:
+            prob_data, header = hp.read_map(filename, field=0, verbose=False, h=True)
+            prob_data = prob_data / np.sum(prob_data)
+
+            map_struct["prob"] = prob_data
 
     if params["doRotate"]:
         for key in map_struct.keys():
