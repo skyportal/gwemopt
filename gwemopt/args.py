@@ -15,7 +15,7 @@ def parse_args(args):
     parser.add_argument("--do2D", action="store_true", default=False)
 
     parser.add_argument("-o", "--outputDir", help="output directory", default=None)
-    parser.add_argument("-n", "--event", help="event name", default="G268556")
+    parser.add_argument("-n", "--event", help="event name", default=None)
 
     parser.add_argument("--doSkymap", action="store_true", default=False)
 
