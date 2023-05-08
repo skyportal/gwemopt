@@ -210,48 +210,6 @@ def read_coverage_files(params, moc_structs):
     return combine_coverage_structs(coverage_structs)
 
 
-def waw(params, map_struct, tile_structs):
-    nside = params["nside"]
-
-    t = np.arange(0, 7, 1 / 24.0)
-    # t = np.arange(0,7,1.0)
-    cr90 = map_struct["cumprob"] < 0.9
-    detmaps = gwemopt.waw.detectability_maps(
-        params, t, map_struct, verbose=True, limit_to_region=cr90, nside=nside
-    )
-
-    coverage_structs = []
-    for telescope in params["telescopes"]:
-        tile_struct = tile_structs[telescope]
-        config_struct = params["config"][telescope]
-        T_int = config_struct["exposuretime"]
-        ranked_tile_probs = gwemopt.tiles.compute_tiles_map(
-            tile_struct, map_struct["prob"], func="np.sum(x)"
-        )
-        strategy_struct = gwemopt.waw.construct_followup_strategy_tiles(
-            map_struct["prob"], detmaps, t, tile_struct, T_int, params["Tobs"]
-        )
-        if strategy_struct is None:
-            raise ValueError("Change distance scale...")
-        strategy_struct = strategy_struct * 86400.0
-        keys = tile_struct.keys()
-        for key, prob, exposureTime in zip(keys, ranked_tile_probs, strategy_struct):
-            tile_struct[key]["prob"] = prob
-            tile_struct[key]["exposureTime"] = exposureTime
-            tile_struct[key]["nexposures"] = int(
-                np.floor(exposureTime / config_struct["exposuretime"])
-            )
-        coverage_struct = gwemopt.scheduler.scheduler(
-            params, config_struct, tile_struct
-        )
-        coverage_structs.append(coverage_struct)
-
-    if params["doPlots"]:
-        gwemopt.plotting.waw(params, detmaps, t, strategy_struct)
-
-    return combine_coverage_structs(coverage_structs)
-
-
 def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
     map_struct_hold = copy.deepcopy(map_struct)
 
@@ -1031,13 +989,6 @@ def timeallocation(params, map_struct, tile_structs, previous_coverage_struct=No
                 tile_structs, coverage_struct = gwemopt.coverage.powerlaw(
                     params, map_struct, tile_structs, previous_coverage_struct
                 )
-
-    elif params["timeallocationType"] == "waw":
-        if params["do3D"]:
-            print("Generating WAW schedule...")
-            coverage_struct = gwemopt.coverage.waw(params, map_struct, tile_structs)
-        else:
-            raise ValueError("Need to enable --do3D for waw")
 
     elif params["timeallocationType"] == "manual":
         print("Generating manual schedule...")
