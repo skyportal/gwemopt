@@ -14,6 +14,8 @@ test_dir = Path(__file__).parent.absolute()
 test_data_dir = test_dir.joinpath("data")
 expected_results_dir = test_data_dir.joinpath("expected_results")
 
+test_skymap = test_data_dir.joinpath("S190814bv_5_LALInference.v1.fits.gz")
+
 
 def test_scheduler():
     """
@@ -55,8 +57,8 @@ def test_scheduler():
                 "-o",
                 str(temp_dir),
                 "--doSkymap",
-                "-n",
-                "S190814bv",
+                "--skymap",
+                str(test_skymap),
                 "--doTiles",
                 "--doPlots",
                 "--doSchedule",
