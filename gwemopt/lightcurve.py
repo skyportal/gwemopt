@@ -1,16 +1,5 @@
-import glob
-import optparse
-import os
-import sys
-
-import matplotlib
 import numpy as np
 import scipy.stats
-
-# matplotlib.rc('text', usetex=True)
-matplotlib.use("Agg")
-matplotlib.rcParams.update({"font.size": 16})
-import matplotlib.pyplot as plt
 
 
 def tophat(mag0=0.0, dmag=0.0):

@@ -1,5 +1,4 @@
 import copy
-import os
 
 import healpy as hp
 import numpy as np
@@ -8,7 +7,6 @@ from shapely.geometry import MultiPoint
 
 import gwemopt.moc
 import gwemopt.quadrants
-import gwemopt.samplers
 import gwemopt.segments
 import gwemopt.utils
 from gwemopt.utils.rotate import angular_distance

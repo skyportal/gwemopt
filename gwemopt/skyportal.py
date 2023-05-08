@@ -1,12 +1,8 @@
 import copy
-import time
 
 import healpy as hp
 import ligo.segments as segments
-import mocpy
 import numpy as np
-from astropy.table import Table
-from ligo.skymap.bayestar import rasterize
 from mocpy import MOC
 from regions import CircleSkyRegion, PolygonSkyRegion, RectangleSkyRegion, Regions
 

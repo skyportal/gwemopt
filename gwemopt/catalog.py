@@ -3,16 +3,13 @@
 
 import copy
 import os
-import sys
 
 import astropy.units as u
 import h5py
 import healpy as hp
 import numpy as np
-import scipy.stats
 from astropy.cosmology import WMAP9 as cosmo
-from astropy.io import ascii
-from astropy.table import Column, Table
+from astropy.table import Table
 from astroquery.vizier import Vizier
 from ligo.skymap import distance
 from scipy.special import gammaincinv

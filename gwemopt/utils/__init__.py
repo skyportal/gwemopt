@@ -11,7 +11,7 @@ from gwemopt.utils.pixels import (
     getRectanglePixels,
     getSquarePixels,
 )
-from gwemopt.utils.skymap import read_skymap, samples_from_skymap
+from gwemopt.utils.skymap import read_skymap
 from gwemopt.utils.tile_utils import (
     append_tile_epochs,
     balance_tiles,

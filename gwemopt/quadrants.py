@@ -13,16 +13,9 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-
-from __future__ import print_function
-
-# import cPickle as pickle
-import pickle
-
 import astropy
 import healpy
 import numpy as np
-from astropy import constants as c
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table

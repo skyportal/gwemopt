@@ -3,14 +3,7 @@ Module for parsing command line arguments
 """
 import argparse
 
-from gwemopt.paths import (
-    CATALOG_DIR,
-    CONFIG_DIR,
-    DEFAULT_BASE_OUTPUT_DIR,
-    DEFAULT_LIGHTCURVE_DIR,
-    SKYMAP_DIR,
-    TILING_DIR,
-)
+from gwemopt.paths import CATALOG_DIR, DEFAULT_LIGHTCURVE_DIR
 
 
 def parse_args(args):
@@ -25,7 +18,6 @@ def parse_args(args):
     parser.add_argument("-n", "--event", help="event name", default="G268556")
 
     parser.add_argument("--doSkymap", action="store_true", default=False)
-    parser.add_argument("--doSamples", action="store_true", default=False)
 
     parser.add_argument("--doCoverage", action="store_true", default=False)
 
