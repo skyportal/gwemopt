@@ -111,13 +111,6 @@ def run(args):
                             fid.close()
                     exit(0)
 
-    if args.doSamples:
-        print("Generating samples from skymap...")
-        if args.do3D:
-            samples_struct = gwemopt.utils.samples_from_skymap(map_struct, is3D=True)
-        else:
-            samples_struct = gwemopt.utils.samples_from_skymap(map_struct, is3D=False)
-
     if args.doSplit:
         print("Splitting skymap...")
         map_struct["groups"] = gwemopt.mapsplit.similar_range(params, map_struct)
