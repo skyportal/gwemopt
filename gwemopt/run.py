@@ -27,16 +27,6 @@ def run(args):
         )
         exit(0)
 
-    # Can force 3D, or 2D, or just work out from the map
-    if args.do3D and args.do2D:
-        raise ValueError("Cannot do both 2D and 3D skymaps.")
-    elif args.do3D:
-        do_3d = True
-    elif args.do2D:
-        do_3d = False
-    else:
-        do_3d = None
-
     if args.event is not None:
         params["skymap"] = get_event(event_name=args.event)
     elif args.doSkymap:
@@ -46,7 +36,7 @@ def run(args):
         exit(0)
 
     # Function to read maps
-    params, map_struct = read_skymap(params, do_3d=do_3d)
+    params, map_struct = read_skymap(params)
 
     # Set output directory
     if args.outputDir is not None:
@@ -192,15 +182,15 @@ def run(args):
                     map_struct,
                     lightcurve_struct,
                     coverage_struct,
-                    do3D=args.do3D,
                 )
                 efficiency_structs[key] = efficiency_struct
                 efficiency_structs[key]["legend_label"] = lightcurve_struct[
                     "legend_label"
                 ]
-                if args.do3D:
+                if params["do_3d"]:
                     print(
-                        f'Percent detections out of {params["Ninj"]} injected KNe: {efficiency_structs[key]["3D"]*100}% '
+                        f'Percent detections out of {params["Ninj"]} injected KNe: '
+                        f'{efficiency_structs[key]["3D"]*100:.2f}% '
                     )
 
             if args.doPlots:

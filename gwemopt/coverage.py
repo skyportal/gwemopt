@@ -279,7 +279,6 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                 previous_coverage_struct,
             )
 
-            # if params["doRASlices"] and params["do3D"]:
             if params["doRASlices"]:
                 coverage_struct = gwemopt.scheduler.schedule_ra_splits(
                     params,
@@ -498,8 +497,8 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
 
 
 def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
-    if not "distmu" in map_struct:
-        print("timeallocationType absmag requires --do3D")
+    if "distmu" not in map_struct:
+        print("timeallocationType absmag requires 3d geometry")
         exit(0)
 
     map_struct_hold = copy.deepcopy(map_struct)

@@ -399,7 +399,7 @@ def efficiency(params, map_struct, efficiency_structs):
     plt.savefig(plotName, dpi=200)
     plt.close("all")
 
-    if params["do3D"]:
+    if params["do_3d"]:
         for key in efficiency_structs:
             efficiency_struct = efficiency_structs[key]
             plotName = os.path.join(
