@@ -8,9 +8,7 @@ from ligo.skymap import distance
 from scipy.interpolate import interpolate as interp
 
 
-def compute_efficiency(
-    params, map_struct, lightcurve_struct, coverage_struct, do3D=False
-):
+def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
     nside = params["nside"]
     npix = hp.nside2npix(nside)
 
@@ -74,7 +72,7 @@ def compute_efficiency(
 
     save_efficiency_data(params, efficiency_struct, lightcurve_struct)
 
-    if do3D:
+    if params["do_3d"]:
         eff_3D, dists_inj = compute_3d_efficiency(
             params, map_struct, lightcurve_struct, coverage_struct
         )

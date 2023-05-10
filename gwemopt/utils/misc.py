@@ -11,7 +11,7 @@ from astropy.time import Time, TimeDelta
 
 
 def auto_rasplit(params, map_struct, nside_down):
-    if params["do3D"]:
+    if params["do_3d"]:
         prob_down, distmu_down, distsigma_down, distnorm_down = ligodist.ud_grade(
             map_struct["prob"],
             map_struct["distmu"],

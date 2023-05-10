@@ -14,10 +14,12 @@ from scipy import stats
 from gwemopt.utils.rotate import rotate_map
 
 
-def read_skymap(params, do_3d=None, map_struct=None):
+def read_skymap(params, map_struct=None):
     # Let's just figure out what's in the skymap first
 
     skymap_path = params["skymap"]
+
+    geometry = params["geometry"]
 
     params["name"] = Path(skymap_path).stem
 
@@ -42,8 +44,15 @@ def read_skymap(params, do_3d=None, map_struct=None):
         params["gpstime"] = t_obs.gps
 
     # "Do 3D" based on map, if not specified
-    if do_3d is None:
-        do_3d = is_3d
+    if geometry is None:
+        params["do_3d"] = is_3d
+    # Otherwise set it
+    else:
+        assert geometry in ["2d", "3d"]
+        if geometry == "2d":
+            params["do_3d"] = False
+        else:
+            params["do_3d"] = True
 
     header = []
     if map_struct is None:
@@ -51,7 +60,7 @@ def read_skymap(params, do_3d=None, map_struct=None):
 
         filename = params["skymap"]
 
-        if do_3d:
+        if params["do_3d"]:
             try:
                 healpix_data, header = hp.read_map(
                     filename, field=(0, 1, 2, 3), verbose=False, h=True
@@ -92,10 +101,10 @@ def read_skymap(params, do_3d=None, map_struct=None):
     print("natural_nside =", natural_nside)
     print("nside =", nside)
 
-    if not do_3d:
+    if not params["do_3d"]:
         map_struct["prob"] = hp.ud_grade(map_struct["prob"], nside, power=-2)
 
-    if do_3d:
+    if params["do_3d"]:
         if natural_nside != nside:
             map_struct["prob"] = hp.pixelfunc.ud_grade(
                 map_struct["prob"], nside, power=-2

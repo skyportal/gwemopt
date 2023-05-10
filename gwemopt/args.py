@@ -11,8 +11,8 @@ def parse_args(args):
 
     parser.add_argument("-s", "--skymap", help="GW skymap.", default=None)
     parser.add_argument("-g", "--gpstime", help="GPS time.", default=None)
-    parser.add_argument("--do3D", action="store_true", default=False)
-    parser.add_argument("--do2D", action="store_true", default=False)
+
+    parser.add_argument("--geometry", help="2d, 3d, or auto", default=None)
 
     parser.add_argument("-o", "--outputDir", help="output directory", default=None)
     parser.add_argument("-n", "--event", help="event name", default=None)
@@ -58,12 +58,6 @@ def parse_args(args):
     parser.add_argument("--doSkybrightness", action="store_true", default=False)
 
     parser.add_argument("--doEfficiency", action="store_true", default=False)
-    parser.add_argument(
-        "-e",
-        "--efficiencyOutput",
-        help="Output file of the efficiency.",
-        default="efficiency.txt",
-    )
     parser.add_argument(
         "-m", "--modelType", help="(file, Bulla, Tophat, afterglow)", default="Tophat"
     )
@@ -111,6 +105,7 @@ def parse_args(args):
         help="Status of Treasure Map observations to be queried.",
         default="planned,completed",
     )
+
     parser.add_argument("--start_time", default=None)
     parser.add_argument("--end_time", default=None)
 
@@ -166,14 +161,6 @@ def parse_args(args):
     parser.add_argument("--doAvoidGalacticPlane", action="store_true", default=False)
     parser.add_argument(
         "--galactic_limit", help="Galactic limit.", default=15.0, type=float
-    )
-
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        default=False,
-        help="Run verbosely. (Default: False)",
     )
 
     return parser.parse_args(args=args)

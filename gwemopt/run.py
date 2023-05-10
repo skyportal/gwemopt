@@ -11,9 +11,16 @@ import gwemopt.plotting
 import gwemopt.segments
 from gwemopt.args import parse_args
 from gwemopt.gracedb import get_event
+from gwemopt.io import read_skymap, summary
 from gwemopt.params import params_struct
 from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR
-from gwemopt.utils import read_skymap
+from gwemopt.plotting import (
+    make_coverage_plots,
+    make_efficiency_plots,
+    make_tile_plots,
+    plot_observability,
+    plot_skymap,
+)
 
 
 def run(args):
@@ -27,16 +34,6 @@ def run(args):
         )
         exit(0)
 
-    # Can force 3D, or 2D, or just work out from the map
-    if args.do3D and args.do2D:
-        raise ValueError("Cannot do both 2D and 3D skymaps.")
-    elif args.do3D:
-        do_3d = True
-    elif args.do2D:
-        do_3d = False
-    else:
-        do_3d = None
-
     if args.event is not None:
         params["skymap"] = get_event(event_name=args.event)
     elif args.doSkymap:
@@ -46,7 +43,7 @@ def run(args):
         exit(0)
 
     # Function to read maps
-    params, map_struct = read_skymap(params, do_3d=do_3d)
+    params, map_struct = read_skymap(params)
 
     # Set output directory
     if args.outputDir is not None:
@@ -70,7 +67,7 @@ def run(args):
 
     if args.doPlots:
         print("Plotting skymap...")
-        gwemopt.plotting.skymap(params, map_struct)
+        plot_skymap(params, map_struct)
 
     if args.doObservability:
         print("Generating observability")
@@ -78,7 +75,7 @@ def run(args):
         map_struct["observability"] = observability_struct
         if args.doPlots:
             print("Plotting observability...")
-            gwemopt.plotting.observability(params, map_struct)
+            plot_observability(params, map_struct)
         if args.doObservabilityExit:
             for telescope in params["telescopes"]:
                 if (
@@ -138,7 +135,7 @@ def run(args):
 
         if args.doPlots:
             print("Plotting tiles struct...")
-            gwemopt.plotting.tiles(params, map_struct, tile_structs)
+            make_tile_plots(params, map_struct, tile_structs)
 
     if args.doSchedule:
         if args.doTiles:
@@ -158,20 +155,18 @@ def run(args):
     if args.doSchedule or args.doCoverage:
         print("Summary of coverage...")
         if args.doCatalog:
-            gwemopt.scheduler.summary(
-                params, map_struct, coverage_struct, catalog_struct=catalog_struct
-            )
+            summary(params, map_struct, coverage_struct, catalog_struct=catalog_struct)
         else:
-            gwemopt.scheduler.summary(params, map_struct, coverage_struct)
+            summary(params, map_struct, coverage_struct)
 
         if args.doPlots:
             print("Plotting coverage...")
             if args.doCatalog:
-                gwemopt.plotting.coverage(
+                make_coverage_plots(
                     params, map_struct, coverage_struct, catalog_struct=catalog_struct
                 )
             else:
-                gwemopt.plotting.coverage(params, map_struct, coverage_struct)
+                make_coverage_plots(params, map_struct, coverage_struct)
 
     if args.doEfficiency:
         if args.doSchedule or args.doCoverage:
@@ -192,20 +187,20 @@ def run(args):
                     map_struct,
                     lightcurve_struct,
                     coverage_struct,
-                    do3D=args.do3D,
                 )
                 efficiency_structs[key] = efficiency_struct
                 efficiency_structs[key]["legend_label"] = lightcurve_struct[
                     "legend_label"
                 ]
-                if args.do3D:
+                if params["do_3d"]:
                     print(
-                        f'Percent detections out of {params["Ninj"]} injected KNe: {efficiency_structs[key]["3D"]*100}% '
+                        f'Percent detections out of {params["Ninj"]} injected KNe: '
+                        f'{efficiency_structs[key]["3D"]*100:.2f}% '
                     )
 
             if args.doPlots:
                 print("Plotting efficiency...")
-                gwemopt.plotting.efficiency(params, map_struct, efficiency_structs)
+                make_efficiency_plots(params, map_struct, efficiency_structs)
         else:
             print("Need to enable --doSchedule or --doCoverage for --doEfficiency")
             exit(0)
