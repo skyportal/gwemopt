@@ -11,6 +11,7 @@ import gwemopt.plotting
 import gwemopt.segments
 from gwemopt.args import parse_args
 from gwemopt.gracedb import get_event
+from gwemopt.io import summary
 from gwemopt.params import params_struct
 from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR
 from gwemopt.plotting import (
@@ -155,11 +156,9 @@ def run(args):
     if args.doSchedule or args.doCoverage:
         print("Summary of coverage...")
         if args.doCatalog:
-            gwemopt.scheduler.summary(
-                params, map_struct, coverage_struct, catalog_struct=catalog_struct
-            )
+            summary(params, map_struct, coverage_struct, catalog_struct=catalog_struct)
         else:
-            gwemopt.scheduler.summary(params, map_struct, coverage_struct)
+            summary(params, map_struct, coverage_struct)
 
         if args.doPlots:
             print("Plotting coverage...")
