@@ -668,7 +668,7 @@ def schedule_alternating(
             elif len(coverage_structs) == 1:
                 tile_struct = append_tile_epochs(tile_struct, coverage_structs[0])
 
-        coverage_struct = gwemopt.scheduler.make_schedule_plots(
+        coverage_struct = gwemopt.scheduler.scheduler(
             params, config_struct, tile_struct
         )
         if params["doMaxTiles"]:
@@ -677,7 +677,7 @@ def schedule_alternating(
             )
 
             if doReschedule:
-                coverage_struct = gwemopt.scheduler.make_schedule_plots(
+                coverage_struct = gwemopt.scheduler.scheduler(
                     params, config_struct, tile_struct
                 )
 
