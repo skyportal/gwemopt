@@ -11,8 +11,7 @@ from astropy.time import Time
 import gwemopt.plotting
 import gwemopt.scheduler
 import gwemopt.tiles
-from gwemopt.utils.pixels import getCirclePixels, getSquarePixels
-from gwemopt.utils.tile_utils import (
+from gwemopt.tiles import (
     balance_tiles,
     check_overlapping_tiles,
     eject_tiles,
@@ -23,6 +22,7 @@ from gwemopt.utils.tile_utils import (
     slice_map_tiles,
     slice_number_tiles,
 )
+from gwemopt.utils.pixels import getCirclePixels, getSquarePixels
 from gwemopt.utils.treasuremap import get_treasuremap_pointings
 
 

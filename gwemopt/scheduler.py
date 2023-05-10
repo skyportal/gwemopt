@@ -10,12 +10,8 @@ from munkres import Munkres, make_cost_matrix
 
 import gwemopt.tiles
 from gwemopt.plotting.schedule import make_schedule_plots
+from gwemopt.tiles import balance_tiles, optimize_max_tiles, schedule_alternating
 from gwemopt.utils.rotate import angular_distance
-from gwemopt.utils.tile_utils import (
-    balance_tiles,
-    optimize_max_tiles,
-    schedule_alternating,
-)
 
 
 def get_altaz_tiles(ras, decs, observatory, obstime):
