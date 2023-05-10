@@ -11,7 +11,7 @@ import gwemopt.plotting
 import gwemopt.segments
 from gwemopt.args import parse_args
 from gwemopt.gracedb import get_event
-from gwemopt.io import summary
+from gwemopt.io import read_skymap, summary
 from gwemopt.params import params_struct
 from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR
 from gwemopt.plotting import (
@@ -21,7 +21,6 @@ from gwemopt.plotting import (
     plot_observability,
     plot_skymap,
 )
-from gwemopt.utils import read_skymap
 
 
 def run(args):
