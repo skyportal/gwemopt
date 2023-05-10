@@ -757,11 +757,11 @@ def galaxy(params, map_struct, catalog_struct):
         while len(idxRem) > 0:
             ii = idxRem[0]
             ra, dec, Sloc, S, Smass = (
-                catalog_struct["ra"][ii],
-                catalog_struct["dec"][ii],
-                catalog_struct["Sloc"][ii],
-                catalog_struct["S"][ii],
-                catalog_struct["Smass"][ii],
+                catalog_struct["ra"].to_numpy()[ii],
+                catalog_struct["dec"].to_numpy()[ii],
+                catalog_struct["Sloc"].to_numpy()[ii],
+                catalog_struct["S"].to_numpy()[ii],
+                catalog_struct["Smass"].to_numpy()[ii],
             )
 
             if config_struct["FOV_type"] == "square":
@@ -772,19 +772,19 @@ def galaxy(params, map_struct, catalog_struct):
                     ra + FoV / np.cos(np.deg2rad(dec)),
                 )
                 idx1 = np.where(
-                    (catalog_struct["ra"][idxRem] >= raCorners[0])
-                    & (catalog_struct["ra"][idxRem] <= raCorners[1])
+                    (catalog_struct["ra"].to_numpy()[idxRem] >= raCorners[0])
+                    & (catalog_struct["ra"].to_numpy()[idxRem] <= raCorners[1])
                 )[0]
                 idx2 = np.where(
-                    (catalog_struct["dec"][idxRem] >= decCorners[0])
-                    & (catalog_struct["dec"][idxRem] <= decCorners[1])
+                    (catalog_struct["dec"].to_numpy()[idxRem] >= decCorners[0])
+                    & (catalog_struct["dec"].to_numpy()[idxRem] <= decCorners[1])
                 )[0]
                 mask = np.intersect1d(idx1, idx2)
 
                 if len(mask) > 1:
                     ra_center, dec_center = get_rectangle(
-                        catalog_struct["ra"][idxRem][mask],
-                        catalog_struct["dec"][idxRem][mask],
+                        catalog_struct["ra"].to_numpy()[idxRem][mask],
+                        catalog_struct["dec"].to_numpy()[idxRem][mask],
                         FoV / np.cos(np.deg2rad(dec)),
                         FoV,
                     )
@@ -795,12 +795,12 @@ def galaxy(params, map_struct, catalog_struct):
                         ra_center + FoV / (2.0 * np.cos(np.deg2rad(dec))),
                     )
                     idx1 = np.where(
-                        (catalog_struct["ra"][idxRem] >= raCorners[0])
-                        & (catalog_struct["ra"][idxRem] <= raCorners[1])
+                        (catalog_struct["ra"].to_numpy()[idxRem] >= raCorners[0])
+                        & (catalog_struct["ra"].to_numpy()[idxRem] <= raCorners[1])
                     )[0]
                     idx2 = np.where(
-                        (catalog_struct["dec"][idxRem] >= decCorners[0])
-                        & (catalog_struct["dec"][idxRem] <= decCorners[1])
+                        (catalog_struct["dec"].to_numpy()[idxRem] >= decCorners[0])
+                        & (catalog_struct["dec"].to_numpy()[idxRem] <= decCorners[1])
                     )[0]
                     mask2 = np.intersect1d(idx1, idx2)
 
@@ -813,12 +813,12 @@ def galaxy(params, map_struct, catalog_struct):
                         ra_center + FoV_center / (2.0 * np.cos(np.deg2rad(dec))),
                     )
                     idx1 = np.where(
-                        (catalog_struct["ra"][idxRem] >= raCorners[0])
-                        & (catalog_struct["ra"][idxRem] <= raCorners[1])
+                        (catalog_struct["ra"].to_numpy()[idxRem] >= raCorners[0])
+                        & (catalog_struct["ra"].to_numpy()[idxRem] <= raCorners[1])
                     )[0]
                     idx2 = np.where(
-                        (catalog_struct["dec"][idxRem] >= decCorners[0])
-                        & (catalog_struct["dec"][idxRem] <= decCorners[1])
+                        (catalog_struct["dec"].to_numpy()[idxRem] >= decCorners[0])
+                        & (catalog_struct["dec"].to_numpy()[idxRem] <= decCorners[1])
                     )[0]
                     mask3 = np.intersect1d(idx1, idx2)
 
@@ -827,18 +827,21 @@ def galaxy(params, map_struct, catalog_struct):
                         mask = mask2
                 else:
                     ra_center, dec_center = np.mean(
-                        catalog_struct["ra"][idxRem][mask]
-                    ), np.mean(catalog_struct["dec"][idxRem][mask])
+                        catalog_struct["ra"].to_numpy()[idxRem][mask]
+                    ), np.mean(catalog_struct["dec"].to_numpy()[idxRem][mask])
 
             elif config_struct["FOV_type"] == "circle":
                 dist = angular_distance(
-                    ra, dec, catalog_struct["ra"][idxRem], catalog_struct["dec"][idxRem]
+                    ra,
+                    dec,
+                    catalog_struct["ra"].to_numpy()[idxRem],
+                    catalog_struct["dec"].to_numpy()[idxRem],
                 )
                 mask = np.where((2 * FoV) >= dist)[0]
                 if len(mask) > 1:
                     ra_center, dec_center = get_rectangle(
-                        catalog_struct["ra"][idxRem][mask],
-                        catalog_struct["dec"][idxRem][mask],
+                        catalog_struct["ra"].to_numpy()[idxRem][mask],
+                        catalog_struct["dec"].to_numpy()[idxRem][mask],
                         (FoV / np.sqrt(2)) / np.cos(np.deg2rad(dec)),
                         FoV / np.sqrt(2),
                     )
@@ -846,8 +849,8 @@ def galaxy(params, map_struct, catalog_struct):
                     dist = angular_distance(
                         ra_center,
                         dec_center,
-                        catalog_struct["ra"][idxRem],
-                        catalog_struct["dec"][idxRem],
+                        catalog_struct["ra"].to_numpy()[idxRem],
+                        catalog_struct["dec"].to_numpy()[idxRem],
                     )
                     mask2 = np.where(FoV >= dist)[0]
                     # did the optimization help?
@@ -855,14 +858,14 @@ def galaxy(params, map_struct, catalog_struct):
                         mask = mask2
                 else:
                     ra_center, dec_center = np.mean(
-                        catalog_struct["ra"][idxRem][mask]
-                    ), np.mean(catalog_struct["dec"][idxRem][mask])
+                        catalog_struct["ra"].to_numpy()[idxRem][mask]
+                    ), np.mean(catalog_struct["dec"].to_numpy()[idxRem][mask])
 
             new_ra.append(ra_center)
             new_dec.append(dec_center)
-            new_Sloc.append(np.sum(catalog_struct["Sloc"][idxRem][mask]))
-            new_S.append(np.sum(catalog_struct["S"][idxRem][mask]))
-            new_Smass.append(np.sum(catalog_struct["Smass"][idxRem][mask]))
+            new_Sloc.append(np.sum(catalog_struct["Sloc"].to_numpy()[idxRem][mask]))
+            new_S.append(np.sum(catalog_struct["S"].to_numpy()[idxRem][mask]))
+            new_Smass.append(np.sum(catalog_struct["Smass"].to_numpy()[idxRem][mask]))
             galaxies.append(idxRem[mask])
 
             idxRem = np.setdiff1d(idxRem, idxRem[mask])
