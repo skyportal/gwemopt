@@ -98,8 +98,7 @@ def test_scheduler():
             "coverage_ZTF.dat",
             "map.dat",
             "summary.dat",
-            "tiles_coverage_int.dat",
-        ]
+        ] + [f"tiles_coverage_int_{t}.txt" for t, _ in telescope_list]
 
         for extra_test_file in extra_test_files:
             new = pd.read_table(
