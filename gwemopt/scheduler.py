@@ -544,7 +544,7 @@ def scheduler(params, config_struct, tile_struct):
     )
 
     if params["doPlots"]:
-        gwemopt.plotting.scheduler(params, exposurelist, keys)
+        gwemopt.output.make_schedule_plots(params, exposurelist, keys)
 
     exposureused = np.where(np.array(keys) >= 0)[0]
     coverage_struct["exposureused"] = exposureused

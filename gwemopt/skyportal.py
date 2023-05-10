@@ -359,7 +359,7 @@ def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
 
 
 def skyportal2FOV(tess, nside):
-    moc = moc_from_tiles([tile.healpix for tile in tess.tiles], 2**29)
+    moc = moc_from_tiles([tile.healpix for tile in tess.make_tile_plots], 2**29)
     pix_id = moc.degrade_to_order(int(np.log2(nside))).flatten()
     if len(pix_id) > 0:
         ipix = hp.nest2ring(int(nside), pix_id.tolist())

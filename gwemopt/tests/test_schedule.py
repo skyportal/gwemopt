@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from gwemopt.read_output import read_schedule
+from gwemopt.io.read_output import read_schedule
 from gwemopt.run import run
 
 np.random.seed(42)
