@@ -4,6 +4,7 @@
 import copy
 import os
 
+import astropy.constants as c
 import astropy.units as u
 import h5py
 import healpy as hp
@@ -15,17 +16,17 @@ from ligo.skymap import distance
 from scipy.special import gammaincinv
 from scipy.stats import norm
 
+from gwemopt.catalogs.clu import CluCatalog
+from gwemopt.catalogs.glade import GladeCatalog
+from gwemopt.catalogs.mangrove import MangroveCatalog
+from gwemopt.catalogs.twomrs import TwoMRSCatalog
+
 # Unset row limits when querying Vizier
 Vizier.ROW_LIMIT = -1
 
 
 def get_catalog(params, map_struct):
-    if not os.path.isdir(params["catalogDir"]):
-        os.makedirs(params["catalogDir"])
-
-    catalogFile = os.path.join(
-        params["catalogDir"], "%s.hdf5" % params["galaxy_catalog"]
-    )
+    params["catalogDir"].mkdir(parents=True, exist_ok=True)
 
     """AB Magnitude zero point."""
     MAB0 = -2.5 * np.log10(3631.0e-23)
@@ -33,183 +34,28 @@ def get_catalog(params, map_struct):
     const = 4.0 * np.pi * (10.0 * pc_cm) ** 2.0
 
     if params["galaxy_catalog"] == "2MRS":
-        if not os.path.isfile(catalogFile):
-            import astropy.constants as c
-
-            (cat,) = Vizier.get_catalogs("J/ApJS/199/26/table3")
-
-            ra, dec = cat["RAJ2000"], cat["DEJ2000"]
-            cz = cat["cz"]
-            magk = cat["Ktmag"]
-
-            z = (u.Quantity(cat["cz"]) / c.c).to(u.dimensionless_unscaled)
-
-            completeness = 0.5
-            alpha = -1.0
-            MK_star = -23.55
-            MK_max = MK_star + 2.5 * np.log10(gammaincinv(alpha + 2, completeness))
-            MK = magk - cosmo.distmod(z)
-            idx = (z > 0) & (MK < MK_max)
-
-            ra, dec = ra[idx], dec[idx]
-            z = z[idx]
-            magk = magk[idx]
-
-            distmpc = cosmo.luminosity_distance(z).to("Mpc").value
-
-            with h5py.File(catalogFile, "w") as f:
-                f.create_dataset("ra", data=ra)
-                f.create_dataset("dec", data=dec)
-                f.create_dataset("z", data=z)
-                f.create_dataset("magk", data=magk)
-                f.create_dataset("distmpc", data=distmpc)
-
-        else:
-            with h5py.File(catalogFile, "r") as f:
-                ra, dec = f["ra"][:], f["dec"][:]
-                z = f["z"][:]
-                magk = f["magk"][:]
-                distmpc = f["distmpc"][:]
-        r = distmpc * 1.0
-        mag = magk * 1.0
+        cat = TwoMRSCatalog(catalog_dir=params["catalogDir"])
 
     elif params["galaxy_catalog"] == "GLADE":
-        if not os.path.isfile(catalogFile):
-            (cat,) = Vizier.get_catalogs("VII/281/glade2")
-
-            ra, dec = cat["RAJ2000"], cat["DEJ2000"]
-            distmpc, z = cat["Dist"], cat["z"]
-            magb, magk = cat["Bmag"], cat["Kmag"]
-            # Keep track of galaxy identifier
-            GWGC, PGC, HyperLEDA = cat["GWGC"], cat["PGC"], cat["HyperLEDA"]
-            _2MASS, SDSS = cat["_2MASS"], cat["SDSS-DR12"]
-
-            idx = np.where(distmpc >= 0)[0]
-            ra, dec = ra[idx], dec[idx]
-            distmpc, z = distmpc[idx], z[idx]
-            magb, magk = magb[idx], magk[idx]
-            GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
-            _2MASS, SDSS = _2MASS[idx], SDSS[idx]
-
-            with h5py.File(catalogFile, "w") as f:
-                f.create_dataset("ra", data=ra)
-                f.create_dataset("dec", data=dec)
-                f.create_dataset("distmpc", data=distmpc)
-                f.create_dataset("magb", data=magb)
-                f.create_dataset("magk", data=magk)
-                f.create_dataset("z", data=z)
-                # Add galaxy identifier
-                f.create_dataset("GWGC", data=GWGC.astype("S"))
-                f.create_dataset("PGC", data=PGC.astype("S"))
-                f.create_dataset("HyperLEDA", data=HyperLEDA.astype("S"))
-                f.create_dataset("2MASS", data=_2MASS.astype("S"))
-                f.create_dataset("SDSS", data=SDSS.astype("S"))
-
-        else:
-            with h5py.File(catalogFile, "r") as f:
-                ra, dec = f["ra"][:], f["dec"][:]
-                distmpc, z = f["distmpc"][:], f["z"][:]
-                magb, magk = f["magb"][:], f["magk"][:]
-                GWGC, PGC, _2MASS = f["GWGC"][:], f["PGC"][:], f["2MASS"][:]
-                HyperLEDA, SDSS = f["HyperLEDA"][:], f["SDSS"][:]
-                # Convert bytestring to unicode
-                GWGC = GWGC.astype("U")
-                PGC = PGC.astype("U")
-                HyperLEDA = HyperLEDA.astype("U")
-                _2MASS = _2MASS.astype("U")
-                SDSS = SDSS.astype("U")
-
-        # Keep only galaxies with finite B mag when using it in the grade
-        if params["galaxy_grade"] == "S":
-            idx = np.where(~np.isnan(magb))[0]
-            ra, dec, distmpc = ra[idx], dec[idx], distmpc[idx]
-            magb, magk = magb[idx], magk[idx]
-            GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
-            _2MASS, SDSS = _2MASS[idx], SDSS[idx]
-
-        r = distmpc * 1.0
-        mag = magb * 1.0
+        cat = GladeCatalog(catalog_dir=params["catalogDir"])
 
     elif params["galaxy_catalog"] == "CLU":
-        if not os.path.isfile(catalogFile):
-            raise ValueError("Please add %s." % catalogFile)
-
-        cat = Table.read(catalogFile)
-        name = cat["name"]
-        ra, dec = cat["ra"], cat["dec"]
-        sfr_fuv, mstar = cat["sfr_fuv"], cat["mstar"]
-        distmpc, magb = cat["distmpc"], cat["magb"]
-        a, b2a, pa = cat["a"], cat["b2a"], cat["pa"]
-        btc = cat["btc"]
-
-        idx = np.where(distmpc >= 0)[0]
-        ra, dec = ra[idx], dec[idx]
-        sfr_fuv, mstar = sfr_fuv[idx], mstar[idx]
-        distmpc, magb = distmpc[idx], magb[idx]
-        a, b2a, pa = a[idx], b2a[idx], pa[idx]
-        btc = btc[idx]
-
-        idx = np.where(~np.isnan(magb))[0]
-        ra, dec = ra[idx], dec[idx]
-        sfr_fuv, mstar = sfr_fuv[idx], mstar[idx]
-        distmpc, magb = distmpc[idx], magb[idx]
-        a, b2a, pa = a[idx], b2a[idx], pa[idx]
-        btc = btc[idx]
-
-        z = -1 * np.ones(distmpc.shape)
-        r = distmpc * 1.0
-        mag = magb * 1.0
+        cat = CluCatalog(catalog_dir=params["catalogDir"])
 
     elif params["galaxy_catalog"] == "mangrove":
-        catalogFile = os.path.join(
-            params["catalogDir"], "%s.hdf5" % params["galaxy_catalog"]
-        )
+        cat = MangroveCatalog(catalog_dir=params["catalogDir"])
+    else:
+        raise KeyError(f"Unknown galaxy catalog: {params['galaxy_catalog']}")
 
-        if not os.path.isfile(catalogFile):
-            print("mangrove catalog not found localy, start the automatic download")
-            url = "https://mangrove.lal.in2p3.fr/data/mangrove.hdf5"
-            os.system("wget -O {}/mangrove.hdf5 {}".format(params["catalogDir"], url))
+    df = cat.get_catalog()
 
-        cat = Table.read(catalogFile)
-
-        ra, dec = cat["RA"], cat["dec"]
-        distmpc, z = cat["dist"], cat["z"]
-        magb, magk = cat["B_mag"], cat["K_mag"]
-        magW1, magW2, magW3, magW4 = (
-            cat["w1mpro"],
-            cat["w2mpro"],
-            cat["w3mpro"],
-            cat["w4mpro"],
-        )
-        stellarmass = cat["stellarmass"]
-        # Keep track of galaxy identifier
-        GWGC, PGC, HyperLEDA = cat["GWGC_name"], cat["PGC"], cat["HyperLEDA_name"]
-        _2MASS, SDSS = cat["2MASS_name"], cat["SDSS-DR12_name"]
-        # keep track of the AGN flag
-        AGN_flag = cat["AGN_flag"]
-
-        idx = np.where(distmpc >= 0)[0]
-        ra, dec = ra[idx], dec[idx]
-        distmpc, z = distmpc[idx], z[idx]
-        magb, magk = magb[idx], magk[idx]
-        magW1, magW2, magW3, magW4 = magW1[idx], magW2[idx], magW3[idx], magW4[idx]
-        stellarmass = stellarmass[idx]
-        GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
-        _2MASS, SDSS = _2MASS[idx], SDSS[idx]
-        AGN_flag = AGN_flag[idx]
-
-        # Convert bytestring to unicode
-        GWGC = GWGC.astype("U")
-        PGC = PGC.astype("U")
-        HyperLEDA = HyperLEDA.astype("U")
-        _2MASS = _2MASS.astype("U")
-        SDSS = SDSS.astype("U")
-
-        r = distmpc * 1.0
-        mag = magb * 1.0
+    if params["galaxy_catalog"] == "glade":
+        # Keep only galaxies with finite B mag when using it in the grade
+        if params["galaxy_grade"] == "S":
+            mask = np.where(~np.isnan(df["magb"]))[0]
+            df = df.iloc[mask]
 
     n, cl = params["powerlaw_n"], params["powerlaw_cl"]
-    dist_exp = params["powerlaw_dist_exp"]
 
     prob_scaled = copy.deepcopy(map_struct["prob"])
     prob_sorted = np.sort(prob_scaled)[::-1]
@@ -219,8 +65,6 @@ def get_catalog(params, map_struct):
     prob_scaled[prob_indexes[index:]] = 0.0
     prob_scaled = prob_scaled**n
 
-    theta = 0.5 * np.pi - dec * 2 * np.pi / 360.0
-    phi = ra * 2 * np.pi / 360.0
     ipix = hp.ang2pix(map_struct["nside"], ra, dec, lonlat=True)
 
     if "distnorm" in map_struct:
@@ -253,30 +97,24 @@ def get_catalog(params, map_struct):
 
             # multiplie the Sloc by 1 or 0 according to the 3 sigma condistion
             Sloc = Sloc * mask
-            idx = np.where(condition_indexer)[0]
         else:
             Sloc = copy.copy(prob_scaled[ipix])
-            idx = np.arange(len(r)).astype(int)
     else:
         Sloc = copy.copy(prob_scaled[ipix])
-        idx = np.arange(len(r)).astype(int)
 
     # this happens when we are using a tiny catalog...
-    CompatibleGal = True
+    compatible_gal = True
     if np.all(Sloc == 0.0):
         Sloc[:] = 1.0
-        CompatibleGal = False
+        compatible_gal = False
 
     # new version of the Slum calcul (from HOGWARTs)
     Lsun = 3.828e26
     Msun = 4.83
-    Mknmin = -19
-    Mknmax = -12
     Lblist = []
 
-    for i in range(0, len(r)):
-        Mb = mag[i] - 5 * np.log10((r[i] * 10**6)) + 5
-        # L = Lsun * 2.512 ** (Msun - Mb)
+    for i, r_i in enumerate(df["r"]):
+        Mb = df["mag"][i] - 5 * np.log10((r_i * 10**6)) + 5
         Lb = Lsun * 2.512 ** (Msun - Mb)
         Lblist.append(Lb)
 
@@ -286,15 +124,6 @@ def get_catalog(params, map_struct):
     Lblist[Sloc == 0] = 0
 
     Slum = Lblist / np.nansum(np.array(Lblist))
-
-    """
-    L_nu = const * 10.**((mag + MAB0)/(-2.5))
-    L_nu = L_nu / np.nanmax(L_nu[idx])
-    L_nu = L_nu**params["catalog_n"]
-    L_nu[L_nu < 0.001] = 0.001
-    L_nu[L_nu > 1.0] = 1.0
-    Slum = L_nu / np.sum(L_nu)
-    """
 
     mlim, M_KNmin, M_KNmax = 22, -17, -12
     L_KNmin = const * 10.0 ** ((M_KNmin + MAB0) / (-2.5))
@@ -350,7 +179,6 @@ def get_catalog(params, map_struct):
         print("beta_mass =", beta_mass)
 
         Smass = Sloc * (1 + (alpha_mass * beta_mass * Smass))
-        # Smass = Sloc*Smass
 
     S = Sloc * Slum * Sdet
 
@@ -395,19 +223,7 @@ def get_catalog(params, map_struct):
         if params["galaxy_grade"] == "Smass":
             Smass = Smass[idx]
 
-    """
-    Sthresh = np.max(grade)*0.01
-    idx = np.where(grade >= Sthresh)[0]
-    grade = grade[idx]
-    ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
-    distmpc, z = distmpc[idx], z[idx]
-    if params["galaxy_catalog"] == "GLADE":
-        GWGC, PGC, HyperLEDA = GWGC[idx], PGC[idx], HyperLEDA[idx]
-        _2MASS, SDSS = _2MASS[idx], SDSS[idx]
-    """
-
     idx = np.argsort(grade)[::-1]
-    grade = grade[idx]
 
     ra, dec, Sloc, S = ra[idx], dec[idx], Sloc[idx], S[idx]
     distmpc, z = distmpc[idx], z[idx]
@@ -490,7 +306,7 @@ def get_catalog(params, map_struct):
     catalog_struct["S"] = S
     catalog_struct["Smass"] = Smass
 
-    catalog_struct["CompatibleGal"] = CompatibleGal
+    catalog_struct["CompatibleGal"] = compatible_gal
 
     if params["writeCatalog"]:
         catalogfile = os.path.join(params["outputDir"], "catalog.csv")

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import astroplan
 import astropy
@@ -104,6 +105,7 @@ def params_struct(opts):
     params["doSuperSched"] = False
     params["doUpdateScheduler"] = False
     params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","), dtype=float)
+    params["catalogDir"] = Path(opts.catalogDir)
 
     if params["tilesType"] not in TILE_TYPES:
         err = (
