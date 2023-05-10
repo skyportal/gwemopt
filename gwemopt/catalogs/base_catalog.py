@@ -31,7 +31,8 @@ class BaseCatalog:
 
     def get_catalog(self) -> pd.DataFrame:
         catalog_path = self.get_catalog_path()
-        print(catalog_path, catalog_path.exists())
         if not catalog_path.exists():
             self.download_catalog()
+        else:
+            print(f"Loading from saved catalog: {catalog_path}")
         return self.load_catalog()
