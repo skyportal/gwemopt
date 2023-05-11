@@ -446,14 +446,8 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                     ]
                 )
 
-                if len(overlap) == 0 or (params["doSuperSched"] and np.max(rat) < 0.50):
+                if len(overlap) == 0:
                     continue
-                if params["doSuperSched"]:
-                    if "epochs_telescope" not in tile_struct[key]:
-                        tile_struct[key]["epochs_telescope"] = []
-                    tile_struct[key]["epochs_telescope"].append(
-                        coverage_struct["telescope"][jj]
-                    )
 
                 if not "epochs" in tile_struct[key]:
                     tile_struct[key]["epochs"] = np.empty((0, 9))
