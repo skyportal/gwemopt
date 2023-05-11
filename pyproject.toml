@@ -60,6 +60,7 @@ dependencies = [
     "black",
     "isort",
     "pre-commit",
+    "tables"
 ]
 dynamic = ["version"]
 

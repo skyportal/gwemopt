@@ -3,13 +3,13 @@ from pathlib import Path
 
 import numpy as np
 
-import gwemopt.catalog
 import gwemopt.coverage
 import gwemopt.efficiency
 import gwemopt.lightcurve
 import gwemopt.plotting
 import gwemopt.segments
 from gwemopt.args import parse_args
+from gwemopt.catalogs import get_catalog
 from gwemopt.gracedb import get_event
 from gwemopt.io import read_skymap, summary
 from gwemopt.params import params_struct
@@ -63,7 +63,7 @@ def run(args):
 
     if args.doCatalog:
         print("Generating catalog...")
-        map_struct, catalog_struct = gwemopt.catalog.get_catalog(params, map_struct)
+        map_struct, catalog_struct = get_catalog(params, map_struct)
 
     if args.doPlots:
         print("Plotting skymap...")
