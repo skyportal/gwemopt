@@ -1,5 +1,5 @@
-import h5py
 import numpy as np
+import pandas as pd
 from astropy import constants as c
 from astropy import units as u
 from astropy.cosmology import WMAP9 as cosmo
@@ -13,40 +13,36 @@ class TwoMRSCatalog(BaseCatalog):
     name = "2mrs"
 
     def download_catalog(self):
-        (cat,) = Vizier.get_catalogs("J/ApJS/199/26/table3")
+        cat = Vizier.get_catalogs("J/ApJS/199/26/table3")
 
-        ra, dec = cat["RAJ2000"], cat["DEJ2000"]
-        magk = cat["Ktmag"]
+        cat["z"] = (u.Quantity(cat["cz"]) / c.c).to(u.dimensionless_unscaled)
+        # cat["z"]
+        df = cat.to_pandas()
+        df = df[df["z"] > 0]
+        key_map = {
+            "RAJ2000": "ra",
+            "DEJ2000": "dec",
+            "Ktmag": "magk",
+        }
 
-        z = (u.Quantity(cat["cz"]) / c.c).to(u.dimensionless_unscaled)
+        copy_keys = ["z"]
+
+        df = df[[x for x in key_map] + copy_keys]
+        df.rename(columns=key_map, inplace=True)
+        df["distmpc"] = cosmo.luminosity_distance(df["z"].to_numpy()).to("Mpc").value
 
         completeness = 0.5
         alpha = -1.0
-        MK_star = -23.55
-        MK_max = MK_star + 2.5 * np.log10(gammaincinv(alpha + 2, completeness))
-        MK = magk - cosmo.distmod(z)
-        idx = (z > 0) & (MK < MK_max)
+        mk_star = -23.55
+        mk_max = mk_star + 2.5 * np.log10(gammaincinv(alpha + 2, completeness))
+        mk = df["magk"].to_numpy() - cosmo.distmod(df["z"].to_numpy()).value
 
-        ra, dec = ra[idx], dec[idx]
-        z = z[idx]
-        magk = magk[idx]
-
-        distmpc = cosmo.luminosity_distance(z).to("Mpc").value
-
-        with h5py.File(self.get_catalog_path(), "w") as f:
-            f.create_dataset("ra", data=ra)
-            f.create_dataset("dec", data=dec)
-            f.create_dataset("z", data=z)
-            f.create_dataset("magk", data=magk)
-            f.create_dataset("distmpc", data=distmpc)
+        mask = mk < mk_max
+        df = df[mask]
+        df.to_hdf(self.get_catalog_path(), key="df")
 
     def load_catalog(self):
-        with h5py.File(self.get_catalog_path(), "r") as f:
-            ra, dec = f["ra"][:], f["dec"][:]
-            z = f["z"][:]
-            magk = f["magk"][:]
-            distmpc = f["distmpc"][:]
-        r = distmpc * 1.0
-        mag = magk * 1.0
-
-        return ra, dec, r, mag, z, distmpc
+        df = pd.read_hdf(self.get_catalog_path(), key="df")
+        df["r"] = df["distmpc"] * 1.0
+        df["mag"] = df["magb"] * 1.0
+        return df
