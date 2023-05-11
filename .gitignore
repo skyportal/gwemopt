@@ -25,6 +25,7 @@ var/
 *.egg
 gwemopt/_version.py
 gwemopt/data/catalogs
+gwemopt/tests/temp
 *.idea
 
 # PyInstaller

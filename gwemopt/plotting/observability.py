@@ -21,7 +21,7 @@ def plot_observability(params, map_struct):
 
         hp.mollview(
             vals,
-            title="Observable Area (integrated)",
+            title=f"Observable Area - {telescope} (integrated)",
             unit=UNIT,
             cbar=CBAR_BOOL,
             min=np.min(map_struct["prob"]),

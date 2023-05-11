@@ -7,6 +7,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord, get_sun
 from astropy.io import ascii
 from astropy.time import Time
+from tqdm import tqdm
 
 import gwemopt.plotting
 import gwemopt.scheduler
@@ -597,11 +598,11 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
                         tile_struct,
                         previous_coverage_struct,
                     )
-                    doReschedule, balanced_fields = balance_tiles(
+                    do_reschedule, balanced_fields = balance_tiles(
                         params_hold, tile_struct, coverage_struct
                     )
 
-                    if doReschedule:
+                    if do_reschedule:
                         config_struct_hold = copy.copy(config_struct)
                         (
                             coverage_struct,
@@ -702,28 +703,25 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
             )
 
             if params["doBalanceExposure"]:
-                cnt, ntrials = 0, 10
-                while cnt < ntrials:
-                    doReschedule, balanced_fields = balance_tiles(
+                ntrials = 10
+                for _ in tqdm(range(ntrials)):
+                    do_reschedule, balanced_fields = balance_tiles(
                         params, tile_struct, coverage_struct
                     )
-                    if doReschedule:
+                    if do_reschedule:
                         for key in params["unbalanced_tiles"]:
                             tile_struct[key]["prob"] = 0.0
                         coverage_struct = gwemopt.scheduler.scheduler(
                             params, config_struct, tile_struct
                         )
-                        cnt = cnt + 1
-                    else:
-                        break
 
             #                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params,coverage_struct)
 
             if params["doMaxTiles"]:
-                tile_struct, doReschedule = slice_number_tiles(
+                tile_struct, do_reschedule = slice_number_tiles(
                     params, telescope, tile_struct, coverage_struct
                 )
-                if doReschedule:
+                if do_reschedule:
                     coverage_struct = gwemopt.scheduler.scheduler(
                         params, config_struct, tile_struct
                     )
