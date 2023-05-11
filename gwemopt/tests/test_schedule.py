@@ -35,6 +35,8 @@ def test_scheduler():
                     "--doCoverage",
                     "--coverageFiles",
                     os.path.join(temp_dir, "coverage_ZTF.dat"),
+                    "--doObservability",
+                    "--doMovie",
                 ],
             ),
             (
@@ -73,9 +75,6 @@ def test_scheduler():
                 "--doSingleExposure",
                 "--doAlternatingFilters",
                 "--doBalanceExposure",
-                "--powerlaw_cl",
-                "0.9",
-                # "--doMovie"
             ] + extra
 
             run(args)
