@@ -439,15 +439,10 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                         "need to specify tiles that have been observed using --observedTiles"
                     )
 
-            if (
-                params["doUpdateScheduler"] or params["doTreasureMap"]
-            ) and previous_coverage_struct:
+            if params["doTreasureMap"] and previous_coverage_struct:
                 tile_struct = update_observed_tiles(
                     params, tile_struct, previous_coverage_struct
                 )  # coverage_struct of the previous round
-
-            if params["doSuperSched"]:
-                tile_struct = erase_observed_tiles(params, tile_struct, telescope)
 
             coverage_struct = gwemopt.scheduler.scheduler(
                 params, config_struct, tile_struct
@@ -487,11 +482,6 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
             map_struct_hold = slice_map_tiles(params, map_struct_hold, coverage_struct)
 
     map_struct["prob"] = full_prob_map
-
-    if params["doMovie_supersched"]:
-        gwemopt.plotting.doMovie_supersched(
-            params, combine_coverage_structs(coverage_structs), tile_structs, map_struct
-        )
 
     return tile_structs, combine_coverage_structs(coverage_structs)
 
@@ -702,15 +692,10 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
                         "need to specify tiles that have been observed using --observedTiles"
                     )
 
-            if (
-                params["doUpdateScheduler"] or params["doTreasureMap"]
-            ) and previous_coverage_struct:
+            if params["doTreasureMap"] and previous_coverage_struct:
                 tile_struct = update_observed_tiles(
                     params, tile_struct, previous_coverage_struct
                 )  # coverage_struct of the previous round
-
-            if params["doSuperSched"]:
-                tile_struct = erase_observed_tiles(params, tile_struct, telescope)
 
             coverage_struct = gwemopt.scheduler.scheduler(
                 params, config_struct, tile_struct
@@ -751,11 +736,6 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
 
     map_struct["prob"] = full_prob_map
 
-    if params["doMovie_supersched"]:
-        gwemopt.plotting.doMovie_supersched(
-            params, combine_coverage_structs(coverage_structs), tile_structs, map_struct
-        )
-
     return tile_structs, combine_coverage_structs(coverage_structs)
 
 
@@ -795,56 +775,6 @@ def pem(params, map_struct, tile_structs):
             map_struct_hold = slice_map_tiles(map_struct_hold, coverage_struct)
 
     return combine_coverage_structs(coverage_structs)
-
-
-def erase_observed_tiles(
-    params, tile_struct, telescope
-):  # only for run_gwemopt_superscheduler
-    done_telescopes = []
-
-    if len(params["coverage_structs"]) == 1:
-        return tile_struct
-    else:
-        ii = len(params["coverage_structs"]) - 1  # finds out which round we are in
-
-    while (
-        ii > 0
-    ):  # loops through all previous coverage structs + covered field ids to set tile probabilities to 0
-        ii -= 1
-        prevtelescopes = params["alltelescopes"][ii].split(",")
-        coverage_struct = params["coverage_structs"][f"coverage_struct_{ii}"]
-        if not coverage_struct:
-            continue
-        tile_struct_hold = check_overlapping_tiles(params, tile_struct, coverage_struct)
-
-        for prevtelescope in prevtelescopes:
-            if prevtelescope in done_telescopes:
-                continue  # to prevent setting tiles to 0 redundantly
-            done_telescopes.append(prevtelescope)
-
-            if prevtelescope == telescope:
-                for field_id in params["covered_field_ids"][prevtelescope][ii]:
-                    tile_struct[field_id]["prob"] = 0.0
-                continue
-
-            for (
-                key
-            ) in (
-                tile_struct.keys()
-            ):  # maps field ids to tile_struct if not for the same telesocpe
-                if not "epochs" in tile_struct_hold[key]:
-                    continue
-                epochs = tile_struct_hold[key]["epochs"]
-                for jj in range(len(epochs)):
-                    field_id = epochs[jj, 5]
-                    coverage_telescope = tile_struct[key]["epochs_telescope"][jj]
-                    if (
-                        field_id in params["covered_field_ids"][prevtelescope][ii]
-                        and coverage_telescope == prevtelescope
-                    ):  # makes sure field id obtained from check_overlapping_tiles is for the correct telescope
-                        tile_struct[key]["prob"] = 0.0
-                        break
-    return tile_struct
 
 
 def update_observed_tiles(params, tile_struct, previous_coverage_struct):
@@ -907,9 +837,7 @@ def timeallocation(params, map_struct, tile_structs, previous_coverage_struct=No
             elif treasuremap_coverage["data"]:
                 previous_coverage_struct = treasuremap_coverage
 
-        if (
-            params["doUpdateScheduler"] or params["doTreasureMap"]
-        ) and not previous_coverage_struct:
+        if params["doTreasureMap"] and not previous_coverage_struct:
             print("\nNo previous observations were ingested.\n")
 
         if params["doBlocks"]:

@@ -447,14 +447,8 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                     ]
                 )
 
-                if len(overlap) == 0 or (params["doSuperSched"] and np.max(rat) < 0.50):
+                if len(overlap) == 0:
                     continue
-                if params["doSuperSched"]:
-                    if "epochs_telescope" not in tile_struct[key]:
-                        tile_struct[key]["epochs_telescope"] = []
-                    tile_struct[key]["epochs_telescope"].append(
-                        coverage_struct["telescope"][jj]
-                    )
 
                 if not "epochs" in tile_struct[key]:
                     tile_struct[key]["epochs"] = np.empty((0, 9))
@@ -609,9 +603,7 @@ def schedule_alternating(
         filt_change_time = config_struct["filt_change_time"]
     else:
         filt_change_time = 0
-    if (
-        params["doUpdateScheduler"] or params["doTreasureMap"]
-    ) and previous_coverage_struct:
+    if params["doTreasureMap"] and previous_coverage_struct:
         tile_struct_hold = check_overlapping_tiles(
             params, tile_struct, previous_coverage_struct
         )  # maps field ids to tile_struct
@@ -655,9 +647,8 @@ def schedule_alternating(
                     params, config_struct, telescope, map_struct, tile_struct
                 )
 
-        if (
-            params["doUpdateScheduler"] or params["doTreasureMap"]
-        ) and previous_coverage_struct:  # erases tiles from a previous round
+        if params["doTreasureMap"] and previous_coverage_struct:
+            # erases tiles from a previous round
             tile_struct = gwemopt.coverage.update_observed_tiles(
                 params, tile_struct_hold, previous_coverage_struct
             )

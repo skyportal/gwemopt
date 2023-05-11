@@ -101,9 +101,6 @@ def params_struct(opts):
     params["unbalanced_tiles"] = None
     params["filters"] = opts.filters.split(",")
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","), dtype=float)
-    params["doMovie_supersched"] = False
-    params["doSuperSched"] = False
-    params["doUpdateScheduler"] = False
     params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","), dtype=float)
     params["catalogDir"] = Path(opts.catalogDir)
 
