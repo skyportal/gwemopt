@@ -21,6 +21,7 @@ from gwemopt.plotting import (
     plot_observability,
     plot_skymap,
 )
+from gwemopt.utils import calculate_observability
 
 
 def run(args):
@@ -70,8 +71,8 @@ def run(args):
         plot_skymap(params, map_struct)
 
     if args.doObservability:
-        print("Generating observability")
-        observability_struct = gwemopt.utils.observability(params, map_struct)
+        print("Calculating observability")
+        observability_struct = calculate_observability(params, map_struct)
         map_struct["observability"] = observability_struct
         if args.doPlots:
             print("Plotting observability...")
