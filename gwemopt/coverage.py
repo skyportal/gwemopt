@@ -439,9 +439,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                         "need to specify tiles that have been observed using --observedTiles"
                     )
 
-            if (
-                params["doUpdateScheduler"] or params["doTreasureMap"]
-            ) and previous_coverage_struct:
+            if params["doTreasureMap"] and previous_coverage_struct:
                 tile_struct = update_observed_tiles(
                     params, tile_struct, previous_coverage_struct
                 )  # coverage_struct of the previous round
@@ -694,9 +692,7 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
                         "need to specify tiles that have been observed using --observedTiles"
                     )
 
-            if (
-                params["doUpdateScheduler"] or params["doTreasureMap"]
-            ) and previous_coverage_struct:
+            if params["doTreasureMap"] and previous_coverage_struct:
                 tile_struct = update_observed_tiles(
                     params, tile_struct, previous_coverage_struct
                 )  # coverage_struct of the previous round
@@ -841,9 +837,7 @@ def timeallocation(params, map_struct, tile_structs, previous_coverage_struct=No
             elif treasuremap_coverage["data"]:
                 previous_coverage_struct = treasuremap_coverage
 
-        if (
-            params["doUpdateScheduler"] or params["doTreasureMap"]
-        ) and not previous_coverage_struct:
+        if params["doTreasureMap"] and not previous_coverage_struct:
             print("\nNo previous observations were ingested.\n")
 
         if params["doBlocks"]:
