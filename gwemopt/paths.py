@@ -16,5 +16,5 @@ TILING_DIR = DATA_DIR.joinpath("tiling")
 SKYMAP_DIR = DEFAULT_BASE_OUTPUT_DIR.joinpath("skymaps")
 SKYMAP_DIR.mkdir(exist_ok=True, parents=True)
 
-CATALOG_DIR = DATA_DIR.joinpath("catalogs")
+CATALOG_DIR = DEFAULT_BASE_OUTPUT_DIR.joinpath("catalogs")
 CATALOG_DIR.mkdir(exist_ok=True, parents=True)

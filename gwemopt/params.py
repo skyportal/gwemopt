@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import astroplan
 import astropy
@@ -101,6 +102,7 @@ def params_struct(opts):
     params["filters"] = opts.filters.split(",")
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","), dtype=float)
     params["max_nb_tiles"] = np.array(opts.max_nb_tiles.split(","), dtype=float)
+    params["catalogDir"] = Path(opts.catalogDir)
 
     if params["tilesType"] not in TILE_TYPES:
         err = (
