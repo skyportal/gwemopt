@@ -16,7 +16,6 @@ class TwoMRSCatalog(BaseCatalog):
         cat = Vizier.get_catalogs("J/ApJS/199/26/table3")
 
         cat["z"] = (u.Quantity(cat["cz"]) / c.c).to(u.dimensionless_unscaled)
-        # cat["z"]
         df = cat.to_pandas()
         df = df[df["z"] > 0]
         key_map = {
