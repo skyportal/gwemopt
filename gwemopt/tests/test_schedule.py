@@ -73,9 +73,7 @@ def test_scheduler():
                 "--doSingleExposure",
                 "--doAlternatingFilters",
                 "--doBalanceExposure",
-                "--powerlaw_cl",
-                "0.9",
-                # "--doMovie"
+                "--doMovie",
             ] + extra
 
             run(args)
