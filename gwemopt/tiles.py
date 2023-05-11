@@ -4,6 +4,7 @@ import copy
 import healpy as hp
 import ligo.segments as segments
 import numpy as np
+import pandas as pd
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
@@ -728,7 +729,10 @@ def get_rectangle(ras, decs, ra_size, dec_size):
     return np.mod((minx + maxx) / 2.0, 360.0), (miny + maxy) / 2.0
 
 
-def galaxy(params, map_struct, catalog_struct):
+def galaxy(params, map_struct, catalog_struct: pd.DataFrame):
+    """
+    Creates a tile_struct for a galaxy survey
+    """
     nside = params["nside"]
 
     tile_structs = {}
@@ -736,163 +740,144 @@ def galaxy(params, map_struct, catalog_struct):
         config_struct = params["config"][telescope]
 
         # Combine in a single pointing, galaxies that are distant by
-        # less than FoV * params['galaxies_FoV_sep']
+        # less than fov * params['galaxies_FoV_sep']
         # Take galaxy with highest proba at the center of new pointing
-        FoV = params["config"][telescope]["FOV"] * params["galaxies_FoV_sep"]
+        fov = params["config"][telescope]["FOV"] * params["galaxies_FoV_sep"]
         if "FOV_center" in params["config"][telescope]:
-            FoV_center = (
+            fov_center = (
                 params["config"][telescope]["FOV_center"] * params["galaxies_FoV_sep"]
             )
         else:
-            FoV_center = params["config"][telescope]["FOV"] * params["galaxies_FoV_sep"]
+            fov_center = params["config"][telescope]["FOV"] * params["galaxies_FoV_sep"]
 
-        new_ra = []
-        new_dec = []
-        new_Sloc = []
-        new_Smass = []
-        new_S = []
-        galaxies = []
-        idxRem = np.arange(len(catalog_struct["ra"])).astype(int)
+        new_cat = []
 
-        while len(idxRem) > 0:
-            ii = idxRem[0]
-            ra, dec, Sloc, S, Smass = (
-                catalog_struct["ra"].to_numpy()[ii],
-                catalog_struct["dec"].to_numpy()[ii],
-                catalog_struct["Sloc"].to_numpy()[ii],
-                catalog_struct["S"].to_numpy()[ii],
-                catalog_struct["Smass"].to_numpy()[ii],
-            )
+        idx_remaining = np.arange(len(catalog_struct["ra"])).astype(int)
+
+        while len(idx_remaining) > 0:
+            ii = idx_remaining[0]
+
+            row = catalog_struct.iloc[ii]
+            remaining = catalog_struct.iloc[idx_remaining]
+
+            ra, dec = row["ra"], row["dec"]
 
             if config_struct["FOV_type"] == "square":
-                decCorners = (dec - FoV, dec + FoV)
+                dec_corners = (dec - fov, dec + fov)
                 # assume small enough to use average dec for corners
-                raCorners = (
-                    ra - FoV / np.cos(np.deg2rad(dec)),
-                    ra + FoV / np.cos(np.deg2rad(dec)),
+                ra_corners = (
+                    ra - fov / np.cos(np.deg2rad(dec)),
+                    ra + fov / np.cos(np.deg2rad(dec)),
                 )
-                idx1 = np.where(
-                    (catalog_struct["ra"].to_numpy()[idxRem] >= raCorners[0])
-                    & (catalog_struct["ra"].to_numpy()[idxRem] <= raCorners[1])
-                )[0]
-                idx2 = np.where(
-                    (catalog_struct["dec"].to_numpy()[idxRem] >= decCorners[0])
-                    & (catalog_struct["dec"].to_numpy()[idxRem] <= decCorners[1])
-                )[0]
-                mask = np.intersect1d(idx1, idx2)
 
-                if len(mask) > 1:
+                mask = (
+                    (remaining["ra"] >= ra_corners[0])
+                    & (remaining["ra"] <= ra_corners[1])
+                    & (remaining["dec"] >= dec_corners[0])
+                    & (remaining["dec"] <= dec_corners[1])
+                )
+
+                if np.sum(mask) > 1:
+                    nearby_gals = remaining[mask]
+
                     ra_center, dec_center = get_rectangle(
-                        catalog_struct["ra"].to_numpy()[idxRem][mask],
-                        catalog_struct["dec"].to_numpy()[idxRem][mask],
-                        FoV / np.cos(np.deg2rad(dec)),
-                        FoV,
+                        nearby_gals["ra"].to_numpy(),
+                        nearby_gals["dec"].to_numpy(),
+                        fov / np.cos(np.deg2rad(dec)),
+                        fov,
                     )
 
-                    decCorners = (dec_center - FoV / 2.0, dec_center + FoV / 2.0)
-                    raCorners = (
-                        ra_center - FoV / (2.0 * np.cos(np.deg2rad(dec))),
-                        ra_center + FoV / (2.0 * np.cos(np.deg2rad(dec))),
+                    dec_corners = (dec_center - fov / 2.0, dec_center + fov / 2.0)
+                    ra_corners = (
+                        ra_center - fov / (2.0 * np.cos(np.deg2rad(dec))),
+                        ra_center + fov / (2.0 * np.cos(np.deg2rad(dec))),
                     )
-                    idx1 = np.where(
-                        (catalog_struct["ra"].to_numpy()[idxRem] >= raCorners[0])
-                        & (catalog_struct["ra"].to_numpy()[idxRem] <= raCorners[1])
-                    )[0]
-                    idx2 = np.where(
-                        (catalog_struct["dec"].to_numpy()[idxRem] >= decCorners[0])
-                        & (catalog_struct["dec"].to_numpy()[idxRem] <= decCorners[1])
-                    )[0]
-                    mask2 = np.intersect1d(idx1, idx2)
 
-                    decCorners = (
-                        dec_center - FoV_center / 2.0,
-                        dec_center + FoV_center / 2.0,
+                    mask2 = (
+                        (remaining["ra"] >= ra_corners[0])
+                        & (remaining["ra"] <= ra_corners[1])
+                        & (remaining["dec"] >= dec_corners[0])
+                        & (remaining["dec"] <= dec_corners[1])
                     )
-                    raCorners = (
-                        ra_center - FoV_center / (2.0 * np.cos(np.deg2rad(dec))),
-                        ra_center + FoV_center / (2.0 * np.cos(np.deg2rad(dec))),
+
+                    dec_corners = (
+                        dec_center - fov_center / 2.0,
+                        dec_center + fov_center / 2.0,
                     )
-                    idx1 = np.where(
-                        (catalog_struct["ra"].to_numpy()[idxRem] >= raCorners[0])
-                        & (catalog_struct["ra"].to_numpy()[idxRem] <= raCorners[1])
-                    )[0]
-                    idx2 = np.where(
-                        (catalog_struct["dec"].to_numpy()[idxRem] >= decCorners[0])
-                        & (catalog_struct["dec"].to_numpy()[idxRem] <= decCorners[1])
-                    )[0]
-                    mask3 = np.intersect1d(idx1, idx2)
+                    ra_corners = (
+                        ra_center - fov_center / (2.0 * np.cos(np.deg2rad(dec))),
+                        ra_center + fov_center / (2.0 * np.cos(np.deg2rad(dec))),
+                    )
+                    mask3 = (
+                        (remaining["ra"] >= ra_corners[0])
+                        & (remaining["ra"] <= ra_corners[1])
+                        & (remaining["dec"] >= dec_corners[0])
+                        & (remaining["dec"] <= dec_corners[1])
+                    )
 
                     # did the optimization help?
-                    if (len(mask2) > 2) and (len(mask3) > 0):
+                    if (np.sum(mask2) > 2) and (np.sum(mask3) > 0):
                         mask = mask2
+
                 else:
-                    ra_center, dec_center = np.mean(
-                        catalog_struct["ra"].to_numpy()[idxRem][mask]
-                    ), np.mean(catalog_struct["dec"].to_numpy()[idxRem][mask])
+                    ra_center, dec_center = row["ra"], row["dec"]
 
             elif config_struct["FOV_type"] == "circle":
                 dist = angular_distance(
                     ra,
                     dec,
-                    catalog_struct["ra"].to_numpy()[idxRem],
-                    catalog_struct["dec"].to_numpy()[idxRem],
+                    remaining["ra"].to_numpy(),
+                    remaining["dec"].to_numpy(),
                 )
-                mask = np.where((2 * FoV) >= dist)[0]
+                mask = dist <= (2 * fov)
                 if len(mask) > 1:
+                    nearby_gals = remaining[mask]
+
                     ra_center, dec_center = get_rectangle(
-                        catalog_struct["ra"].to_numpy()[idxRem][mask],
-                        catalog_struct["dec"].to_numpy()[idxRem][mask],
-                        (FoV / np.sqrt(2)) / np.cos(np.deg2rad(dec)),
-                        FoV / np.sqrt(2),
+                        nearby_gals["ra"].to_numpy(),
+                        nearby_gals["dec"].to_numpy(),
+                        (fov / np.sqrt(2)) / np.cos(np.deg2rad(dec)),
+                        fov / np.sqrt(2),
                     )
 
                     dist = angular_distance(
                         ra_center,
                         dec_center,
-                        catalog_struct["ra"].to_numpy()[idxRem],
-                        catalog_struct["dec"].to_numpy()[idxRem],
+                        nearby_gals["ra"].to_numpy(),
+                        nearby_gals["dec"].to_numpy(),
                     )
-                    mask2 = np.where(FoV >= dist)[0]
+                    mask2 = np.where(fov >= dist)[0]
                     # did the optimization help?
                     if len(mask2) > 2:
                         mask = mask2
                 else:
-                    ra_center, dec_center = np.mean(
-                        catalog_struct["ra"].to_numpy()[idxRem][mask]
-                    ), np.mean(catalog_struct["dec"].to_numpy()[idxRem][mask])
+                    ra_center, dec_center = row["ra"], row["dec"]
+            else:
+                raise ValueError("FOV_type not recognized")
 
-            new_ra.append(ra_center)
-            new_dec.append(dec_center)
-            new_Sloc.append(np.sum(catalog_struct["Sloc"].to_numpy()[idxRem][mask]))
-            new_S.append(np.sum(catalog_struct["S"].to_numpy()[idxRem][mask]))
-            new_Smass.append(np.sum(catalog_struct["Smass"].to_numpy()[idxRem][mask]))
-            galaxies.append(idxRem[mask])
+            new_cat.append(
+                {
+                    "ra": ra_center,
+                    "dec": dec_center,
+                    "Sloc": np.sum(remaining["Sloc"].to_numpy()[mask]),
+                    "S": np.sum(remaining["S"].to_numpy()[mask]),
+                    "Smass": np.sum(remaining["Smass"].to_numpy()[mask]),
+                    "galaxies": idx_remaining[mask],
+                }
+            )
 
-            idxRem = np.setdiff1d(idxRem, idxRem[mask])
+            idx_remaining = np.setdiff1d(idx_remaining, idx_remaining[mask])
 
         # redefine catalog_struct
-        catalog_struct_new = {}
-        catalog_struct_new["ra"] = new_ra
-        catalog_struct_new["dec"] = new_dec
-        catalog_struct_new["Sloc"] = new_Sloc
-        catalog_struct_new["S"] = new_S
-        catalog_struct_new["Smass"] = new_Smass
-        catalog_struct_new["galaxies"] = galaxies
+        catalog_struct_new = pd.DataFrame(new_cat)
 
         moc_struct = {}
         cnt = 0
-        for ra, dec, Sloc, S, Smass, galaxies in zip(
-            catalog_struct_new["ra"],
-            catalog_struct_new["dec"],
-            catalog_struct_new["Sloc"],
-            catalog_struct_new["S"],
-            catalog_struct_new["Smass"],
-            catalog_struct_new["galaxies"],
-        ):
+        for _, row in catalog_struct_new.iterrows():
             moc_struct[cnt] = gwemopt.moc.Fov2Moc(
-                params, config_struct, telescope, ra, dec, nside
+                params, config_struct, telescope, row["ra"], row["dec"], nside
             )
-            moc_struct[cnt]["galaxies"] = galaxies
+            moc_struct[cnt]["galaxies"] = row["galaxies"]
             cnt = cnt + 1
 
         if params["timeallocationType"] == "absmag":
@@ -908,34 +893,27 @@ def galaxy(params, map_struct, catalog_struct):
                 moc_struct,
                 catalog_struct=catalog_struct,
             )
+        else:
+            raise ValueError("timeallocationType not recognized")
 
         tile_struct = gwemopt.segments.get_segments_tiles(
             params, config_struct, tile_struct
         )
 
         cnt = 0
-        for ra, dec, Sloc, S, Smass, galaxies in zip(
-            catalog_struct_new["ra"],
-            catalog_struct_new["dec"],
-            catalog_struct_new["Sloc"],
-            catalog_struct_new["S"],
-            catalog_struct_new["Smass"],
-            catalog_struct_new["galaxies"],
-        ):
-            if params["galaxy_grade"] == "Sloc":
-                tile_struct[cnt]["prob"] = Sloc
-            elif params["galaxy_grade"] == "S":
-                tile_struct[cnt]["prob"] = S
-            elif params["galaxy_grade"] == "Smass":
-                tile_struct[cnt]["prob"] = Smass
+        for _, row in catalog_struct_new.iterrows():
+            tile_struct[cnt]["prob"] = row[params["galaxy_grade"]]
 
-            tile_struct[cnt]["galaxies"] = galaxies
+            tile_struct[cnt]["galaxies"] = row["galaxies"]
+
             if config_struct["FOV_type"] == "square":
                 tile_struct[cnt]["area"] = params["config"][telescope]["FOV"] ** 2
             elif config_struct["FOV_type"] == "circle":
                 tile_struct[cnt]["area"] = (
                     4 * np.pi * params["config"][telescope]["FOV"] ** 2
                 )
+            else:
+                raise ValueError("FOV_type not recognized")
             cnt = cnt + 1
 
         tile_structs[telescope] = tile_struct
