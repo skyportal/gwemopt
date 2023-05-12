@@ -55,7 +55,7 @@ def slice_map_tiles(params, map_struct, coverage_struct):
 def slice_number_tiles(params, telescope, tile_struct, coverage_struct):
     idx = params["telescopes"].index(telescope)
     max_nb_tile = params["max_nb_tiles"][idx]
-    if max_nb_tile < 0:
+    if max_nb_tile is None:
         return tile_struct, False
 
     keys = tile_struct.keys()
@@ -206,7 +206,6 @@ def optimize_max_tiles(
 
     optimized_max = -1  # assigns baseline optimized maxtiles
     n_dif_og = np.sum(freq != len(params["filters"]))
-    params["doMaxTiles"] = True
     countervals = []
 
     coarse_bool = False
@@ -670,7 +669,7 @@ def schedule_alternating(
         coverage_struct = gwemopt.scheduler.scheduler(
             params, config_struct, tile_struct
         )
-        if params["doMaxTiles"]:
+        if params["max_nb_tiles"] is not None:
             tile_struct, doReschedule = slice_number_tiles(
                 params, telescope, tile_struct, coverage_struct
             )

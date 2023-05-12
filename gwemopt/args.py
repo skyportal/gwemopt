@@ -130,8 +130,7 @@ def parse_args(args):
 
     parser.add_argument("--exposuretimes", default="30.0,30.0,30.0")
 
-    parser.add_argument("--doMaxTiles", action="store_true", default=False)
-    parser.add_argument("--max_nb_tiles", default="-1,-1,-1")
+    parser.add_argument("--max_nb_tiles", default=None, type=int)
     parser.add_argument("--doReferences", action="store_true", default=False)
 
     parser.add_argument("--doChipGaps", action="store_true", default=False)
