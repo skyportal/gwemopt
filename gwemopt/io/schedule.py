@@ -5,7 +5,7 @@ from VOEventLib.VOEvent import Field, Table, What
 from VOEventLib.Vutil import stringVOEvent, utilityTable
 
 from gwemopt.scheduler import computeSlewReadoutTime
-from gwemopt.utils.rotate import angular_distance
+from gwemopt.utils import angular_distance
 
 
 def read_schedule(schedule_path):
@@ -29,7 +29,6 @@ def read_schedule(schedule_path):
             "prob",
             "airmass",
             "filter",
-            "pid",
         ],
     )
 
@@ -225,14 +224,13 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
                     data[6],
                     data[7],
                 )
-                program_id = data[8]
 
                 if params["tilesType"] == "galaxy":
                     galaxies = coverage_struct["galaxies"][ii]
                     prob = np.sum(catalog_struct[params["galaxy_grade"]][galaxies])
 
                 fid.write(
-                    "%d %.5f %.5f %.5f %.5f %d %.5f %.5f %s %d\n"
+                    "%d %.5f %.5f %.5f %.5f %d %.5f %.5f %s \n"
                     % (
                         field_id,
                         ra,
@@ -243,7 +241,6 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
                         prob,
                         airmass,
                         filt,
-                        program_id,
                     )
                 )
 

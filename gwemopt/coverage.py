@@ -12,6 +12,7 @@ from tqdm import tqdm
 import gwemopt.plotting
 import gwemopt.scheduler
 import gwemopt.tiles
+from gwemopt.io.schedule import read_schedule
 from gwemopt.tiles import (
     balance_tiles,
     check_overlapping_tiles,
@@ -29,7 +30,7 @@ from gwemopt.utils.treasuremap import get_treasuremap_pointings
 
 def combine_coverage_structs(coverage_structs):
     coverage_struct_combined = {}
-    coverage_struct_combined["data"] = np.empty((0, 9))
+    coverage_struct_combined["data"] = np.empty((0, 8))
     coverage_struct_combined["filters"] = np.empty((0, 1))
     coverage_struct_combined["ipix"] = []
     coverage_struct_combined["patch"] = []
@@ -100,27 +101,11 @@ def read_coverage(params, telescope, filename, moc_struct=None):
         schedule_table["dec"] = decs
         schedule_table["mag"] = mags
         schedule_table["airmass"] = np.zeros(len(ras))
-        schedule_table["program_id"] = np.zeros(len(ras))
         schedule_table["prob"] = np.zeros(len(ras))
 
     except:
-        schedule_table = pd.read_csv(
-            filename,
-            delimiter=" ",
-            header=None,
-            names=(
-                "field",
-                "ra",
-                "dec",
-                "mjd",
-                "mag",
-                "exposure_time",
-                "prob",
-                "airmass",
-                "filt",
-                "program_id",
-            ),
-        )
+        schedule_table = read_schedule(filename)
+
     coverage_struct = {}
     coverage_struct["data"] = np.empty((0, 9))
     coverage_struct["filters"] = []
@@ -137,13 +122,10 @@ def read_coverage(params, telescope, filename, moc_struct=None):
         prob = row1["prob"]
         airmass = row1["airmass"]
         filt = row1["filt"]
-        program_id = row1["program_id"]
 
         coverage_struct["data"] = np.append(
             coverage_struct["data"],
-            np.array(
-                [[ra, dec, mjd, mag, exposureTime, field, prob, airmass, program_id]]
-            ),
+            np.array([[ra, dec, mjd, mag, exposureTime, field, prob, airmass]]),
             axis=0,
         )
         coverage_struct["filters"].append(filt)
@@ -290,9 +272,9 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                     previous_coverage_struct,
                 )
             elif params["doBalanceExposure"]:
-                if not params[
-                    "doMaxTiles"
-                ]:  # optimize max tiles (iff max tiles not already specified)
+                if (
+                    params["max_nb_tiles"] is None
+                ):  # optimize max tiles (iff max tiles not already specified)
                     optimized_max, coverage_struct, tile_struct = optimize_max_tiles(
                         params,
                         tile_struct,
@@ -440,7 +422,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                         "need to specify tiles that have been observed using --observedTiles"
                     )
 
-            if params["doTreasureMap"] and previous_coverage_struct:
+            if params["treasuremap_token"] is not None and previous_coverage_struct:
                 tile_struct = update_observed_tiles(
                     params, tile_struct, previous_coverage_struct
                 )  # coverage_struct of the previous round
@@ -467,7 +449,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
 
             #                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params,coverage_struct)
 
-            if params["doMaxTiles"]:
+            if params["max_tiles_nb"] is not None:
                 tile_struct, doReschedule = slice_number_tiles(
                     params, telescope, tile_struct, coverage_struct
                 )
@@ -570,9 +552,8 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
                     previous_coverage_struct,
                 )
             elif params["doBalanceExposure"]:
-                if not params[
-                    "doMaxTiles"
-                ]:  # optimize max tiles (iff max tiles not already specified)
+                if params["max_tiles_nb"] is None:
+                    # optimize max tiles (iff max tiles not already specified)
                     optimized_max, coverage_struct, tile_struct = optimize_max_tiles(
                         params,
                         tile_struct,
@@ -693,7 +674,7 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
                         "need to specify tiles that have been observed using --observedTiles"
                     )
 
-            if params["doTreasureMap"] and previous_coverage_struct:
+            if params["treasuremap_token"] is not None and previous_coverage_struct:
                 tile_struct = update_observed_tiles(
                     params, tile_struct, previous_coverage_struct
                 )  # coverage_struct of the previous round
@@ -717,7 +698,7 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
 
             #                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params,coverage_struct)
 
-            if params["doMaxTiles"]:
+            if params["max_nb_tiles"] is not None:
                 tile_struct, do_reschedule = slice_number_tiles(
                     params, telescope, tile_struct, coverage_struct
                 )
@@ -813,10 +794,7 @@ def timeallocation(params, map_struct, tile_structs, previous_coverage_struct=No
     ):
         print("Generating powerlaw schedule...")
 
-        if params["doTreasureMap"]:
-            if not params["treasuremap_token"]:
-                print("Must provide Treasure Map API Token.")
-                exit(0)
+        if params["treasuremap_token"] is not None:
             treasuremap_coverage = get_treasuremap_pointings(params)
 
             if previous_coverage_struct and treasuremap_coverage["data"]:
@@ -835,7 +813,7 @@ def timeallocation(params, map_struct, tile_structs, previous_coverage_struct=No
             elif treasuremap_coverage["data"]:
                 previous_coverage_struct = treasuremap_coverage
 
-        if params["doTreasureMap"] and not previous_coverage_struct:
+        if params["treasuremap_token"] is not None and not previous_coverage_struct:
             print("\nNo previous observations were ingested.\n")
 
         if params["doBlocks"]:

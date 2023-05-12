@@ -10,8 +10,7 @@ import gwemopt.plotting
 import gwemopt.segments
 from gwemopt.args import parse_args
 from gwemopt.catalogs import get_catalog
-from gwemopt.gracedb import get_event
-from gwemopt.io import read_skymap, summary
+from gwemopt.io import get_skymap, read_skymap, summary
 from gwemopt.params import params_struct
 from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR
 from gwemopt.plotting import (
@@ -30,18 +29,11 @@ def run(args):
     params = params_struct(args)
 
     if len(params["filters"]) != len(params["exposuretimes"]):
-        print(
+        raise ValueError(
             "The number of filters specified must match the number of exposure times."
         )
-        exit(0)
 
-    if args.event is not None:
-        params["skymap"] = get_event(event_name=args.event)
-    elif args.doSkymap:
-        pass
-    else:
-        print("Need to enable --doEvent or --doSkymap")
-        exit(0)
+    params["skymap"] = get_skymap(event_name=args.event)
 
     # Function to read maps
     params, map_struct = read_skymap(params)
@@ -62,9 +54,11 @@ def run(args):
 
     print("Loading skymap...")
 
-    if args.doCatalog:
+    if params["catalog"] is not None:
         print("Generating catalog...")
         map_struct, catalog_struct = get_catalog(params, map_struct)
+    else:
+        catalog_struct = None
 
     if args.doPlots:
         print("Plotting skymap...")
@@ -77,36 +71,6 @@ def run(args):
         if args.doPlots:
             print("Plotting observability...")
             plot_observability(params, map_struct)
-        if args.doObservabilityExit:
-            for telescope in params["telescopes"]:
-                if (
-                    np.sum(observability_struct[telescope]["prob"])
-                    < args.observability_thresh
-                ):
-                    print(
-                        "Observability for %s: %.5f < %.5f... exiting."
-                        % (
-                            telescope,
-                            np.sum(observability_struct[telescope]["prob"]),
-                            args.observability_thresh,
-                        )
-                    )
-
-                    if params["doTrueLocation"]:
-                        lightcurve_structs = gwemopt.lightcurve.read_files(
-                            params["lightcurveFiles"]
-                        )
-                        for key in lightcurve_structs.keys():
-                            filename = os.path.join(
-                                params["outputDir"],
-                                "efficiency_true_"
-                                + lightcurve_structs[key]["name"]
-                                + ".txt",
-                            )
-                            fid = open(filename, "w")
-                            fid.write("0")
-                            fid.close()
-                    exit(0)
 
     if args.doSplit:
         print("Splitting skymap...")
@@ -155,19 +119,12 @@ def run(args):
 
     if args.doSchedule or args.doCoverage:
         print("Summary of coverage...")
-        if args.doCatalog:
-            summary(params, map_struct, coverage_struct, catalog_struct=catalog_struct)
-        else:
-            summary(params, map_struct, coverage_struct)
+        summary(params, map_struct, coverage_struct, catalog_struct=catalog_struct)
 
-        if args.doPlots:
-            print("Plotting coverage...")
-            if args.doCatalog:
-                make_coverage_plots(
-                    params, map_struct, coverage_struct, catalog_struct=catalog_struct
-                )
-            else:
-                make_coverage_plots(params, map_struct, coverage_struct)
+        print("Plotting coverage...")
+        make_coverage_plots(
+            params, map_struct, coverage_struct, catalog_struct=catalog_struct
+        )
 
     if args.doEfficiency:
         if args.doSchedule or args.doCoverage:

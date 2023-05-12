@@ -8,10 +8,9 @@ import numpy as np
 from astropy.time import Time
 from munkres import Munkres, make_cost_matrix
 
-import gwemopt.tiles
-from gwemopt.plotting.schedule import make_schedule_plots
+from gwemopt.plotting import make_schedule_plots
 from gwemopt.tiles import balance_tiles, optimize_max_tiles, schedule_alternating
-from gwemopt.utils.rotate import angular_distance
+from gwemopt.utils import angular_distance
 
 
 def get_altaz_tiles(ras, decs, observatory, obstime):
@@ -511,7 +510,7 @@ def scheduler(params, config_struct, tile_struct):
 
     # import gwemopt.segments_astroplan
     coverage_struct = {}
-    coverage_struct["data"] = np.empty((0, 9))
+    coverage_struct["data"] = np.empty((0, 8))
     coverage_struct["filters"] = []
     coverage_struct["ipix"] = []
     coverage_struct["patch"] = []
@@ -613,7 +612,6 @@ def scheduler(params, config_struct, tile_struct):
                             int(key),
                             tile_struct_hold["prob"],
                             airmass,
-                            params["program_id"],
                         ]
                     ]
                 ),

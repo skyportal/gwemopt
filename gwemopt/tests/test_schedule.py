@@ -41,9 +41,16 @@ def test_scheduler():
             ),
             (
                 "KPED",
-                ["--tilesType", "galaxy", "--powerlaw_dist_exp", "1.0", "--doCatalog"],
+                [
+                    "--tilesType",
+                    "galaxy",
+                    "--powerlaw_dist_exp",
+                    "1.0",
+                    "--catalog",
+                    "GLADE",
+                ],
             ),
-            ("DECam", ["--doChipGaps"]),
+            ("DECam", ["--doChipGaps", "--max_nb_tiles", "5"]),
             # ('TRE', []),
             # ("WINTER", []),
             # ('TNT', ["--tilesType", "galaxy", "--powerlaw_dist_exp", "1.0", "--doCatalog", "--galaxy_grade", "Sloc"]),
@@ -58,8 +65,7 @@ def test_scheduler():
                 telescope,
                 "-o",
                 str(temp_dir),
-                "--doSkymap",
-                "--skymap",
+                "-e",
                 str(test_skymap),
                 "--doTiles",
                 "--doPlots",
@@ -97,6 +103,8 @@ def test_scheduler():
             "coverage_ZTF.dat",
             "map.dat",
             "summary.dat",
+            "efficiency.txt",
+            "efficiency_tophat.txt",
         ] + [f"tiles_coverage_int_{t}.txt" for t, _ in telescope_list]
 
         for extra_test_file in extra_test_files:

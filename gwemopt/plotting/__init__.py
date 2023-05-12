@@ -2,14 +2,14 @@ import os
 
 import matplotlib.pyplot as plt
 
-from gwemopt.plotting.coverage import make_coverage_plots
-from gwemopt.plotting.efficiency import make_efficiency_plots
 from gwemopt.plotting.movie import make_movie
 from gwemopt.plotting.observability import plot_observability
+from gwemopt.plotting.plot_coverage import make_coverage_plots
+from gwemopt.plotting.plot_efficiency import make_efficiency_plots
+from gwemopt.plotting.plot_schedule import make_schedule_plots
 from gwemopt.plotting.plot_skymap import plot_skymap
-from gwemopt.plotting.schedule import make_schedule_plots
+from gwemopt.plotting.plot_tiles import make_tile_plots
 from gwemopt.plotting.style import add_edges, cmap
-from gwemopt.plotting.tiles import make_tile_plots
 
 
 def tauprob(params, tau, prob):

@@ -14,7 +14,7 @@ from shapely.geometry import MultiPoint
 import gwemopt
 import gwemopt.moc
 import gwemopt.segments
-from gwemopt.utils.rotate import angular_distance
+from gwemopt.utils.geometry import angular_distance
 
 TILE_TYPES = ["moc", "galaxy"]
 
@@ -53,9 +53,8 @@ def slice_map_tiles(params, map_struct, coverage_struct):
 
 
 def slice_number_tiles(params, telescope, tile_struct, coverage_struct):
-    idx = params["telescopes"].index(telescope)
-    max_nb_tile = params["max_nb_tiles"][idx]
-    if max_nb_tile < 0:
+    max_nb_tile = params["max_nb_tiles"]
+    if max_nb_tile is None:
         return tile_struct, False
 
     keys = tile_struct.keys()
@@ -206,7 +205,6 @@ def optimize_max_tiles(
 
     optimized_max = -1  # assigns baseline optimized maxtiles
     n_dif_og = np.sum(freq != len(params["filters"]))
-    params["doMaxTiles"] = True
     countervals = []
 
     coarse_bool = False
@@ -603,7 +601,7 @@ def schedule_alternating(
         filt_change_time = config_struct["filt_change_time"]
     else:
         filt_change_time = 0
-    if params["doTreasureMap"] and previous_coverage_struct:
+    if params["treasuremap_token"] is not None and previous_coverage_struct:
         tile_struct_hold = check_overlapping_tiles(
             params, tile_struct, previous_coverage_struct
         )  # maps field ids to tile_struct
@@ -647,7 +645,7 @@ def schedule_alternating(
                     params, config_struct, telescope, map_struct, tile_struct
                 )
 
-        if params["doTreasureMap"] and previous_coverage_struct:
+        if params["treasuremap_token"] is not None and previous_coverage_struct:
             # erases tiles from a previous round
             tile_struct = gwemopt.coverage.update_observed_tiles(
                 params, tile_struct_hold, previous_coverage_struct
@@ -670,7 +668,7 @@ def schedule_alternating(
         coverage_struct = gwemopt.scheduler.scheduler(
             params, config_struct, tile_struct
         )
-        if params["doMaxTiles"]:
+        if params["max_nb_tiles"] is not None:
             tile_struct, doReschedule = slice_number_tiles(
                 params, telescope, tile_struct, coverage_struct
             )

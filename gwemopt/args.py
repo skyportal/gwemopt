@@ -9,15 +9,12 @@ from gwemopt.paths import CATALOG_DIR, DEFAULT_LIGHTCURVE_DIR
 def parse_args(args):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-s", "--skymap", help="GW skymap.", default=None)
     parser.add_argument("-g", "--gpstime", help="GPS time.", default=None)
 
-    parser.add_argument("--geometry", help="2d, 3d, or auto", default=None)
+    parser.add_argument("--geometry", help="2d, 3d, or None (=auto)", default=None)
 
     parser.add_argument("-o", "--outputDir", help="output directory", default=None)
-    parser.add_argument("-n", "--event", help="event name", default=None)
-
-    parser.add_argument("--doSkymap", action="store_true", default=False)
+    parser.add_argument("-e", "--event", help="event name", default=None)
 
     parser.add_argument("--doCoverage", action="store_true", default=False)
 
@@ -39,23 +36,18 @@ def parse_args(args):
     parser.add_argument("--doPerturbativeTiling", action="store_true", default=False)
     parser.add_argument("--doOrderByObservability", action="store_true", default=False)
 
-    parser.add_argument("--doCatalog", action="store_true", default=False)
     parser.add_argument("--doUseCatalog", action="store_true", default=False)
     parser.add_argument("--catalogDir", help="catalog directory", default=CATALOG_DIR)
-    parser.add_argument("--galaxy_catalog", help="Source catalog", default="GLADE")
+    parser.add_argument(
+        "--catalog", help="Galaxy catalog name (e.g GLADE)", default=None
+    )
     parser.add_argument(
         "--galaxy_grade",
         help="grade to use ('S', 'Sloc' or 'Smass')",
         type=str,
         default="S",
     )
-    parser.add_argument("--writeCatalog", action="store_true", default=False)
-    parser.add_argument("--catalog_n", default=1.0, type=float)
-    parser.add_argument("--AGN_flag", action="store_true", default=False)
     parser.add_argument("--doObservability", action="store_true", default=False)
-    parser.add_argument("--doObservabilityExit", action="store_true", default=False)
-    parser.add_argument("--observability_thresh", default=0.05, type=float)
-    parser.add_argument("--doSkybrightness", action="store_true", default=False)
 
     parser.add_argument("--doEfficiency", action="store_true", default=False)
     parser.add_argument(
@@ -81,8 +73,7 @@ def parse_args(args):
     )
     parser.add_argument("--Ninj", default=10000, type=int)
     parser.add_argument("--Ntiles", default=10, type=int)
-    parser.add_argument("--doCalcTiles", action="store_true", default=False)
-    parser.add_argument("--Ntiles_cr", default=0.70, type=float)
+
     parser.add_argument("--Ndet", default=1, type=int)
     parser.add_argument("--nside", default=256, type=int)
     parser.add_argument("--DScale", default=1.0, type=float)
@@ -96,9 +87,8 @@ def parse_args(args):
 
     parser.add_argument("--galaxies_FoV_sep", default=1.0, type=float)
 
-    parser.add_argument("--doTreasureMap", action="store_true", default=False)
     parser.add_argument(
-        "--treasuremap_token", help="Treasure Map API Token.", default=""
+        "--treasuremap_token", help="Treasure Map API Token.", default=None
     )
     parser.add_argument(
         "--treasuremap_status",
@@ -108,13 +98,6 @@ def parse_args(args):
 
     parser.add_argument("--start_time", default=None)
     parser.add_argument("--end_time", default=None)
-
-    parser.add_argument("--doTrueLocation", action="store_true", default=False)
-    parser.add_argument("--true_ra", default=30.0, type=float)
-    parser.add_argument("--true_dec", default=60.0, type=float)
-    parser.add_argument("--true_distance", default=100.0, type=float)
-
-    parser.add_argument("--dt", default=14.0, type=float)
 
     parser.add_argument("-a", "--airmass", default=2.5, type=float)
 
@@ -130,8 +113,7 @@ def parse_args(args):
 
     parser.add_argument("--exposuretimes", default="30.0,30.0,30.0")
 
-    parser.add_argument("--doMaxTiles", action="store_true", default=False)
-    parser.add_argument("--max_nb_tiles", default="-1,-1,-1")
+    parser.add_argument("--max_nb_tiles", default=None, type=int)
     parser.add_argument("--doReferences", action="store_true", default=False)
 
     parser.add_argument("--doChipGaps", action="store_true", default=False)
@@ -150,17 +132,11 @@ def parse_args(args):
 
     parser.add_argument("--doRASlice", action="store_true", default=False)
     parser.add_argument("--raslice", default="0.0,24.0")
-    parser.add_argument("--program_id", default=-1, type=int)
 
     parser.add_argument("--absmag", default=-15.0, type=float)
 
-    parser.add_argument("--doRotate", action="store_true", default=False)
-    parser.add_argument("--theta", help="theta rotation.", default=0.0, type=float)
-    parser.add_argument("--phi", help="phi rotation.", default=0.0, type=float)
-
-    parser.add_argument("--doAvoidGalacticPlane", action="store_true", default=False)
     parser.add_argument(
-        "--galactic_limit", help="Galactic limit.", default=15.0, type=float
+        "--galactic_limit", help="Galactic limit.", default=0.0, type=float
     )
 
     return parser.parse_args(args=args)
