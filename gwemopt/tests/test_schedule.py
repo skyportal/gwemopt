@@ -41,7 +41,14 @@ def test_scheduler():
             ),
             (
                 "KPED",
-                ["--tilesType", "galaxy", "--powerlaw_dist_exp", "1.0", "--doCatalog"],
+                [
+                    "--tilesType",
+                    "galaxy",
+                    "--powerlaw_dist_exp",
+                    "1.0",
+                    "--catalog",
+                    "GLADE",
+                ],
             ),
             ("DECam", ["--doChipGaps", "--max_nb_tiles", "5"]),
             # ('TRE', []),

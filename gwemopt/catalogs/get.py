@@ -26,19 +26,22 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
     pc_cm = 3.08568025e18
     const = 4.0 * np.pi * (10.0 * pc_cm) ** 2.0
 
-    if params["galaxy_catalog"] == "2MRS":
+    if params["catalog"] == "2MRS":
         cat = TwoMRSCatalog(catalog_dir=params["catalogDir"])
 
-    elif params["galaxy_catalog"] == "GLADE":
+    elif params["catalog"] == "GLADE":
         cat = GladeCatalog(catalog_dir=params["catalogDir"])
 
-    elif params["galaxy_catalog"] == "CLU":
+    elif params["catalog"] == "CLU":
         cat = CluCatalog(catalog_dir=params["catalogDir"])
 
-    elif params["galaxy_catalog"] == "mangrove":
+    elif params["catalog"] == "mangrove":
         cat = MangroveCatalog(catalog_dir=params["catalogDir"])
     else:
-        raise KeyError(f"Unknown galaxy catalog: {params['galaxy_catalog']}")
+        raise KeyError(
+            f"Unknown galaxy catalog: {params['galaxy_catalog']}. "
+            f"Must be one of '2MRS', 'GLADE', 'CLU', 'mangrove'"
+        )
 
     cat_df = cat.get_catalog()
 

@@ -54,9 +54,11 @@ def run(args):
 
     print("Loading skymap...")
 
-    if args.doCatalog:
+    if params["catalog"] is not None:
         print("Generating catalog...")
         map_struct, catalog_struct = get_catalog(params, map_struct)
+    else:
+        catalog_struct = None
 
     if args.doPlots:
         print("Plotting skymap...")
@@ -117,19 +119,12 @@ def run(args):
 
     if args.doSchedule or args.doCoverage:
         print("Summary of coverage...")
-        if args.doCatalog:
-            summary(params, map_struct, coverage_struct, catalog_struct=catalog_struct)
-        else:
-            summary(params, map_struct, coverage_struct)
+        summary(params, map_struct, coverage_struct, catalog_struct=catalog_struct)
 
-        if args.doPlots:
-            print("Plotting coverage...")
-            if args.doCatalog:
-                make_coverage_plots(
-                    params, map_struct, coverage_struct, catalog_struct=catalog_struct
-                )
-            else:
-                make_coverage_plots(params, map_struct, coverage_struct)
+        print("Plotting coverage...")
+        make_coverage_plots(
+            params, map_struct, coverage_struct, catalog_struct=catalog_struct
+        )
 
     if args.doEfficiency:
         if args.doSchedule or args.doCoverage:

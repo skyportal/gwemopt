@@ -18,7 +18,7 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
     mjd_inj = Time(gpstime, format="gps", scale="utc").mjd
     # FOV_r = np.sqrt(float(params['FOV'])/np.pi)
 
-    if params["doCatalog"]:
+    if params["catalog"] is not None:
         distn = scipy.stats.rv_discrete(
             values=(np.arange(npix), map_struct["prob_catalog"])
         )
@@ -152,7 +152,7 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
     gpstime = params["gpstime"]
     mjd_inj = Time(gpstime, format="gps", scale="utc").mjd
 
-    if params["doCatalog"]:
+    if params["catalog"] is not None:
         distn = scipy.stats.rv_discrete(
             values=(np.arange(npix), map_struct["prob_catalog"])
         )

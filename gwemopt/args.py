@@ -36,10 +36,11 @@ def parse_args(args):
     parser.add_argument("--doPerturbativeTiling", action="store_true", default=False)
     parser.add_argument("--doOrderByObservability", action="store_true", default=False)
 
-    parser.add_argument("--doCatalog", action="store_true", default=False)
     parser.add_argument("--doUseCatalog", action="store_true", default=False)
     parser.add_argument("--catalogDir", help="catalog directory", default=CATALOG_DIR)
-    parser.add_argument("--galaxy_catalog", help="Source catalog", default="GLADE")
+    parser.add_argument(
+        "--catalog", help="Galaxy catalog name (e.g GLADE)", default=None
+    )
     parser.add_argument(
         "--galaxy_grade",
         help="grade to use ('S', 'Sloc' or 'Smass')",
