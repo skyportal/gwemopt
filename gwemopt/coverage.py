@@ -440,7 +440,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                         "need to specify tiles that have been observed using --observedTiles"
                     )
 
-            if params["doTreasureMap"] and previous_coverage_struct:
+            if params["treasuremap_token"] is not None and previous_coverage_struct:
                 tile_struct = update_observed_tiles(
                     params, tile_struct, previous_coverage_struct
                 )  # coverage_struct of the previous round
@@ -692,7 +692,7 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
                         "need to specify tiles that have been observed using --observedTiles"
                     )
 
-            if params["doTreasureMap"] and previous_coverage_struct:
+            if params["treasuremap_token"] is not None and previous_coverage_struct:
                 tile_struct = update_observed_tiles(
                     params, tile_struct, previous_coverage_struct
                 )  # coverage_struct of the previous round
@@ -812,10 +812,7 @@ def timeallocation(params, map_struct, tile_structs, previous_coverage_struct=No
     ):
         print("Generating powerlaw schedule...")
 
-        if params["doTreasureMap"]:
-            if not params["treasuremap_token"]:
-                print("Must provide Treasure Map API Token.")
-                exit(0)
+        if params["treasuremap_token"] is not None:
             treasuremap_coverage = get_treasuremap_pointings(params)
 
             if previous_coverage_struct and treasuremap_coverage["data"]:
@@ -834,7 +831,7 @@ def timeallocation(params, map_struct, tile_structs, previous_coverage_struct=No
             elif treasuremap_coverage["data"]:
                 previous_coverage_struct = treasuremap_coverage
 
-        if params["doTreasureMap"] and not previous_coverage_struct:
+        if params["treasuremap_token"] is not None and not previous_coverage_struct:
             print("\nNo previous observations were ingested.\n")
 
         if params["doBlocks"]:

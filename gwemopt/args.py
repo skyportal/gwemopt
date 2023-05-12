@@ -92,9 +92,8 @@ def parse_args(args):
 
     parser.add_argument("--galaxies_FoV_sep", default=1.0, type=float)
 
-    parser.add_argument("--doTreasureMap", action="store_true", default=False)
     parser.add_argument(
-        "--treasuremap_token", help="Treasure Map API Token.", default=""
+        "--treasuremap_token", help="Treasure Map API Token.", default=None
     )
     parser.add_argument(
         "--treasuremap_status",
