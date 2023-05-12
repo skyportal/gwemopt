@@ -11,7 +11,7 @@ def parse_args(args):
 
     parser.add_argument("-g", "--gpstime", help="GPS time.", default=None)
 
-    parser.add_argument("--geometry", help="2d, 3d, or auto", default=None)
+    parser.add_argument("--geometry", help="2d, 3d, or None (=auto)", default=None)
 
     parser.add_argument("-o", "--outputDir", help="output directory", default=None)
     parser.add_argument("-e", "--event", help="event name", default=None)
