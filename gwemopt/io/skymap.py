@@ -1,20 +1,132 @@
+"""
+Module to fetch event info and skymap from GraceDB, url, or locally
+"""
+import os
 from pathlib import Path
 
 import healpy as hp
 import ligo.skymap.distance as ligodist
+import lxml.etree
 import numpy as np
+import requests
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
 from astropy.time import Time
+from ligo.gracedb.rest import GraceDb
 from ligo.skymap.bayestar import rasterize
 from ligo.skymap.io import read_sky_map
 from scipy import stats
 
+from gwemopt.paths import SKYMAP_DIR
 from gwemopt.utils.rotate import rotate_map
 
 
+def download_from_url(skymap_url: str, output_dir: Path, skymap_name: str) -> Path:
+    """
+    Download a skymap from a URL
+
+    :param skymap_url: URL to download from
+    :param output_dir: Output directory
+    :param skymap_name: Name of skymap
+    :return: Path to downloaded skymap
+    """
+    savepath = output_dir.joinpath(skymap_name)
+
+    if savepath.exists():
+        print(f"File {savepath} already exists. Using this.")
+    else:
+        print(f"Saving to: {savepath}")
+        response = requests.get(skymap_url)
+
+        with open(savepath, "wb") as f:
+            f.write(response.content)
+
+    return savepath
+
+
+def get_skymap_gracedb(
+    event_name: str, rev=None, output_dir: Path = SKYMAP_DIR
+) -> Path:
+    """
+    Fetches the skymap from GraceDB
+
+    :param event_name: name of the event
+    :param rev: revision number of the event
+    :param output_dir: directory to save the skymap and event info
+    :return: path to the skymap
+    """
+    ligo_client = GraceDb()
+
+    voevents = ligo_client.voevents(event_name).json()["voevents"]
+
+    if rev is None:
+        rev = len(voevents)
+
+    elif rev > len(voevents):
+        raise Exception(f"Revision {0} not found".format(rev))
+
+    latest_voevent = voevents[rev - 1]
+    print(f"Found voevent {latest_voevent['filename']}")
+
+    if "Retraction" in latest_voevent["filename"]:
+        raise ValueError(
+            f"The specified LIGO event, "
+            f"{latest_voevent['filename']}, was retracted."
+        )
+
+    response = requests.get(latest_voevent["links"]["file"])
+
+    root = lxml.etree.fromstring(response.content)
+    params = {
+        elem.attrib["name"]: elem.attrib["value"] for elem in root.iterfind(".//Param")
+    }
+
+    latest_skymap_url = params["skymap_fits"]
+
+    print(f"Latest skymap URL: {latest_skymap_url}")
+
+    skymap_name = "_".join(
+        [event_name, str(latest_voevent["N"]), os.path.basename(latest_skymap_url)]
+    )
+
+    skymap_path = download_from_url(latest_skymap_url, output_dir, skymap_name)
+
+    return skymap_path
+
+
+def get_skymap(event_name: str, output_dir: Path = SKYMAP_DIR, rev: int = None) -> Path:
+    """
+    Fetches the event info and skymap from GraceDB
+
+    :param event_name: name of the event
+    :param output_dir: directory to save the skymap and event info
+    :param rev: revision number of the event
+    :return: path to the skymap
+    """
+
+    if Path(event_name).exists():
+        savepath = Path(event_name)
+    elif output_dir.joinpath(event_name).exists():
+        savepath = output_dir.joinpath(event_name)
+    elif event_name[:8] == "https://":
+        savepath = download_from_url(
+            event_name, output_dir, os.path.basename(event_name)
+        )
+    else:
+        savepath = get_skymap_gracedb(event_name, output_dir=output_dir, rev=rev)
+
+    return savepath
+
+
 def read_skymap(params, map_struct=None):
+    """
+    Read in a skymap and return a map_struct
+
+    :param params: dictionary of parameters
+    :param map_struct: dictionary of map parameters
+    :return: map_struct
+    """
     # Let's just figure out what's in the skymap first
 
     skymap_path = params["skymap"]

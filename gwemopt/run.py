@@ -10,8 +10,7 @@ import gwemopt.plotting
 import gwemopt.segments
 from gwemopt.args import parse_args
 from gwemopt.catalogs import get_catalog
-from gwemopt.gracedb import get_event
-from gwemopt.io import read_skymap, summary
+from gwemopt.io import get_skymap, read_skymap, summary
 from gwemopt.params import params_struct
 from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR
 from gwemopt.plotting import (
@@ -30,18 +29,11 @@ def run(args):
     params = params_struct(args)
 
     if len(params["filters"]) != len(params["exposuretimes"]):
-        print(
+        raise ValueError(
             "The number of filters specified must match the number of exposure times."
         )
-        exit(0)
 
-    if args.event is not None:
-        params["skymap"] = get_event(event_name=args.event)
-    elif args.doSkymap:
-        pass
-    else:
-        print("Need to enable --doEvent or --doSkymap")
-        exit(0)
+    params["skymap"] = get_skymap(event_name=args.event)
 
     # Function to read maps
     params, map_struct = read_skymap(params)
