@@ -19,7 +19,6 @@ from ligo.skymap.io import read_sky_map
 from scipy import stats
 
 from gwemopt.paths import SKYMAP_DIR
-from gwemopt.utils.rotate import rotate_map
 
 
 def download_from_url(skymap_url: str, output_dir: Path, skymap_name: str) -> Path:
@@ -199,13 +198,6 @@ def read_skymap(params, map_struct=None):
             prob_data = prob_data / np.sum(prob_data)
 
             map_struct["prob"] = prob_data
-
-    if params["doRotate"]:
-        for key in map_struct.keys():
-            map_struct[key] = rotate_map(
-                map_struct[key], np.deg2rad(params["theta"]), np.deg2rad(params["phi"])
-            )
-        map_struct["prob"] = map_struct["prob"] / np.sum(map_struct["prob"])
 
     natural_nside = hp.pixelfunc.get_nside(map_struct["prob"])
     nside = params["nside"]

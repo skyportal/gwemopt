@@ -140,10 +140,6 @@ def parse_args(args):
 
     parser.add_argument("--absmag", default=-15.0, type=float)
 
-    parser.add_argument("--doRotate", action="store_true", default=False)
-    parser.add_argument("--theta", help="theta rotation.", default=0.0, type=float)
-    parser.add_argument("--phi", help="phi rotation.", default=0.0, type=float)
-
     parser.add_argument(
         "--galactic_limit", help="Galactic limit.", default=0.0, type=float
     )
