@@ -53,8 +53,7 @@ def slice_map_tiles(params, map_struct, coverage_struct):
 
 
 def slice_number_tiles(params, telescope, tile_struct, coverage_struct):
-    idx = params["telescopes"].index(telescope)
-    max_nb_tile = params["max_nb_tiles"][idx]
+    max_nb_tile = params["max_nb_tiles"]
     if max_nb_tile is None:
         return tile_struct, False
 
