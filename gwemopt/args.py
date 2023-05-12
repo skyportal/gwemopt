@@ -50,7 +50,6 @@ def parse_args(args):
     parser.add_argument("--catalog_n", default=1.0, type=float)
     parser.add_argument("--AGN_flag", action="store_true", default=False)
     parser.add_argument("--doObservability", action="store_true", default=False)
-    parser.add_argument("--doObservabilityExit", action="store_true", default=False)
     parser.add_argument("--observability_thresh", default=0.05, type=float)
     parser.add_argument("--doSkybrightness", action="store_true", default=False)
 

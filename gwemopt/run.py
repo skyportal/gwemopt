@@ -69,36 +69,6 @@ def run(args):
         if args.doPlots:
             print("Plotting observability...")
             plot_observability(params, map_struct)
-        if args.doObservabilityExit:
-            for telescope in params["telescopes"]:
-                if (
-                    np.sum(observability_struct[telescope]["prob"])
-                    < args.observability_thresh
-                ):
-                    print(
-                        "Observability for %s: %.5f < %.5f... exiting."
-                        % (
-                            telescope,
-                            np.sum(observability_struct[telescope]["prob"]),
-                            args.observability_thresh,
-                        )
-                    )
-
-                    if params["doTrueLocation"]:
-                        lightcurve_structs = gwemopt.lightcurve.read_files(
-                            params["lightcurveFiles"]
-                        )
-                        for key in lightcurve_structs.keys():
-                            filename = os.path.join(
-                                params["outputDir"],
-                                "efficiency_true_"
-                                + lightcurve_structs[key]["name"]
-                                + ".txt",
-                            )
-                            fid = open(filename, "w")
-                            fid.write("0")
-                            fid.close()
-                    exit(0)
 
     if args.doSplit:
         print("Splitting skymap...")
