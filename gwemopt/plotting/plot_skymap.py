@@ -32,19 +32,6 @@ def plot_skymap(params, map_struct):
             cmap=cmap,
         )
 
-    if params["doTrueLocation"]:
-        hp.projplot(
-            params["true_ra"],
-            params["true_dec"],
-            lonlat=True,
-            coord="G",
-            marker="D",
-            c="blue",
-            linestyle="None",
-            label="true location",
-        )
-        plt.legend()
-
     add_edges()
     plt.savefig(plot_name, dpi=200)
     plt.close()

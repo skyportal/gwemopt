@@ -104,10 +104,6 @@ def parse_args(args):
     parser.add_argument("--start_time", default=None)
     parser.add_argument("--end_time", default=None)
 
-    parser.add_argument("--doTrueLocation", action="store_true", default=False)
-    parser.add_argument("--true_ra", default=30.0, type=float)
-    parser.add_argument("--true_dec", default=60.0, type=float)
-    parser.add_argument("--true_distance", default=100.0, type=float)
     parser.add_argument("--dt", default=14.0, type=float)
 
     parser.add_argument("-a", "--airmass", default=2.5, type=float)
