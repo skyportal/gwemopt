@@ -7,6 +7,8 @@ from astropy.time import Time
 from ligo.skymap import distance
 from scipy.interpolate import interpolate as interp
 
+from gwemopt.io.export_efficiency import export_efficiency_data, save_efficiency_metric
+
 
 def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
     nside = params["nside"]
@@ -70,7 +72,7 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
     efficiency_struct["efficiency"] = efficiency
     efficiency_struct["distances"] = dists
 
-    save_efficiency_data(params, efficiency_struct, lightcurve_struct)
+    export_efficiency_data(params, efficiency_struct, lightcurve_struct)
 
     if params["do_3d"]:
         eff_3D, dists_inj = compute_3d_efficiency(
@@ -159,25 +161,6 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
     return detections / Ninj, dists_inj
 
 
-def save_efficiency_data(params, efficiency_struct, lightcurve_struct):
-    filename = os.path.join(
-        params["outputDir"], "efficiency_" + lightcurve_struct["name"] + ".txt"
-    )
-
-    for i in range(0, len(efficiency_struct["distances"])):
-        dist = efficiency_struct["distances"][i]
-        eff = efficiency_struct["efficiency"][i]
-        if os.path.exists(filename):
-            append_write = "a"
-            efficiency_file = open(filename, append_write)
-        else:
-            append_write = "w"
-            efficiency_file = open(filename, append_write)
-            efficiency_file.write("Distance" + "\t" + "efficiency\n")
-        efficiency_file.write(str(dist) + "\t" + str(eff) + "\n")
-    efficiency_file.close()
-
-
 def calculate_efficiency_metric(params, efficiency_struct):
     dist_sum = 0
     weighted_sum = 0
@@ -189,40 +172,3 @@ def calculate_efficiency_metric(params, efficiency_struct):
     metric = weighted_sum / dist_sum
     uncertainty = np.sqrt(metric * (1 - metric) / params["Ninj"])
     return (metric, uncertainty)
-
-
-def save_efficiency_metric(
-    params, efficiency_filename, efficiency_metric, lightcurve_struct
-):
-    if os.path.exists(efficiency_filename):
-        append_write = "a"
-        efficiency_file = open(efficiency_filename, append_write)
-    else:
-        append_write = "w"
-        efficiency_file = open(efficiency_filename, append_write)
-        efficiency_file.write(
-            "tilesType\t"
-            + "timeallocationType\t"
-            + "scheduleType\t"
-            + "Ntiles\t"
-            + "efficiencyMetric\t"
-            + "efficiencyMetric_err\t"
-            + "injection\n"
-        )
-    efficiency_file.write(
-        params["tilesType"]
-        + "\t"
-        + params["timeallocationType"]
-        + "\t"
-        + params["scheduleType"]
-        + "\t"
-        + str(params["Ntiles"])
-        + "\t"
-        + str(efficiency_metric[0])
-        + "\t"
-        + str(efficiency_metric[1])
-        + "\t"
-        + lightcurve_struct["name"]
-        + "\n"
-    )
-    efficiency_file.close()
