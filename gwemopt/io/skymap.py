@@ -271,7 +271,7 @@ def read_skymap(params, map_struct=None):
         map_struct["prob"][ipix] = 0.0
         map_struct["prob"] = map_struct["prob"] / np.sum(map_struct["prob"])
 
-    if params["doAvoidGalacticPlane"]:
+    if params["galactic_limit"] > 0.0:
         coords = SkyCoord(ra=ra * u.deg, dec=dec * u.deg)
         ipix = np.where(np.abs(coords.galactic.b.deg) <= params["galactic_limit"])[0]
         map_struct["prob"][ipix] = 0.0
