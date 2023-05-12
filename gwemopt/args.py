@@ -77,8 +77,7 @@ def parse_args(args):
     )
     parser.add_argument("--Ninj", default=10000, type=int)
     parser.add_argument("--Ntiles", default=10, type=int)
-    parser.add_argument("--doCalcTiles", action="store_true", default=False)
-    parser.add_argument("--Ntiles_cr", default=0.70, type=float)
+
     parser.add_argument("--Ndet", default=1, type=int)
     parser.add_argument("--nside", default=256, type=int)
     parser.add_argument("--DScale", default=1.0, type=float)
@@ -103,8 +102,6 @@ def parse_args(args):
 
     parser.add_argument("--start_time", default=None)
     parser.add_argument("--end_time", default=None)
-
-    parser.add_argument("--dt", default=14.0, type=float)
 
     parser.add_argument("-a", "--airmass", default=2.5, type=float)
 
