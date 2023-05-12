@@ -72,7 +72,7 @@ def run(args):
             print("Plotting observability...")
             plot_observability(params, map_struct)
 
-    if args.doSplit:
+    if params["splitType"] is not None:
         print("Splitting skymap...")
         map_struct["groups"] = gwemopt.mapsplit.similar_range(params, map_struct)
 

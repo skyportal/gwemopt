@@ -2,14 +2,6 @@ import healpy as hp
 import numpy as np
 
 
-def recombine(groups, sliced_array):
-    combined = np.array([])
-    for group in groups:
-        for i in range(len(sliced_array)):
-            if i in group:
-                combined
-
-
 def similar_range(params, map_struct):
     if params["doObservability"]:
         observability_struct = map_struct["observability"]

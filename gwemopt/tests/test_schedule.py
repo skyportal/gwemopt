@@ -50,7 +50,7 @@ def test_scheduler():
                     "GLADE",
                 ],
             ),
-            ("DECam", ["--doChipGaps", "--max_nb_tiles", "5"]),
+            ("DECam", ["--doChipGaps", "--max_nb_tiles", "5", "--doMinimalTiling"]),
             # ('TRE', []),
             # ("WINTER", []),
             # ('TNT', ["--tilesType", "galaxy", "--powerlaw_dist_exp", "1.0", "--doCatalog", "--galaxy_grade", "Sloc"]),
