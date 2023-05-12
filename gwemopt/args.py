@@ -47,11 +47,7 @@ def parse_args(args):
         type=str,
         default="S",
     )
-    parser.add_argument("--writeCatalog", action="store_true", default=False)
-    parser.add_argument("--catalog_n", default=1.0, type=float)
     parser.add_argument("--doObservability", action="store_true", default=False)
-    parser.add_argument("--observability_thresh", default=0.05, type=float)
-    parser.add_argument("--doSkybrightness", action="store_true", default=False)
 
     parser.add_argument("--doEfficiency", action="store_true", default=False)
     parser.add_argument(
@@ -136,7 +132,6 @@ def parse_args(args):
 
     parser.add_argument("--doRASlice", action="store_true", default=False)
     parser.add_argument("--raslice", default="0.0,24.0")
-    parser.add_argument("--program_id", default=-1, type=int)
 
     parser.add_argument("--absmag", default=-15.0, type=float)
 

@@ -12,6 +12,7 @@ from tqdm import tqdm
 import gwemopt.plotting
 import gwemopt.scheduler
 import gwemopt.tiles
+from gwemopt.io.schedule import read_schedule
 from gwemopt.tiles import (
     balance_tiles,
     check_overlapping_tiles,
@@ -29,7 +30,7 @@ from gwemopt.utils.treasuremap import get_treasuremap_pointings
 
 def combine_coverage_structs(coverage_structs):
     coverage_struct_combined = {}
-    coverage_struct_combined["data"] = np.empty((0, 9))
+    coverage_struct_combined["data"] = np.empty((0, 8))
     coverage_struct_combined["filters"] = np.empty((0, 1))
     coverage_struct_combined["ipix"] = []
     coverage_struct_combined["patch"] = []
@@ -100,27 +101,11 @@ def read_coverage(params, telescope, filename, moc_struct=None):
         schedule_table["dec"] = decs
         schedule_table["mag"] = mags
         schedule_table["airmass"] = np.zeros(len(ras))
-        schedule_table["program_id"] = np.zeros(len(ras))
         schedule_table["prob"] = np.zeros(len(ras))
 
     except:
-        schedule_table = pd.read_csv(
-            filename,
-            delimiter=" ",
-            header=None,
-            names=(
-                "field",
-                "ra",
-                "dec",
-                "mjd",
-                "mag",
-                "exposure_time",
-                "prob",
-                "airmass",
-                "filt",
-                "program_id",
-            ),
-        )
+        schedule_table = read_schedule(filename)
+
     coverage_struct = {}
     coverage_struct["data"] = np.empty((0, 9))
     coverage_struct["filters"] = []
@@ -137,13 +122,10 @@ def read_coverage(params, telescope, filename, moc_struct=None):
         prob = row1["prob"]
         airmass = row1["airmass"]
         filt = row1["filt"]
-        program_id = row1["program_id"]
 
         coverage_struct["data"] = np.append(
             coverage_struct["data"],
-            np.array(
-                [[ra, dec, mjd, mag, exposureTime, field, prob, airmass, program_id]]
-            ),
+            np.array([[ra, dec, mjd, mag, exposureTime, field, prob, airmass]]),
             axis=0,
         )
         coverage_struct["filters"].append(filt)

@@ -8,8 +8,8 @@ import numpy as np
 from astropy.time import Time
 from joblib import Parallel, delayed
 
+from gwemopt.utils.geometry import angular_distance
 from gwemopt.utils.misc import get_exposures
-from gwemopt.utils.rotate import angular_distance
 
 
 def get_telescope_segments(params):

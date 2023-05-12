@@ -9,7 +9,7 @@ from matplotlib.pyplot import cm
 from gwemopt.io import export_tiles_coverage_hist, export_tiles_coverage_int
 from gwemopt.plotting.movie import make_movie
 from gwemopt.plotting.style import CBAR_BOOL, UNIT, add_edges, add_sun_moon, cmap
-from gwemopt.utils.rotate import angular_distance
+from gwemopt.utils.geometry import angular_distance
 
 
 def plot_mollweide_coverage(params, map_struct, coverage_struct):

@@ -45,7 +45,7 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
 
     cat_df = cat.get_catalog()
 
-    if params["galaxy_catalog"] == "glade":
+    if params["catalog"] == "glade":
         # Keep only galaxies with finite B mag when using it in the grade
         if params["galaxy_grade"] == "S":
             mask = np.where(~np.isnan(cat_df["magb"]))[0]

@@ -103,6 +103,8 @@ def test_scheduler():
             "coverage_ZTF.dat",
             "map.dat",
             "summary.dat",
+            "efficiency.txt",
+            "efficiency_tophat.txt",
         ] + [f"tiles_coverage_int_{t}.txt" for t, _ in telescope_list]
 
         for extra_test_file in extra_test_files:
