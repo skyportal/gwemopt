@@ -87,7 +87,9 @@ def params_struct(opts):
         observer = astroplan.Observer(location=location)
         params["config"][telescope]["observer"] = observer
 
-    params["coverageFiles"] = opts.coverageFiles.split(",")
+    params["coverageFiles"] = (
+        opts.coverageFiles.split(",") if opts.coverageFiles else None
+    )
     params["telescopes"] = telescopes
     params["lightcurveFiles"] = str(opts.lightcurveFiles).split(",")
 

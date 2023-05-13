@@ -76,56 +76,28 @@ def combine_coverage_structs(coverage_structs):
 def read_coverage(params, telescope, filename, moc_struct=None):
     nside = params["nside"]
     config_struct = params["config"][telescope]
-
-    try:
-        schedule_table = ascii.read(filename)
-        schedule_table["field_id"].name = "field"
-        schedule_table["time"].name = "mjd"
-        schedule_table["exposure"].name = "exposure_time"
-
-        ras, decs, mags = [], [], []
-        for ii, row1 in enumerate(schedule_table):
-            field = row1["field"]
-            ra, dec = moc_struct[field]["ra"], moc_struct[field]["dec"]
-            exposureTime = row1["exposure_time"]
-            nmag = -2.5 * np.log10(
-                np.sqrt(config_struct["exposuretime"] / exposureTime)
-            )
-            mag = config_struct["magnitude"] + nmag
-
-            ras.append(ra)
-            decs.append(dec)
-            mags.append(mag)
-
-        schedule_table["ra"] = ras
-        schedule_table["dec"] = decs
-        schedule_table["mag"] = mags
-        schedule_table["airmass"] = np.zeros(len(ras))
-        schedule_table["prob"] = np.zeros(len(ras))
-
-    except:
-        schedule_table = read_schedule(filename)
+    schedule_table = read_schedule(filename)
 
     coverage_struct = {}
-    coverage_struct["data"] = np.empty((0, 9))
+    coverage_struct["data"] = np.empty((0, 8))
     coverage_struct["filters"] = []
     coverage_struct["ipix"] = []
     coverage_struct["patch"] = []
     coverage_struct["area"] = []
 
-    for ii, row1 in enumerate(schedule_table):
-        ra, dec = row1["ra"], row1["dec"]
-        mjd = row1["mjd"]
-        mag = row1["mag"]
-        exposureTime = row1["exposure_time"]
-        field = row1["field"]
-        prob = row1["prob"]
-        airmass = row1["airmass"]
-        filt = row1["filt"]
+    for ii, row in schedule_table.iterrows():
+        ra, dec = row["ra"], row["dec"]
+        tobs = row["tobs"]
+        limmag = row["limmag"]
+        texp = row["texp"]
+        field = row["field"]
+        prob = row["prob"]
+        airmass = row["airmass"]
+        filt = row["filter"]
 
         coverage_struct["data"] = np.append(
             coverage_struct["data"],
-            np.array([[ra, dec, mjd, mag, exposureTime, field, prob, airmass]]),
+            np.array([[ra, dec, tobs, limmag, texp, field, prob, airmass]]),
             axis=0,
         )
         coverage_struct["filters"].append(filt)
@@ -182,6 +154,12 @@ def read_coverage(params, telescope, filename, moc_struct=None):
 
 
 def read_coverage_files(params, moc_structs):
+    if params["coverageFiles"]:
+        if not (len(params["telescopes"]) == len(params["coverageFiles"])):
+            return ValueError("Need same number of coverageFiles as telescopes")
+    else:
+        return ValueError("Need coverageFiles if doCoverage is enabled.")
+
     coverage_structs = []
     for telescope, coverageFile in zip(params["telescopes"], params["coverageFiles"]):
         coverage_struct = read_coverage(

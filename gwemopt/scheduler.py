@@ -8,7 +8,6 @@ import numpy as np
 from astropy.time import Time
 from munkres import Munkres, make_cost_matrix
 
-from gwemopt.plotting import make_schedule_plots
 from gwemopt.tiles import balance_tiles, optimize_max_tiles, schedule_alternating
 from gwemopt.utils import angular_distance
 
@@ -538,6 +537,8 @@ def scheduler(params, config_struct, tile_struct):
     )
 
     if params["doPlots"]:
+        from gwemopt.plotting import make_schedule_plots
+
         make_schedule_plots(params, exposurelist, keys)
 
     exposureused = np.where(np.array(keys) >= 0)[0]

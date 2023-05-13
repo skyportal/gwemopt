@@ -8,6 +8,30 @@ from gwemopt.scheduler import computeSlewReadoutTime
 from gwemopt.utils import angular_distance
 
 
+def read_summary(summary_path):
+    """
+    Reads a summary file and returns a pandas dataframe
+
+    :param summary_path: path to summary file
+    :return: pandas dataframe
+    """
+
+    summary = pd.read_csv(
+        summary_path,
+        index_col=False,
+        sep=",",
+        names=[
+            "time",
+            "dt",
+            "prob",
+            "area",
+            "mjds",
+        ],
+    )
+
+    return summary
+
+
 def read_schedule(schedule_path):
     """
     Reads a schedule file and returns a pandas dataframe
@@ -18,6 +42,7 @@ def read_schedule(schedule_path):
 
     schedule = pd.read_csv(
         schedule_path,
+        index_col=False,
         sep=" ",
         names=[
             "field",

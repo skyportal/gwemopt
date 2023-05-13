@@ -60,7 +60,7 @@ def parse_args(args):
         "-d",
         "--coverageFiles",
         help="Telescope coverage files.",
-        default="../data/ATLAS_GW170104.dat",
+        default=None,
     )
     parser.add_argument(
         "-l",
