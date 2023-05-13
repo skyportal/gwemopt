@@ -91,7 +91,7 @@ def test_scheduler():
             check_files = [
                 f"schedule_{telescope}.dat",
                 f"tiles_coverage_int_{telescope}.txt",
-                f"coverage_{telescope}.dat",
+                # f"coverage_{telescope}.dat",
             ]
 
             for i, file_name in enumerate(check_files):
@@ -115,6 +115,7 @@ def test_scheduler():
             "efficiency.txt",
             "efficiency_tophat.txt",
             "catalog_glade.csv",
+            "coverage_ZTF.dat",
         ]
 
         for extra_test_file in extra_test_files:
