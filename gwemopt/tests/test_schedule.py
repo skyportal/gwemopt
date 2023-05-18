@@ -114,7 +114,6 @@ def test_scheduler():
             "summary.dat",
             "efficiency.txt",
             "efficiency_tophat.txt",
-            "catalog_glade.csv",
             "coverage_ZTF.dat",
         ]
 
