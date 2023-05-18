@@ -72,7 +72,7 @@ def run(args):
             print("Plotting observability...")
             plot_observability(params, map_struct)
 
-    if args.doSplit:
+    if params["splitType"] is not None:
         print("Splitting skymap...")
         map_struct["groups"] = gwemopt.mapsplit.similar_range(params, map_struct)
 
@@ -80,6 +80,7 @@ def run(args):
         if params["tilesType"] == "moc":
             print("Generating MOC struct...")
             moc_structs = gwemopt.moc.create_moc(params, map_struct=map_struct)
+            print("Generating tile struct for MOC...")
             tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
 
         elif params["tilesType"] == "galaxy":

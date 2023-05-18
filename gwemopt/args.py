@@ -120,8 +120,8 @@ def parse_args(args):
     parser.add_argument("--doUsePrimary", action="store_true", default=False)
     parser.add_argument("--doUseSecondary", action="store_true", default=False)
 
-    parser.add_argument("--doSplit", action="store_true", default=False)
-    parser.add_argument("--splitType", default="regional")
+    parser.add_argument("--splitType", help="e.g: regional", default=None)
+
     parser.add_argument("--Nregions", default=768, type=int)
 
     parser.add_argument("--doParallel", action="store_true", default=False)

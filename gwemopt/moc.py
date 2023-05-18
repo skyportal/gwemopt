@@ -3,6 +3,7 @@ import copy
 import healpy as hp
 import numpy as np
 from joblib import Parallel, delayed
+from tqdm import tqdm
 
 import gwemopt.tiles
 from gwemopt.chipgaps import get_decam_quadrant_ipix, get_ztf_quadrant_ipix
@@ -50,7 +51,7 @@ def create_moc(params, map_struct=None):
                 )
                 for tess in tesselation
             )
-            for ii, tess in enumerate(tesselation):
+            for ii, tess in tqdm(enumerate(tesselation), total=len(tesselation)):
                 index, ra, dec = tess[0], tess[1], tess[2]
                 if (telescope == "ZTF") and params["doUsePrimary"] and (index > 880):
                     continue
@@ -58,7 +59,7 @@ def create_moc(params, map_struct=None):
                     continue
                 moc_struct[index] = moclists[ii]
         else:
-            for ii, tess in enumerate(tesselation):
+            for ii, tess in tqdm(enumerate(tesselation), total=len(tesselation)):
                 index, ra, dec = tess[0], tess[1], tess[2]
                 if (telescope == "ZTF") and params["doUsePrimary"] and (index > 880):
                     continue

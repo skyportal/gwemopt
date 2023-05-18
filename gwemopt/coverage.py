@@ -178,7 +178,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
     full_prob_map = map_struct["prob"]
 
     for jj, telescope in enumerate(params["telescopes"]):
-        if params["doSplit"]:
+        if params["splitType"] is not None:
             if "observability" in map_struct:
                 map_struct["observability"][telescope]["prob"] = map_struct["groups"][
                     n_scope
@@ -459,7 +459,7 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
     full_prob_map = map_struct["prob"]
 
     for jj, telescope in enumerate(params["telescopes"]):
-        if params["doSplit"]:
+        if params["splitType"] is not None:
             if "observability" in map_struct:
                 map_struct["observability"][telescope]["prob"] = map_struct["groups"][
                     n_scope

@@ -25,6 +25,9 @@ def test_scheduler():
     """
 
     with tempfile.TemporaryDirectory() as temp_dir:
+        # Efficiency just appends, so you would get issues
+        Path(temp_dir).joinpath("efficiency.txt").unlink(missing_ok=True)
+
         telescope_list = [
             (
                 "ZTF",
@@ -50,7 +53,7 @@ def test_scheduler():
                     "GLADE",
                 ],
             ),
-            ("DECam", ["--doChipGaps", "--max_nb_tiles", "5"]),
+            ("DECam", ["--doChipGaps", "--max_nb_tiles", "5", "--doMinimalTiling"]),
             # ('TRE', []),
             # ("WINTER", []),
             # ('TNT', ["--tilesType", "galaxy", "--powerlaw_dist_exp", "1.0", "--doCatalog", "--galaxy_grade", "Sloc"]),
@@ -85,29 +88,38 @@ def test_scheduler():
 
             run(args)
 
-            new_schedule = read_schedule(
-                Path(temp_dir).joinpath(f"schedule_{telescope}.dat")
-            )
-            expected_schedule = read_schedule(
-                expected_results_dir.joinpath(f"schedule_{telescope}.dat")
-            )
+            check_files = [
+                f"schedule_{telescope}.dat",
+                f"tiles_coverage_int_{telescope}.txt",
+                # f"coverage_{telescope}.dat",
+            ]
 
-            pd.testing.assert_frame_equal(
-                new_schedule.reset_index(drop=True),
-                expected_schedule.reset_index(drop=True),
-            )
+            for i, file_name in enumerate(check_files):
+                print(f"Testing: {file_name}")
+
+                new_schedule = read_schedule(Path(temp_dir).joinpath(file_name))
+                expected_schedule = read_schedule(
+                    expected_results_dir.joinpath(file_name)
+                )
+
+                pd.testing.assert_frame_equal(
+                    new_schedule.reset_index(drop=True),
+                    expected_schedule.reset_index(drop=True),
+                )
 
         # Test the extra efficiency/coverage files
 
         extra_test_files = [
-            "coverage_ZTF.dat",
             "map.dat",
             "summary.dat",
             "efficiency.txt",
             "efficiency_tophat.txt",
-        ] + [f"tiles_coverage_int_{t}.txt" for t, _ in telescope_list]
+            "coverage_ZTF.dat",
+        ]
 
         for extra_test_file in extra_test_files:
+            print(f"Testing: {extra_test_file}")
+
             new = pd.read_table(
                 Path(temp_dir).joinpath(extra_test_file), delim_whitespace=True
             )
