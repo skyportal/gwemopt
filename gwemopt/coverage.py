@@ -427,7 +427,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
 
             #                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params,coverage_struct)
 
-            if params["max_tiles_nb"] is not None:
+            if params["max_nb_tiles"] is not None:
                 tile_struct, doReschedule = slice_number_tiles(
                     params, telescope, tile_struct, coverage_struct
                 )
@@ -530,7 +530,7 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
                     previous_coverage_struct,
                 )
             elif params["doBalanceExposure"]:
-                if params["max_tiles_nb"] is None:
+                if params["max_nb_tiles"] is None:
                     # optimize max tiles (iff max tiles not already specified)
                     optimized_max, coverage_struct, tile_struct = optimize_max_tiles(
                         params,
