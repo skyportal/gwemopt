@@ -47,6 +47,12 @@ def parse_args(args):
         type=str,
         default="S",
     )
+    parser.add_argument(
+        "--galaxy_limit",
+        help="Limit on the number of returned galaxies",
+        type=int,
+        default=2000,
+    )
     parser.add_argument("--doObservability", action="store_true", default=False)
 
     parser.add_argument("--doEfficiency", action="store_true", default=False)

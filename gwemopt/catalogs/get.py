@@ -222,9 +222,9 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
 
     cat_df.sort_values(by=["grade"], inplace=True, ascending=False, ignore_index=True)
 
-    if len(cat_df) > 2000:
-        print("Cutting catalog to top 2000 galaxies...")
-        cat_df = cat_df.iloc[:2000]
+    if len(cat_df) > params["galaxy_limit"]:
+        print(f'Cutting catalog to top {params["galaxy_limit"]} galaxies...')
+        cat_df = cat_df.iloc[: params["galaxy_limit"]]
 
     # now normalize the distributions
     for key in ["S", "Sloc", "Smass"]:
