@@ -105,6 +105,9 @@ def params_struct(opts):
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","), dtype=float)
     params["catalogDir"] = Path(opts.catalogDir)
 
+    if params["catalog"] is not None:
+        params["galaxy_limit"] = int(opts.galaxy_limit)
+
     if params["tilesType"] not in TILE_TYPES:
         err = (
             f"Unrecognised tilesType: {params['tilesType']}. "
