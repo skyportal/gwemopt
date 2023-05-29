@@ -129,17 +129,6 @@ def read_skymap(params, map_struct=None):
 
     geometry = params["geometry"]
 
-    # "Do 3D" based on map, if not specified
-    if geometry is None:
-        params["do_3d"] = is_3d
-    # Otherwise set it
-    else:
-        assert geometry in ["2d", "3d"]
-        if geometry == "2d":
-            params["do_3d"] = False
-        else:
-            params["do_3d"] = True
-
     if map_struct is None:
         # Let's just figure out what's in the skymap first
         skymap_path = params["skymap"]
@@ -205,6 +194,17 @@ def read_skymap(params, map_struct=None):
         for j in range(len(header)):
             if header[j][0] == "DATE":
                 map_struct["trigtime"] = header[j][1]
+
+    # "Do 3D" based on map, if not specified
+    if geometry is None:
+        params["do_3d"] = is_3d
+    # Otherwise set it
+    else:
+        assert geometry in ["2d", "3d"]
+        if geometry == "2d":
+            params["do_3d"] = False
+        else:
+            params["do_3d"] = True
 
     natural_nside = hp.pixelfunc.get_nside(map_struct["prob"])
     nside = params["nside"]
