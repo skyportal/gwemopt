@@ -153,7 +153,7 @@ def get_order(
                 ):
                     continue
             if "epochs" in tile_struct[key]:
-                if params["doMindifFilt"]:
+                if params.get("doMindifFilt", False):
                     # take into account filter for mindiff
                     idx = np.where(
                         np.asarray(tile_struct[key]["epochs_filters"])

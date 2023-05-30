@@ -470,7 +470,7 @@ def append_tile_epochs(tile_struct, coverage_struct):
     for key in tile_struct.keys():
         if key not in coverage_struct["data"][:, 5]:
             continue
-        if "epochs" not in tile_struct[key]:
+        if "epochs" not in tile_struct[key] or len(tile_struct[key]["epochs"]) == 0:
             tile_struct[key]["epochs"] = np.empty((0, 8))
         idx = np.where(coverage_struct["data"][:, 5] == key)[0]
         for jj in idx:
