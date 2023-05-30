@@ -1,4 +1,5 @@
 import healpy as hp
+import ligo.skymap.plot
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
