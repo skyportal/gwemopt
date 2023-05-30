@@ -154,6 +154,8 @@ def get_order(
                     continue
             if "epochs" in tile_struct[key]:
                 if params.get("doMindifFilt", False):
+                    if "epochs_filters" not in tile_struct[key]:
+                        tile_struct[key]["epochs_filters"] = []
                     # take into account filter for mindiff
                     idx = np.where(
                         np.asarray(tile_struct[key]["epochs_filters"])
@@ -447,7 +449,6 @@ def scheduler(params, config_struct, tile_struct):
         height=config_struct["elevation"] * u.m,
     )
 
-    segmentlist = config_struct["segmentlist"]
     exposurelist = config_struct["exposurelist"]
     # tilesegmentlists = gwemopt.segments_astroplan.get_segments_tiles(config_struct, tile_struct, observatory, segmentlist)
     tilesegmentlists = []
@@ -481,7 +482,6 @@ def scheduler(params, config_struct, tile_struct):
                 if (keys[jj] == key) and (filts[jj] == filt) and not (nkeys == jj + 1):
                     if np.abs(exposurelist[jj][1] - mjd_exposure_start) > 5.0 / 24:
                         mjd_exposure_end = exposurelist[jj - 1][1]
-                        nexp = jj + 1
                         keys = keys[jj:]
                         filts = filts[jj:]
                         exposurelist = exposurelist[jj:]
@@ -494,19 +494,14 @@ def scheduler(params, config_struct, tile_struct):
 
                     exposureTime = (mjd_exposure_end - mjd_exposure_start) * 86400.0
 
-                    nexp = jj + 1
                     keys = []
                     filts = []
                     exposurelist = []
                 else:
-                    nexp = jj + 1
                     keys = keys[jj:]
                     filts = filts[jj:]
                     exposurelist = exposurelist[jj:]
                     break
-
-            # the (middle) tile observation time is mjd_exposure_mid
-            mjd_exposure_mid = (mjd_exposure_start + mjd_exposure_end) / 2.0
 
             # calculate airmass for each tile at the start of its exposure:
             t = Time(mjd_exposure_start, format="mjd")

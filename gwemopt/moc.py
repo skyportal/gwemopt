@@ -15,12 +15,7 @@ def create_moc(params, map_struct=None):
 
     if params["doMinimalTiling"]:
         prob = map_struct["prob"]
-
-        n, cl, dist_exp = (
-            params["powerlaw_n"],
-            params["powerlaw_cl"],
-            params["powerlaw_dist_exp"],
-        )
+        cl = params["powerlaw_cl"]
         prob_scaled = copy.deepcopy(prob)
         prob_sorted = np.sort(prob_scaled)[::-1]
         prob_indexes = np.argsort(prob_scaled)[::-1]

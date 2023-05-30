@@ -200,11 +200,6 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
         except:
             min_obs_duration = 0.0
 
-        if "filt_change_time" in config_struct.keys():
-            filt_change_time = config_struct["filt_change_time"]
-        else:
-            filt_change_time = 0
-
         if params["doIterativeTiling"] and (params["tilesType"] == "galaxy"):
             tile_struct = slice_galaxy_tiles(
                 params, tile_struct, combine_coverage_structs(coverage_structs)
@@ -480,11 +475,6 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
             min_obs_duration = config_struct["min_observability_duration"] / 24
         except:
             min_obs_duration = 0.0
-
-        if "filt_change_time" in config_struct.keys():
-            filt_change_time = config_struct["filt_change_time"]
-        else:
-            filt_change_time = 0
 
         if params["doIterativeTiling"] and (params["tilesType"] == "galaxy"):
             tile_struct = slice_galaxy_tiles(

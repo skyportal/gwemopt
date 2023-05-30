@@ -30,19 +30,8 @@ def slice_map_tiles(params, map_struct, coverage_struct):
 
     for ii in range(len(coverage_struct["ipix"])):
         data = coverage_struct["data"][ii, :]
-        filt = coverage_struct["filters"][ii]
         ipix = coverage_struct["ipix"][ii]
-        patch = coverage_struct["patch"][ii]
         FOV = coverage_struct["FOV"][ii]
-        area = coverage_struct["area"][ii]
-
-        observ_time, exposure_time, field_id, prob, airmass = (
-            data[2],
-            data[4],
-            data[5],
-            data[6],
-            data[7],
-        )
 
         ipix_slice = np.setdiff1d(ipix, ipix_keep)
         if len(ipix_slice) == 0:
@@ -387,7 +376,6 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
     coverage_ras = coverage_struct["data"][:, 0]
     coverage_decs = coverage_struct["data"][:, 1]
     #   coverage_mjds = coverage_struct["data"][:,2]
-    coverage_ipixs = coverage_struct["ipix"]
     if len(coverage_ras) == 0:
         return tile_struct
 
@@ -417,7 +405,7 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                 overlap = np.setdiff1d(galaxies, galaxies2)
                 if len(overlap) == 0:
                     if not "epochs" in tile_struct[key]:
-                        tile_struct[key]["epochs"] = np.empty((0, 9))
+                        tile_struct[key]["epochs"] = np.empty((0, 8))
                     tile_struct[key]["epochs"] = np.append(
                         tile_struct[key]["epochs"],
                         np.atleast_2d(coverage_struct["data"][jj, :]),
@@ -438,18 +426,11 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                 ipix2 = coverage_struct["ipix"][jj]
                 overlap = np.intersect1d(ipix, ipix2)
 
-                rat = np.array(
-                    [
-                        float(len(overlap)) / float(len(ipix)),
-                        float(len(overlap)) / float(len(ipix2)),
-                    ]
-                )
-
                 if len(overlap) == 0:
                     continue
 
                 if not "epochs" in tile_struct[key]:
-                    tile_struct[key]["epochs"] = np.empty((0, 9))
+                    tile_struct[key]["epochs"] = np.empty((0, 8))
                     tile_struct[key]["epochs_overlap"] = []
                     tile_struct[key]["epochs_filters"] = []
 
@@ -470,12 +451,13 @@ def append_tile_epochs(tile_struct, coverage_struct):
     for key in tile_struct.keys():
         if key not in coverage_struct["data"][:, 5]:
             continue
-        if "epochs" not in tile_struct[key] or len(tile_struct[key]["epochs"]) == 0:
+        # if epochs not in tile_struct[key] or its empty
+        if "epochs" not in tile_struct[key]:
             tile_struct[key]["epochs"] = np.empty((0, 8))
         idx = np.where(coverage_struct["data"][:, 5] == key)[0]
         for jj in idx:
             tile_struct[key]["epochs"] = np.append(
-                tile_struct[key]["epochs"],
+                tile_struct[key]["epochs"], 
                 np.atleast_2d(coverage_struct["data"][jj, :]),
                 axis=0,
             )
@@ -916,8 +898,6 @@ def absmag_tiles_struct(params, config_struct, telescope, map_struct, tile_struc
     if ntiles == 0:
         return tile_struct
 
-    tot_obs_time = config_struct["tot_obs_time"]
-
     if "observability" in map_struct:
         prob = map_struct["observability"][telescope]["prob"]
     else:
@@ -1341,9 +1321,6 @@ def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
 
     ranked_tile_probs = compute_tiles_map(
         params, tile_struct, prob, func="np.sum(x)", ipix_keep=map_struct["ipix_keep"]
-    )
-    ranked_tile_times = gwemopt.utils.integrationTime(
-        tot_obs_time, ranked_tile_probs, func=None, T_int=config_struct["exposuretime"]
     )
 
     lim_mag = config_struct["magnitude"]
