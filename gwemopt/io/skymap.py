@@ -126,78 +126,82 @@ def read_skymap(params, map_struct=None):
     :param map_struct: dictionary of map parameters
     :return: map_struct
     """
-    # Let's just figure out what's in the skymap first
-
-    skymap_path = params["skymap"]
 
     geometry = params["geometry"]
-
-    params["name"] = Path(skymap_path).stem
-
-    is_3d = False
-    t_obs = Time.now()
-
-    with fits.open(skymap_path) as hdul:
-        for x in hdul:
-            if "DATE-OBS" in x.header:
-                t_obs = Time(x.header["DATE-OBS"], format="isot")
-
-            elif "EVENTMJD" in x.header:
-                t_obs_mjd = x.header["EVENTMJD"]
-                t_obs = Time(t_obs_mjd, format="mjd")
-
-            if ("DISTMEAN" in x.header) | ("DISTSTD" in x.header):
-                is_3d = True
-
-    # Set GPS time from skymap, if not specified. Defaults to today
-    params["eventtime"] = t_obs
-    if params["gpstime"] is None:
-        params["gpstime"] = t_obs.gps
-
-    # "Do 3D" based on map, if not specified
-    if geometry is None:
-        params["do_3d"] = is_3d
-    # Otherwise set it
-    else:
-        assert geometry in ["2d", "3d"]
+    if geometry is not None:
         if geometry == "2d":
             params["do_3d"] = False
         else:
             params["do_3d"] = True
 
-    header = []
     if map_struct is None:
-        map_struct = {}
+        # Let's just figure out what's in the skymap first
+        skymap_path = params["skymap"]
 
-        filename = params["skymap"]
+        params["name"] = Path(skymap_path).stem
 
-        if params["do_3d"]:
-            try:
-                healpix_data, header = hp.read_map(
-                    filename, field=(0, 1, 2, 3), verbose=False, h=True
+        is_3d = False
+        t_obs = Time.now()
+
+        with fits.open(skymap_path) as hdul:
+            for x in hdul:
+                if "DATE-OBS" in x.header:
+                    t_obs = Time(x.header["DATE-OBS"], format="isot")
+
+                elif "EVENTMJD" in x.header:
+                    t_obs_mjd = x.header["EVENTMJD"]
+                    t_obs = Time(t_obs_mjd, format="mjd")
+
+                if ("DISTMEAN" in x.header) | ("DISTSTD" in x.header):
+                    is_3d = True
+
+        # Set GPS time from skymap, if not specified. Defaults to today
+        params["eventtime"] = t_obs
+        if params["gpstime"] is None:
+            params["gpstime"] = t_obs.gps
+
+        if "do_3d" not in params:
+            params["do_3d"] = is_3d
+
+        header = []
+        if map_struct is None:
+            map_struct = {}
+
+            filename = params["skymap"]
+
+            if params["do_3d"]:
+                try:
+                    healpix_data, header = hp.read_map(
+                        filename, field=(0, 1, 2, 3), verbose=False, h=True
+                    )
+                except:
+                    table = read_sky_map(filename, moc=True, distances=True)
+                    order = hp.nside2order(params["nside"])
+                    t = rasterize(table, order)
+                    result = t["PROB"], t["DISTMU"], t["DISTSIGMA"], t["DISTNORM"]
+                    healpix_data = hp.reorder(result, "NESTED", "RING")
+
+                distmu_data = healpix_data[1]
+                distsigma_data = healpix_data[2]
+                prob_data = healpix_data[0]
+                norm_data = healpix_data[3]
+
+                map_struct["distmu"] = distmu_data / params["DScale"]
+                map_struct["distsigma"] = distsigma_data / params["DScale"]
+                map_struct["prob"] = prob_data
+                map_struct["distnorm"] = norm_data
+
+            else:
+                prob_data, header = hp.read_map(
+                    filename, field=0, verbose=False, h=True
                 )
-            except:
-                table = read_sky_map(filename, moc=True, distances=True)
-                order = hp.nside2order(params["nside"])
-                t = rasterize(table, order)
-                result = t["PROB"], t["DISTMU"], t["DISTSIGMA"], t["DISTNORM"]
-                healpix_data = hp.reorder(result, "NESTED", "RING")
+                prob_data = prob_data / np.sum(prob_data)
 
-            distmu_data = healpix_data[1]
-            distsigma_data = healpix_data[2]
-            prob_data = healpix_data[0]
-            norm_data = healpix_data[3]
+                map_struct["prob"] = prob_data
 
-            map_struct["distmu"] = distmu_data / params["DScale"]
-            map_struct["distsigma"] = distsigma_data / params["DScale"]
-            map_struct["prob"] = prob_data
-            map_struct["distnorm"] = norm_data
-
-        else:
-            prob_data, header = hp.read_map(filename, field=0, verbose=False, h=True)
-            prob_data = prob_data / np.sum(prob_data)
-
-            map_struct["prob"] = prob_data
+        for j in range(len(header)):
+            if header[j][0] == "DATE":
+                map_struct["trigtime"] = header[j][1]
 
     natural_nside = hp.pixelfunc.get_nside(map_struct["prob"])
     nside = params["nside"]
@@ -283,9 +287,5 @@ def read_skymap(params, map_struct=None):
     map_struct["npix"] = npix
     map_struct["pixarea"] = pixarea
     map_struct["pixarea_deg2"] = pixarea_deg2
-
-    for j in range(len(header)):
-        if header[j][0] == "DATE":
-            map_struct["trigtime"] = header[j][1]
 
     return params, map_struct
