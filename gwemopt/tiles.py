@@ -457,7 +457,7 @@ def append_tile_epochs(tile_struct, coverage_struct):
         idx = np.where(coverage_struct["data"][:, 5] == key)[0]
         for jj in idx:
             tile_struct[key]["epochs"] = np.append(
-                tile_struct[key]["epochs"], 
+                tile_struct[key]["epochs"],
                 np.atleast_2d(coverage_struct["data"][jj, :]),
                 axis=0,
             )
