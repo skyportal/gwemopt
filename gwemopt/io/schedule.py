@@ -178,6 +178,7 @@ def export_schedule_xml(xmlfile, map_struct, coverage_struct, config_struct):
         table_field.setValue("airmass", ii, airmass)
         table_field.setValue("prob_sum", ii, prob)
         table_field.setValue("priority", ii, ii)
+
     table = table_field.getTable()
     what.add_Table(table)
     xml = stringVOEvent(what)

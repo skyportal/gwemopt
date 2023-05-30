@@ -283,19 +283,13 @@ def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
         config_struct = params["config"][telescope]
         tesselation = config_struct["tesselation"]
         moc_struct = {}
-
-        if params["doParallel"]:
-            ipixs = Parallel(n_jobs=params["Ncores"])(
-                delayed(skyportal2Moc)(tess, nside) for tess in tesselation
-            )
-        else:
-            ipixs = []
-            for ii, tess in enumerate(tesselation):
-                if field_ids is not None:
-                    if tess.field_id not in field_ids[telescope]:
-                        ipixs.append([])
-                        continue
-                ipixs.append(skyportal2FOV(tess, nside))
+        ipixs = []
+        for ii, tess in enumerate(tesselation):
+            if field_ids is not None:
+                if tess.field_id not in field_ids[telescope]:
+                    ipixs.append([])
+                    continue
+            ipixs.append(skyportal2FOV(tess, nside))
         for ii, tess in enumerate(tesselation):
             index = tess.field_id
 

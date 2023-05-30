@@ -152,11 +152,6 @@ def getRectanglePixels(
     else:
         ipix = hp.query_polygon(nside, np.array(xyz))
 
-    # idx1 = np.where((radecs[:,1]>=70.0) | (radecs[:,1]<=-70.0))[0]
-    # idx2 = np.where((radecs[:,0]>300.0) | (radecs[:,0]<60.0))[0]
-    # if (len(idx1) == 0) or (len(idx2) > 0):
-    #    return [], [], [], []
-
     xyz = np.array(xyz)
     proj = hp.projector.MollweideProj(rot=rotation, coord=None)
     x, y = proj.vec2xy(xyz[:, 0], xyz[:, 1], xyz[:, 2])
@@ -232,11 +227,6 @@ def getSquarePixels(
         ipix = hp.query_polygon(nside, np.array(xyz))
     else:
         ipix = hp.query_polygon(nside, np.array(xyz))
-
-    # idx1 = np.where((radecs[:,1]>=70.0) | (radecs[:,1]<=-70.0))[0]
-    # idx2 = np.where((radecs[:,0]>300.0) | (radecs[:,0]<60.0))[0]
-    # if (len(idx1) == 0) or (len(idx2) > 0):
-    #    return [], [], [], []
 
     xyz = np.array(xyz)
     proj = hp.projector.MollweideProj(rot=rotation, coord=None)

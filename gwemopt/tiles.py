@@ -1,4 +1,3 @@
-# import gwemopt.utils
 import copy
 
 import healpy as hp
@@ -375,7 +374,6 @@ def optimize_max_tiles(
 def check_overlapping_tiles(params, tile_struct, coverage_struct):
     coverage_ras = coverage_struct["data"][:, 0]
     coverage_decs = coverage_struct["data"][:, 1]
-    #   coverage_mjds = coverage_struct["data"][:,2]
     if len(coverage_ras) == 0:
         return tile_struct
 
@@ -451,7 +449,6 @@ def append_tile_epochs(tile_struct, coverage_struct):
     for key in tile_struct.keys():
         if key not in coverage_struct["data"][:, 5]:
             continue
-        # if epochs not in tile_struct[key] or its empty
         if "epochs" not in tile_struct[key]:
             tile_struct[key]["epochs"] = np.empty((0, 8))
         idx = np.where(coverage_struct["data"][:, 5] == key)[0]

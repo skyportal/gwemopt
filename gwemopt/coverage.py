@@ -662,8 +662,6 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
                             params, config_struct, tile_struct
                         )
 
-            #                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params,coverage_struct)
-
             if params["max_nb_tiles"] is not None:
                 tile_struct, do_reschedule = slice_number_tiles(
                     params, telescope, tile_struct, coverage_struct

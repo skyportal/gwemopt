@@ -18,7 +18,6 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
     Ndet = params["Ndet"]
     gpstime = params["gpstime"]
     mjd_inj = Time(gpstime, format="gps", scale="utc").mjd
-    # FOV_r = np.sqrt(float(params['FOV'])/np.pi)
 
     if params["catalog"] is not None:
         distn = scipy.stats.rv_discrete(

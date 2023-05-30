@@ -68,7 +68,6 @@ def plot_tiles_coverage(params, map_struct, coverage_struct, plot_sun_moon=False
     for ii in range(len(coverage_struct["ipix"])):
         patch = coverage_struct["patch"][ii]
 
-        # hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
         if patch == []:
             continue
 
@@ -298,7 +297,6 @@ def plot_coverage_scaled(params, map_struct, coverage_struct, plot_sun_moon, max
         if patch == []:
             continue
 
-        # hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
         patch_cpy = copy.copy(patch)
         patch_cpy.axes = None
         patch_cpy.figure = None

@@ -229,8 +229,6 @@ def read_skymap(params, map_struct=None):
         nside_down = 32
 
         distmu_down = hp.pixelfunc.ud_grade(map_struct["distmu"], nside_down)
-        distsigma_down = hp.pixelfunc.ud_grade(map_struct["distsigma"], nside_down)
-        distnorm_down = hp.pixelfunc.ud_grade(map_struct["distnorm"], nside_down)
 
         (
             map_struct["distmed"],
