@@ -4,7 +4,7 @@ import healpy as hp
 import ligo.segments as segments
 import numpy as np
 from mocpy import MOC
-from regions import CircleSkyRegion, PolygonSkyRegion, RectangleSkyRegion, Regions
+from regions import CircleSkyRegion, PolygonSkyRegion, RectangleSkyRegion
 
 import gwemopt.tiles
 from gwemopt.tiles import (

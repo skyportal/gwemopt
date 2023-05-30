@@ -1,5 +1,4 @@
 import copy
-import os
 
 import astropy.coordinates
 import astropy.units as u

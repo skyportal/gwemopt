@@ -2,10 +2,8 @@ import copy
 
 import ligo.segments as segments
 import numpy as np
-import pandas as pd
 from astropy import units as u
 from astropy.coordinates import SkyCoord, get_sun
-from astropy.io import ascii
 from astropy.time import Time
 from tqdm import tqdm
 

@@ -16,7 +16,6 @@ from astropy.time import Time
 from ligo.gracedb.rest import GraceDb
 from ligo.skymap.bayestar import rasterize
 from ligo.skymap.io import read_sky_map
-from scipy import stats
 
 from gwemopt.paths import SKYMAP_DIR
 

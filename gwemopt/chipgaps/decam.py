@@ -222,7 +222,7 @@ def get_decam_quadrant_ipix(nside, ra, dec):
     ccd_xyz = np.moveaxis(ccd_coords_icrs.cartesian.xyz.value, 0, -1)[0]
 
     ipixs = []
-    for subfield_id, xyz in enumerate(ccd_xyz):
+    for xyz in ccd_xyz:
         ipix = hp.query_polygon(nside, xyz)
         ipixs.append(ipix.tolist())
     return ipixs
@@ -244,15 +244,10 @@ def ccd_xy_to_radec(alpha_p, delta_p, ccd_centers_xy):
         # Calabrett & Greisen (2002), Eqn. 55
         theta = np.arctan2(1, Rtheta.to(u.rad).value) * u.rad
 
-        # Native longitude/latitude of fiducial point
-        # appropriate for zenithal projections including TAN
-        phi0 = 0 * u.deg
-        theta0 = 90 * u.deg
         # Native longitude/latitue of celestial pole
         # for delta0<theta0 then phip should be 180 deg
         # and theta0=90 deg
         phi_p = 180 * u.deg
-        theta_p = delta_p
 
         # Celestial longitude/latitude
         # Calabretta & Greisen (2002), Eqn. 2
