@@ -122,7 +122,7 @@ addopts = "--verbose -r s"
 
 [tool.bumpver]
 current_version = "0.1.0"
-version_pattern = "MAJOR.MINOR.PATCH"
+version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
 commit_message = "bump version {old_version} -> {new_version}"
 commit = true
 tag = true
@@ -131,8 +131,4 @@ push = true
 [tool.bumpver.file_patterns]
 "pyproject.toml" = [
     'current_version = "{version}"',
-]
-"README.md" = [
-    "{version}",
-    "{pep440_version}",
 ]
