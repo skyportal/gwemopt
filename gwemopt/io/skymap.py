@@ -16,7 +16,6 @@ from astropy.time import Time
 from ligo.gracedb.rest import GraceDb
 from ligo.skymap.bayestar import rasterize
 from ligo.skymap.io import read_sky_map
-from scipy import stats
 
 from gwemopt.paths import SKYMAP_DIR
 
@@ -230,8 +229,6 @@ def read_skymap(params, map_struct=None):
         nside_down = 32
 
         distmu_down = hp.pixelfunc.ud_grade(map_struct["distmu"], nside_down)
-        distsigma_down = hp.pixelfunc.ud_grade(map_struct["distsigma"], nside_down)
-        distnorm_down = hp.pixelfunc.ud_grade(map_struct["distnorm"], nside_down)
 
         (
             map_struct["distmed"],

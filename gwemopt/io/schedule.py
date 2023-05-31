@@ -155,11 +155,7 @@ def export_schedule_xml(xmlfile, map_struct, coverage_struct, config_struct):
 
     for ii in range(len(coverage_struct["ipix"])):
         data = coverage_struct["data"][ii, :]
-        filt = coverage_struct["filters"][ii]
         ipix = coverage_struct["ipix"][ii]
-        patch = coverage_struct["patch"][ii]
-        FOV = coverage_struct["FOV"][ii]
-        area = coverage_struct["area"][ii]
 
         prob = np.sum(map_struct["prob"][ipix])
 
@@ -182,6 +178,7 @@ def export_schedule_xml(xmlfile, map_struct, coverage_struct, config_struct):
         table_field.setValue("airmass", ii, airmass)
         table_field.setValue("prob_sum", ii, prob)
         table_field.setValue("priority", ii, ii)
+
     table = table_field.getTable()
     what.add_Table(table)
     xml = stringVOEvent(what)
@@ -235,9 +232,7 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
                 data = coverage_struct["data"][ii, :]
                 filt = coverage_struct["filters"][ii]
                 ipix = coverage_struct["ipix"][ii]
-                patch = coverage_struct["patch"][ii]
-                FOV = coverage_struct["FOV"][ii]
-                area = coverage_struct["area"][ii]
+
                 prob = np.sum(map_struct["prob"][ipix])
 
                 ra, dec = data[0], data[1]
@@ -318,7 +313,6 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
 
         tts = np.array([1, 7, 60])
         for tt in tts:
-            radecs = np.empty((0, 2))
             mjds_floor = []
             mjds = []
             ipixs = np.empty((0, 2))
@@ -332,9 +326,6 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
                 data = coverage_struct["data"][ii, :]
                 filt = coverage_struct["filters"][ii]
                 ipix = coverage_struct["ipix"][ii]
-                patch = coverage_struct["patch"][ii]
-                FOV = coverage_struct["FOV"][ii]
-                area = coverage_struct["area"][ii]
 
                 prob = np.sum(map_struct["prob"][ipix])
 

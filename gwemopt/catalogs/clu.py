@@ -16,7 +16,7 @@ class CluCatalog(BaseCatalog):
 
     def load_catalog(self):
         cat = Table.read(self.get_catalog_path())
-        name = cat["name"]
+
         ra, dec = cat["ra"], cat["dec"]
         sfr_fuv, mstar = cat["sfr_fuv"], cat["mstar"]
         distmpc, magb = cat["distmpc"], cat["magb"]

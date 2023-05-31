@@ -2,10 +2,8 @@ import copy
 
 import ligo.segments as segments
 import numpy as np
-import pandas as pd
 from astropy import units as u
 from astropy.coordinates import SkyCoord, get_sun
-from astropy.io import ascii
 from astropy.time import Time
 from tqdm import tqdm
 
@@ -199,11 +197,6 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
             min_obs_duration = config_struct["min_observability_duration"] / 24
         except:
             min_obs_duration = 0.0
-
-        if "filt_change_time" in config_struct.keys():
-            filt_change_time = config_struct["filt_change_time"]
-        else:
-            filt_change_time = 0
 
         if params["doIterativeTiling"] and (params["tilesType"] == "galaxy"):
             tile_struct = slice_galaxy_tiles(
@@ -481,11 +474,6 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
         except:
             min_obs_duration = 0.0
 
-        if "filt_change_time" in config_struct.keys():
-            filt_change_time = config_struct["filt_change_time"]
-        else:
-            filt_change_time = 0
-
         if params["doIterativeTiling"] and (params["tilesType"] == "galaxy"):
             tile_struct = slice_galaxy_tiles(
                 params, tile_struct, combine_coverage_structs(coverage_structs)
@@ -673,8 +661,6 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
                         coverage_struct = gwemopt.scheduler.scheduler(
                             params, config_struct, tile_struct
                         )
-
-            #                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params,coverage_struct)
 
             if params["max_nb_tiles"] is not None:
                 tile_struct, do_reschedule = slice_number_tiles(

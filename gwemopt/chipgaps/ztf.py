@@ -120,15 +120,11 @@ class ZTFtile:
         # central point of projection (native pole)
         alphap = self.RA
         deltap = self.Dec
-        # Native longitude/latitude of fiducial point
-        # appropriate for zenithal projections including TAN
-        phi0 = 0 * u.deg
-        theta0 = 90 * u.deg
+
         # Native longitude/latitue of celestial pole
         # for delta0<theta0 then phip should be 180 deg
         # and theta0=90 deg
         phip = 180 * u.deg
-        thetap = self.Dec
 
         # Celestial longitude/latitude
         # Calabretta & Greisen (2002), Eqn. 2

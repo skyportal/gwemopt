@@ -99,10 +99,8 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
         s_loc = copy.copy(prob_scaled[ipix])
 
     # this happens when we are using a tiny catalog...
-    compatible_gal = True
     if np.all(s_loc == 0.0):
         s_loc[:] = 1.0
-        compatible_gal = False
 
     # new version of the Slum calcul (from HOGWARTs)
     Lsun = 3.828e26

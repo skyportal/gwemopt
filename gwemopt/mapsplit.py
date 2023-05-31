@@ -7,7 +7,6 @@ def similar_range(params, map_struct):
         observability_struct = map_struct["observability"]
         telescope = observability_struct.keys()[0]
         prob = observability_struct[telescope]["prob"]
-
     else:
         prob = map_struct["prob"]
 

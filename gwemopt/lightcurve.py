@@ -38,7 +38,6 @@ def read_files(files, tmin=-100.0, tmax=100.0):
             legend_label = name
 
         mag_d = np.loadtxt(filename)
-        # mag_d = mag_d[1:,:]
 
         bands = ["u", "g", "r", "i", "z", "y", "J", "H", "K"]
 

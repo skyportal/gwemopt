@@ -19,16 +19,10 @@ def make_tile_plots(params, map_struct, tiles_structs, plot_sun_moon=True):
     for telescope in tiles_structs:
         tiles_struct = tiles_structs[telescope]
         for index in tiles_struct.keys():
-            ipix, corners, patch = (
-                tiles_struct[index]["ipix"],
-                tiles_struct[index]["corners"],
-                tiles_struct[index]["patch"],
-            )
-            # hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
+            patch = tiles_struct[index]["patch"]
             if not patch:
                 continue
             hp.projaxes.HpxMollweideAxes.add_patch(ax, patch)
-            # tiles.plot()
 
     if plot_sun_moon:
         add_sun_moon(params)
@@ -63,12 +57,7 @@ def make_tile_plots(params, map_struct, tiles_structs, plot_sun_moon=True):
                         in config_struct["reference_images"][index]
                     ):
                         continue
-                ipix, corners, patch = (
-                    tiles_struct[index]["ipix"],
-                    tiles_struct[index]["corners"],
-                    tiles_struct[index]["patch"],
-                )
-                # hp.visufunc.projplot(corners[:,0], corners[:,1], 'k', lonlat = True)
+                patch = tiles_struct[index]["patch"]
                 if not patch:
                     continue
                 patch_cpy = copy.copy(patch)
@@ -76,7 +65,6 @@ def make_tile_plots(params, map_struct, tiles_structs, plot_sun_moon=True):
                 patch_cpy.figure = None
                 patch_cpy.set_transform(ax.transData)
                 hp.projaxes.HpxMollweideAxes.add_patch(ax, patch_cpy)
-                # tiles.plot()
         add_edges()
         plt.savefig(plot_name, dpi=200)
         plt.close()
