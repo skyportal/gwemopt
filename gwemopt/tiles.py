@@ -212,7 +212,7 @@ def optimize_max_tiles(
         for key in tile_struct_hold.keys():
             tile_struct_hold[key]["prob"] = prob[key]
             if "epochs" in tile_struct_hold[key]:
-                tile_struct_hold[key]["epochs"] = np.empty((0, 9))
+                tile_struct_hold[key]["epochs"] = np.empty((0, 8))
         params["max_nb_tiles"] = np.array([max_trial], dtype=float)
         params_hold = copy.copy(params)
         config_struct_hold = copy.copy(config_struct)
@@ -270,7 +270,7 @@ def optimize_max_tiles(
         for key in tile_struct_hold.keys():
             tile_struct_hold[key]["prob"] = prob[key]
             if "epochs" in tile_struct_hold[key]:
-                tile_struct_hold[key]["epochs"] = np.empty((0, 9))
+                tile_struct_hold[key]["epochs"] = np.empty((0, 8))
         params["max_nb_tiles"] = np.array([max_trial], dtype=float)
         params_hold = copy.copy(params)
         config_struct_hold = copy.copy(config_struct)
@@ -319,7 +319,7 @@ def optimize_max_tiles(
             for key in tile_struct_hold.keys():
                 tile_struct_hold[key]["prob"] = prob[key]
                 if "epochs" in tile_struct_hold[key]:
-                    tile_struct_hold[key]["epochs"] = np.empty((0, 9))
+                    tile_struct_hold[key]["epochs"] = np.empty((0, 8))
             doReschedule, balanced_fields = balance_tiles(
                 params_hold, opt_tile_struct, opt_coverage_struct
             )
