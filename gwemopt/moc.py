@@ -1,13 +1,16 @@
 import copy
+import os
 
 import healpy as hp
 import numpy as np
 from joblib import Parallel, delayed
+from regions import Regions
 from tqdm import tqdm
 
 import gwemopt.tiles
 from gwemopt.chipgaps import get_decam_quadrant_ipix, get_ztf_quadrant_ipix
-from gwemopt.utils.pixels import getCirclePixels, getSquarePixels
+from gwemopt.paths import CONFIG_DIR
+from gwemopt.utils.pixels import getCirclePixels, getRegionPixels, getSquarePixels
 
 
 def create_moc(params, map_struct=None):
@@ -29,15 +32,19 @@ def create_moc(params, map_struct=None):
         tesselation = config_struct["tesselation"]
         moc_struct = {}
 
-        if params["doMinimalTiling"] and (config_struct["FOV"] < 1.0):
-            idxs = hp.pixelfunc.ang2pix(
-                map_struct["nside"], tesselation[:, 1], tesselation[:, 2], lonlat=True
-            )
-            isin = np.isin(idxs, prob_indexes)
+        if params["doMinimalTiling"]:
+            if config_struct["FOV_type"] == "region" or config_struct["FOV"] < 1.0:
+                idxs = hp.pixelfunc.ang2pix(
+                    map_struct["nside"],
+                    tesselation[:, 1],
+                    tesselation[:, 2],
+                    lonlat=True,
+                )
+                isin = np.isin(idxs, prob_indexes)
 
-            idxs = [i for i, x in enumerate(isin) if x]
-            print("Keeping %d/%d tiles" % (len(idxs), len(tesselation)))
-            tesselation = tesselation[idxs, :]
+                idxs = [i for i, x in enumerate(isin) if x]
+                print("Keeping %d/%d tiles" % (len(idxs), len(tesselation)))
+                tesselation = tesselation[idxs, :]
 
         if params["doParallel"]:
             moclists = Parallel(n_jobs=params["Ncores"])(
@@ -126,6 +133,14 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
         ipix, radecs, patch, area = getCirclePixels(
             ra_pointing, dec_pointing, config_struct["FOV"], nside, rotation=rotation
         )
+    elif config_struct["FOV_type"] == "region":
+        region_file = os.path.join(CONFIG_DIR, config_struct["FOV"])
+        regions = Regions.read(region_file, format="ds9")
+        ipix, radecs, patch, area = getRegionPixels(
+            ra_pointing, dec_pointing, regions, nside, rotation=rotation
+        )
+    else:
+        raise ValueError("FOV_type must be square, circle or region")
 
     if params["doChipGaps"]:
         if telescope == "ZTF":
