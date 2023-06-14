@@ -71,11 +71,15 @@ def plot_tiles_coverage(params, map_struct, coverage_struct, plot_sun_moon=False
         if patch == []:
             continue
 
-        patch_cpy = copy.copy(patch)
-        patch_cpy.axes = None
-        patch_cpy.figure = None
-        patch_cpy.set_transform(ax.transData)
-        hp.projaxes.HpxMollweideAxes.add_patch(ax, patch_cpy)
+        if not type(patch) == list:
+            patch = [patch]
+
+        for p in patch:
+            patch_cpy = copy.copy(p)
+            patch_cpy.axes = None
+            patch_cpy.figure = None
+            patch_cpy.set_transform(ax.transData)
+            hp.projaxes.HpxMollweideAxes.add_patch(ax, patch_cpy)
 
     if plot_sun_moon:
         add_sun_moon(params)
@@ -139,13 +143,18 @@ def plot_tiles_coverage_int(
 
             if patch == []:
                 continue
-            patch_cpy = copy.copy(patch)
-            patch_cpy.axes = None
-            patch_cpy.figure = None
-            patch_cpy.set_transform(ax.transData)
-            patch_cpy.set_facecolor(colors[idx])
 
-            hp.projaxes.HpxMollweideAxes.add_patch(ax, patch_cpy)
+            if not type(patch) == list:
+                patch = [patch]
+
+            for p in patch:
+                patch_cpy = copy.copy(p)
+                patch_cpy.axes = None
+                patch_cpy.figure = None
+                patch_cpy.set_transform(ax.transData)
+                patch_cpy.set_facecolor(colors[idx])
+
+                hp.projaxes.HpxMollweideAxes.add_patch(ax, patch_cpy)
 
     idxs = np.argsort(coverage_struct["data"][:, 2])
     plt.axes(ax2)
@@ -297,18 +306,22 @@ def plot_coverage_scaled(params, map_struct, coverage_struct, plot_sun_moon, max
         if patch == []:
             continue
 
-        patch_cpy = copy.copy(patch)
-        patch_cpy.axes = None
-        patch_cpy.figure = None
-        patch_cpy.set_transform(ax.transData)
-        current_alpha = patch_cpy.get_alpha()
+        if not type(patch) == list:
+            patch = [patch]
 
-        if current_alpha > 0.0:
-            alpha = data[4] / max_time
-            if alpha > 1:
-                alpha = 1.0
-            patch_cpy.set_alpha(alpha)
-        hp.projaxes.HpxMollweideAxes.add_patch(ax, patch_cpy)
+        for p in patch:
+            patch_cpy = copy.copy(p)
+            patch_cpy.axes = None
+            patch_cpy.figure = None
+            patch_cpy.set_transform(ax.transData)
+            current_alpha = patch_cpy.get_alpha()
+
+            if current_alpha > 0.0:
+                alpha = data[4] / max_time
+                if alpha > 1:
+                    alpha = 1.0
+                patch_cpy.set_alpha(alpha)
+            hp.projaxes.HpxMollweideAxes.add_patch(ax, patch_cpy)
 
     if plot_sun_moon:
         add_sun_moon(params)
@@ -345,11 +358,16 @@ def plot_coverage_scaled(params, map_struct, coverage_struct, plot_sun_moon, max
                 if patch == []:
                     continue
 
-                patch_cpy = copy.copy(patch)
-                patch_cpy.axes = None
-                patch_cpy.figure = None
-                patch_cpy.set_transform(ax.transData)
-                hp.projaxes.HpxMollweideAxes.add_patch(ax, patch_cpy)
+                if not type(patch) == list:
+                    patch = [patch]
+
+                for p in patch:
+                    patch_cpy = copy.copy(p)
+                    patch_cpy.axes = None
+                    patch_cpy.figure = None
+                    patch_cpy.set_transform(ax.transData)
+                    hp.projaxes.HpxMollweideAxes.add_patch(ax, patch_cpy)
+
             plt.savefig(plot_name, dpi=200)
             plt.close()
 

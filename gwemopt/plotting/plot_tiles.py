@@ -22,7 +22,11 @@ def make_tile_plots(params, map_struct, tiles_structs, plot_sun_moon=True):
             patch = tiles_struct[index]["patch"]
             if not patch:
                 continue
-            hp.projaxes.HpxMollweideAxes.add_patch(ax, patch)
+            if type(patch) == list:
+                for p in patch:
+                    hp.projaxes.HpxMollweideAxes.add_patch(ax, p)
+            else:
+                hp.projaxes.HpxMollweideAxes.add_patch(ax, patch)
 
     if plot_sun_moon:
         add_sun_moon(params)

@@ -1,6 +1,10 @@
+import astropy.units as u
 import healpy as hp
 import matplotlib
 import numpy as np
+from astropy import coordinates
+from astropy_healpix import HEALPix
+from mocpy import MOC
 
 
 def get_ellipse_coords(a=0.0, b=0.0, x=0.0, y=0.0, angle=0.0, npts=10):
@@ -29,6 +33,75 @@ def get_ellipse_coords(a=0.0, b=0.0, x=0.0, y=0.0, angle=0.0, npts=10):
     pts[:, 1] = y + (a * cos_alpha * sin_beta + b * sin_alpha * cos_beta)
 
     return pts
+
+
+def getRegionPixels(
+    ra_pointing,
+    dec_pointing,
+    regions,
+    nside,
+    alpha=0.4,
+    color="k",
+    edgecolor="k",
+    rotation=None,
+):
+    theta = 0.5 * np.pi - np.deg2rad(dec_pointing)
+    phi = np.deg2rad(ra_pointing)
+
+    HPX = HEALPix(nside=nside, order="nested", frame=coordinates.ICRS())
+
+    skyoffset_frames = coordinates.SkyCoord(
+        ra_pointing, dec_pointing, unit=u.deg
+    ).skyoffset_frame()
+
+    proj = hp.projector.MollweideProj(rot=rotation, coord=None)
+
+    # security for the periodic limit conditions
+    ipix = []
+    radecs = np.empty((0, 2))
+    patch = []
+    for reg in regions:
+        ra_tmp = reg.vertices.ra
+        dec_tmp = reg.vertices.dec
+
+        coords = np.stack([np.array(ra_tmp), np.array(dec_tmp)])
+
+        # Copy the tile coordinates such that there is one per field
+        # in the grid
+        coords_icrs = coordinates.SkyCoord(
+            *np.tile(coords[:, np.newaxis, ...], (1, 1, 1)),
+            unit=u.deg,
+            frame=skyoffset_frames[:, np.newaxis, np.newaxis],
+        ).transform_to(coordinates.ICRS)
+        coords = coords_icrs.transform_to(HPX.frame)
+
+        moc = MOC.from_polygon_skycoord(coords)
+
+        pix_id = moc.degrade_to_order(int(np.log2(nside))).flatten()
+        if len(pix_id) > 0:
+            ipix.extend(hp.nest2ring(int(nside), pix_id.tolist()))
+
+        ras = [coord.ra.deg for coord in coords]
+        decs = [coord.dec.deg for coord in coords]
+        coords = np.vstack([ras, decs]).T
+
+        xyz = hp.ang2vec(coords[:, 0], coords[:, 1], lonlat=True)
+        x, y = proj.vec2xy(xyz[:, 0], xyz[:, 1], xyz[:, 2])
+        xy = np.vstack([x, y]).T
+        path = matplotlib.path.Path(xy)
+
+        radecs = np.vstack([radecs, coords])
+
+        patch.append(
+            matplotlib.patches.PathPatch(
+                path, alpha=alpha, color=color, fill=True, zorder=3, edgecolor=edgecolor
+            )
+        )
+
+    ipix = list(set(ipix))
+    area = len(ipix) * hp.nside2pixarea(nside, degrees=True)
+
+    return ipix, radecs, patch, area
 
 
 def getCirclePixels(
