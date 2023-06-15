@@ -9,6 +9,7 @@ from scipy.stats import norm
 from gwemopt.catalogs.clu import CluCatalog
 from gwemopt.catalogs.glade import GladeCatalog
 from gwemopt.catalogs.mangrove import MangroveCatalog
+from gwemopt.catalogs.nedlvs import NEDCatalog
 from gwemopt.catalogs.twomrs import TwoMRSCatalog
 
 # Unset row limits when querying Vizier
@@ -28,22 +29,31 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
 
     if params["catalog"] == "2MRS":
         cat = TwoMRSCatalog(catalog_dir=params["catalogDir"])
+        default_mag_column = "magk"
 
     elif params["catalog"] == "GLADE":
         cat = GladeCatalog(catalog_dir=params["catalogDir"])
+        default_mag_column = "magk"
 
     elif params["catalog"] == "CLU":
         cat = CluCatalog(catalog_dir=params["catalogDir"])
+        default_mag_column = "magb"
 
     elif params["catalog"] == "mangrove":
         cat = MangroveCatalog(catalog_dir=params["catalogDir"])
+        default_mag_column = "magb"
+
+    elif params["catalog"] == "NED":
+        cat = NEDCatalog(catalog_dir=params["catalogDir"])
+        default_mag_column = "magk"
     else:
         raise KeyError(
             f"Unknown galaxy catalog: {params['galaxy_catalog']}. "
-            f"Must be one of '2MRS', 'GLADE', 'CLU', 'mangrove'"
+            f"Must be one of '2MRS', 'GLADE', 'CLU', 'mangrove', or 'NED'"
         )
 
     cat_df = cat.get_catalog()
+    mag_column = params.get("catalog_mag_column", default_mag_column)
 
     if params["catalog"] == "glade":
         # Keep only galaxies with finite B mag when using it in the grade
@@ -61,12 +71,17 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
     prob_scaled[prob_indexes[index:]] = 0.0
     prob_scaled = prob_scaled**n
 
-    ipix = hp.ang2pix(map_struct["nside"], cat_df["ra"], cat_df["dec"], lonlat=True)
+    ipix = hp.ang2pix(
+        map_struct["nside"],
+        np.array(cat_df["ra"]),
+        np.array(cat_df["dec"]),
+        lonlat=True,
+    )
 
     if "distnorm" in map_struct:
         if map_struct["distnorm"] is not None:
             # creat an mask to cut at 3 sigma in distance
-            mask = np.zeros(len(cat_df["r"]))
+            mask = np.zeros(len(cat_df["distmpc"]))
 
             # calculate the moments from distmu, distsigma and distnorm
             mom_mean, mom_std, mom_norm = distance.parameters_to_moments(
@@ -74,8 +89,8 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
             )
 
             condition_indexer = np.where(
-                (cat_df["r"] < (mom_mean[ipix] + (3 * mom_std[ipix])))
-                & (cat_df["r"] > (mom_mean[ipix] - (3 * mom_std[ipix])))
+                (cat_df["distmpc"] < (mom_mean[ipix] + (3 * mom_std[ipix])))
+                & (cat_df["distmpc"] > (mom_mean[ipix] - (3 * mom_std[ipix])))
             )
             mask[condition_indexer] = 1
 
@@ -85,7 +100,7 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
                     map_struct["distnorm"][ipix]
                     * norm(
                         map_struct["distmu"][ipix], map_struct["distsigma"][ipix]
-                    ).pdf(cat_df["r"])
+                    ).pdf(cat_df["distmpc"])
                 )
                 ** params["powerlaw_dist_exp"]
                 / map_struct["pixarea"]
@@ -107,10 +122,13 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
     Msun = 4.83
     Lblist = []
 
-    for i, r_i in enumerate(cat_df["r"]):
-        Mb = cat_df["mag"][i] - 5 * np.log10((r_i * 10**6)) + 5
-        Lb = Lsun * 2.512 ** (Msun - Mb)
-        Lblist.append(Lb)
+    for _, row in cat_df.iterrows():
+        if row[mag_column] is not None:
+            Mb = row[mag_column] - 5 * np.log10((row["distmpc"] * 10**6)) + 5
+            Lb = Lsun * 2.512 ** (Msun - Mb)
+            Lblist.append(Lb)
+        else:
+            Lblist.append(0)
 
     # set 0 when Sloc is 0 (keep compatible galaxies for normalization)
     Lblist = np.array(Lblist)
@@ -126,7 +144,7 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
     Llim = (
         4.0
         * np.pi
-        * (cat_df["r"] * 1e6 * pc_cm) ** 2.0
+        * (cat_df["distmpc"] * 1e6 * pc_cm) ** 2.0
         * 10.0 ** ((mlim + MAB0) / (-2.5))
     )
     sdet = (L_KNmax - Llim) / (L_KNmax - L_KNmin)
@@ -183,8 +201,7 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
 
         s_mass = s_loc * (1 + (alpha_mass * beta_mass * s_mass))
 
-    s = s_loc * Slum * sdet
-
+    s = np.array(s_loc * Slum * sdet)
     prob = np.zeros(map_struct["prob"].shape)
     if params["galaxy_grade"] == "Sloc":
         for j in range(len(ipix)):

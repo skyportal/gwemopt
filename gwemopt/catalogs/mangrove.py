@@ -58,4 +58,4 @@ class MangroveCatalog(BaseCatalog):
 
         mask = np.where(df["distmpc"] >= 0)[0]
 
-        return df[mask]
+        return df.iloc[mask]

@@ -15,30 +15,12 @@ class CluCatalog(BaseCatalog):
         raise FileNotFoundError(err)
 
     def load_catalog(self):
-        cat = Table.read(self.get_catalog_path())
+        df = Table.read(self.get_catalog_path()).to_pandas()
 
-        ra, dec = cat["ra"], cat["dec"]
-        sfr_fuv, mstar = cat["sfr_fuv"], cat["mstar"]
-        distmpc, magb = cat["distmpc"], cat["magb"]
-        a, b2a, pa = cat["a"], cat["b2a"], cat["pa"]
-        btc = cat["btc"]
+        mask = np.where(df["distmpc"] >= 0)[0]
+        df = df.iloc[mask]
 
-        idx = np.where(distmpc >= 0)[0]
-        ra, dec = ra[idx], dec[idx]
-        sfr_fuv, mstar = sfr_fuv[idx], mstar[idx]
-        distmpc, magb = distmpc[idx], magb[idx]
-        a, b2a, pa = a[idx], b2a[idx], pa[idx]
-        btc = btc[idx]
+        mask = np.where(~np.isnan(df["magb"]))[0]
+        df = df.iloc[mask]
 
-        idx = np.where(~np.isnan(magb))[0]
-        ra, dec = ra[idx], dec[idx]
-        sfr_fuv, mstar = sfr_fuv[idx], mstar[idx]
-        distmpc, magb = distmpc[idx], magb[idx]
-        a, b2a, pa = a[idx], b2a[idx], pa[idx]
-        btc = btc[idx]
-
-        z = -1 * np.ones(distmpc.shape)
-        r = distmpc * 1.0
-        mag = magb * 1.0
-
-        return ra, dec, r, mag, z, distmpc
+        return df
