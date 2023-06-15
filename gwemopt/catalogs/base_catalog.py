@@ -26,11 +26,12 @@ class BaseCatalog:
     def load_catalog(self):
         raise NotImplementedError
 
-    def get_catalog_path(self):
-        return CATALOG_DIR.joinpath(f"{self.name}.hdf5")
+    def get_catalog_path(self, filetype="hdf5"):
+        return CATALOG_DIR.joinpath(f"{self.name}.{filetype}")
 
     def get_catalog(self) -> pd.DataFrame:
         catalog_path = self.get_catalog_path()
+        print(catalog_path)
         if not catalog_path.exists():
             self.download_catalog()
         else:

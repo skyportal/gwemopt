@@ -13,7 +13,7 @@ class TwoMRSCatalog(BaseCatalog):
     name = "2mrs"
 
     def download_catalog(self):
-        cat = Vizier.get_catalogs("J/ApJS/199/26/table3")
+        cat = Vizier.get_catalogs("J/ApJS/199/26/table3")[0]
 
         cat["z"] = (u.Quantity(cat["cz"]) / c.c).to(u.dimensionless_unscaled)
         df = cat.to_pandas()
@@ -42,6 +42,4 @@ class TwoMRSCatalog(BaseCatalog):
 
     def load_catalog(self):
         df = pd.read_hdf(self.get_catalog_path(), key="df")
-        df["r"] = df["distmpc"] * 1.0
-        df["mag"] = df["magb"] * 1.0
         return df

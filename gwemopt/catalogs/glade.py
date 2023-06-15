@@ -35,6 +35,4 @@ class GladeCatalog(BaseCatalog):
 
     def load_catalog(self) -> pd.DataFrame:
         df = pd.read_hdf(self.get_catalog_path(), key="df")
-        df["r"] = df["distmpc"] * 1.0
-        df["mag"] = df["magb"] * 1.0
         return df
