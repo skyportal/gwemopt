@@ -94,7 +94,7 @@ def getRegionPixels(
 
         patch.append(
             matplotlib.patches.PathPatch(
-                path, alpha=alpha, color=color, fill=True, zorder=3, edgecolor=edgecolor
+                path, alpha=alpha, facecolor=color, fill=True, zorder=3, edgecolor=edgecolor
             )
         )
 
@@ -155,7 +155,7 @@ def getCirclePixels(
     # path = matplotlib.path.Path(xyz[:,1:3])
     path = matplotlib.path.Path(xy)
     patch = matplotlib.patches.PathPatch(
-        path, alpha=alpha, color=color, fill=True, zorder=3, edgecolor=edgecolor
+        path, alpha=alpha, facecolor=color, fill=True, zorder=3, edgecolor=edgecolor
     )
 
     area = np.pi * radius**2
@@ -233,7 +233,7 @@ def getRectanglePixels(
     xy[:, 1] = y
     path = matplotlib.path.Path(xy)
     patch = matplotlib.patches.PathPatch(
-        path, alpha=alpha, color=color, fill=True, zorder=3, edgecolor=edgecolor
+        path, alpha=alpha, facecolor=color, fill=True, zorder=3, edgecolor=edgecolor
     )
 
     return ipix, radecs, patch, area
@@ -309,7 +309,7 @@ def getSquarePixels(
     xy[:, 1] = y
     path = matplotlib.path.Path(xy)
     patch = matplotlib.patches.PathPatch(
-        path, alpha=alpha, color=color, fill=True, zorder=3, edgecolor=edgecolor
+        path, alpha=alpha, facecolor=color, fill=True, zorder=3, edgecolor=edgecolor
     )
 
     return ipix, radecs, patch, area
