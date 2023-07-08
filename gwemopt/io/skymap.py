@@ -74,7 +74,9 @@ def get_skymap_gracedb(
         )
 
     response = requests.get(
-        latest_voevent["links"]["file"], headers={"User-Agent": "Mozilla/5.0"}
+        latest_voevent["links"]["file"],
+        headers={"User-Agent": "Mozilla/5.0"},
+        timeout=60,
     )
 
     root = lxml.etree.fromstring(response.content)
