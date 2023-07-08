@@ -94,7 +94,12 @@ def getRegionPixels(
 
         patch.append(
             matplotlib.patches.PathPatch(
-                path, alpha=alpha, facecolor=color, fill=True, zorder=3, edgecolor=edgecolor
+                path,
+                alpha=alpha,
+                facecolor=color,
+                fill=True,
+                zorder=3,
+                edgecolor=edgecolor,
             )
         )
 

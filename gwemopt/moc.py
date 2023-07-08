@@ -47,7 +47,11 @@ def create_moc(params, map_struct=None):
                 tesselation = tesselation[idxs, :]
 
         if params["doParallel"]:
-            moclists = Parallel(n_jobs=params["Ncores"], backend="multiprocessing", batch_size=int(len(tesselation) / params["Ncores"]) + 1)(
+            moclists = Parallel(
+                n_jobs=params["Ncores"],
+                backend="multiprocessing",
+                batch_size=int(len(tesselation) / params["Ncores"]) + 1,
+            )(
                 delayed(Fov2Moc)(
                     params, config_struct, telescope, tess[1], tess[2], nside
                 )
