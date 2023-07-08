@@ -35,7 +35,7 @@ def download_from_url(skymap_url: str, output_dir: Path, skymap_name: str) -> Pa
         print(f"File {savepath} already exists. Using this.")
     else:
         print(f"Saving to: {savepath}")
-        response = requests.get(skymap_url)
+        response = requests.get(skymap_url, headers={"User-Agent": "Mozilla/5.0"})
 
         with open(savepath, "wb") as f:
             f.write(response.content)
@@ -73,7 +73,11 @@ def get_skymap_gracedb(
             f"{latest_voevent['filename']}, was retracted."
         )
 
-    response = requests.get(latest_voevent["links"]["file"])
+    response = requests.get(
+        latest_voevent["links"]["file"],
+        headers={"User-Agent": "Mozilla/5.0"},
+        timeout=60,
+    )
 
     root = lxml.etree.fromstring(response.content)
     params = {
