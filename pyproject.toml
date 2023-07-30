@@ -54,8 +54,6 @@ dependencies = [
     'pytest-rerunfailures',
     'pytest-runner',
     'freezegun',
-    'sqlparse',
-    'bs4',
     "coveralls",
     "black",
     "isort",
