@@ -71,7 +71,7 @@ And then run `pip install -e gwemopt` again.
 Once installed, You can use gwemopt via the command line:
 
 ```commandline
-python -m gwemopt ....
+gwemopt-run ....
 ```
 
 where ... corresponds to the various arguments. 
