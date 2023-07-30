@@ -63,6 +63,9 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[project.scripts]
+gwemopt-run = "gwemopt.run:run"
+
 [tool.setuptools_scm]
 write_to = "gwemopt/_version.py"
 

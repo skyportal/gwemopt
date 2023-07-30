@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -23,7 +24,10 @@ from gwemopt.plotting import (
 from gwemopt.utils import calculate_observability
 
 
-def run(args):
+def run(args=None):
+    if args is None:
+        args = sys.argv[1:]
+
     args = parse_args(args)
 
     params = params_struct(args)
