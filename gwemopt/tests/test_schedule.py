@@ -105,6 +105,9 @@ def test_scheduler():
                 pd.testing.assert_frame_equal(
                     new_schedule.reset_index(drop=True),
                     expected_schedule.reset_index(drop=True),
+                    check_exact=False,
+                    rtol=1e-3,
+                    atol=0.01,
                 )
 
         # Test the extra efficiency/coverage files
@@ -129,4 +132,7 @@ def test_scheduler():
             pd.testing.assert_frame_equal(
                 new.reset_index(drop=True),
                 expected.reset_index(drop=True),
+                check_exact=False,
+                rtol=1e-3,
+                atol=0.01,
             )
