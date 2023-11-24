@@ -145,4 +145,6 @@ def parse_args(args):
         "--galactic_limit", help="Galactic limit.", default=0.0, type=float
     )
 
+    parser.add_argument("--ignore_observability", action="store_true", default=False)
+
     return parser.parse_args(args=args)

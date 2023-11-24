@@ -285,6 +285,11 @@ def get_segments_tiles(params, config_struct, tile_struct):
         ras.append(tile_struct[key]["ra"])
         decs.append(tile_struct[key]["dec"])
 
+    if params["ignore_observability"]:
+        for ii, key in enumerate(keys):
+            tile_struct[key]["segmentlist"] = copy.deepcopy(segmentlist)
+        return tile_struct
+
     # Convert to RA, Dec.
     radecs = astropy.coordinates.SkyCoord(
         ra=np.array(ras) * u.degree, dec=np.array(decs) * u.degree, frame="icrs"

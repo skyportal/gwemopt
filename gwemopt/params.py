@@ -105,6 +105,10 @@ def params_struct(opts):
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","), dtype=float)
     params["catalogDir"] = Path(opts.catalogDir)
 
+    params["ignore_observability"] = (
+        opts.ignore_observability if hasattr(opts, "ignore_observability") else False
+    )
+
     if params["catalog"] is not None:
         params["galaxy_limit"] = int(opts.galaxy_limit)
 
