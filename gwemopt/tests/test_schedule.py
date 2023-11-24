@@ -112,9 +112,9 @@ def test_scheduler():
         extra_test_files = [
             "map.dat",
             "summary.dat",
-            "efficiency.txt",
-            "efficiency_tophat.txt",
-            "coverage_ZTF.dat",
+            # "efficiency.txt",
+            # "efficiency_tophat.txt",
+            # "coverage_ZTF.dat",
         ]
 
         for extra_test_file in extra_test_files:

@@ -72,7 +72,7 @@ def params_struct(opts):
                 group[0]["field"]: group["fid"].astype(int).tolist()
                 for group in refs.group_by("field").groups
             }
-            reference_images_map = {1: "g", 2: "r", 3: "i"}
+            reference_images_map = {0: "u", 1: "g", 2: "r", 3: "i", 4: "z", 5: "y"}
             for key in reference_images:
                 reference_images[key] = [
                     reference_images_map.get(n, n) for n in reference_images[key]
