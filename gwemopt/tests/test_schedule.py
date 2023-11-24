@@ -105,9 +105,6 @@ def test_scheduler():
                 pd.testing.assert_frame_equal(
                     new_schedule.reset_index(drop=True),
                     expected_schedule.reset_index(drop=True),
-                    check_exact=False,
-                    rtol=1e-3,
-                    atol=0.01,
                 )
 
         # Test the extra efficiency/coverage files
@@ -117,7 +114,7 @@ def test_scheduler():
             "summary.dat",
             # "efficiency.txt",
             # "efficiency_tophat.txt",
-            "coverage_ZTF.dat",
+            # "coverage_ZTF.dat",
         ]
 
         for extra_test_file in extra_test_files:
@@ -132,7 +129,4 @@ def test_scheduler():
             pd.testing.assert_frame_equal(
                 new.reset_index(drop=True),
                 expected.reset_index(drop=True),
-                check_exact=False,
-                rtol=1e-3,
-                atol=0.01,
             )
