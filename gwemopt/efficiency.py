@@ -7,7 +7,11 @@ from astropy.time import Time
 from ligo.skymap import distance
 from scipy.interpolate import interpolate as interp
 
-from gwemopt.io.export_efficiency import export_efficiency_data, save_efficiency_metric
+from gwemopt.io.export_efficiency import (
+    export_efficiency_data,
+    save_detection_nondetection,
+    save_efficiency_metric,
+)
 
 
 def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
@@ -87,7 +91,60 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
         efficiency_struct["3D"] = eff_3D
         efficiency_struct["dists_inj"] = dists_inj
 
+    if params["true_location"]:
+        det = compute_true_efficiency(
+            params, map_struct, lightcurve_struct, coverage_struct
+        )
+
+        lc_name = lightcurve_struct["name"]
+        save_detection_nondetection(
+            os.path.join(params["outputDir"], f"efficiency_true_{lc_name}.txt"), det
+        )
+
+        efficiency_struct["detection"] = det
+
     return efficiency_struct
+
+
+def compute_true_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
+    nside = params["nside"]
+    npix = hp.nside2npix(nside)
+    Ninj = params["Ninj"]
+    gpstime = params["gpstime"]
+    mjd_inj = Time(gpstime, format="gps", scale="utc").mjd
+
+    ipix = hp.ang2pix(nside, params["true_ra"], params["true_dec"], lonlat=True)
+    # ipix = np.argmax(map_struct["prob"])
+    # lat, lon = hp.pix2ang(nside, ipix, lonlat=True)
+    dist = params["true_distance"]
+
+    idxs = []
+    for jj in range(len(coverage_struct["ipix"])):
+        expPixels = coverage_struct["ipix"][jj]
+
+        if ipix in expPixels:
+            idxs.append(jj)
+
+    mjds = coverage_struct["data"][idxs, 2]
+    mags = coverage_struct["data"][idxs, 3]
+    filts = coverage_struct["filters"][idxs]
+    single_detection = False
+    for mjd, mag, filt in zip(mjds, mags, filts):
+        lightcurve_t = lightcurve_struct["t"] + mjd_inj
+        lightcurve_mag = lightcurve_struct[filt]
+        idx = np.where(np.isfinite(lightcurve_mag))[0]
+
+        f = interp.interp1d(
+            lightcurve_t[idx], lightcurve_mag[idx], fill_value="extrapolate"
+        )
+        lightcurve_mag_interp = f(mjd)
+        dist_threshold = (10 ** (((mag - lightcurve_mag_interp) / 5.0) + 1.0)) / 1e6
+
+        if dist <= dist_threshold:
+            single_detection = True
+            break
+
+    return single_detection
 
 
 def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct):

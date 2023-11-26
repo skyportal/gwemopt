@@ -1,6 +1,23 @@
 import os
 
 
+def save_detection_nondetection(detection_filename, det):
+    """
+    Save the detection boolean to a file.
+
+    :param detection_filename: The name of the file to save the detection boolean to.
+    :param det: boolean indicating detection / non-detection.
+    :return: None
+    """
+
+    fid = open(detection_filename, "w")
+    if det:
+        fid.write("1")
+    else:
+        fid.write("0")
+    fid.close()
+
+
 def export_efficiency_data(params, efficiency_struct, lightcurve_struct):
     """
     Export the efficiency data to a file.

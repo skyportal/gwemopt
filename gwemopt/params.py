@@ -109,6 +109,19 @@ def params_struct(opts):
         opts.ignore_observability if hasattr(opts, "ignore_observability") else False
     )
 
+    params["true_location"] = (
+        opts.true_location if hasattr(opts, "true_location") else False
+    )
+
+    if hasattr(opts, "true_ra"):
+        params["true_ra"] = opts.true_ra
+
+    if hasattr(opts, "true_dec"):
+        params["true_dec"] = opts.true_dec
+
+    if hasattr(opts, "true_distance"):
+        params["true_distance"] = opts.true_distance
+
     if params["catalog"] is not None:
         params["galaxy_limit"] = int(opts.galaxy_limit)
 

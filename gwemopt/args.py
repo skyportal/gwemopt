@@ -147,4 +147,9 @@ def parse_args(args):
 
     parser.add_argument("--ignore_observability", action="store_true", default=False)
 
+    parser.add_argument("--true_location", action="store_true", default=False)
+    parser.add_argument("--true_ra", default=30.0, type=float)
+    parser.add_argument("--true_dec", default=60.0, type=float)
+    parser.add_argument("--true_distance", default=100.0, type=float)
+
     return parser.parse_args(args=args)
