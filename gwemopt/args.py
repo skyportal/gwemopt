@@ -9,7 +9,7 @@ from gwemopt.paths import CATALOG_DIR, DEFAULT_LIGHTCURVE_DIR
 def parse_args(args):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-g", "--gpstime", help="GPS time.", default=None)
+    parser.add_argument("-g", "--gpstime", type= float, help="GPS time.", default=None)
 
     parser.add_argument("--geometry", help="2d, 3d, or None (=auto)", default=None)
 
