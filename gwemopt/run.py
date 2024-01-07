@@ -135,11 +135,11 @@ def run(args=None):
         if args.doSchedule or args.doCoverage:
             print("Computing efficiency...")
             if args.modelType == "file":
-                lightcurve_structs = gwemopt.lightcurve.read_files(
+                lightcurve_structs = gwemopt.lightcurve.read_files(params,
                     params["lightcurveFiles"]
                 )
             elif args.modelType == "Tophat":
-                lightcurve_structs = gwemopt.lightcurve.tophat(
+                lightcurve_structs = gwemopt.lightcurve.tophat(params,
                     mag0=args.mag, dmag=args.dmag
                 )
             efficiency_structs = {}
