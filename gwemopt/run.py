@@ -76,6 +76,37 @@ def run(args=None):
             print("Plotting observability...")
             plot_observability(params, map_struct)
 
+        if args.doObservabilityExit:
+            for telescope in params["telescopes"]:
+                if (
+                    np.sum(observability_struct[telescope]["prob"])
+                    < args.observability_thresh
+                ):
+                    print(
+                        "Observability for %s: %.5f < %.5f... exiting."
+                        % (
+                            telescope,
+                            np.sum(observability_struct[telescope]["prob"]),
+                            args.observability_thresh,
+                        )
+                    )
+
+                    if params["doTrueLocation"]:
+                        lightcurve_structs = gwemopt.lightcurve.read_files(
+                            params, params["lightcurveFiles"]
+                        )
+                        for key in lightcurve_structs.keys():
+                            filename = os.path.join(
+                                params["outputDir"],
+                                "efficiency_true_"
+                                + lightcurve_structs[key]["name"]
+                                + ".txt",
+                            )
+                            fid = open(filename, "w")
+                            fid.write("0")
+                            fid.close()
+                    exit(0)
+
     if params["splitType"] is not None:
         print("Splitting skymap...")
         map_struct["groups"] = gwemopt.mapsplit.similar_range(params, map_struct)
@@ -136,11 +167,11 @@ def run(args=None):
             print("Computing efficiency...")
             if args.modelType == "file":
                 lightcurve_structs = gwemopt.lightcurve.read_files(
-                    params["lightcurveFiles"]
+                    params, params["lightcurveFiles"]
                 )
             elif args.modelType == "Tophat":
                 lightcurve_structs = gwemopt.lightcurve.tophat(
-                    mag0=args.mag, dmag=args.dmag
+                    params, mag0=args.mag, dmag=args.dmag
                 )
             efficiency_structs = {}
             for key in lightcurve_structs.keys():
