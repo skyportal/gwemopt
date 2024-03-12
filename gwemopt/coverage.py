@@ -803,24 +803,24 @@ def timeallocation(params, map_struct, tile_structs, previous_coverage_struct=No
                     params_hold["config"][telescope]["exposurelist"] = exposurelist
 
                     if params["timeallocationType"] == "absmag":
-                        tile_structs_hold[
-                            telescope
-                        ] = gwemopt.tiles.absmag_tiles_struct(
-                            params_hold,
-                            config_struct,
-                            telescope,
-                            map_struct,
-                            tile_structs_hold[telescope],
+                        tile_structs_hold[telescope] = (
+                            gwemopt.tiles.absmag_tiles_struct(
+                                params_hold,
+                                config_struct,
+                                telescope,
+                                map_struct,
+                                tile_structs_hold[telescope],
+                            )
                         )
                     elif params["timeallocationType"] == "powerlaw":
-                        tile_structs_hold[
-                            telescope
-                        ] = gwemopt.tiles.powerlaw_tiles_struct(
-                            params_hold,
-                            config_struct,
-                            telescope,
-                            map_struct,
-                            tile_structs_hold[telescope],
+                        tile_structs_hold[telescope] = (
+                            gwemopt.tiles.powerlaw_tiles_struct(
+                                params_hold,
+                                config_struct,
+                                telescope,
+                                map_struct,
+                                tile_structs_hold[telescope],
+                            )
                         )
 
                 if params["timeallocationType"] == "absmag":

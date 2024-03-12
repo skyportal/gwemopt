@@ -1,6 +1,7 @@
 """
 Module for parsing command line arguments
 """
+
 import argparse
 
 from gwemopt.paths import CATALOG_DIR, DEFAULT_LIGHTCURVE_DIR
