@@ -142,4 +142,8 @@ def params_struct(opts):
     else:
         params["end_time"] = time.Time(opts.end_time, format="isot", scale="utc")
 
+    params["inclination"] = (
+        opts.inclination if hasattr(opts, "true_location") else False
+    )
+
     return params

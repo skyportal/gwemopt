@@ -151,9 +151,12 @@ def parse_args(args):
     parser.add_argument("--true_ra", default=30.0, type=float)
     parser.add_argument("--true_dec", default=60.0, type=float)
     parser.add_argument("--true_distance", default=100.0, type=float)
+    parser.add_argument("--true_inclination", default=0.0, type=float)
 
     parser.add_argument("--doTrueLocation", action="store_true", default=False)
     parser.add_argument("--observability_thresh", default=0.05, type=float)
     parser.add_argument("--doObservabilityExit", action="store_true", default=False)
+
+    parser.add_argument("--inclination", action="store_true", default=False)
 
     return parser.parse_args(args=args)

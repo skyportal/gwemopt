@@ -16,6 +16,9 @@ from astropy.time import Time
 from ligo.gracedb.rest import GraceDb
 from ligo.skymap.bayestar import rasterize
 from ligo.skymap.io import read_sky_map
+from ligo.skymap.moc import uniq2nest
+from scipy.interpolate import PchipInterpolator
+from scipy.stats import norm
 
 from gwemopt.paths import SKYMAP_DIR
 
@@ -121,6 +124,94 @@ def get_skymap(event_name: str, output_dir: Path = SKYMAP_DIR, rev: int = None) 
     return savepath
 
 
+def read_inclination(skymap, params, map_struct):
+    # check if the sky location is input
+    # if not, the maximum posterior point is taken
+    if params["true_location"]:
+        ra = params["true_ra"]
+        dec = params["true_dec"]
+        print(f"Using the input sky location ra={ra}, dec={dec}")
+        # convert them back to theta and phi
+        phi = np.deg2rad(ra)
+        theta = 0.5 * np.pi - np.deg2rad(dec)
+        # make use of the maP nside
+        maP_idx = np.argmax(skymap["PROBDENSITY"])
+        order, _ = uniq2nest(skymap[maP_idx]["UNIQ"])
+        nside = hp.order2nside(order)
+        # get the nested idx for the given sky location
+        nest_idx = hp.ang2pix(nside, theta, phi, nest=True)
+        # find the row with the closest nested index
+        nest_idxs = []
+        for row in skymap:
+            order_per_row, nest_idx_per_row = uniq2nest(row["UNIQ"])
+            if order_per_row == order:
+                nest_idxs.append(nest_idx_per_row)
+            else:
+                nest_idxs.append(0)
+        nest_idxs = np.array(nest_idxs)
+        row = skymap[np.argmin(np.absolute(nest_idxs - nest_idx))]
+    else:
+        print("Using the maP point from the fits file input")
+        maP_idx = np.argmax(skymap["PROBDENSITY"])
+        uniq_idx = skymap[maP_idx]["UNIQ"]
+        # convert to nested indexing and find the location of that index
+        order, nest_idx = uniq2nest(uniq_idx)
+        nside = hp.order2nside(order)
+        theta, phi = hp.pix2ang(nside, int(nest_idx), nest=True)
+        # convert theta and phi to ra and dec
+        ra = np.rad2deg(phi)
+        dec = np.rad2deg(0.5 * np.pi - theta)
+        print(f"The maP location is ra={ra}, dec={dec}")
+        # fetching the skymap row
+        row = skymap[maP_idx]
+
+    # construct the iota prior
+    cosiota_nodes_num = 10
+    cosiota_nodes = np.cos(np.linspace(0, np.pi, cosiota_nodes_num))
+    colnames = ["PROBDENSITY", "DISTMU", "DISTSIGMA", "DISTNORM"]
+    # do an all-in-one interpolation
+    prob_density, dist_mu, dist_sigma, dist_norm = (
+        PchipInterpolator(
+            cosiota_nodes[::-1],
+            row["{}_SAMPLES".format(colname)][::-1],
+        )
+        for colname in colnames
+    )
+    # now have the joint distribution evaluated
+    u = np.linspace(-1, 1, 1000)  # this is cosiota
+    # fetch the fixed distance
+    dL = params["true_distance"]
+    prob_u = (
+        prob_density(u)
+        * dist_norm(u)
+        * np.square(dL)
+        * norm(dist_mu(u), dist_sigma(u)).pdf(dL)
+    )
+
+    iota = np.arccos(u)
+    prob_iota = prob_u * np.absolute(np.sin(iota))
+    # in GW, iota in [0, pi], but in EM, iota in [0, pi/2]
+    # therefore, we need to do a folding
+    # split the domain in half
+    iota_lt_pi2 = iota[iota < np.pi / 2]
+    prob_lt_pi2, prob_gt_pi2 = prob_iota[iota < np.pi / 2], prob_iota[iota >= np.pi / 2]
+    iota_EM = iota_lt_pi2
+    prob_iota_EM = prob_lt_pi2 + prob_gt_pi2[::-1]
+
+    # normalize
+    prob_iota /= np.trapz(iota_EM, prob_iota_EM)
+
+    map_struct["iota_EM"] = iota_EM
+    map_struct["prob_iota_EM"] = prob_iota_EM
+
+    map_struct["prob_density_interp"] = prob_density
+    map_struct["dist_mu_interp"] = dist_mu
+    map_struct["dist_sigma_interp"] = dist_sigma
+    map_struct["dist_norm_interp"] = dist_norm
+
+    return map_struct
+
+
 def read_skymap(params, map_struct=None):
     """
     Read in a skymap and return a map_struct
@@ -178,9 +269,33 @@ def read_skymap(params, map_struct=None):
                         filename, field=(0, 1, 2, 3), verbose=False, h=True
                     )
                 except:
-                    table = read_sky_map(filename, moc=True, distances=True)
+                    skymap = read_sky_map(filename, moc=True, distances=True)
                     order = hp.nside2order(params["nside"])
-                    t = rasterize(table, order)
+
+                    # for colname in skymap.colnames:
+                    #    if colname.startswith('PROB'):
+                    #        newname = colname.replace('PROB', 'PROBDENSITY')
+                    #        skymap.rename_column(colname, newname)
+                    #        skymap[newname] *= len(skymap) / (4 * np.pi)
+                    #        skymap[newname].unit = u.steradian ** -1
+
+                    if "PROBDENSITY_SAMPLES" in skymap.columns:
+                        if params["inclination"]:
+                            map_struct = read_inclination(skymap, params, map_struct)
+
+                        skymap.remove_columns(
+                            [
+                                f"{name}_SAMPLES"
+                                for name in [
+                                    "PROBDENSITY",
+                                    "DISTMU",
+                                    "DISTSIGMA",
+                                    "DISTNORM",
+                                ]
+                            ]
+                        )
+
+                    t = rasterize(skymap)
                     result = t["PROB"], t["DISTMU"], t["DISTSIGMA"], t["DISTNORM"]
                     healpix_data = hp.reorder(result, "NESTED", "RING")
 

@@ -18,6 +18,7 @@ from gwemopt.plotting import (
     make_coverage_plots,
     make_efficiency_plots,
     make_tile_plots,
+    plot_inclination,
     plot_observability,
     plot_skymap,
 )
@@ -67,6 +68,8 @@ def run(args=None):
     if args.doPlots:
         print("Plotting skymap...")
         plot_skymap(params, map_struct)
+        if args.inclination:
+            plot_inclination(params, map_struct)
 
     if args.doObservability:
         print("Calculating observability")
