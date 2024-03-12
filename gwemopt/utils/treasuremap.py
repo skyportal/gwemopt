@@ -1,6 +1,7 @@
 """
 Module for interacting with the Treasure Map API.
 """
+
 import re
 import urllib.parse
 
