@@ -194,6 +194,11 @@ def get_segments(params, config_struct):
 
 
 def get_segments_tile(config_struct, observatory, radec, segmentlist, airmass):
+
+    # check for empty segmentlist and immediately return
+    if len(segmentlist) == 0:
+        return segments.segmentlistdict()
+
     observer = ephem.Observer()
     observer.lat = str(config_struct["latitude"])
     observer.lon = str(config_struct["longitude"])
