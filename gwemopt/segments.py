@@ -168,10 +168,7 @@ def get_segments(params, config_struct):
         if date_set > date_rise:
             date_set = observer.previous_setting(sun, start=date_start)
 
-        astropy_rise = Time(date_rise.datetime(), scale="utc").mjd
-        astropy_set = Time(date_set.datetime(), scale="utc").mjd
-
-        segment = segments.segment(astropy_set, astropy_rise)
+        segment = segments.segment(date_rise + MJD_TO_DJD, date_set + MJD_TO_DJD)
         nightsegmentlist = nightsegmentlist + segments.segmentlist([segment])
         nightsegmentlist.coalesce()
 

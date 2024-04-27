@@ -12,7 +12,7 @@ from gwemopt.tiles import balance_tiles, optimize_max_tiles, schedule_alternatin
 from gwemopt.utils import angular_distance
 
 
-def get_altaz_tiles(ra, dec, observer, obstime):
+def get_altaz_tile(ra, dec, observer, obstime):
 
     observer.date = ephem.Date(obstime.iso)
 
@@ -219,9 +219,10 @@ def get_order(
         for ii in np.arange(len(exposurelist)):
             # first, create an array of airmass-weighted probabilities
             t = Time(exposurelist[ii][0], format="mjd")
-            alts, azs = [
+            altazs = [
                 get_altaz_tile(ra, dec, observer, t) for ra, dec in zip(ras, decs)
             ]
+            alts = np.array([altaz[0] for altaz in altazs])
             horizon = config_struct["horizon"]
             horizon_mask = alts <= horizon
             airmass = 1 / np.cos((90.0 - alts) * np.pi / 180.0)
@@ -507,7 +508,7 @@ def scheduler(params, config_struct, tile_struct):
 
             # calculate airmass for each tile at the start of its exposure:
             t = Time(mjd_exposure_start, format="mjd")
-            alt, az = get_altaz_tiles(
+            alt, az = get_altaz_tile(
                 tile_struct_hold["ra"], tile_struct_hold["dec"], observer, t
             )
             airmass = 1 / np.cos((90.0 - alt) * np.pi / 180)
