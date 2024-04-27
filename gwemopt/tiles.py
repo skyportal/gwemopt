@@ -9,6 +9,7 @@ from astropy.coordinates import SkyCoord
 from astropy.time import Time
 from scipy.stats import norm
 from shapely.geometry import MultiPoint
+from tqdm import tqdm
 
 import gwemopt
 import gwemopt.moc
@@ -589,7 +590,7 @@ def schedule_alternating(
     coverage_structs = []
     maxidx = 0
 
-    for i in range(len(exposuretimes)):
+    for i in tqdm(range(len(exposuretimes))):
         params["filters"] = [filters[i]]
         params["exposuretimes"] = [exposuretimes[i]]
         config_struct["exposurelist"] = segments.segmentlist(

@@ -3,7 +3,7 @@ import ligo.skymap.plot
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-from astropy.coordinates import get_moon, get_sun
+from astropy.coordinates import get_body
 from astropy.time import Time
 
 cmap = "cylon"
@@ -21,7 +21,7 @@ def add_edges():
     """
     Add longitude and latitude lines to a healpix map.
     """
-    hp.graticule(verbose=False)
+    hp.graticule()
     plt.grid(True)
     lons = np.arange(-150.0, 180, 30.0)
     lats = np.zeros(lons.shape)
@@ -41,8 +41,8 @@ def add_sun_moon(params):
     start_time = params["gpstime"]
     start_time = Time(start_time, format="gps", scale="utc")
 
-    sun_position = get_sun(start_time)
-    moon_position = get_moon(start_time)
+    sun_position = get_body("sun", start_time)
+    moon_position = get_body("moon", start_time)
 
     hp.visufunc.projscatter(
         sun_position.ra, sun_position.dec, lonlat=True, color="yellow"
@@ -61,7 +61,7 @@ def add_sun_moon(params):
 
         new_time = Time(new_time, format="gps", scale="utc")
 
-        new_moon_position = get_moon(new_time)
+        new_moon_position = get_body("moon", new_time)
         hp.visufunc.projscatter(
             new_moon_position.ra,
             new_moon_position.dec,
@@ -73,7 +73,7 @@ def add_sun_moon(params):
 
         if not i % 8:
             # only plot point for the sun every two days in order to avoid overlap
-            new_sun_position = get_sun(new_time)
+            new_sun_position = get_body("sun", new_time)
             hp.visufunc.projscatter(
                 new_sun_position.ra,
                 new_sun_position.dec,

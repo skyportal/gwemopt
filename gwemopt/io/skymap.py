@@ -267,7 +267,7 @@ def read_skymap(params, map_struct=None):
             if params["do_3d"]:
                 try:
                     healpix_data, header = hp.read_map(
-                        filename, field=(0, 1, 2, 3), verbose=False, h=True
+                        filename, field=(0, 1, 2, 3), h=True
                     )
                 except:
                     skymap = read_sky_map(filename, moc=True, distances=True)

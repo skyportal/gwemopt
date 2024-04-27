@@ -2,6 +2,7 @@ import copy
 
 import astropy.coordinates
 import astropy.units as u
+import ephem
 import ligo.segments as segments
 import numpy as np
 from astropy.time import Time
@@ -11,19 +12,18 @@ from gwemopt.tiles import balance_tiles, optimize_max_tiles, schedule_alternatin
 from gwemopt.utils import angular_distance
 
 
-def get_altaz_tiles(ras, decs, observatory, obstime):
-    # Convert to RA, Dec.
-    radecs = astropy.coordinates.SkyCoord(
-        ra=np.array(ras) * u.degree, dec=np.array(decs) * u.degree, frame="icrs"
+def get_altaz_tiles(ra, dec, observer, obstime):
+
+    observer.date = ephem.Date(obstime.iso)
+
+    fxdbdy = ephem.FixedBody()
+    fxdbdy._ra = ephem.degrees(str(ra))
+    fxdbdy._dec = ephem.degrees(str(dec))
+    fxdbdy.compute(observer)
+
+    return float(repr(fxdbdy.alt)) * (360 / (2 * np.pi)), float(repr(fxdbdy.az)) * (
+        360 / (2 * np.pi)
     )
-
-    # Alt/az reference frame at observatory, now
-    frame = astropy.coordinates.AltAz(obstime=obstime, location=observatory)
-
-    # Transform grid to alt/az coordinates at observatory, now
-    altaz = radecs.transform_to(frame)
-
-    return altaz
 
 
 def find_tile(
@@ -89,7 +89,7 @@ def find_tile(
 
 
 def get_order(
-    params, tile_struct, tilesegmentlists, exposurelist, observatory, config_struct
+    params, tile_struct, tilesegmentlists, exposurelist, observer, config_struct
 ):
     """
     tile_struct: dictionary. key -> struct info.
@@ -219,8 +219,9 @@ def get_order(
         for ii in np.arange(len(exposurelist)):
             # first, create an array of airmass-weighted probabilities
             t = Time(exposurelist[ii][0], format="mjd")
-            altaz = get_altaz_tiles(ras, decs, observatory, t)
-            alts = altaz.alt.degree
+            alts, azs = [
+                get_altaz_tile(ra, dec, observer, t) for ra, dec in zip(ras, decs)
+            ]
             horizon = config_struct["horizon"]
             horizon_mask = alts <= horizon
             airmass = 1 / np.cos((90.0 - alts) * np.pi / 180.0)
@@ -442,10 +443,13 @@ def scheduler(params, config_struct, tile_struct):
     if params["tilesType"] == "galaxy":
         coverage_struct["galaxies"] = []
 
-    observatory = astropy.coordinates.EarthLocation(
-        lat=config_struct["latitude"] * u.deg,
-        lon=config_struct["longitude"] * u.deg,
-        height=config_struct["elevation"] * u.m,
+    observer = ephem.Observer()
+    observer.lat = str(config_struct["latitude"])
+    observer.lon = str(config_struct["longitude"])
+    observer.horizon = str(config_struct["horizon"])
+    observer.elevation = config_struct["elevation"]
+    observer.horizon = ephem.degrees(
+        str(90 - np.arccos(1 / params["airmass"]) * 180 / np.pi)
     )
 
     exposurelist = config_struct["exposurelist"]
@@ -455,9 +459,8 @@ def scheduler(params, config_struct, tile_struct):
     for key in keys:
         # segments.py: tile_struct[key]["segmentlist"] is a list of segments when the tile is available for observation
         tilesegmentlists.append(tile_struct[key]["segmentlist"])
-    print("Generating schedule order...")
     keys, filts = get_order(
-        params, tile_struct, tilesegmentlists, exposurelist, observatory, config_struct
+        params, tile_struct, tilesegmentlists, exposurelist, observer, config_struct
     )
 
     if params["doPlots"]:
@@ -504,10 +507,9 @@ def scheduler(params, config_struct, tile_struct):
 
             # calculate airmass for each tile at the start of its exposure:
             t = Time(mjd_exposure_start, format="mjd")
-            altaz = get_altaz_tiles(
-                tile_struct_hold["ra"], tile_struct_hold["dec"], observatory, t
+            alt, az = get_altaz_tiles(
+                tile_struct_hold["ra"], tile_struct_hold["dec"], observer, t
             )
-            alt = altaz.alt.degree
             airmass = 1 / np.cos((90.0 - alt) * np.pi / 180)
 
             # total duration of the observation (?)

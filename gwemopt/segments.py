@@ -7,9 +7,11 @@ import ligo.segments as segments
 import numpy as np
 from astropy.time import Time
 from joblib import Parallel, delayed
+from tqdm import tqdm
 
 from gwemopt.utils.geometry import angular_distance
 from gwemopt.utils.misc import get_exposures
+from gwemopt.utils.sidereal_time import greenwich_sidereal_time
 
 
 def get_telescope_segments(params):
@@ -38,13 +40,7 @@ def get_telescope_segments(params):
     return params
 
 
-def get_moon_segments(config_struct, segmentlist, observer, fxdbdy, radec):
-    if "moon_constraint" in config_struct:
-        moon_constraint = float(config_struct["moon_constraint"])
-    else:
-        moon_constraint = 20.0
-
-    moonsegmentlist = segments.segmentlist()
+def get_moon_radecs(segmentlist, observer):
     dt = 1.0 / 24.0
     tt = np.arange(segmentlist[0][0], segmentlist[-1][1] + dt, dt)
     conv = (
@@ -52,30 +48,41 @@ def get_moon_segments(config_struct, segmentlist, observer, fxdbdy, radec):
     )  # conversion between MJD (tt) and DJD (what ephem uses)
     tt_DJD = tt - conv
 
-    ra2 = radec.ra.radian
-    d2 = radec.dec.radian
-
+    moon_radecs = []
     # Where is the moon?
     moon = ephem.Moon()
     for ii in range(len(tt) - 1):
         observer.date = ephem.Date(tt_DJD[ii])
         moon.compute(observer)
-        fxdbdy.compute(observer)
-
-        alt_target = float(repr(fxdbdy.alt)) * (360 / (2 * np.pi))
-        az_target = float(repr(fxdbdy.az)) * (360 / (2 * np.pi))
-        # print("Altitude / Azimuth of target: %.5f / %.5f"%(alt_target,az_target))
-
-        alt_moon = float(repr(moon.alt)) * (360 / (2 * np.pi))
-        az_moon = float(repr(moon.az)) * (360 / (2 * np.pi))
-        # print("Altitude / Azimuth of moon: %.5f / %.5f"%(alt_moon,az_moon))
-
-        ra_moon = (180 / np.pi) * float(repr(moon.ra))
-        dec_moon = (180 / np.pi) * float(repr(moon.dec))
 
         # Coverting both target and moon ra and dec to radians
         ra1 = float(repr(moon.ra))
         d1 = float(repr(moon.dec))
+
+        moon_radecs.append([ra1, d1])
+
+    return moon_radecs
+
+
+def get_moon_segments(config_struct, segmentlist, moon_radecs, radec):
+    if "moon_constraint" in config_struct:
+        moon_constraint = float(config_struct["moon_constraint"])
+    else:
+        moon_constraint = 20.0
+
+    moonsegments = []
+    moonsegmentlist = segments.segmentlist()
+    dt = 1.0 / 24.0
+    tt = np.arange(segmentlist[0][0], segmentlist[-1][1] + dt, dt)
+
+    ra2 = radec.ra.radian
+    d2 = radec.dec.radian
+
+    # Where is the moon?
+    for ii in range(len(tt) - 1):
+        # Coverting both target and moon ra and dec to radians
+        ra1 = moon_radecs[ii][0]
+        d1 = moon_radecs[ii][1]
 
         # Calculate angle between target and moon
         cosA = np.sin(d1) * np.sin(d2) + np.cos(d1) * np.cos(d2) * np.cos(ra1 - ra2)
@@ -84,9 +91,12 @@ def get_moon_segments(config_struct, segmentlist, observer, fxdbdy, radec):
 
         # if angle >= 50.0*moon.moon_phase**2:
         if angle >= moon_constraint:
-            segment = segments.segment(tt[ii], tt[ii + 1])
-            moonsegmentlist = moonsegmentlist + segments.segmentlist([segment])
-            moonsegmentlist.coalesce()
+            moonsegments.append([tt[ii], tt[ii + 1]])
+
+    moonsegmentlist = segments.segmentlist()
+    for seg in moonsegments:
+        moonsegmentlist.append(segments.segment(seg))
+    moonsegmentlist.coalesce()
 
     moonsegmentlistdic = segments.segmentlistdict()
     moonsegmentlistdic["observations"] = segmentlist
@@ -97,7 +107,7 @@ def get_moon_segments(config_struct, segmentlist, observer, fxdbdy, radec):
     return moonsegmentlist
 
 
-def get_ha_segments(config_struct, segmentlist, observer, fxdbdy, radec):
+def get_ha_segments(config_struct, segmentlist, observer, radec):
     if "ha_constraint" in config_struct:
         ha_constraint = config_struct["ha_constraint"].split(",")
         ha_min = float(ha_constraint[0])
@@ -113,17 +123,14 @@ def get_ha_segments(config_struct, segmentlist, observer, fxdbdy, radec):
                 35.0 - radec.dec.deg
             ), 0.644981 * np.sqrt(35.0 - radec.dec.deg)
 
-    location = astropy.coordinates.EarthLocation(
-        config_struct["longitude"],
-        config_struct["latitude"],
-        config_struct["elevation"],
-    )
-
     halist = segments.segmentlist()
     for seg in segmentlist:
         mjds = np.linspace(seg[0], seg[1], 100)
-        tt = Time(mjds, format="mjd", scale="utc", location=location)
-        lst = tt.sidereal_time("mean")
+        tt = Time(mjds, format="mjd", scale="utc")
+        lst = astropy.coordinates.Longitude(
+            np.deg2rad(config_struct["longitude"]) + greenwich_sidereal_time(tt),
+            u.radian,
+        )
         ha = (lst - radec.ra).hour
         idx = np.where((ha >= ha_min) & (ha <= ha_max))[0]
         if len(idx) >= 2:
@@ -193,7 +200,7 @@ def get_segments(params, config_struct):
     return segmentlist
 
 
-def get_segments_tile(config_struct, observatory, radec, segmentlist, airmass):
+def get_segments_tile(config_struct, radec, segmentlist, moon_radecs, airmass):
 
     # check for empty segmentlist and immediately return
     if len(segmentlist) == 0:
@@ -205,12 +212,11 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist, airmass):
     observer.horizon = str(config_struct["horizon"])
     observer.elevation = config_struct["elevation"]
     observer.horizon = ephem.degrees(str(90 - np.arccos(1 / airmass) * 180 / np.pi))
+    observer.date = ephem.Date(Time(segmentlist[0][0], format="mjd", scale="utc").iso)
 
     fxdbdy = ephem.FixedBody()
     fxdbdy._ra = ephem.degrees(str(radec.ra.degree))
     fxdbdy._dec = ephem.degrees(str(radec.dec.degree))
-
-    observer.date = ephem.Date(Time(segmentlist[0][0], format="mjd", scale="utc").iso)
     fxdbdy.compute(observer)
 
     date_start = ephem.Date(Time(segmentlist[0][0], format="mjd", scale="utc").iso)
@@ -252,11 +258,9 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist, airmass):
     # moonsegmentlist = get_skybrightness(\
     #    config_struct,segmentlist,observer,fxdbdy,radec)
 
-    halist = get_ha_segments(config_struct, segmentlist, observer, fxdbdy, radec)
+    halist = get_ha_segments(config_struct, segmentlist, observer, radec)
 
-    moonsegmentlist = get_moon_segments(
-        config_struct, segmentlist, observer, fxdbdy, radec
-    )
+    moonsegmentlist = get_moon_segments(config_struct, segmentlist, moon_radecs, radec)
 
     tilesegmentlistdic = segments.segmentlistdict()
     tilesegmentlistdic["observations"] = segmentlist
@@ -273,12 +277,6 @@ def get_segments_tile(config_struct, observatory, radec, segmentlist, airmass):
 
 
 def get_segments_tiles(params, config_struct, tile_struct):
-    observatory = astropy.coordinates.EarthLocation(
-        lat=config_struct["latitude"] * u.deg,
-        lon=config_struct["longitude"] * u.deg,
-        height=config_struct["elevation"] * u.m,
-    )
-
     segmentlist = config_struct["segmentlist"]
 
     print("Generating segments for tiles...")
@@ -300,6 +298,17 @@ def get_segments_tiles(params, config_struct, tile_struct):
         ra=np.array(ras) * u.degree, dec=np.array(decs) * u.degree, frame="icrs"
     )
 
+    observer = ephem.Observer()
+    observer.lat = str(config_struct["latitude"])
+    observer.lon = str(config_struct["longitude"])
+    observer.horizon = str(config_struct["horizon"])
+    observer.elevation = config_struct["elevation"]
+    observer.horizon = ephem.degrees(
+        str(90 - np.arccos(1 / params["airmass"]) * 180 / np.pi)
+    )
+
+    moon_radecs = get_moon_radecs(segmentlist, observer)
+
     if params["doParallel"]:
         tilesegmentlists = Parallel(
             n_jobs=params["Ncores"],
@@ -307,16 +316,14 @@ def get_segments_tiles(params, config_struct, tile_struct):
             batch_size=int(len(radecs) / params["Ncores"]) + 1,
         )(
             delayed(get_segments_tile)(
-                config_struct, observatory, radec, segmentlist, params["airmass"]
+                config_struct, radec, segmentlist, moon_radecs, params["airmass"]
             )
-            for radec in radecs
+            for radec in tqdm(radecs)
         )
         for ii, key in enumerate(keys):
             tile_struct[key]["segmentlist"] = tilesegmentlists[ii]
     else:
-        for ii, key in enumerate(keys):
-            # if np.mod(ii,100) == 0:
-            #    print("Generating segments for tile %d/%d"%(ii+1,len(radecs)))
+        for ii, key in tqdm(enumerate(keys), total=len(keys)):
             radec = radecs[ii]
 
             if params["doMinimalTiling"]:
@@ -325,9 +332,9 @@ def get_segments_tiles(params, config_struct, tile_struct):
                     radecs_computed = np.atleast_2d([radec.ra.value, radec.dec.value])
                     tilesegmentlist = get_segments_tile(
                         config_struct,
-                        observatory,
                         radec,
                         segmentlist,
+                        moon_radecs,
                         params["airmass"],
                     )
                     tile_struct[key]["segmentlist"] = tilesegmentlist
@@ -352,16 +359,16 @@ def get_segments_tiles(params, config_struct, tile_struct):
                         )
                         tilesegmentlist = get_segments_tile(
                             config_struct,
-                            observatory,
                             radec,
                             segmentlist,
+                            moon_radecs,
                             params["airmass"],
                         )
                         tile_struct[key]["segmentlist"] = tilesegmentlist
 
             else:
                 tilesegmentlist = get_segments_tile(
-                    config_struct, observatory, radec, segmentlist, params["airmass"]
+                    config_struct, radec, segmentlist, moon_radecs, params["airmass"]
                 )
                 tile_struct[key]["segmentlist"] = tilesegmentlist
 

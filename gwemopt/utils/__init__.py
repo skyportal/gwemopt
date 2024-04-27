@@ -8,4 +8,5 @@ from gwemopt.utils.pixels import (
     getRectanglePixels,
     getSquarePixels,
 )
+from gwemopt.utils.sidereal_time import greenwich_sidereal_time
 from gwemopt.utils.treasuremap import get_treasuremap_pointings

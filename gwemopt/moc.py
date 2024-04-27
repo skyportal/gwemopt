@@ -55,7 +55,7 @@ def create_moc(params, map_struct=None):
                 delayed(Fov2Moc)(
                     params, config_struct, telescope, tess[1], tess[2], nside
                 )
-                for tess in tesselation
+                for tess in tqdm(tesselation)
             )
             for ii, tess in tqdm(enumerate(tesselation), total=len(tesselation)):
                 index, ra, dec = tess[0], tess[1], tess[2]
