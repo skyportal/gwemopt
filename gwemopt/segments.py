@@ -13,6 +13,9 @@ from gwemopt.utils.geometry import angular_distance
 from gwemopt.utils.misc import get_exposures
 from gwemopt.utils.sidereal_time import greenwich_sidereal_time
 
+# conversion between MJD (tt) and DJD (what ephem uses)
+MJD_TO_DJD = -2400000.5 + 2415020.0
+
 
 def get_telescope_segments(params):
     for telescope in params["telescopes"]:
@@ -43,10 +46,7 @@ def get_telescope_segments(params):
 def get_moon_radecs(segmentlist, observer):
     dt = 1.0 / 24.0
     tt = np.arange(segmentlist[0][0], segmentlist[-1][1] + dt, dt)
-    conv = (
-        -2400000.5 + 2415020.0
-    )  # conversion between MJD (tt) and DJD (what ephem uses)
-    tt_DJD = tt - conv
+    tt_DJD = tt - MJD_TO_DJD
 
     moon_radecs = []
     # Where is the moon?
@@ -75,8 +75,8 @@ def get_moon_segments(config_struct, segmentlist, moon_radecs, radec):
     dt = 1.0 / 24.0
     tt = np.arange(segmentlist[0][0], segmentlist[-1][1] + dt, dt)
 
-    ra2 = radec.ra.radian
-    d2 = radec.dec.radian
+    ra2 = np.deg2rad(radec[0])
+    d2 = np.deg2rad(radec[1])
 
     # Where is the moon?
     for ii in range(len(tt) - 1):
@@ -116,22 +116,22 @@ def get_ha_segments(config_struct, segmentlist, observer, radec):
         ha_min, ha_max = -24.0, 24.0
 
     if config_struct["telescope"] == "DECam":
-        if radec.dec.deg <= -30.0:
+        if radec[1] <= -30.0:
             ha_min, ha_max = -5.2, 5.2
         else:
-            ha_min, ha_max = -0.644981 * np.sqrt(
-                35.0 - radec.dec.deg
-            ), 0.644981 * np.sqrt(35.0 - radec.dec.deg)
+            ha_min, ha_max = -0.644981 * np.sqrt(35.0 - radec[1]), 0.644981 * np.sqrt(
+                35.0 - radec[1]
+            )
 
     halist = segments.segmentlist()
     for seg in segmentlist:
         mjds = np.linspace(seg[0], seg[1], 100)
         tt = Time(mjds, format="mjd", scale="utc")
-        lst = astropy.coordinates.Longitude(
+        lst = np.mod(
             np.deg2rad(config_struct["longitude"]) + greenwich_sidereal_time(tt),
-            u.radian,
+            2 * np.pi,
         )
-        ha = (lst - radec.ra).hour
+        ha = (lst - np.deg2rad(radec[0])) * 24 / (2 * np.pi)
         idx = np.where((ha >= ha_min) & (ha <= ha_max))[0]
         if len(idx) >= 2:
             halist.append(segments.segment(mjds[idx[0]], mjds[idx[-1]]))
@@ -156,9 +156,9 @@ def get_segments(params, config_struct):
     observer.horizon = str(-12.0)
     observer.elevation = config_struct["elevation"]
 
-    date_start = ephem.Date(Time(segmentlist[0][0], format="mjd", scale="utc").iso)
-    date_end = ephem.Date(Time(segmentlist[-1][1], format="mjd", scale="utc").iso)
-    observer.date = ephem.Date(Time(segmentlist[0][0], format="mjd", scale="utc").iso)
+    date_start = ephem.Date(segmentlist[0][0] - MJD_TO_DJD)
+    date_end = ephem.Date(segmentlist[-1][1] - MJD_TO_DJD)
+    observer.date = ephem.Date(segmentlist[0][0] - MJD_TO_DJD)
 
     sun = ephem.Sun()
     nightsegmentlist = segments.segmentlist()
@@ -212,15 +212,15 @@ def get_segments_tile(config_struct, radec, segmentlist, moon_radecs, airmass):
     observer.horizon = str(config_struct["horizon"])
     observer.elevation = config_struct["elevation"]
     observer.horizon = ephem.degrees(str(90 - np.arccos(1 / airmass) * 180 / np.pi))
-    observer.date = ephem.Date(Time(segmentlist[0][0], format="mjd", scale="utc").iso)
+    observer.date = ephem.Date(segmentlist[0][0] - MJD_TO_DJD)
 
     fxdbdy = ephem.FixedBody()
-    fxdbdy._ra = ephem.degrees(str(radec.ra.degree))
-    fxdbdy._dec = ephem.degrees(str(radec.dec.degree))
+    fxdbdy._ra = ephem.degrees(str(radec[0]))
+    fxdbdy._dec = ephem.degrees(str(radec[1]))
     fxdbdy.compute(observer)
 
-    date_start = ephem.Date(Time(segmentlist[0][0], format="mjd", scale="utc").iso)
-    date_end = ephem.Date(Time(segmentlist[-1][1], format="mjd", scale="utc").iso)
+    date_start = ephem.Date(segmentlist[0][0] - MJD_TO_DJD)
+    date_end = ephem.Date(segmentlist[-1][1] - MJD_TO_DJD)
     tilesegmentlist = segments.segmentlist()
     while date_start < date_end:
         try:
@@ -241,12 +241,6 @@ def get_segments_tile(config_struct, radec, segmentlist, moon_radecs, airmass):
 
         astropy_rise_mjd = astropy_rise.mjd
         astropy_set_mjd = astropy_set.mjd
-        # Alt/az reference frame at observatory, now
-        # frame_rise = astropy.coordinates.AltAz(obstime=astropy_rise, location=observatory)
-        # frame_set = astropy.coordinates.AltAz(obstime=astropy_set, location=observatory)
-        # Transform grid to alt/az coordinates at observatory, now
-        # altaz_rise = radec.transform_to(frame_rise)
-        # altaz_set = radec.transform_to(frame_set)
 
         segment = segments.segment(astropy_rise_mjd, astropy_set_mjd)
         tilesegmentlist = tilesegmentlist + segments.segmentlist([segment])
@@ -281,22 +275,15 @@ def get_segments_tiles(params, config_struct, tile_struct):
 
     print("Generating segments for tiles...")
 
-    ras = []
-    decs = []
+    radecs = []
     keys = tile_struct.keys()
     for key in keys:
-        ras.append(tile_struct[key]["ra"])
-        decs.append(tile_struct[key]["dec"])
+        radecs.append([tile_struct[key]["ra"], tile_struct[key]["dec"]])
 
     if params["ignore_observability"]:
         for ii, key in enumerate(keys):
             tile_struct[key]["segmentlist"] = copy.deepcopy(segmentlist)
         return tile_struct
-
-    # Convert to RA, Dec.
-    radecs = astropy.coordinates.SkyCoord(
-        ra=np.array(ras) * u.degree, dec=np.array(decs) * u.degree, frame="icrs"
-    )
 
     observer = ephem.Observer()
     observer.lat = str(config_struct["latitude"])
@@ -329,7 +316,7 @@ def get_segments_tiles(params, config_struct, tile_struct):
             if params["doMinimalTiling"]:
                 if ii == 0:
                     keys_computed = [key]
-                    radecs_computed = np.atleast_2d([radec.ra.value, radec.dec.value])
+                    radecs_computed = np.atleast_2d(radec)
                     tilesegmentlist = get_segments_tile(
                         config_struct,
                         radec,
@@ -340,8 +327,8 @@ def get_segments_tiles(params, config_struct, tile_struct):
                     tile_struct[key]["segmentlist"] = tilesegmentlist
                 else:
                     seps = angular_distance(
-                        radec.ra.value,
-                        radec.dec.value,
+                        radec[0],
+                        radec[1],
                         radecs_computed[:, 0],
                         radecs_computed[:, 1],
                     )
@@ -354,9 +341,7 @@ def get_segments_tiles(params, config_struct, tile_struct):
                         )
                     else:
                         keys_computed.append(key)
-                        radecs_computed = np.vstack(
-                            (radecs_computed, [radec.ra.value, radec.dec.value])
-                        )
+                        radecs_computed = np.vstack((radecs_computed, radec))
                         tilesegmentlist = get_segments_tile(
                             config_struct,
                             radec,

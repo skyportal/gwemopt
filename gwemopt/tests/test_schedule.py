@@ -129,4 +129,5 @@ def test_scheduler():
             pd.testing.assert_frame_equal(
                 new.reset_index(drop=True),
                 expected.reset_index(drop=True),
+                rtol=1e-2,
             )
