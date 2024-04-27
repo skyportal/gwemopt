@@ -236,13 +236,7 @@ def get_segments_tile(config_struct, radec, segmentlist, moon_radecs, airmass):
             date_set = ephem.Date(0.0)
             break
 
-        astropy_rise = Time(date_rise.datetime(), scale="utc")
-        astropy_set = Time(date_set.datetime(), scale="utc")
-
-        astropy_rise_mjd = astropy_rise.mjd
-        astropy_set_mjd = astropy_set.mjd
-
-        segment = segments.segment(astropy_rise_mjd, astropy_set_mjd)
+        segment = segments.segment(date_rise + MJD_TO_DJD, date_set + MJD_TO_DJD)
         tilesegmentlist = tilesegmentlist + segments.segmentlist([segment])
         tilesegmentlist.coalesce()
 
