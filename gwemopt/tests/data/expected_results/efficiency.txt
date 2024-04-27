@@ -1,2 +1,3 @@
 tilesType	timeallocationType	scheduleType	Ntiles	efficiencyMetric	efficiencyMetric_err	injection
 moc	powerlaw	greedy	10	0.0405	0.001971287650242856	tophat
+moc	powerlaw	greedy	10	0.0405	0.001971287650242856	tophat
