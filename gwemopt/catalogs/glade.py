@@ -34,9 +34,9 @@ class GladeCatalog(BaseCatalog):
         df.rename(columns=key_map, inplace=True)
         df["PGC"] = df["PGC"].astype(str)
         cat = Table.from_pandas(df)
-        write_table_hdf5(cat, save_path, path="df")
+        write_table_hdf5(cat, str(save_path), path="df")
 
     def load_catalog(self) -> pd.DataFrame:
-        cat = read_table_hdf5(self.get_catalog_path(), path="df")
+        cat = read_table_hdf5(str(self.get_catalog_path()), path="df")
         df = cat.to_pandas()
         return df
