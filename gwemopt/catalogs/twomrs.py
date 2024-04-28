@@ -3,16 +3,23 @@ import pandas as pd
 from astropy import constants as c
 from astropy import units as u
 from astropy.cosmology import WMAP9 as cosmo
+from astropy.io.misc.hdf5 import read_table_hdf5, write_table_hdf5
 from astroquery.vizier import Vizier
 from scipy.special import gammaincinv
 
 from gwemopt.catalogs.base_catalog import BaseCatalog
+
+# Unset row limits when querying Vizier
+Vizier.ROW_LIMIT = -1
 
 
 class TwoMRSCatalog(BaseCatalog):
     name = "2mrs"
 
     def download_catalog(self):
+        save_path = self.get_catalog_path()
+        print(f"Downloading 2MRS catalog to {save_path}...")
+
         cat = Vizier.get_catalogs("J/ApJS/199/26/table3")[0]
 
         cat["z"] = (u.Quantity(cat["cz"]) / c.c).to(u.dimensionless_unscaled)
@@ -38,8 +45,10 @@ class TwoMRSCatalog(BaseCatalog):
 
         mask = mk < mk_max
         df = df[mask]
-        df.to_hdf(self.get_catalog_path(), key="df")
+        cat = Table.from_pandas(df)
+        write_table_hdf5(cat, save_path, path="df")
 
-    def load_catalog(self):
-        df = pd.read_hdf(self.get_catalog_path(), key="df")
+    def load_catalog(self) -> pd.DataFrame:
+        cat = read_table_hdf5(self.get_catalog_path(), path="df")
+        df = cat.to_pandas()
         return df

@@ -1,4 +1,6 @@
 import pandas as pd
+from astropy.io.misc.hdf5 import read_table_hdf5, write_table_hdf5
+from astropy.table import Table
 from astroquery.vizier import Vizier
 
 from gwemopt.catalogs.base_catalog import BaseCatalog
@@ -31,8 +33,10 @@ class GladeCatalog(BaseCatalog):
         df = df[[x for x in key_map] + copy_keys]
         df.rename(columns=key_map, inplace=True)
         df["PGC"] = df["PGC"].astype(str)
-        df.to_hdf(save_path, key="df")
+        cat = Table.from_pandas(df)
+        write_table_hdf5(cat, save_path, path="df")
 
     def load_catalog(self) -> pd.DataFrame:
-        df = pd.read_hdf(self.get_catalog_path(), key="df")
+        cat = read_table_hdf5(self.get_catalog_path(), path="df")
+        df = cat.to_pandas()
         return df
