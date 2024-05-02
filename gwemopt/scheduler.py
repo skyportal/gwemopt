@@ -6,10 +6,12 @@ import ephem
 import ligo.segments as segments
 import numpy as np
 from astropy.time import Time
-from munkres import Munkres, make_cost_matrix
 
 from gwemopt.tiles import balance_tiles, optimize_max_tiles, schedule_alternating
 from gwemopt.utils import angular_distance
+from gwemopt.utils.munkres import Munkres, make_cost_matrix
+
+# from munkres import Munkres, make_cost_matrix
 
 
 def get_altaz_tile(ra, dec, observer, obstime):

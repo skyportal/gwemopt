@@ -47,7 +47,6 @@ dependencies = [
     "lxml",
     'h5py',
     "healpy",
-    'munkres',
     'pandas',
     'shapely',
     "tables",
