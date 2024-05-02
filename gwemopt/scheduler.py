@@ -6,10 +6,10 @@ import ephem
 import ligo.segments as segments
 import numpy as np
 from astropy.time import Time
+from ortools.linear_solver import pywraplp
 
 from gwemopt.tiles import balance_tiles, optimize_max_tiles, schedule_alternating
 from gwemopt.utils import angular_distance
-from gwemopt.utils.munkres import Munkres, make_cost_matrix
 
 # from munkres import Munkres, make_cost_matrix
 
@@ -395,12 +395,56 @@ def get_order(
         tilematrix_mask = tilematrix > 10 ** (-10)
 
         if tilematrix_mask.any():
-            print("Calculating Hungarian solution...")
+            print("Calculating MILP solution...")
             total_cost = 0
-            cost_matrix = make_cost_matrix(tilematrix)
-            m = Munkres()
-            optimal_points = m.compute(cost_matrix)
-            print("Hungarian solution calculated...")
+
+            maximum = max(max(row) for row in tilematrix)
+            inversion_function = lambda x: maximum - x
+
+            cost_matrix = []
+            for row in tilematrix:
+                cost_matrix.append([inversion_function(value) for value in row])
+
+            # Create a linear solver
+            solver = pywraplp.Solver.CreateSolver("CBC")
+
+            # Define variables
+            num_workers = len(cost_matrix)
+            num_tasks = len(cost_matrix[0])
+            x = {}
+
+            for i in range(num_workers):
+                for j in range(num_tasks):
+                    x[i, j] = solver.BoolVar("x[%i,%i]" % (i, j))
+
+            # Define constraints: each worker is assigned to at most one task
+            for i in range(num_workers):
+                solver.Add(solver.Sum([x[i, j] for j in range(num_tasks)]) <= 1)
+
+            # Define constraints: each task is assigned to exactly one worker
+            for j in range(num_tasks):
+                solver.Add(solver.Sum([x[i, j] for i in range(num_workers)]) == 1)
+
+            # Define objective function: minimize the total cost
+            objective = solver.Objective()
+            for i in range(num_workers):
+                for j in range(num_tasks):
+                    objective.SetCoefficient(x[i, j], cost_matrix[i][j])
+            objective.SetMinimization()
+
+            # Solve the problem
+            status = solver.Solve()
+
+            optimal_points = []
+            if status == pywraplp.Solver.OPTIMAL:
+                print("Total cost =", solver.Objective().Value())
+                for i in range(num_workers):
+                    for j in range(num_tasks):
+                        if x[i, j].solution_value() > 0:
+                            optimal_points.append((i, j))
+            else:
+                print("The problem does not have an optimal solution.")
+
             max_no_observ = min(tilematrix.shape)
             for jj in range(max_no_observ):
                 idx0, idx1 = optimal_points[jj]

@@ -44,13 +44,14 @@ dependencies = [
     'joblib',
     'ligo-segments',
     'ligo.skymap',
-    "lxml",
+    'lxml',
     'h5py',
-    "healpy",
+    'healpy',
+    'ortools',
     'pandas',
     'shapely',
-    "tables",
-    "regions"
+    'tables',
+    'regions'
 ]
 dynamic = ["version"]
 
