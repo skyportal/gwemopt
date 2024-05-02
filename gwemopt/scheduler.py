@@ -447,10 +447,10 @@ def get_order(
 
             max_no_observ = min(tilematrix.shape)
             for jj in range(max_no_observ):
-                idx0, idx1 = optimal_points[jj]
                 # idx0 indexes over the time windows, idx1 indexes over the probabilities
                 # idx2 gets the exposure id of the tile, used to assign tileexptime and tilenexps
                 try:
+                    idx0, idx1 = optimal_points[jj]
                     idx2 = exposureids[idx1]
                     pamw = tilematrix[idx0][idx1]
                     total_cost += pamw
