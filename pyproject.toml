@@ -49,6 +49,7 @@ dependencies = [
     'healpy',
     'ortools',
     'pandas',
+    'pulp',
     'shapely',
     'tables',
     'regions'

@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -144,6 +145,16 @@ def params_struct(opts):
 
     params["inclination"] = (
         opts.inclination if hasattr(opts, "true_location") else False
+    )
+
+    params["solverType"] = (
+        opts.solverType if hasattr(opts, "solverType") else "heuristic"
+    )
+    params["milpSolver"] = (
+        opts.milpSolver if hasattr(opts, "milpSolver") else "PULP_CBC_CMD"
+    )
+    params["milpOptions"] = (
+        json.loads(opts.milpOptions) if hasattr(opts, "milpOptions") else {}
     )
 
     return params
