@@ -162,6 +162,6 @@ def parse_args(args):
 
     parser.add_argument("--solverType", default="heuristic")
     parser.add_argument("--milpSolver", default="PULP_CBC_CMD")
-    parser.add_argument("--milpOptions")
+    parser.add_argument("--milpOptions", default="{}")
 
     return parser.parse_args(args=args)
