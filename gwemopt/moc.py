@@ -77,18 +77,19 @@ def create_moc(params, map_struct=None):
                 )
 
         if map_struct is not None:
-            ipix_keep = map_struct["ipix_keep"]
+            moc_keep = map_struct["moc_keep"]
         else:
-            ipix_keep = []
+            moc_keep = None
+
         if params["doMinimalTiling"]:
             moc_struct_new = copy.copy(moc_struct)
             if params["tilesType"] == "galaxy":
                 tile_probs = gwemopt.tiles.compute_tiles_map(
-                    params, moc_struct_new, prob, func="center", ipix_keep=ipix_keep
+                    params, moc_struct_new, prob, func="center", moc_keep=moc_keep
                 )
             else:
                 tile_probs = gwemopt.tiles.compute_tiles_map(
-                    params, moc_struct_new, prob, func="np.sum(x)", ipix_keep=ipix_keep
+                    params, moc_struct_new, prob, func="np.sum(x)", moc_keep=moc_keep
                 )
 
             keys = moc_struct.keys()
@@ -130,7 +131,7 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
         rotation = None
 
     if config_struct["FOV_type"] == "square":
-        ipix, radecs, patch, area = getSquarePixels(
+        moc = getSquarePixels(
             ra_pointing, dec_pointing, config_struct["FOV"], nside, rotation=rotation
         )
     elif config_struct["FOV_type"] == "circle":
@@ -158,11 +159,6 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
 
     moc_struct["ra"] = ra_pointing
     moc_struct["dec"] = dec_pointing
-    moc_struct["ipix"] = ipix
-    moc_struct["corners"] = radecs
-    moc_struct["patch"] = patch
-    moc_struct["area"] = area
-
-    moc_struct["moc"] = []
+    moc_struct["moc"] = moc
 
     return moc_struct

@@ -1,13 +1,3 @@
-def export_tiles_coverage_hist(params, diffs):
-    """
-    Export the histogram of the tiles coverage.
-    """
-    filename = params["outputDir"].joinpath("tiles_coverage_hist.dat")
-    with open(filename, "w") as fid:
-        for ii in range(len(diffs)):
-            fid.write("%.10f\n" % diffs[ii])
-
-
 def export_tiles_coverage_int(filename, tts, cum_probs, cum_areas):
     with open(filename, "w") as fid:
         for ii in range(len(tts)):

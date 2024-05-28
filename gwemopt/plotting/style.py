@@ -33,7 +33,7 @@ def add_edges():
         hp.projtext(lon, lat, "%.0f" % lat, lonlat=True)
 
 
-def add_sun_moon(params):
+def add_sun_moon(params, ax):
     """
     Add sun and moon position to the skymap
     """
@@ -44,11 +44,17 @@ def add_sun_moon(params):
     sun_position = get_body("sun", start_time)
     moon_position = get_body("moon", start_time)
 
-    hp.visufunc.projscatter(
-        sun_position.ra, sun_position.dec, lonlat=True, color="yellow"
+    ax.plot(
+        sun_position.ra,
+        sun_position.dec,
+        transform=ax.get_transform("world"),
+        color="yellow",
     )
-    hp.visufunc.projscatter(
-        moon_position.ra, moon_position.dec, lonlat=True, color="grey"
+    ax.plot(
+        moon_position.ra,
+        moon_position.dec,
+        transform=ax.get_transform("world"),
+        color="grey",
     )
 
     # also plot (in smaller scale) sun and moon position for the 7 following days
@@ -62,23 +68,23 @@ def add_sun_moon(params):
         new_time = Time(new_time, format="gps", scale="utc")
 
         new_moon_position = get_body("moon", new_time)
-        hp.visufunc.projscatter(
+        ax.plot(
             new_moon_position.ra,
             new_moon_position.dec,
-            lonlat=True,
+            transform=ax.get_transform("world"),
             color="black",
             marker=".",
-            s=1,
+            markersize=1,
         )
 
         if not i % 8:
             # only plot point for the sun every two days in order to avoid overlap
             new_sun_position = get_body("sun", new_time)
-            hp.visufunc.projscatter(
+            ax.plot(
                 new_sun_position.ra,
                 new_sun_position.dec,
-                lonlat=True,
+                transform=ax.get_transform("world"),
                 color="black",
                 marker=".",
-                s=1,
+                markersize=1,
             )

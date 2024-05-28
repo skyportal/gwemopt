@@ -98,7 +98,10 @@ def params_struct(opts):
 
     params["treasuremap_status"] = opts.treasuremap_status.split(",")
 
-    params["raslice"] = np.array(opts.raslice.split(","), dtype=float)
+    if opts.raslice is not None:
+        params["raslice"] = np.array(opts.raslice.split(","), dtype=float)
+    else:
+        params["raslice"] = None
 
     params["unbalanced_tiles"] = None
     params["filters"] = opts.filters.split(",")

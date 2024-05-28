@@ -30,10 +30,7 @@ def combine_coverage_structs(coverage_structs):
     coverage_struct_combined = {}
     coverage_struct_combined["data"] = np.empty((0, 8))
     coverage_struct_combined["filters"] = np.empty((0, 1))
-    coverage_struct_combined["ipix"] = []
-    coverage_struct_combined["patch"] = []
-    coverage_struct_combined["FOV"] = np.empty((0, 1))
-    coverage_struct_combined["area"] = np.empty((0, 1))
+    coverage_struct_combined["moc"] = []
     coverage_struct_combined["telescope"] = np.empty((0, 1))
     coverage_struct_combined["galaxies"] = []
     coverage_struct_combined["exposureused"] = []
@@ -45,17 +42,8 @@ def combine_coverage_structs(coverage_structs):
         coverage_struct_combined["filters"] = np.append(
             coverage_struct_combined["filters"], coverage_struct["filters"]
         )
-        coverage_struct_combined["ipix"] = (
-            coverage_struct_combined["ipix"] + coverage_struct["ipix"]
-        )
-        coverage_struct_combined["patch"] = (
-            coverage_struct_combined["patch"] + coverage_struct["patch"]
-        )
-        coverage_struct_combined["FOV"] = np.append(
-            coverage_struct_combined["FOV"], coverage_struct["FOV"]
-        )
-        coverage_struct_combined["area"] = np.append(
-            coverage_struct_combined["area"], coverage_struct["area"]
+        coverage_struct_combined["moc"] = (
+            coverage_struct_combined["moc"] + coverage_struct["moc"]
         )
         coverage_struct_combined["telescope"] = np.append(
             coverage_struct_combined["telescope"], coverage_struct["telescope"]
@@ -173,7 +161,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
 
     coverage_structs = []
     n_scope = 0
-    full_prob_map = map_struct["prob"]
+    full_prob_map = map_struct["skymap"]
 
     for jj, telescope in enumerate(params["telescopes"]):
         if params["splitType"] is not None:
@@ -233,16 +221,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                 previous_coverage_struct,
             )
 
-            if params["doRASlices"]:
-                coverage_struct = gwemopt.scheduler.schedule_ra_splits(
-                    params,
-                    config_struct,
-                    map_struct_hold,
-                    tile_struct,
-                    telescope,
-                    previous_coverage_struct,
-                )
-            elif params["doBalanceExposure"]:
+            if params["doBalanceExposure"]:
                 if (
                     params["max_nb_tiles"] is None
                 ):  # optimize max tiles (iff max tiles not already specified)
@@ -435,7 +414,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
         if params["doIterativeTiling"]:
             map_struct_hold = slice_map_tiles(params, map_struct_hold, coverage_struct)
 
-    map_struct["prob"] = full_prob_map
+    map_struct["skymap"] = full_prob_map
 
     return tile_structs, combine_coverage_structs(coverage_structs)
 
@@ -508,16 +487,7 @@ def absmag(params, map_struct, tile_structs, previous_coverage_struct=None):
                 tile_struct,
                 previous_coverage_struct,
             )
-            if params["doRASlices"]:
-                coverage_struct = gwemopt.scheduler.schedule_ra_splits(
-                    params,
-                    config_struct,
-                    map_struct_hold,
-                    tile_struct,
-                    telescope,
-                    previous_coverage_struct,
-                )
-            elif params["doBalanceExposure"]:
+            if params["doBalanceExposure"]:
                 if params["max_nb_tiles"] is None:
                     # optimize max tiles (iff max tiles not already specified)
                     optimized_max, coverage_struct, tile_struct = optimize_max_tiles(

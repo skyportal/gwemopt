@@ -1,12 +1,15 @@
+import bisect
 import copy
 
+import astropy_healpix as ah
 import healpy as hp
 import ligo.segments as segments
 import numpy as np
 import pandas as pd
 from astropy import units as u
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import ICRS, SkyCoord
 from astropy.time import Time
+from mocpy import MOC
 from scipy.stats import norm
 from shapely.geometry import MultiPoint
 from tqdm import tqdm
@@ -15,6 +18,10 @@ import gwemopt
 import gwemopt.moc
 import gwemopt.segments
 from gwemopt.utils.geometry import angular_distance
+
+LEVEL = MOC.MAX_ORDER
+HPX = ah.HEALPix(nside=ah.level_to_nside(LEVEL), order="nested", frame=ICRS())
+PIXEL_AREA = HPX.pixel_area.to_value(u.sr)
 
 TILE_TYPES = ["moc", "galaxy"]
 
@@ -1071,9 +1078,9 @@ def powerlaw_tiles_struct(
     tot_obs_time = config_struct["tot_obs_time"]
 
     if "observability" in map_struct:
-        prob = map_struct["observability"][telescope]["prob"]
+        skymap = map_struct["observability"][telescope]["prob"]
     else:
-        prob = map_struct["prob"]
+        skymap = map_struct["skymap"]
 
     n, cl, dist_exp = (
         params["powerlaw_n"],
@@ -1085,96 +1092,29 @@ def powerlaw_tiles_struct(
         tile_probs = compute_tiles_map(
             params,
             tile_struct,
-            prob,
+            skymap,
             func="galaxy",
-            ipix_keep=map_struct["ipix_keep"],
+            moc_keep=map_struct["moc_keep"],
             catalog_struct=catalog_struct,
         )
     else:
         tile_probs = compute_tiles_map(
             params,
             tile_struct,
-            prob,
+            skymap,
             func="np.sum(x)",
-            ipix_keep=map_struct["ipix_keep"],
+            moc_keep=map_struct["moc_keep"],
         )
 
     tile_probs[tile_probs < np.max(tile_probs) * 0.01] = 0.0
 
-    prob_scaled = copy.deepcopy(prob)
-    prob_sorted = np.sort(prob_scaled)[::-1]
-    prob_indexes = np.argsort(prob_scaled)[::-1]
-    prob_cumsum = np.cumsum(prob_sorted)
-    index = np.argmin(np.abs(prob_cumsum - cl)) + 1
-    # prob_scaled[prob_indexes[index:]] = 1e-10
-    prob_scaled[prob_indexes[index:]] = 0.0
-    prob_scaled = prob_scaled**n
-    prob_scaled = prob_scaled / np.nansum(prob_scaled)
-
-    if params["tilesType"] == "galaxy":
-        ranked_tile_probs = compute_tiles_map(
-            params,
-            tile_struct,
-            prob_scaled,
-            func="galaxy",
-            ipix_keep=map_struct["ipix_keep"],
-            catalog_struct=catalog_struct,
-        )
-    else:
-        ranked_tile_probs = compute_tiles_map(
-            params,
-            tile_struct,
-            prob_scaled,
-            func="np.sum(x)",
-            ipix_keep=map_struct["ipix_keep"],
-        )
-
-    ranked_tile_probs[np.isnan(ranked_tile_probs)] = 0.0
-    ranked_tile_probs_thresh = np.max(ranked_tile_probs) * 0.01
-    ranked_tile_probs[ranked_tile_probs <= ranked_tile_probs_thresh] = 0.0
-    ranked_tile_probs = ranked_tile_probs / np.nansum(ranked_tile_probs)
-
-    if "distmed" in map_struct:
-        distmed = map_struct["distmed"]
-        distmed[distmed <= 0] = np.nan
-        distmed[~np.isfinite(distmed)] = np.nan
-        # distmed[distmed<np.nanmedian(distmed)/4.0] = np.nanmedian(distmed)/4.0
-
-        if params["tilesType"] == "galaxy":
-            ranked_tile_distances = compute_tiles_map(
-                params,
-                tile_struct,
-                distmed,
-                func="center",
-                ipix_keep=map_struct["ipix_keep"],
-            )
-        else:
-            ranked_tile_distances = compute_tiles_map(
-                params,
-                tile_struct,
-                distmed,
-                func="np.nanmedian(x)",
-                ipix_keep=map_struct["ipix_keep"],
-            )
-        ranked_tile_distances_median = ranked_tile_distances / np.nanmedian(
-            ranked_tile_distances
-        )
-        ranked_tile_distances_median = ranked_tile_distances_median**dist_exp
-        ranked_tile_probs = ranked_tile_probs * ranked_tile_distances_median
-        ranked_tile_probs = ranked_tile_probs / np.nansum(ranked_tile_probs)
-        ranked_tile_probs[np.isnan(ranked_tile_probs)] = 0.0
-
     if params["doSingleExposure"]:
         keys = tile_struct.keys()
-        ranked_tile_times = np.zeros(
-            (len(ranked_tile_probs), len(params["exposuretimes"]))
-        )
+        ranked_tile_times = np.zeros((len(tile_probs), len(params["exposuretimes"])))
         for ii in range(len(params["exposuretimes"])):
-            ranked_tile_times[ranked_tile_probs > 0, ii] = params["exposuretimes"][ii]
+            ranked_tile_times[tile_probs > 0, ii] = params["exposuretimes"][ii]
 
-        for key, prob, exposureTime, tileprob in zip(
-            keys, ranked_tile_probs, ranked_tile_times, tile_probs
-        ):
+        for key, tileprob, exposureTime in zip(keys, tile_probs, ranked_tile_times):
             # Try to load the minimum duration of time from telescope config file
             # Otherwise set it to zero
             try:
@@ -1203,7 +1143,7 @@ def powerlaw_tiles_struct(
                     tileprob = 0.0
 
             tile_struct[key]["prob"] = tileprob
-            if prob == 0.0:
+            if tileprob == 0.0:
                 tile_struct[key]["exposureTime"] = 0.0
                 tile_struct[key]["nexposures"] = 0
                 tile_struct[key]["filt"] = []
@@ -1236,7 +1176,7 @@ def powerlaw_tiles_struct(
     else:
         ranked_tile_times = gwemopt.utils.integrationTime(
             tot_obs_time,
-            ranked_tile_probs,
+            tile_probs,
             func=None,
             T_int=config_struct["exposuretime"],
         )
@@ -1244,7 +1184,7 @@ def powerlaw_tiles_struct(
         keys = tile_struct.keys()
 
         for key, prob, exposureTime, tileprob in zip(
-            keys, ranked_tile_probs, ranked_tile_times, tile_probs
+            keys, tile_probs, ranked_tile_times
         ):
             # Try to load the minimum duration of time from telescope config file
             # Otherwise set it to zero
@@ -1309,90 +1249,44 @@ def moc(params, map_struct, moc_structs, doSegments=True):
     return tile_structs
 
 
-def pem_tiles_struct(params, config_struct, telescope, map_struct, tile_struct):
-    tot_obs_time = config_struct["tot_obs_time"]
+def find_overlap(intervals_list, query_intervals, probdensity):
 
-    if "observability" in map_struct:
-        prob = map_struct["observability"][telescope]["prob"]
-    else:
-        prob = map_struct["prob"]
+    # Sort both intervals list and query_intervals list based on start points
+    intervals_list.sort(key=lambda x: x[0])
+    t0s = np.array([query_interval[0] for query_interval in query_intervals])
+    idx = np.argsort(t0s).tolist()
+    query_intervals = [query_intervals[i] for i in idx]
+    probdensity = [probdensity[i] for i in idx]
 
-    ranked_tile_probs = compute_tiles_map(
-        params, tile_struct, prob, func="np.sum(x)", ipix_keep=map_struct["ipix_keep"]
-    )
+    prob = 0
+    for interval in intervals_list:
+        interval_start, interval_end = interval
+        # Find the index where interval_start would be inserted in query_intervals
+        index = bisect.bisect_right(query_intervals, [interval_start, float("inf")])
+        # Iterate over query_intervals starting from the index to find overlaps
+        for query_interval, probdens in zip(
+            query_intervals[index:], probdensity[index:]
+        ):
+            query_start, query_end = query_interval
+            if query_start > interval_end:
+                break  # No more overlaps possible, break the loop
+            overlap_start = max(interval_start, query_start)
+            overlap_end = min(interval_end, query_end)
+            overlap = max(0, overlap_end - overlap_start)
+            if overlap > 0:
+                # length * area * overlap
+                prob = prob + overlap * PIXEL_AREA * probdens
 
-    lim_mag = config_struct["magnitude"]
-    lim_time = config_struct["exposuretime"]
-
-    tau = np.arange(lim_time, 3600.0, lim_time)
-    Loftau = None
-
-    N_ref = 9.7847e9
-    L_min = 4.9370e31
-    L_max = 4.9370e33
-
-    if "distmu" in map_struct:
-        prob = map_struct["prob"]
-        distnorm = map_struct["distnorm"]
-        distmu = map_struct["distmu"]
-        distsigma = map_struct["distsigma"]
-
-        D_min = 1.0e7
-        D_max = 1.0e10
-        R = np.linspace(D_min / 1e6, D_max / 1e6)
-        p_R = [
-            np.sum(prob * rr**2 * distnorm * norm(distmu, distsigma).pdf(rr))
-            for rr in R
-        ]
-        p_R = np.array(p_R)
-        p_R = p_R / len(prob)
-
-        R = R * 1e6
-        D_mu = None
-        D_sig = None
-    else:
-        D_mu = 200.0e6
-        D_sig = 60.0e6
-        R = None
-        p_R = None
-
-    tau, prob = gwemopt.pem.Pem(
-        lim_mag,
-        lim_time,
-        N_ref=N_ref,
-        L_min=L_min,
-        L_max=L_max,
-        tau=tau,
-        Loftau=Loftau,
-        D_mu=D_mu,
-        D_sig=D_sig,
-        R=R,
-        p_R=p_R,
-    )
-
-    tprob, time_allocation = gwemopt.pem.Main(
-        tot_obs_time, 0, 0, ranked_tile_probs, tau, prob, "Eq"
-    )
-
-    if params["doPlots"]:
-        gwemopt.plotting.tauprob(params, tau, prob)
-
-    keys = tile_struct.keys()
-    for key, prob, exposureTime in zip(keys, ranked_tile_probs, time_allocation):
-        tile_struct[key]["prob"] = prob
-        tile_struct[key]["exposureTime"] = exposureTime
-        tile_struct[key]["nexposures"] = int(
-            np.floor(exposureTime / config_struct["exposuretime"])
-        )
-        tile_struct[key]["filt"] = [config_struct["filt"]] * tile_struct[key][
-            "nexposures"
-        ]
-
-    return tile_struct
+    return prob
 
 
 def compute_tiles_map(
-    params, tile_struct, skymap, func=None, ipix_keep=[], catalog_struct=None
+    params,
+    tile_struct,
+    skymap,
+    func=None,
+    moc_keep=MOC.new_empty(max_depth=10),
+    catalog_struct=None,
 ):
     if func is None:
         f = lambda x: np.sum(x)
@@ -1426,31 +1320,12 @@ def compute_tiles_map(
     keys = tile_struct.keys()
     ntiles = len(keys)
     vals = np.nan * np.ones((ntiles,))
-    for ii, key in enumerate(tile_struct.keys()):
-        idx = np.where(prob[tile_struct[key]["ipix"]] == -1)[0]
-        idx = np.setdiff1d(idx, ipix_keep)
-        if len(prob[tile_struct[key]["ipix"]]) == 0:
-            rat = 0.0
-        else:
-            rat = float(len(idx)) / float(len(prob[tile_struct[key]["ipix"]]))
-        if rat > params["maximumOverlap"]:
-            vals[ii] = 0.0
-        else:
-            ipix = tile_struct[key]["ipix"]
-            if len(ipix) == 0:
-                vals[ii] = 0.0
-            else:
-                vals_to_sum = prob[ipix]
-                if func == "np.nanmedian(x)":
-                    vals_to_sum[vals_to_sum < 0] = np.nan
-                else:
-                    vals_to_sum[vals_to_sum < 0] = 0
-                vals[ii] = f(vals_to_sum)
-
-        ipix_keep = np.setdiff1d(ipix_keep, tile_struct[key]["ipix"])
-        ipix_slice = np.setdiff1d(tile_struct[key]["ipix"], ipix_keep)
-        if len(ipix_slice) > 0:
-            prob[ipix_slice] = -1
+    for ii, key in tqdm(enumerate(keys), total=len(keys)):
+        mr1 = []
+        for lo, hi in tile_struct[key]["moc"].to_depth29_ranges:
+            mr1.append([lo, hi])
+        mr2 = skymap["HPX"].data.tolist()
+        vals[ii] = find_overlap(mr1, mr2, skymap["PROBDENSITY"].tolist())
 
     return vals
 

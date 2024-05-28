@@ -213,35 +213,21 @@ def getRectanglePixels(
 
     idx1 = np.where(np.abs(radecs[:, 1]) >= 87.0)[0]
     if len(idx1) == 4:
-        return [], [], [], []
+        return MOC.new_empty(max_depth=10)
 
     idx1 = np.where((radecs[:, 1] >= 87.0) | (radecs[:, 1] <= -87.0))[0]
     if len(idx1) > 0:
         radecs = np.delete(radecs, idx1[0], 0)
 
-    xyz = []
-    for r, d in radecs:
-        xyz.append(hp.ang2vec(r, d, lonlat=True))
-
     npts, junk = radecs.shape
     if npts == 4:
-        xyz = [xyz[0], xyz[1], xyz[3], xyz[2]]
-        ipix = hp.query_polygon(nside, np.array(xyz))
-    else:
-        ipix = hp.query_polygon(nside, np.array(xyz))
+        idx = [0, 1, 3, 2]
+        radecs = radecs[idx, :]
 
-    xyz = np.array(xyz)
-    proj = hp.projector.MollweideProj(rot=rotation, coord=None)
-    x, y = proj.vec2xy(xyz[:, 0], xyz[:, 1], xyz[:, 2])
-    xy = np.zeros(radecs.shape)
-    xy[:, 0] = x
-    xy[:, 1] = y
-    path = matplotlib.path.Path(xy)
-    patch = matplotlib.patches.PathPatch(
-        path, alpha=alpha, facecolor=color, fill=True, zorder=3, edgecolor=edgecolor
-    )
+    coords = coordinates.SkyCoord(radecs[:, 0] * u.deg, radecs[:, 1] * u.deg)
+    moc = MOC.from_polygon_skycoord(coords)
 
-    return ipix, radecs, patch, area
+    return moc
 
 
 def getSquarePixels(
@@ -289,32 +275,18 @@ def getSquarePixels(
 
     idx1 = np.where(np.abs(radecs[:, 1]) >= 87.0)[0]
     if len(idx1) == 4:
-        return [], [], [], []
+        return MOC.new_empty(max_depth=10)
 
     idx1 = np.where((radecs[:, 1] >= 87.0) | (radecs[:, 1] <= -87.0))[0]
     if len(idx1) > 0:
         radecs = np.delete(radecs, idx1[0], 0)
 
-    xyz = []
-    for r, d in radecs:
-        xyz.append(hp.ang2vec(r, d, lonlat=True))
-
     npts, junk = radecs.shape
     if npts == 4:
-        xyz = [xyz[0], xyz[1], xyz[3], xyz[2]]
-        ipix = hp.query_polygon(nside, np.array(xyz))
-    else:
-        ipix = hp.query_polygon(nside, np.array(xyz))
+        idx = [0, 1, 3, 2]
+        radecs = radecs[idx, :]
 
-    xyz = np.array(xyz)
-    proj = hp.projector.MollweideProj(rot=rotation, coord=None)
-    x, y = proj.vec2xy(xyz[:, 0], xyz[:, 1], xyz[:, 2])
-    xy = np.zeros(radecs.shape)
-    xy[:, 0] = x
-    xy[:, 1] = y
-    path = matplotlib.path.Path(xy)
-    patch = matplotlib.patches.PathPatch(
-        path, alpha=alpha, facecolor=color, fill=True, zorder=3, edgecolor=edgecolor
-    )
+    coords = coordinates.SkyCoord(radecs[:, 0] * u.deg, radecs[:, 1] * u.deg)
+    moc = MOC.from_polygon_skycoord(coords)
 
-    return ipix, radecs, patch, area
+    return moc

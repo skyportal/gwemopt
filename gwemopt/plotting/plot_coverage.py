@@ -6,54 +6,10 @@ import numpy as np
 from astropy.time import Time
 from matplotlib.pyplot import cm
 
-from gwemopt.io import export_tiles_coverage_hist, export_tiles_coverage_int
+from gwemopt.io import export_tiles_coverage_int
 from gwemopt.plotting.movie import make_movie
 from gwemopt.plotting.style import CBAR_BOOL, UNIT, add_edges, add_sun_moon, cmap
 from gwemopt.utils.geometry import angular_distance
-
-
-def plot_mollweide_coverage(params, map_struct, coverage_struct):
-    """
-    Plot the coverage in Mollweide projection.
-    """
-    plot_name = params["outputDir"].joinpath("mollview_coverage.pdf")
-    plt.figure()
-    hp.mollview(map_struct["prob"], title="", unit=UNIT, cbar=CBAR_BOOL, cmap=cmap)
-    hp.projplot(
-        coverage_struct["data"][:, 0],
-        coverage_struct["data"][:, 1],
-        "wx",
-        lonlat=True,
-        coord="G",
-    )
-    add_edges()
-    plt.savefig(plot_name, dpi=200)
-    plt.close()
-
-
-def plot_coverage(params, coverage_struct):
-    """
-    Plot the coverage
-    """
-    plot_name = params["outputDir"].joinpath("coverage.pdf")
-    plt.figure(figsize=(10, 8))
-    for ii in range(len(coverage_struct["ipix"])):
-        data = coverage_struct["data"][ii, :]
-        filt = coverage_struct["filters"][ii]
-
-        if filt == "g":
-            color = "g"
-        elif filt == "r":
-            color = "r"
-        else:
-            color = "k"
-
-        plt.scatter(data[2], data[5], s=20, color=color)
-
-    plt.xlabel("Time [MJD]")
-    plt.ylabel("Tile Number")
-    plt.savefig(plot_name, dpi=200)
-    plt.close()
 
 
 def plot_tiles_coverage(params, map_struct, coverage_struct, plot_sun_moon=False):
@@ -88,20 +44,6 @@ def plot_tiles_coverage(params, map_struct, coverage_struct, plot_sun_moon=False
     plt.close()
 
 
-def plot_tiles_coverage_hist(params, diffs):
-    """
-    Plot the histogram of the tiles coverage.
-    """
-    plot_name = params["outputDir"].joinpath("tiles_coverage_hist.pdf")
-    plt.figure(figsize=(12, 8))
-    bins = np.linspace(0.0, 24.0, 25)
-    plt.hist(24.0 * np.array(diffs), bins=bins)
-    plt.xlabel("Difference Between Observations [hours]")
-    plt.ylabel("Number of Observations")
-    plt.savefig(plot_name, dpi=200)
-    plt.close("all")
-
-
 def plot_tiles_coverage_int(
     params, map_struct, catalog_struct, coverage_struct, plot_sun_moon=False
 ):
@@ -109,6 +51,9 @@ def plot_tiles_coverage_int(
     event_mjd = Time(gpstime, format="gps", scale="utc").mjd
 
     colors = cm.rainbow(np.linspace(0, 1, len(params["telescopes"])))
+
+    hdu = map_struct["hdu"]
+    columns = [col.name for col in hdu.columns]
 
     plot_name = params["outputDir"].joinpath("tiles_coverage_int.pdf")
     fig = plt.figure(figsize=(12, 8))
@@ -119,10 +64,7 @@ def plot_tiles_coverage_int(
     ax3 = ax2.twinx()  # mirror them
 
     plt.axes(ax1)
-    hp.mollview(
-        map_struct["prob"], title="", unit=UNIT, cbar=CBAR_BOOL, cmap=cmap, hold=True
-    )
-    add_edges()
+    ax1.imshow_hpx(hdu, field=columns.index("PROB"), cmap="cylon")
     ax = plt.gca()
 
     if params["tilesType"] == "galaxy":
@@ -136,30 +78,19 @@ def plot_tiles_coverage_int(
                 color=color,
             )
     else:
-        for ii in range(len(coverage_struct["ipix"])):
-            patch = coverage_struct["patch"][ii]
-
-            idx = params["telescopes"].index(coverage_struct["telescope"][ii])
-
-            if patch == []:
-                continue
-
-            if not type(patch) == list:
-                patch = [patch]
-
-            for p in patch:
-                patch_cpy = copy.copy(p)
-                patch_cpy.axes = None
-                patch_cpy.figure = None
-                patch_cpy.set_transform(ax.transData)
-                patch_cpy.set_facecolor(colors[idx])
-
-                hp.projaxes.HpxMollweideAxes.add_patch(ax, patch_cpy)
+        for ii in range(len(coverage_struct["moc"])):
+            moc = coverage_struct["moc"][ii]
+            data = coverage_struct["data"]
+            print(data)
+            moc.fill(
+                ax=ax, wcs=ax.wcs, alpha=data[0], fill=True, color="black", linewidth=1
+            )
+            moc.border(ax=ax, wcs=ax.wcs, alpha=1, color="black")
 
     idxs = np.argsort(coverage_struct["data"][:, 2])
     plt.axes(ax2)
     for telescope, color in zip(params["telescopes"], colors):
-        ipixs = np.empty((0, 2))
+        moc = None
         cum_prob = 0.0
 
         tts, cum_probs, cum_areas = [], [], []
@@ -171,7 +102,7 @@ def plot_tiles_coverage_int(
                 print("%s: %d/%d" % (telescope, jj, len(idxs)))
 
             data = coverage_struct["data"][ii, :]
-            ipix = coverage_struct["ipix"][ii]
+            m = coverage_struct["moc"][ii]
             if params["tilesType"] == "galaxy":
                 galaxies = coverage_struct["galaxies"][ii]
 
@@ -196,8 +127,10 @@ def plot_tiles_coverage_int(
                     cum_galaxies = np.unique(cum_galaxies).astype(int)
                 cum_area = len(cum_galaxies)
             else:
-                ipixs = np.append(ipixs, ipix)
-                ipixs = np.unique(ipixs).astype(int)
+                if moc is None:
+                    moc = m
+                else:
+                    moc = moc.union(m)
 
                 cum_prob = np.sum(map_struct["prob"][ipixs])
                 cum_area = len(ipixs) * map_struct["pixarea_deg2"]
@@ -380,66 +313,12 @@ def plot_coverage_scaled(params, map_struct, coverage_struct, plot_sun_moon, max
 def make_coverage_plots(
     params, map_struct, coverage_struct, catalog_struct=None, plot_sun_moon: bool = True
 ):
-    plot_mollweide_coverage(params, map_struct, coverage_struct)
 
     idx = np.isfinite(coverage_struct["data"][:, 4])
     if not idx.size:
         return
 
     max_time = np.max(coverage_struct["data"][idx, 4])
-
-    plot_coverage(params, coverage_struct)
-
-    plot_tiles_coverage(
-        params, map_struct, coverage_struct, plot_sun_moon=plot_sun_moon
-    )
-
-    diffs = []
-    if params["tilesType"] == "galaxy":
-        coverage_ras = coverage_struct["data"][:, 0]
-        coverage_decs = coverage_struct["data"][:, 1]
-
-        for ii in range(len(coverage_ras) - 1):
-            current_ra, current_dec = coverage_ras[ii], coverage_decs[ii]
-
-            dist = angular_distance(
-                current_ra, current_dec, coverage_ras[ii + 1 :], coverage_decs[ii + 1 :]
-            )
-            idx = np.where(dist <= 1 / 3600.0)[0]
-            if len(idx) > 0:
-                jj = idx[0]
-                diffs.append(
-                    np.abs(
-                        coverage_struct["data"][ii, 2] - coverage_struct["data"][jj, 2]
-                    )
-                )
-    else:
-        for ii in range(len(coverage_struct["ipix"])):
-            ipix = coverage_struct["ipix"][ii]
-            for jj in range(len(coverage_struct["ipix"])):
-                if ii >= jj:
-                    continue
-                if coverage_struct["telescope"][ii] == coverage_struct["telescope"][jj]:
-                    continue
-                ipix2 = coverage_struct["ipix"][jj]
-                overlap = np.intersect1d(ipix, ipix2)
-                rat = np.array(
-                    [
-                        float(len(overlap)) / float(len(ipix)),
-                        float(len(overlap)) / float(len(ipix2)),
-                    ]
-                )
-                if np.any(rat > 0.5):
-                    diffs.append(
-                        np.abs(
-                            coverage_struct["data"][ii, 2]
-                            - coverage_struct["data"][jj, 2]
-                        )
-                    )
-
-    export_tiles_coverage_hist(params, diffs)
-
-    plot_tiles_coverage_hist(params, diffs)
 
     plot_tiles_coverage_int(
         params, map_struct, catalog_struct, coverage_struct, plot_sun_moon
