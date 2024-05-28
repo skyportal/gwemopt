@@ -6,10 +6,10 @@ import ephem
 import ligo.segments as segments
 import numpy as np
 from astropy.time import Time
-from munkres import Munkres, make_cost_matrix
+from ortools.linear_solver import pywraplp
 
 from gwemopt.tiles import balance_tiles, optimize_max_tiles, schedule_alternating
-from gwemopt.utils import angular_distance
+from gwemopt.utils import angular_distance, solve_milp
 
 
 def get_altaz_tile(ra, dec, observer, obstime):
@@ -88,7 +88,7 @@ def find_tile(
     return idx2, exposureids, probs
 
 
-def get_order(
+def get_order_heuristic(
     params, tile_struct, tilesegmentlists, exposurelist, observer, config_struct
 ):
     """
@@ -393,18 +393,62 @@ def get_order(
         tilematrix_mask = tilematrix > 10 ** (-10)
 
         if tilematrix_mask.any():
-            print("Calculating Hungarian solution...")
+            print("Calculating MILP solution...")
             total_cost = 0
-            cost_matrix = make_cost_matrix(tilematrix)
-            m = Munkres()
-            optimal_points = m.compute(cost_matrix)
-            print("Hungarian solution calculated...")
+
+            maximum = max(max(row) for row in tilematrix)
+            inversion_function = lambda x: maximum - x
+
+            cost_matrix = []
+            for row in tilematrix:
+                cost_matrix.append([inversion_function(value) for value in row])
+
+            # Create a linear solver
+            solver = pywraplp.Solver.CreateSolver("CBC")
+
+            # Define variables
+            num_workers = len(cost_matrix)
+            num_tasks = len(cost_matrix[0])
+            x = {}
+
+            for i in range(num_workers):
+                for j in range(num_tasks):
+                    x[i, j] = solver.BoolVar("x[%i,%i]" % (i, j))
+
+            # Define constraints: each worker is assigned to at most one task
+            for i in range(num_workers):
+                solver.Add(solver.Sum([x[i, j] for j in range(num_tasks)]) <= 1)
+
+            # Define constraints: each task is assigned to exactly one worker
+            for j in range(num_tasks):
+                solver.Add(solver.Sum([x[i, j] for i in range(num_workers)]) == 1)
+
+            # Define objective function: minimize the total cost
+            objective = solver.Objective()
+            for i in range(num_workers):
+                for j in range(num_tasks):
+                    objective.SetCoefficient(x[i, j], cost_matrix[i][j])
+            objective.SetMinimization()
+
+            # Solve the problem
+            status = solver.Solve()
+
+            optimal_points = []
+            if status == pywraplp.Solver.OPTIMAL:
+                print("Total cost =", solver.Objective().Value())
+                for i in range(num_workers):
+                    for j in range(num_tasks):
+                        if x[i, j].solution_value() > 0:
+                            optimal_points.append((i, j))
+            else:
+                print("The problem does not have an optimal solution.")
+
             max_no_observ = min(tilematrix.shape)
             for jj in range(max_no_observ):
-                idx0, idx1 = optimal_points[jj]
                 # idx0 indexes over the time windows, idx1 indexes over the probabilities
                 # idx2 gets the exposure id of the tile, used to assign tileexptime and tilenexps
                 try:
+                    idx0, idx1 = optimal_points[jj]
                     idx2 = exposureids[idx1]
                     pamw = tilematrix[idx0][idx1]
                     total_cost += pamw
@@ -425,6 +469,127 @@ def get_order(
         )
 
     return idxs, filts
+
+
+def get_order_milp(params, tile_struct, exposurelist, observer, config_struct):
+    """
+    tile_struct: dictionary. key -> struct info.
+    exposurelist: list of segments that the telescope is supposed to be working.
+        consecutive segments from the start to the end, with each segment size
+        being the exposure time.
+    Returns a list of tile indices in the order of observation.
+    """
+
+    if "dec_constraint" in config_struct:
+        dec_constraint = config_struct["dec_constraint"].split(",")
+        dec_min = float(dec_constraint[0])
+        dec_max = float(dec_constraint[1])
+
+    exposureids = []
+    probs = []
+    ras, decs, filts, keys = [], [], [], []
+    for ii, key in enumerate(list(tile_struct.keys())):
+        if tile_struct[key]["prob"] == 0:
+            continue
+        if "dec_constraint" in config_struct:
+            if (tile_struct[key]["dec"] < dec_min) or (
+                tile_struct[key]["dec"] > dec_max
+            ):
+                continue
+
+        exposureids.append(key)
+        probs.append(tile_struct[key]["prob"])
+        ras.append(tile_struct[key]["ra"])
+        decs.append(tile_struct[key]["dec"])
+        filts.append(tile_struct[key]["filt"])
+        keys.append(key)
+
+    fields = -1 * np.ones(
+        (len(exposurelist)),
+    )
+    filters = ["n"] * len(exposurelist)
+
+    if len(probs) == 0:
+        return fields, filters
+
+    probs = np.array(probs)
+    ras = np.array(ras)
+    decs = np.array(decs)
+    exposureids = np.array(exposureids)
+    keys = np.array(keys)
+    tilematrix = np.zeros((len(exposurelist), len(ras)))
+    for ii in np.arange(len(exposurelist)):
+        # first, create an array of airmass-weighted probabilities
+        t = Time(exposurelist[ii][0], format="mjd")
+        altazs = [get_altaz_tile(ra, dec, observer, t) for ra, dec in zip(ras, decs)]
+        alts = np.array([altaz[0] for altaz in altazs])
+        horizon = config_struct["horizon"]
+        horizon_mask = alts <= horizon
+        airmass = 1 / np.cos((90.0 - alts) * np.pi / 180.0)
+        airmass_mask = airmass > params["airmass"]
+
+        airmass_weight = 10 ** (0.4 * 0.1 * (airmass - 1))
+
+        if params["scheduleType"] in ["greedy", "greedy_slew"]:
+            tilematrix[ii, :] = np.array(probs)
+        elif params["scheduleType"] == ["airmass_weighted", "airmass_weighted_slew"]:
+            tilematrix[ii, :] = np.array(probs / airmass_weight)
+        tilematrix[ii, horizon_mask] = np.nan
+        tilematrix[ii, airmass_mask] = np.nan
+
+        for jj, key in enumerate(keys):
+            tilesegmentlist = tile_struct[key]["segmentlist"]
+            if not tilesegmentlist.intersects_segment(exposurelist[ii]):
+                tilematrix[ii, jj] = np.nan
+
+    # which fields are never observable
+    ind = np.where(np.nansum(tilematrix, axis=0) > 0)[0]
+
+    probs = np.array(probs)[ind]
+    ras = np.array(ras)[ind]
+    decs = np.array(decs)[ind]
+    exposureids = np.array(exposureids)[ind]
+    filts = [filts[i] for i in ind]
+    tilematrix = tilematrix[:, ind]
+
+    # which times do not have any observability
+    ind = np.where(np.nansum(tilematrix, axis=1) > 0)[0]
+    tilematrix = tilematrix[ind, :]
+
+    cost_matrix = tilematrix
+    cost_matrix[np.isnan(cost_matrix)] = -np.inf
+
+    distmatrix = np.zeros((len(ras), len(ras)))
+    for ii, (r, d) in enumerate(zip(ras, decs)):
+        dist = angular_distance(r, d, ras, decs)
+        if "slew" in params["scheduleType"]:
+            dist = dist / config_struct["slew_rate"]
+            dist = dist - config_struct["readout"]
+            dist[dist < 0] = 0
+        else:
+            distmatrix[ii, :] = dist
+    distmatrix = distmatrix / np.max(distmatrix)
+
+    dt = int(np.ceil((exposurelist[1][0] - exposurelist[0][0]) * 86400))
+    optimal_points = solve_milp(
+        cost_matrix,
+        dist_matrix=distmatrix,
+        useDistance=False,
+        max_tasks_per_worker=len(params["filters"]),
+        useTaskSepration=False,
+        min_task_separation=int(np.ceil(dt / params["mindiff"])),
+    )
+
+    for optimal_point in optimal_points:
+        idx = ind[optimal_point[0]]
+        idy = optimal_point[1]
+        if len(filts[idy]) > 0:
+            fields[idx] = exposureids[idy]
+            filters[idx] = filts[idy][0]
+            filt = filts[idy][1:]
+            filts[idy] = filt
+
+    return fields, filters
 
 
 def scheduler(params, config_struct, tile_struct):
@@ -458,9 +623,17 @@ def scheduler(params, config_struct, tile_struct):
     for key in keys:
         # segments.py: tile_struct[key]["segmentlist"] is a list of segments when the tile is available for observation
         tilesegmentlists.append(tile_struct[key]["segmentlist"])
-    keys, filts = get_order(
-        params, tile_struct, tilesegmentlists, exposurelist, observer, config_struct
-    )
+
+    if params["solverType"] == "heuristic":
+        keys, filts = get_order_heuristic(
+            params, tile_struct, tilesegmentlists, exposurelist, observer, config_struct
+        )
+    elif params["solverType"] == "milp":
+        keys, filts = get_order_milp(
+            params, tile_struct, exposurelist, observer, config_struct
+        )
+    else:
+        raise ValueError(f'Unknown solverType {params["solverType"]}')
 
     if params["doPlots"]:
         from gwemopt.plotting import make_schedule_plots
