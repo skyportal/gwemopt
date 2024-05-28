@@ -151,13 +151,10 @@ def export_schedule_xml(xmlfile, map_struct, coverage_struct, config_struct):
         Field(name="priority", ucd="", unit="", dataType="int", Description=[""])
     )
     table_field = utilityTable(table)
-    table_field.blankTable(len(coverage_struct["ipix"]))
+    table_field.blankTable(len(coverage_struct["moc"]))
 
-    for ii in range(len(coverage_struct["ipix"])):
+    for ii in range(len(coverage_struct["moc"])):
         data = coverage_struct["data"][ii, :]
-        ipix = coverage_struct["ipix"][ii]
-
-        prob = np.sum(map_struct["prob"][ipix])
 
         ra, dec = data[0], data[1]
         observ_time, exposure_time, field_id, prob, airmass = (
@@ -198,15 +195,6 @@ def export_schedule_xml(xmlfile, map_struct, coverage_struct, config_struct):
 
 
 def summary(params, map_struct, coverage_struct, catalog_struct=None):
-    idx50 = len(map_struct["cumprob"]) - np.argmin(np.abs(map_struct["cumprob"] - 0.50))
-    idx90 = len(map_struct["cumprob"]) - np.argmin(np.abs(map_struct["cumprob"] - 0.90))
-
-    mapfile = params["outputDir"].joinpath("map.dat")
-    with open(mapfile, "w") as fid:
-        fid.write(
-            "%.5f %.5f\n"
-            % (map_struct["pixarea_deg2"] * idx50, map_struct["pixarea_deg2"] * idx90)
-        )
 
     filts = list(set(coverage_struct["filters"]))
     for jj, telescope in enumerate(params["telescopes"]):
@@ -225,15 +213,12 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
         totexp = 0
 
         with open(schedulefile, "w") as fid:
-            for ii in range(len(coverage_struct["ipix"])):
+            for ii in range(len(coverage_struct["filters"])):
                 if not telescope == coverage_struct["telescope"][ii]:
                     continue
 
                 data = coverage_struct["data"][ii, :]
                 filt = coverage_struct["filters"][ii]
-                ipix = coverage_struct["ipix"][ii]
-
-                prob = np.sum(map_struct["prob"][ipix])
 
                 ra, dec = data[0], data[1]
                 observ_time, mag, exposure_time, field_id, prob, airmass = (
@@ -285,15 +270,7 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
 
         fields_sum = np.sum(fields[:, 2:], axis=1)
         idx = np.where(fields_sum >= 2)[0]
-        print(
-            "%d/%d fields were observed at least twice\n" % (len(idx), len(fields_sum))
-        )
-
-        print(
-            "Integrated probability, All: %.5f, 2+: %.5f"
-            % (np.sum(fields[:, 1]), np.sum(fields[idx, 1]))
-        )
-
+        print("%d/%d fields were observed at least twice" % (len(idx), len(fields_sum)))
         print(f"Expected time spent on exposures: {totexp / 3600:.1f} hr.")
         slew_readout_time = computeSlewReadoutTime(config_struct, coverage_struct)
         print(f"Expected time spent on slewing and readout: {slew_readout_time:.0f} s.")
@@ -307,6 +284,8 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
                 fid.write("\n")
 
     summaryfile = params["outputDir"].joinpath("summary.dat")
+    cummoc = None
+
     with open(summaryfile, "w") as fid:
         gpstime = params["gpstime"]
         event_mjd = Time(gpstime, format="gps", scale="utc").mjd
@@ -322,26 +301,36 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
             if params["tilesType"] == "galaxy":
                 galaxies = np.empty((0, 2))
 
-            for ii in range(len(coverage_struct["ipix"])):
+            for ii in range(len(coverage_struct["filters"])):
                 data = coverage_struct["data"][ii, :]
                 filt = coverage_struct["filters"][ii]
-                ipix = coverage_struct["ipix"][ii]
+                moc = coverage_struct["moc"][ii]
 
-                prob = np.sum(map_struct["prob"][ipix])
+                ra, dec = data[0], data[1]
+                observ_time, mag, exposure_time, field_id, prob, airmass = (
+                    data[2],
+                    data[3],
+                    data[4],
+                    data[5],
+                    data[6],
+                    data[7],
+                )
 
                 if data[2] > event_mjd + tt:
                     continue
 
-                ipixs = np.append(ipixs, ipix)
-                ipixs = np.unique(ipixs).astype(int)
-                cum_prob = np.sum(map_struct["prob"][ipixs])
+                if cummoc is None:
+                    cummoc = moc
+                else:
+                    cummoc = cummoc + moc
+                cum_prob = cummoc.probability_in_multiordermap(map_struct["skymap"])
 
                 if params["tilesType"] == "galaxy":
                     galaxies = np.append(galaxies, coverage_struct["galaxies"][ii])
                     galaxies = np.unique(galaxies).astype(int)
                     cum_prob = np.sum(catalog_struct[params["galaxy_grade"]][galaxies])
 
-                cum_area = len(ipixs) * map_struct["pixarea_deg2"]
+                cum_area = cummoc.sky_fraction * 360**2 / np.pi
                 mjds.append(data[2])
                 mjds_floor.append(int(np.floor(data[2])))
 

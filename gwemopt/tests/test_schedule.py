@@ -38,7 +38,6 @@ def test_scheduler():
                     "--doCoverage",
                     "--coverageFiles",
                     os.path.join(temp_dir, "coverage_ZTF.dat"),
-                    "--doObservability",
                     "--doMovie",
                 ],
             ),
@@ -53,7 +52,7 @@ def test_scheduler():
                     "GLADE",
                 ],
             ),
-            ("DECam", ["--doChipGaps", "--max_nb_tiles", "5", "--doMinimalTiling"]),
+            ("DECam", ["--max_nb_tiles", "5", "--doMinimalTiling"]),
             # ('TRE', []),
             # ("WINTER", []),
             # ('TNT', ["--tilesType", "galaxy", "--powerlaw_dist_exp", "1.0", "--doCatalog", "--galaxy_grade", "Sloc"]),
@@ -111,7 +110,6 @@ def test_scheduler():
         # Test the extra efficiency/coverage files
 
         extra_test_files = [
-            "map.dat",
             "summary.dat",
             # "efficiency.txt",
             # "efficiency_tophat.txt",

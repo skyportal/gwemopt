@@ -1,11 +1,13 @@
 import os
 
+import astropy.units as u
 import healpy as hp
 import numpy as np
 import scipy.stats
+from astropy.coordinates import SkyCoord
 from astropy.time import Time
 from ligo.skymap import distance
-from scipy.interpolate import interpolate as interp
+from scipy.interpolate import interp1d
 
 from gwemopt.io.export_efficiency import (
     export_efficiency_data,
@@ -23,24 +25,22 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
     gpstime = params["gpstime"]
     mjd_inj = Time(gpstime, format="gps", scale="utc").mjd
 
-    if params["catalog"] is not None:
-        distn = scipy.stats.rv_discrete(
-            values=(np.arange(npix), map_struct["prob_catalog"])
-        )
-    else:
-        distn = scipy.stats.rv_discrete(values=(np.arange(npix), map_struct["prob"]))
+    distn = scipy.stats.rv_discrete(
+        values=(np.arange(npix), map_struct["skymap_raster"]["PROB"])
+    )
     ipix = distn.rvs(size=Ninj)
     ras, decs = hp.pix2ang(nside, ipix, lonlat=True)
 
     dists = np.logspace(-1, 3, 1000)
     ndetections = np.zeros((len(dists),))
 
-    for pinpoint in ipix:
+    for ra, dec in zip(ras, decs):
+        coords = SkyCoord(ra * u.deg, dec * u.deg)
         idxs = []
-        for jj in range(len(coverage_struct["ipix"])):
-            expPixels = coverage_struct["ipix"][jj]
+        for jj in range(len(coverage_struct["moc"])):
+            moc = coverage_struct["moc"][jj]
 
-            if pinpoint in expPixels:
+            if moc.contains_skycoords(coords):
                 idxs.append(jj)
         if len(idxs) == 0:
             continue
@@ -56,7 +56,7 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
             lightcurve_mag = lightcurve_struct[filt]
             idx = np.where(np.isfinite(lightcurve_mag))[0]
 
-            f = interp.interp1d(
+            f = interp1d(
                 lightcurve_t[idx], lightcurve_mag[idx], fill_value="extrapolate"
             )
             lightcurve_mag_interp = f(mjd)
@@ -113,16 +113,13 @@ def compute_true_efficiency(params, map_struct, lightcurve_struct, coverage_stru
     gpstime = params["gpstime"]
     mjd_inj = Time(gpstime, format="gps", scale="utc").mjd
 
-    ipix = hp.ang2pix(nside, params["true_ra"], params["true_dec"], lonlat=True)
-    # ipix = np.argmax(map_struct["prob"])
-    # lat, lon = hp.pix2ang(nside, ipix, lonlat=True)
     dist = params["true_distance"]
-
+    coords = SkyCoord(params["true_ra"] * u.deg, params["true_dec"] * u.deg)
     idxs = []
-    for jj in range(len(coverage_struct["ipix"])):
-        expPixels = coverage_struct["ipix"][jj]
+    for jj in range(len(coverage_struct["moc"])):
+        moc = coverage_struct["moc"][jj]
 
-        if ipix in expPixels:
+        if moc.contains_skycoords(coords):
             idxs.append(jj)
 
     mjds = coverage_struct["data"][idxs, 2]
@@ -154,38 +151,39 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
     gpstime = params["gpstime"]
     mjd_inj = Time(gpstime, format="gps", scale="utc").mjd
 
-    if params["catalog"] is not None:
-        distn = scipy.stats.rv_discrete(
-            values=(np.arange(npix), map_struct["prob_catalog"])
-        )
-    else:
-        distn = scipy.stats.rv_discrete(values=(np.arange(npix), map_struct["prob"]))
-    ipix = distn.rvs(size=Ninj)
-
-    # calculate the moments from distmu, distsigma and distnorm
-    mom_mean, mom_std, mom_norm = distance.parameters_to_moments(
-        map_struct["distmu"], map_struct["distsigma"]
+    distn = scipy.stats.rv_discrete(
+        values=(np.arange(npix), map_struct["skymap_raster"]["PROB"])
     )
+    ipix = distn.rvs(size=Ninj)
+    ras, decs = hp.pix2ang(nside, ipix, lonlat=True)
 
     detections = 0
     dists_inj = {}
     dists_inj["recovered"], dists_inj["tot"] = [], []
-    for pinpoint in ipix:
+    for pinpoint, ra, dec in zip(ipix, ras, decs):
+        coords = SkyCoord(ra * u.deg, dec * u.deg)
+
         dist = -1
         while dist < 0:
-            if np.isinf(mom_mean[pinpoint]) or np.isinf(mom_std[pinpoint]):
+            if np.isinf(map_struct["skymap_raster"]["DISTMEAN"][pinpoint]) or np.isinf(
+                map_struct["skymap_raster"]["DISTSTD"][pinpoint]
+            ):
                 dist = np.inf
             else:
-                dist = mom_mean[pinpoint] + mom_std[pinpoint] * np.random.normal()
+                dist = (
+                    map_struct["skymap_raster"]["DISTMEAN"][pinpoint]
+                    + map_struct["skymap_raster"]["DISTSTD"][pinpoint]
+                    * np.random.normal()
+                )
 
         if dist != np.inf:
             dists_inj["tot"].append(dist)
 
         idxs = []
-        for jj in range(len(coverage_struct["ipix"])):
-            expPixels = coverage_struct["ipix"][jj]
+        for jj in range(len(coverage_struct["moc"])):
+            moc = coverage_struct["moc"][jj]
 
-            if pinpoint in expPixels:
+            if moc.contains_skycoords(coords):
                 idxs.append(jj)
 
         if len(idxs) == 0:
@@ -200,7 +198,7 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
             lightcurve_mag = lightcurve_struct[filt]
             idx = np.where(np.isfinite(lightcurve_mag))[0]
 
-            f = interp.interp1d(
+            f = interp1d(
                 lightcurve_t[idx], lightcurve_mag[idx], fill_value="extrapolate"
             )
             lightcurve_mag_interp = f(mjd)

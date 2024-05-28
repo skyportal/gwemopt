@@ -5,8 +5,10 @@ Module to fetch event info and skymap from GraceDB, url, or locally
 import os
 from pathlib import Path
 
+import astropy_healpix as ah
 import healpy as hp
 import ligo.skymap.distance as ligodist
+import ligo.skymap.plot
 import lxml.etree
 import numpy as np
 import requests
@@ -15,9 +17,11 @@ from astropy.coordinates import SkyCoord
 from astropy.io import fits
 from astropy.time import Time
 from ligo.gracedb.rest import GraceDb
+from ligo.skymap import moc
 from ligo.skymap.bayestar import rasterize
 from ligo.skymap.io import read_sky_map
-from ligo.skymap.moc import uniq2nest
+from matplotlib import pyplot as plt
+from mocpy import MOC
 from scipy.interpolate import PchipInterpolator
 from scipy.stats import norm
 
@@ -137,14 +141,14 @@ def read_inclination(skymap, params, map_struct):
         theta = 0.5 * np.pi - np.deg2rad(dec)
         # make use of the maP nside
         maP_idx = np.argmax(skymap["PROBDENSITY"])
-        order, _ = uniq2nest(skymap[maP_idx]["UNIQ"])
+        order, _ = moc.uniq2nest(skymap[maP_idx]["UNIQ"])
         nside = hp.order2nside(order)
         # get the nested idx for the given sky location
         nest_idx = hp.ang2pix(nside, theta, phi, nest=True)
         # find the row with the closest nested index
         nest_idxs = []
         for row in skymap:
-            order_per_row, nest_idx_per_row = uniq2nest(row["UNIQ"])
+            order_per_row, nest_idx_per_row = moc.uniq2nest(row["UNIQ"])
             if order_per_row == order:
                 nest_idxs.append(nest_idx_per_row)
             else:
@@ -156,7 +160,7 @@ def read_inclination(skymap, params, map_struct):
         maP_idx = np.argmax(skymap["PROBDENSITY"])
         uniq_idx = skymap[maP_idx]["UNIQ"]
         # convert to nested indexing and find the location of that index
-        order, nest_idx = uniq2nest(uniq_idx)
+        order, nest_idx = moc.uniq2nest(uniq_idx)
         nside = hp.order2nside(order)
         theta, phi = hp.pix2ang(nside, int(nest_idx), nest=True)
         # convert theta and phi to ra and dec
@@ -258,151 +262,108 @@ def read_skymap(params, map_struct=None):
         if "do_3d" not in params:
             params["do_3d"] = is_3d
 
-        header = []
-        if map_struct is None:
-            map_struct = {}
+        map_struct = {}
 
-            filename = params["skymap"]
+        filename = params["skymap"]
 
-            if params["do_3d"]:
-                try:
-                    healpix_data, header = hp.read_map(
-                        filename, field=(0, 1, 2, 3), h=True
-                    )
-                except:
-                    skymap = read_sky_map(filename, moc=True, distances=True)
-                    order = hp.nside2order(params["nside"])
+        if params["do_3d"]:
+            skymap = read_sky_map(filename, moc=True, distances=True)
 
-                    # for colname in skymap.colnames:
-                    #    if colname.startswith('PROB'):
-                    #        newname = colname.replace('PROB', 'PROBDENSITY')
-                    #        skymap.rename_column(colname, newname)
-                    #        skymap[newname] *= len(skymap) / (4 * np.pi)
-                    #        skymap[newname].unit = u.steradian ** -1
+            if "PROBDENSITY_SAMPLES" in skymap.columns:
+                if params["inclination"]:
+                    map_struct = read_inclination(skymap, params, map_struct)
 
-                    if "PROBDENSITY_SAMPLES" in skymap.columns:
-                        if params["inclination"]:
-                            map_struct = read_inclination(skymap, params, map_struct)
-
-                        skymap.remove_columns(
-                            [
-                                f"{name}_SAMPLES"
-                                for name in [
-                                    "PROBDENSITY",
-                                    "DISTMU",
-                                    "DISTSIGMA",
-                                    "DISTNORM",
-                                ]
-                            ]
-                        )
-
-                    t = rasterize(skymap)
-                    result = t["PROB"], t["DISTMU"], t["DISTSIGMA"], t["DISTNORM"]
-                    healpix_data = hp.reorder(result, "NESTED", "RING")
-
-                distmu_data = healpix_data[1]
-                distsigma_data = healpix_data[2]
-                prob_data = healpix_data[0]
-                norm_data = healpix_data[3]
-
-                map_struct["distmu"] = distmu_data / params["DScale"]
-                map_struct["distsigma"] = distsigma_data / params["DScale"]
-                map_struct["prob"] = prob_data
-                map_struct["distnorm"] = norm_data
-
-            else:
-                prob_data, header = hp.read_map(
-                    filename, field=0, verbose=False, h=True
+                skymap.remove_columns(
+                    [
+                        f"{name}_SAMPLES"
+                        for name in [
+                            "PROBDENSITY",
+                            "DISTMU",
+                            "DISTSIGMA",
+                            "DISTNORM",
+                        ]
+                    ]
                 )
-                prob_data = prob_data / np.sum(prob_data)
 
-                map_struct["prob"] = prob_data
+            map_struct["skymap"] = skymap
+        else:
+            skymap = read_sky_map(filename, moc=True, distances=False)
+            map_struct["skymap"] = skymap
 
-        for j in range(len(header)):
-            if header[j][0] == "DATE":
-                map_struct["trigtime"] = header[j][1]
+    level, ipix = ah.uniq_to_level_ipix(map_struct["skymap"]["UNIQ"])
+    LEVEL = MOC.MAX_ORDER
+    shift = 2 * (LEVEL - level)
+    hpx = np.array(np.vstack([ipix << shift, (ipix + 1) << shift]), dtype=np.uint64).T
+    nside = ah.level_to_nside(level)
+    pixel_area = ah.nside_to_pixel_area(ah.level_to_nside(level))
+    ra, dec = ah.healpix_to_lonlat(ipix, nside, order="nested")
+    map_struct["skymap"]["ra"] = ra.deg
+    map_struct["skymap"]["dec"] = dec.deg
 
-    natural_nside = hp.pixelfunc.get_nside(map_struct["prob"])
-    nside = params["nside"]
-
-    print("natural_nside =", natural_nside)
-    print("nside =", nside)
-
-    if not params["do_3d"]:
-        map_struct["prob"] = hp.ud_grade(map_struct["prob"], nside, power=-2)
-
-    if params["do_3d"]:
-        if natural_nside != nside:
-            map_struct["prob"] = hp.pixelfunc.ud_grade(
-                map_struct["prob"], nside, power=-2
-            )
-            map_struct["distmu"] = hp.pixelfunc.ud_grade(map_struct["distmu"], nside)
-            map_struct["distsigma"] = hp.pixelfunc.ud_grade(
-                map_struct["distsigma"], nside
-            )
-            map_struct["distnorm"] = hp.pixelfunc.ud_grade(
-                map_struct["distnorm"], nside
-            )
-
-            map_struct["distmu"][map_struct["distmu"] < -1e30] = np.inf
-
-        nside_down = 32
-
-        distmu_down = hp.pixelfunc.ud_grade(map_struct["distmu"], nside_down)
-
-        (
-            map_struct["distmed"],
-            map_struct["diststd"],
-            mom_norm,
-        ) = ligodist.parameters_to_moments(
-            map_struct["distmu"], map_struct["distsigma"]
-        )
-
-        distmu_down[distmu_down < -1e30] = np.inf
-
-        map_struct["distmed"] = hp.ud_grade(map_struct["distmed"], nside, power=-2)
-        map_struct["diststd"] = hp.ud_grade(map_struct["diststd"], nside, power=-2)
-
-    npix = hp.nside2npix(nside)
-    theta, phi = hp.pix2ang(nside, np.arange(npix))
-    ra = np.rad2deg(phi)
-    dec = np.rad2deg(0.5 * np.pi - theta)
-
-    map_struct["ra"] = ra
-    map_struct["dec"] = dec
-
-    if params["doRASlice"]:
+    if params["raslice"] is not None:
         ra_low, ra_high = params["raslice"][0], params["raslice"][1]
         if ra_low <= ra_high:
             ipix = np.where(
-                (ra_high * 360.0 / 24.0 < ra) | (ra_low * 360.0 / 24.0 > ra)
+                (ra_high * 360.0 / 24.0 < ra.deg) | (ra_low * 360.0 / 24.0 > ra.deg)
             )[0]
         else:
             ipix = np.where(
-                (ra_high * 360.0 / 24.0 < ra) & (ra_low * 360.0 / 24.0 > ra)
+                (ra_high * 360.0 / 24.0 < ra.deg) & (ra_low * 360.0 / 24.0 > ra.deg)
             )[0]
-        map_struct["prob"][ipix] = 0.0
-        map_struct["prob"] = map_struct["prob"] / np.sum(map_struct["prob"])
+        map_struct["skymap"]["PROBDENSITY"][ipix] = 0.0
 
     if params["galactic_limit"] > 0.0:
-        coords = SkyCoord(ra=ra * u.deg, dec=dec * u.deg)
+        coords = SkyCoord(ra=ra, dec=dec)
         ipix = np.where(np.abs(coords.galactic.b.deg) <= params["galactic_limit"])[0]
-        map_struct["prob"][ipix] = 0.0
-        map_struct["prob"] = map_struct["prob"] / np.sum(map_struct["prob"])
+        map_struct["skymap"]["PROBDENSITY"][ipix] = 0.0
 
-    sort_idx = np.argsort(map_struct["prob"])[::-1]
-    csm = np.empty(len(map_struct["prob"]))
-    csm[sort_idx] = np.cumsum(map_struct["prob"][sort_idx])
+    map_struct["skymap_raster"] = rasterize(
+        map_struct["skymap"], order=hp.nside2order(int(params["nside"]))
+    )
+    peak = map_struct["skymap_raster"][
+        map_struct["skymap_raster"]["PROB"]
+        == np.max(map_struct["skymap_raster"]["PROB"])
+    ]
+    map_struct["center"] = SkyCoord(peak["ra"][0] * u.deg, peak["dec"][0] * u.deg)
 
-    map_struct["cumprob"] = csm
-    map_struct["ipix_keep"] = np.where(csm <= params["iterativeOverlap"])[0]
+    if "DISTMU" in map_struct["skymap_raster"].columns:
+        (
+            map_struct["skymap_raster"]["DISTMEAN"],
+            map_struct["skymap_raster"]["DISTSTD"],
+            mom_norm,
+        ) = ligodist.parameters_to_moments(
+            map_struct["skymap_raster"]["DISTMU"],
+            map_struct["skymap_raster"]["DISTSIGMA"],
+        )
 
-    pixarea = hp.nside2pixarea(nside)
-    pixarea_deg2 = hp.nside2pixarea(nside, degrees=True)
+    extra_header = [
+        ("PIXTYPE", "HEALPIX", "HEALPIX pixelisation"),
+        ("ORDERING", "NESTED", "Pixel ordering scheme: RING, NESTED, or NUNIQ"),
+        ("COORDSYS", "C", "Ecliptic, Galactic or Celestial (equatorial)"),
+        (
+            "MOCORDER",
+            moc.uniq2order(map_struct["skymap"]["UNIQ"].max()),
+            "MOC resolution (best order)",
+        ),
+        ("INDXSCHM", "EXPLICIT", "Indexing: IMPLICIT or EXPLICIT"),
+    ]
 
-    map_struct["nside"] = nside
-    map_struct["npix"] = npix
-    map_struct["pixarea"] = pixarea
-    map_struct["pixarea_deg2"] = pixarea_deg2
+    hdu = fits.table_to_hdu(map_struct["skymap_raster"])
+    hdu.header.extend(extra_header)
+    map_struct["hdu"] = hdu
+
+    skymap_sorted = map_struct["skymap"].copy()
+    skymap_sorted.sort("PROBDENSITY")
+    skymap_sorted.reverse()
+
+    level, ipix = ah.uniq_to_level_ipix(skymap_sorted["UNIQ"])
+    pixel_area = ah.nside_to_pixel_area(ah.level_to_nside(level))
+
+    prob = pixel_area * skymap_sorted["PROBDENSITY"]
+    cumprob = np.cumsum(prob)
+
+    i = cumprob.searchsorted(params["iterativeOverlap"])
+    skymap_keep = skymap_sorted[:i]
+    map_struct["moc_keep"] = skymap_keep
 
     return params, map_struct

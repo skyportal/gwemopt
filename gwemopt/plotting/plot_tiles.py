@@ -3,8 +3,9 @@ import copy
 import healpy as hp
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm import tqdm
 
-from gwemopt.plotting.style import CBAR_BOOL, UNIT, add_edges, add_sun_moon, cmap
+from gwemopt.plotting.style import add_sun_moon
 
 
 def make_tile_plots(params, map_struct, tiles_structs, plot_sun_moon=True):
@@ -13,62 +14,37 @@ def make_tile_plots(params, map_struct, tiles_structs, plot_sun_moon=True):
     """
 
     plot_name = params["outputDir"].joinpath("tiles.pdf")
-    plt.figure()
-    hp.mollview(map_struct["prob"], title="", unit=UNIT, cbar=CBAR_BOOL, cmap=cmap)
-    ax = plt.gca()
+
+    hdu = map_struct["hdu"]
+    columns = [col.name for col in hdu.columns]
+
+    fig = plt.figure(figsize=(8, 6), dpi=100)
+    ax = plt.axes(
+        [0.05, 0.05, 0.9, 0.9],
+        center=map_struct["center"],
+        projection=params["projection"],
+    )
+    ax.imshow_hpx(hdu, field=columns.index("PROB"), cmap="cylon")
     for telescope in tiles_structs:
         tiles_struct = tiles_structs[telescope]
-        for index in tiles_struct.keys():
-            patch = tiles_struct[index]["patch"]
-            if not patch:
-                continue
-            if type(patch) == list:
-                for p in patch:
-                    hp.projaxes.HpxMollweideAxes.add_patch(ax, p)
-            else:
-                hp.projaxes.HpxMollweideAxes.add_patch(ax, patch)
+        keys = list(tiles_struct.keys())
+        probs = np.array([tiles_struct[key]["prob"] for key in keys])
+        alphas = probs / np.max(probs)
+
+        for ii, index in tqdm(enumerate(keys), total=len(keys)):
+            moc = tiles_struct[index]["moc"]
+            moc.fill(
+                ax=ax,
+                wcs=ax.wcs,
+                alpha=alphas[ii],
+                fill=True,
+                color="black",
+                linewidth=1,
+            )
+            moc.border(ax=ax, wcs=ax.wcs, alpha=1, color="black")
 
     if plot_sun_moon:
-        add_sun_moon(params)
+        add_sun_moon(params, ax)
 
-    add_edges()
     plt.savefig(plot_name, dpi=200)
     plt.close()
-
-    if params["doReferences"]:
-        rot = (90, 0, 0)
-        plot_name = params["outputDir"].joinpath("tiles_ref.pdf")
-        plt.figure()
-        hp.mollview(
-            np.zeros(map_struct["prob"].shape),
-            title="",
-            unit=UNIT,
-            cbar=CBAR_BOOL,
-            cmap=cmap,
-        )
-        ax = plt.gca()
-        for telescope in tiles_structs:
-            config_struct = params["config"][telescope]
-            tiles_struct = tiles_structs[telescope]
-            if "reference_images" not in config_struct:
-                continue
-            for index in tiles_struct.keys():
-                if index not in config_struct["reference_images"]:
-                    continue
-                if len(params["filters"]) == 1:
-                    if (
-                        not params["filters"][0]
-                        in config_struct["reference_images"][index]
-                    ):
-                        continue
-                patch = tiles_struct[index]["patch"]
-                if not patch:
-                    continue
-                patch_cpy = copy.copy(patch)
-                patch_cpy.axes = None
-                patch_cpy.figure = None
-                patch_cpy.set_transform(ax.transData)
-                hp.projaxes.HpxMollweideAxes.add_patch(ax, patch_cpy)
-        add_edges()
-        plt.savefig(plot_name, dpi=200)
-        plt.close()

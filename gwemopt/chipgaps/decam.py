@@ -24,6 +24,7 @@ import numpy as np
 from astropy import units as u
 from astropy.coordinates import ICRS, SkyCoord
 from astropy.wcs import WCS
+from mocpy import MOC
 
 
 class DECamtile:
@@ -210,7 +211,7 @@ def get_decam_ccds(ra, dec, save_footprint=False):
     return np.transpose(offsets, (2, 0, 1))
 
 
-def get_decam_quadrant_ipix(nside, ra, dec):
+def get_decam_quadrant_moc(ra, dec):
     ccd_coords = get_decam_ccds(0, 0)
 
     skyoffset_frames = SkyCoord(ra, dec, unit=u.deg).skyoffset_frame()
@@ -219,13 +220,15 @@ def get_decam_quadrant_ipix(nside, ra, dec):
         unit=u.deg,
         frame=skyoffset_frames[:, np.newaxis, np.newaxis],
     ).transform_to(ICRS)
-    ccd_xyz = np.moveaxis(ccd_coords_icrs.cartesian.xyz.value, 0, -1)[0]
 
-    ipixs = []
-    for xyz in ccd_xyz:
-        ipix = hp.query_polygon(nside, xyz)
-        ipixs.append(ipix.tolist())
-    return ipixs
+    moc = None
+    for subfield_id, coords in enumerate(ccd_coords_icrs[0]):
+        if moc is None:
+            moc = MOC.from_polygon_skycoord(coords)
+        else:
+            moc = moc + MOC.from_polygon_skycoord(coords)
+
+    return moc
 
 
 def ccd_xy_to_radec(alpha_p, delta_p, ccd_centers_xy):

@@ -25,6 +25,7 @@ import numpy as np
 from astropy import units as u
 from astropy.coordinates import ICRS, SkyCoord
 from astropy.wcs import WCS
+from mocpy import MOC
 
 
 class ZTFtile:
@@ -273,7 +274,7 @@ def get_ztf_quadrants():
     return np.transpose(offsets, (2, 0, 1))
 
 
-def get_ztf_quadrant_ipix(nside, ra, dec, subfield_ids=None):
+def get_ztf_quadrant_moc(ra, dec, subfield_ids=None):
     quadrant_coords = get_ztf_quadrants()
 
     skyoffset_frames = SkyCoord(ra, dec, unit=u.deg).skyoffset_frame()
@@ -282,13 +283,16 @@ def get_ztf_quadrant_ipix(nside, ra, dec, subfield_ids=None):
         unit=u.deg,
         frame=skyoffset_frames[:, np.newaxis, np.newaxis],
     ).transform_to(ICRS)
-    quadrant_xyz = np.moveaxis(quadrant_coords_icrs.cartesian.xyz.value, 0, -1)[0]
 
-    ipixs = []
-    for subfield_id, xyz in enumerate(quadrant_xyz):
+    moc = None
+    for subfield_id, coords in enumerate(quadrant_coords_icrs[0]):
         if subfield_ids is not None:
             if subfield_id not in subfield_ids:
                 continue
-        ipix = hp.query_polygon(nside, xyz)
-        ipixs.append(ipix.tolist())
-    return ipixs
+
+        if moc is None:
+            moc = MOC.from_polygon_skycoord(coords)
+        else:
+            moc = moc + MOC.from_polygon_skycoord(coords)
+
+    return moc

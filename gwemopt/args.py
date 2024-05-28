@@ -37,7 +37,6 @@ def parse_args(args):
     parser.add_argument("--doPerturbativeTiling", action="store_true", default=False)
     parser.add_argument("--doOrderByObservability", action="store_true", default=False)
 
-    parser.add_argument("--doUseCatalog", action="store_true", default=False)
     parser.add_argument("--catalogDir", help="catalog directory", default=CATALOG_DIR)
     parser.add_argument(
         "--catalog", help="Galaxy catalog name (e.g GLADE)", default=None
@@ -54,7 +53,6 @@ def parse_args(args):
         type=int,
         default=2000,
     )
-    parser.add_argument("--doObservability", action="store_true", default=False)
 
     parser.add_argument("--doEfficiency", action="store_true", default=False)
     parser.add_argument(
@@ -83,7 +81,6 @@ def parse_args(args):
 
     parser.add_argument("--Ndet", default=1, type=int)
     parser.add_argument("--nside", default=256, type=int)
-    parser.add_argument("--DScale", default=1.0, type=float)
     parser.add_argument("--Tobs", default="0.0,1.0")
 
     parser.add_argument("--mindiff", default=0.0, type=float)
@@ -111,8 +108,6 @@ def parse_args(args):
     parser.add_argument("--doSingleExposure", action="store_true", default=False)
     parser.add_argument("--filters", default="r,g,r")
     parser.add_argument("--doAlternatingFilters", action="store_true", default=False)
-    parser.add_argument("--doRASlices", action="store_true", default=False)
-    parser.add_argument("--nside_down", default=2, type=int)
     parser.add_argument("--max_filter_sets", default=4, type=int)
     parser.add_argument("--iterativeOverlap", default=0.0, type=float)
     parser.add_argument("--maximumOverlap", default=1.0, type=float)
@@ -137,10 +132,8 @@ def parse_args(args):
     parser.add_argument("--doBlocks", action="store_true", default=False)
     parser.add_argument("--Nblocks", default=4, type=int)
 
-    parser.add_argument("--doRASlice", action="store_true", default=False)
-    parser.add_argument("--raslice", default="0.0,24.0")
-
     parser.add_argument("--absmag", default=-15.0, type=float)
+    parser.add_argument("--raslice", default=None)
 
     parser.add_argument(
         "--galactic_limit", help="Galactic limit.", default=0.0, type=float
@@ -155,10 +148,9 @@ def parse_args(args):
     parser.add_argument("--true_inclination", default=0.0, type=float)
 
     parser.add_argument("--doTrueLocation", action="store_true", default=False)
-    parser.add_argument("--observability_thresh", default=0.05, type=float)
-    parser.add_argument("--doObservabilityExit", action="store_true", default=False)
 
     parser.add_argument("--inclination", action="store_true", default=False)
+    parser.add_argument("--projection", default="astro mollweide")
 
     parser.add_argument("--solverType", default="heuristic")
     parser.add_argument("--milpSolver", default="PULP_CBC_CMD")

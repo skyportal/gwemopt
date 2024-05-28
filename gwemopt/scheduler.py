@@ -118,13 +118,13 @@ def get_order_heuristic(
     for jj, key in enumerate(keys):
         tileprobs[jj] = tile_struct[key]["prob"]
         tilenexps[jj] = tile_struct[key]["nexposures"]
-        try:
+
+        if type(tile_struct[key]["exposureTime"]) in [float, np.float64]:
             tileexpdur[jj] = tile_struct[key]["exposureTime"]
-        except:
-            try:
-                tileexpdur[jj] = tile_struct[key]["exposureTime"][0]
-            except:
-                tileexpdur[jj] = 0.0
+        elif type(tile_struct[key]["exposureTime"]) in [list, np.ndarray]:
+            tileexpdur[jj] = tile_struct[key]["exposureTime"][0]
+        else:
+            tileexpdur[jj] = 0.0
 
         tilefilts[key] = copy.deepcopy(tile_struct[key]["filt"])
         tileavailable_tiles[jj] = []
@@ -603,9 +603,7 @@ def scheduler(params, config_struct, tile_struct):
     coverage_struct = {}
     coverage_struct["data"] = np.empty((0, 8))
     coverage_struct["filters"] = []
-    coverage_struct["ipix"] = []
-    coverage_struct["patch"] = []
-    coverage_struct["area"] = []
+    coverage_struct["moc"] = []
     if params["tilesType"] == "galaxy":
         coverage_struct["galaxies"] = []
 
@@ -714,13 +712,10 @@ def scheduler(params, config_struct, tile_struct):
             )
 
             coverage_struct["filters"].append(filt)
-            coverage_struct["patch"].append(tile_struct_hold["patch"])
-            coverage_struct["ipix"].append(tile_struct_hold["ipix"])
-            coverage_struct["area"].append(tile_struct_hold["area"])
+            coverage_struct["moc"].append(tile_struct_hold["moc"])
             if params["tilesType"] == "galaxy":
                 coverage_struct["galaxies"].append(tile_struct_hold["galaxies"])
 
-    coverage_struct["area"] = np.array(coverage_struct["area"])
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
     coverage_struct["FOV"] = [config_struct["FOV"]] * len(coverage_struct["filters"])
     coverage_struct["telescope"] = [config_struct["telescope"]] * len(
@@ -743,166 +738,3 @@ def computeSlewReadoutTime(config_struct, coverage_struct):
         prev_dec = dat[0]
         prev_ra = dat[1]
     return acc_time
-
-
-def schedule_ra_splits(
-    params,
-    config_struct,
-    map_struct_hold,
-    tile_struct,
-    telescope,
-    previous_coverage_struct,
-):
-    location = astropy.coordinates.EarthLocation(
-        config_struct["longitude"],
-        config_struct["latitude"],
-        config_struct["elevation"],
-    )
-
-    raslices = gwemopt.utils.utils.auto_rasplit(
-        params, map_struct_hold, params["nside_down"]
-    )
-
-    maxidx = 0
-    coverage_structs = []
-    skip = False
-    while len(raslices) != 0:
-        params["unbalanced_tiles"] = []
-        config_struct["exposurelist"] = segments.segmentlist(
-            config_struct["exposurelist"][maxidx:]
-        )
-        if len(config_struct["exposurelist"]) < 2:
-            break
-
-        map_struct_slice = copy.deepcopy(map_struct_hold)
-
-        exposurelist = np.array_split(config_struct["exposurelist"], len(raslices))[0]
-        minhas = []
-        minhas_late = []
-        try_end = False
-        if len(raslices) == 1:
-            raslice = raslices[0]
-            del raslices[0]
-        else:
-            for raslice in raslices:
-                has = []
-                has_late = []
-                for seg in exposurelist:
-                    mjds = np.linspace(seg[0], seg[1], 100)
-                    tt = Time(mjds, format="mjd", scale="utc", location=location)
-                    lst = tt.sidereal_time("mean") / u.hourangle
-                    ha = np.abs(lst - raslice[0])
-                    ha_late = np.abs(lst - raslice[1])
-
-                    idx = np.where(ha > 12.0)[0]
-                    ha[idx] = 24.0 - ha[idx]
-                    idx_late = np.where(ha_late > 12.0)[0]
-                    ha_late[idx_late] = 24.0 - ha_late[idx_late]
-                    has += list(ha)
-                    has_late += list(ha_late)
-                if len(has) > 0:
-                    minhas.append(np.min(has))
-                if len(has_late) > 0:
-                    minhas_late.append(np.min(has_late))
-
-            if (len(minhas_late) > 0) and (len(has_late) > 0):
-                # conditions for trying to schedule end of slice
-                if np.min(minhas_late) <= 5.0 and np.min(has) > 4.0 and not skip:
-                    try_end = True
-                    min = np.argmin(minhas_late)
-                    raslice = raslices[min]
-                else:
-                    min = np.argmin(minhas)
-                    raslice = raslices[min]
-                    del raslices[min]
-            else:
-                min = np.argmin(minhas)
-                raslice = raslices[min]
-                del raslices[min]
-
-        # do RA slicing
-        ra_low, ra_high = raslice[0], raslice[1]
-        ra = map_struct_slice["ra"]
-        if ra_low <= ra_high:
-            ipix = np.where(
-                (ra_high * 360.0 / 24.0 < ra) | (ra_low * 360.0 / 24.0 > ra)
-            )[0]
-        else:
-            ipix = np.where(
-                (ra_high * 360.0 / 24.0 < ra) & (ra_low * 360.0 / 24.0 > ra)
-            )[0]
-
-        map_struct_slice["prob"][ipix] = 0.0
-
-        if params["timeallocationType"] == "absmag":
-            tile_struct = gwemopt.tiles.absmag_tiles_struct(
-                params, config_struct, telescope, map_struct_slice, tile_struct
-            )
-        else:
-            tile_struct = gwemopt.tiles.powerlaw_tiles_struct(
-                params, config_struct, telescope, map_struct_slice, tile_struct
-            )
-
-        config_struct_hold = copy.copy(config_struct)
-        coverage_struct, tile_struct = schedule_alternating(
-            params,
-            config_struct_hold,
-            telescope,
-            map_struct_slice,
-            tile_struct,
-            previous_coverage_struct,
-        )
-        if len(coverage_struct["ipix"]) == 0:
-            continue
-        optimized_max, coverage_struct, tile_struct = optimize_max_tiles(
-            params,
-            tile_struct,
-            coverage_struct,
-            config_struct,
-            telescope,
-            map_struct_slice,
-        )
-        params["max_nb_tiles"] = np.array([optimized_max], dtype=float)
-        balanced_fields = 0
-        coverage_struct, tile_struct = schedule_alternating(
-            params,
-            config_struct,
-            telescope,
-            map_struct_slice,
-            tile_struct,
-            previous_coverage_struct,
-        )
-
-        doReschedule, balanced_fields = balance_tiles(
-            params, tile_struct, coverage_struct
-        )
-        config_struct_hold = copy.copy(config_struct)
-
-        if balanced_fields == 0:
-            if try_end:
-                skip = True
-            continue
-        elif try_end:
-            del raslices[min]
-        skip = False
-
-        if len(coverage_struct["exposureused"]) > 0:
-            maxidx = int(coverage_struct["exposureused"][-1])
-
-        coverage_struct = gwemopt.utils.utils.erase_unbalanced_tiles(
-            params, coverage_struct
-        )
-
-        # limit to max number of filter sets
-        if len(coverage_structs) < params["max_filter_sets"]:
-            coverage_structs.append(coverage_struct)
-        else:
-            prob_structs = [
-                np.sum(prev_struct["data"][:, 6]) for prev_struct in coverage_structs
-            ]
-            if np.any(np.array(prob_structs) < np.sum(coverage_struct["data"][:, 6])):
-                argmin = np.argmin(prob_structs)
-                del coverage_structs[argmin]
-                coverage_structs.append(coverage_struct)
-
-    return gwemopt.coverage.combine_coverage_structs(coverage_structs)
