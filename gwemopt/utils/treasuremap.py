@@ -45,7 +45,7 @@ def get_treasuremap_pointings(params):
     coverage_struct = {}
     coverage_struct["data"] = np.empty((0, 8))
     coverage_struct["filters"] = []
-    coverage_struct["ipix"] = []
+    coverage_struct["moc"] = []
 
     # read information into coverage struct
     for obs in observations:
@@ -60,7 +60,7 @@ def get_treasuremap_pointings(params):
         ra, dec = float(pointing[0]), float(pointing[1])
 
         filteridx = obs.find("band") + 10  # jump to starting index of filter
-        filter = obs[filteridx:].split('"')[0][:-1]
+        filt = obs[filteridx:].split('"')[0][:-1]
 
         instrumentidx = (
             obs.find("instrumentid") + 16
@@ -68,13 +68,9 @@ def get_treasuremap_pointings(params):
         instrument_id = int(obs[instrumentidx:].split(",")[0])
 
         if instrument_id in FOV_square:
-            ipix, radecs, patch, area = getSquarePixels(
-                ra, dec, FOV_square[instrument_id], params["nside"]
-            )
+            moc = getSquarePixels(ra, dec, FOV_square[instrument_id])
         elif instrument_id in FOV_circle:
-            ipix, radecs, patch, area = getCirclePixels(
-                ra, dec, FOV_circle[instrument_id], params["nside"]
-            )
+            moc = getCirclePixels(ra, dec, FOV_circle[instrument_id])
         else:
             continue
 
@@ -83,7 +79,7 @@ def get_treasuremap_pointings(params):
             np.array([[ra, dec, -1, -1, -1, -1, -1, -1]]),
             axis=0,
         )
-        coverage_struct["filters"].append(filter)
-        coverage_struct["ipix"].append(ipix)
+        coverage_struct["filters"].append(filt)
+        coverage_struct["moc"].append(moc)
 
     return coverage_struct

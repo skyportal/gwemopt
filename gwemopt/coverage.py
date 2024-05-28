@@ -363,11 +363,6 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                         "need to specify tiles that have been observed using --observedTiles"
                     )
 
-            if params["treasuremap_token"] is not None and previous_coverage_struct:
-                tile_struct = update_observed_tiles(
-                    params, tile_struct, previous_coverage_struct
-                )  # coverage_struct of the previous round
-
             coverage_struct = gwemopt.scheduler.scheduler(
                 params, config_struct, tile_struct
             )
@@ -408,35 +403,6 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
     map_struct["skymap"] = full_prob_map
 
     return tile_structs, combine_coverage_structs(coverage_structs)
-
-
-def update_observed_tiles(params, tile_struct, previous_coverage_struct):
-    if not params["doAlternatingFilters"]:
-        tile_struct = check_overlapping_tiles(
-            params, tile_struct, previous_coverage_struct
-        )  # maps field ids to tile_struct
-
-    for key in tile_struct.keys():  # sets tile to 0 if previously observed
-        if "epochs" not in tile_struct[key]:
-            continue
-        ipix = tile_struct[key]["ipix"]
-
-        tot_overlap = sum(
-            tile_struct[key]["epochs_overlap"]
-        )  # sums over list of overlapping ipix lengths
-
-        if params["doAlternatingFilters"]:
-            # only takes into account fields with same filters for total overlap
-            for ii, filt in enumerate(tile_struct[key]["epochs_filters"]):
-                if filt != params["filters"][0]:
-                    tot_overlap -= tile_struct[key]["epochs_overlap"][ii]
-
-        rat = tot_overlap / len(ipix)
-
-        if rat > 0.3:
-            tile_struct[key]["prob"] = 0.0
-
-    return tile_struct
 
 
 def timeallocation(params, map_struct, tile_structs, previous_coverage_struct=None):
@@ -506,7 +472,7 @@ def timeallocation(params, map_struct, tile_structs, previous_coverage_struct=No
                 )
 
                 coverage_structs.append(coverage_struct)
-                for ii in range(len(coverage_struct["ipix"])):
+                for ii in range(len(coverage_struct["moc"])):
                     telescope = coverage_struct["telescope"][ii]
                     scheduled_fields[telescope].append(
                         coverage_struct["data"][ii, 5]

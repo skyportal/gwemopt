@@ -622,12 +622,6 @@ def schedule_alternating(
                 params, config_struct, telescope, map_struct, tile_struct
             )
 
-        if params["treasuremap_token"] is not None and previous_coverage_struct:
-            # erases tiles from a previous round
-            tile_struct = gwemopt.coverage.update_observed_tiles(
-                params, tile_struct_hold, previous_coverage_struct
-            )
-
         # set unbalanced fields to 0
         if params["doBalanceExposure"] and params["unbalanced_tiles"]:
             for key in params["unbalanced_tiles"]:
