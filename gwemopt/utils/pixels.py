@@ -40,9 +40,6 @@ def getRegionPixels(
     dec_pointing,
     regions,
     nside,
-    alpha=0.4,
-    color="k",
-    edgecolor="k",
 ):
     theta = 0.5 * np.pi - np.deg2rad(dec_pointing)
     phi = np.deg2rad(ra_pointing)
@@ -83,9 +80,6 @@ def getCirclePixels(
     ra_pointing,
     dec_pointing,
     radius,
-    alpha=0.4,
-    color="k",
-    edgecolor="k",
 ):
 
     radecs = get_ellipse_coords(
@@ -117,9 +111,6 @@ def getRectanglePixels(
     dec_pointing,
     raSide,
     decSide,
-    alpha=0.4,
-    color="k",
-    edgecolor="k",
 ):
     area = raSide * decSide
 
@@ -176,9 +167,6 @@ def getSquarePixels(
     ra_pointing,
     dec_pointing,
     tileSide,
-    alpha=0.4,
-    color="k",
-    edgecolor="k",
 ):
     area = tileSide * tileSide
 
