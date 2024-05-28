@@ -2,8 +2,10 @@ import copy
 
 import healpy as hp
 import numpy as np
+from astropy.table import Table
 from astroquery.vizier import Vizier
 from ligo.skymap import distance
+from ligo.skymap.bayestar import derasterize
 from scipy.stats import norm
 
 from gwemopt.catalogs.clu import CluCatalog
@@ -63,7 +65,7 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
 
     n, cl = params["powerlaw_n"], params["powerlaw_cl"]
 
-    prob_scaled = copy.deepcopy(map_struct["prob"])
+    prob_scaled = copy.deepcopy(map_struct["skymap_raster"]["PROB"])
     prob_sorted = np.sort(prob_scaled)[::-1]
     prob_indexes = np.argsort(prob_scaled)[::-1]
     prob_cumsum = np.cumsum(prob_sorted)
@@ -72,34 +74,42 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
     prob_scaled = prob_scaled**n
 
     ipix = hp.ang2pix(
-        map_struct["nside"],
+        params["nside"],
         np.array(cat_df["ra"]),
         np.array(cat_df["dec"]),
         lonlat=True,
     )
 
-    if "distnorm" in map_struct:
-        if map_struct["distnorm"] is not None:
+    if "DISTNORM" in map_struct:
+        if map_struct["skymap_raster"]["DISTNORM"] is not None:
             # creat an mask to cut at 3 sigma in distance
             mask = np.zeros(len(cat_df["distmpc"]))
 
-            # calculate the moments from distmu, distsigma and distnorm
-            mom_mean, mom_std, mom_norm = distance.parameters_to_moments(
-                map_struct["distmu"], map_struct["distsigma"]
-            )
-
             condition_indexer = np.where(
-                (cat_df["distmpc"] < (mom_mean[ipix] + (3 * mom_std[ipix])))
-                & (cat_df["distmpc"] > (mom_mean[ipix] - (3 * mom_std[ipix])))
+                (
+                    cat_df["distmpc"]
+                    < (
+                        map_struct["skymap_raster"]["DISTMEAN"][ipix]
+                        + (3 * map_struct["skymap_raster"]["DISTSTD"][ipix])
+                    )
+                )
+                & (
+                    cat_df["distmpc"]
+                    > (
+                        map_struct["skymap_raster"]["DISTMEAN"][ipix]
+                        - (3 * map_struct["skymap_raster"]["DISTSTD"][ipix])
+                    )
+                )
             )
             mask[condition_indexer] = 1
 
             s_loc = (
                 prob_scaled[ipix]
                 * (
-                    map_struct["distnorm"][ipix]
+                    map_struct["skymap_raster"]["DISTNORM"][ipix]
                     * norm(
-                        map_struct["distmu"][ipix], map_struct["distsigma"][ipix]
+                        map_struct["skymap_raster"]["DISTMU"][ipix],
+                        map_struct["skymap_raster"]["DISTSIGMA"][ipix],
                     ).pdf(cat_df["distmpc"])
                 )
                 ** params["powerlaw_dist_exp"]
@@ -202,7 +212,7 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
         s_mass = s_loc * (1 + (alpha_mass * beta_mass * s_mass))
 
     s = np.array(s_loc * Slum * sdet)
-    prob = np.zeros(map_struct["prob"].shape)
+    prob = np.zeros(map_struct["skymap_raster"]["PROB"].shape)
     if params["galaxy_grade"] == "Sloc":
         for j in range(len(ipix)):
             prob[ipix[j]] += s_loc[j]
@@ -220,11 +230,12 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
             "You are trying to use a galaxy grade that is not implemented yet."
         )
 
+    prob[np.isnan(prob)] = 0.0
     prob = prob / np.sum(prob)
 
-    map_struct["prob_catalog"] = prob
-    if params["doUseCatalog"]:
-        map_struct["prob"] = prob
+    map_struct["skymap_raster"]["PROB"] = prob
+    skymap = map_struct["skymap_raster"].copy()
+    map_struct["skymap"] = derasterize(skymap)
 
     cat_df["grade"] = grade
     cat_df["S"] = s

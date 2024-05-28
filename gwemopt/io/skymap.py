@@ -294,7 +294,6 @@ def read_skymap(params, map_struct=None):
     LEVEL = MOC.MAX_ORDER
     shift = 2 * (LEVEL - level)
     hpx = np.array(np.vstack([ipix << shift, (ipix + 1) << shift]), dtype=np.uint64).T
-    map_struct["skymap"]["HPX"] = hpx
     nside = ah.level_to_nside(level)
     pixel_area = ah.nside_to_pixel_area(ah.level_to_nside(level))
     ra, dec = ah.healpix_to_lonlat(ipix, nside, order="nested")
@@ -318,7 +317,14 @@ def read_skymap(params, map_struct=None):
         ipix = np.where(np.abs(coords.galactic.b.deg) <= params["galactic_limit"])[0]
         map_struct["skymap"]["PROBDENSITY"][ipix] = 0.0
 
-    map_struct["skymap_raster"] = rasterize(map_struct["skymap"])
+    map_struct["skymap_raster"] = rasterize(
+        map_struct["skymap"], order=hp.nside2order(int(params["nside"]))
+    )
+    peak = map_struct["skymap_raster"][
+        map_struct["skymap_raster"]["PROB"]
+        == np.max(map_struct["skymap_raster"]["PROB"])
+    ]
+    map_struct["center"] = SkyCoord(peak["ra"][0] * u.deg, peak["dec"][0] * u.deg)
 
     if "DISTMU" in map_struct["skymap_raster"].columns:
         (
@@ -358,18 +364,6 @@ def read_skymap(params, map_struct=None):
 
     i = cumprob.searchsorted(params["iterativeOverlap"])
     skymap_keep = skymap_sorted[:i]
-
-    if params["iterativeOverlap"] > 0:
-
-        tab = rasterize(skymap_keep)
-        hdu = fits.table_to_hdu(tab)
-        hdu.header.extend(extra_header)
-
-        fig = plt.figure(figsize=(4, 4), dpi=100)
-        ax = plt.axes([0.05, 0.05, 0.9, 0.9], projection="astro mollweide")
-        ax.imshow_hpx(hdu, cmap="cylon")
-        fig.savefig("keep.pdf")
-
     map_struct["moc_keep"] = skymap_keep
 
     return params, map_struct

@@ -6,8 +6,6 @@ from astropy.io import fits
 from ligo.skymap import moc
 from matplotlib import pyplot as plt
 
-from gwemopt.plotting.style import CBAR_BOOL, UNIT, add_edges, cmap
-
 
 def plot_skymap(params, map_struct, colnames=["PROB", "DISTMEAN", "DISTSTD"]):
     """
@@ -23,8 +21,13 @@ def plot_skymap(params, map_struct, colnames=["PROB", "DISTMEAN", "DISTSTD"]):
         if col in columns:
 
             fig = plt.figure(figsize=(8, 6), dpi=100)
-            ax = plt.axes([0.05, 0.05, 0.9, 0.9], projection="astro mollweide")
+            ax = plt.axes(
+                [0.05, 0.05, 0.9, 0.9],
+                center=map_struct["center"],
+                projection=params["projection"],
+            )
             ax.imshow_hpx(hdu, field=columns.index(col), cmap="cylon")
+            ax.grid()
             plot_name = params["outputDir"].joinpath(f"{col.lower()}.pdf")
             plt.savefig(plot_name, dpi=200)
             plt.close()

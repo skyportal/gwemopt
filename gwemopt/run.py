@@ -19,7 +19,6 @@ from gwemopt.plotting import (
     make_efficiency_plots,
     make_tile_plots,
     plot_inclination,
-    plot_observability,
     plot_skymap,
 )
 from gwemopt.utils import calculate_observability
@@ -70,45 +69,6 @@ def run(args=None):
         plot_skymap(params, map_struct)
         if args.inclination:
             plot_inclination(params, map_struct)
-
-    if args.doObservability:
-        print("Calculating observability")
-        observability_struct = calculate_observability(params, map_struct)
-        map_struct["observability"] = observability_struct
-        if args.doPlots:
-            print("Plotting observability...")
-            plot_observability(params, map_struct)
-
-        if args.doObservabilityExit:
-            for telescope in params["telescopes"]:
-                if (
-                    np.sum(observability_struct[telescope]["prob"])
-                    < args.observability_thresh
-                ):
-                    print(
-                        "Observability for %s: %.5f < %.5f... exiting."
-                        % (
-                            telescope,
-                            np.sum(observability_struct[telescope]["prob"]),
-                            args.observability_thresh,
-                        )
-                    )
-
-                    if params["doTrueLocation"]:
-                        lightcurve_structs = gwemopt.lightcurve.read_files(
-                            params, params["lightcurveFiles"]
-                        )
-                        for key in lightcurve_structs.keys():
-                            filename = os.path.join(
-                                params["outputDir"],
-                                "efficiency_true_"
-                                + lightcurve_structs[key]["name"]
-                                + ".txt",
-                            )
-                            fid = open(filename, "w")
-                            fid.write("0")
-                            fid.close()
-                    exit(0)
 
     if params["splitType"] is not None:
         print("Splitting skymap...")

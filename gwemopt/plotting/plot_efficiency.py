@@ -2,8 +2,6 @@ import healpy as hp
 import matplotlib.pyplot as plt
 import numpy as np
 
-from gwemopt.plotting.style import CBAR_BOOL, UNIT, add_edges
-
 
 def make_efficiency_plots(params, map_struct, efficiency_structs):
     plot_name = params["outputDir"].joinpath("efficiency.pdf")
@@ -27,16 +25,6 @@ def make_efficiency_plots(params, map_struct, efficiency_structs):
     plt.plot(efficiency_struct["ra"], efficiency_struct["dec"], "kx")
     plt.xlabel("RA [Degrees]")
     plt.ylabel("Declination [Degrees]")
-    plt.savefig(plot_name, dpi=200)
-    plt.close()
-
-    plot_name = params["outputDir"].joinpath("mollview_injs.pdf")
-    plt.figure()
-    hp.mollview(map_struct["prob"], unit=UNIT, cbar=CBAR_BOOL)
-    hp.projplot(
-        efficiency_struct["ra"], efficiency_struct["dec"], "wx", lonlat=True, coord="G"
-    )
-    add_edges()
     plt.savefig(plot_name, dpi=200)
     plt.close()
 

@@ -13,25 +13,6 @@ plt.ioff()
 matplotlib.rcParams.update({"font.size": 16})
 matplotlib.rcParams["contour.negative_linestyle"] = "solid"
 
-UNIT = "Gravitational-wave probability"
-CBAR_BOOL = False
-
-
-def add_edges():
-    """
-    Add longitude and latitude lines to a healpix map.
-    """
-    hp.graticule()
-    plt.grid(True)
-    lons = np.arange(-150.0, 180, 30.0)
-    lats = np.zeros(lons.shape)
-    for lon, lat in zip(lons, lats):
-        hp.projtext(lon, lat, "%.0f" % lon, lonlat=True)
-    lats = np.arange(-60.0, 90, 30.0)
-    lons = np.zeros(lons.shape)
-    for lon, lat in zip(lons, lats):
-        hp.projtext(lon, lat, "%.0f" % lat, lonlat=True)
-
 
 def add_sun_moon(params, ax):
     """

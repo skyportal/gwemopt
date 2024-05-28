@@ -145,8 +145,10 @@ def params_struct(opts):
     else:
         params["end_time"] = time.Time(opts.end_time, format="isot", scale="utc")
 
-    params["inclination"] = (
-        opts.inclination if hasattr(opts, "true_location") else False
+    params["inclination"] = opts.inclination if hasattr(opts, "inclination") else False
+
+    params["projection"] = (
+        opts.projection if hasattr(opts, "projection") else "astro mollweide"
     )
 
     return params

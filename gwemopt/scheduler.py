@@ -118,13 +118,13 @@ def get_order(
     for jj, key in enumerate(keys):
         tileprobs[jj] = tile_struct[key]["prob"]
         tilenexps[jj] = tile_struct[key]["nexposures"]
-        try:
+
+        if type(tile_struct[key]["exposureTime"]) in [float, np.float64]:
             tileexpdur[jj] = tile_struct[key]["exposureTime"]
-        except:
-            try:
-                tileexpdur[jj] = tile_struct[key]["exposureTime"][0]
-            except:
-                tileexpdur[jj] = 0.0
+        elif type(tile_struct[key]["exposureTime"]) in [list, np.ndarray]:
+            tileexpdur[jj] = tile_struct[key]["exposureTime"][0]
+        else:
+            tileexpdur[jj] = 0.0
 
         tilefilts[key] = copy.deepcopy(tile_struct[key]["filt"])
         tileavailable_tiles[jj] = []

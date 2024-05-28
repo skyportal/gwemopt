@@ -270,15 +270,7 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
 
         fields_sum = np.sum(fields[:, 2:], axis=1)
         idx = np.where(fields_sum >= 2)[0]
-        print(
-            "%d/%d fields were observed at least twice\n" % (len(idx), len(fields_sum))
-        )
-
-        print(
-            "Integrated probability, All: %.5f, 2+: %.5f"
-            % (np.sum(fields[:, 1]), np.sum(fields[idx, 1]))
-        )
-
+        print("%d/%d fields were observed at least twice" % (len(idx), len(fields_sum)))
         print(f"Expected time spent on exposures: {totexp / 3600:.1f} hr.")
         slew_readout_time = computeSlewReadoutTime(config_struct, coverage_struct)
         print(f"Expected time spent on slewing and readout: {slew_readout_time:.0f} s.")
@@ -331,14 +323,14 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
                     cummoc = moc
                 else:
                     cummoc = cummoc + moc
-                cum_prob = 0  ## FIXME
+                cum_prob = cummoc.probability_in_multiordermap(map_struct["skymap"])
 
                 if params["tilesType"] == "galaxy":
                     galaxies = np.append(galaxies, coverage_struct["galaxies"][ii])
                     galaxies = np.unique(galaxies).astype(int)
                     cum_prob = np.sum(catalog_struct[params["galaxy_grade"]][galaxies])
 
-                cum_area = 0  ## FIXME
+                cum_area = cummoc.sky_fraction * 360**2 / np.pi
                 mjds.append(data[2])
                 mjds_floor.append(int(np.floor(data[2])))
 
