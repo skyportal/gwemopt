@@ -40,7 +40,7 @@ and
 }
 ```
 
-and for the ability to balance field exposures.
+and for the ability to balance field exposures [Dynamic scheduling: target of opportunity observations of gravitational wave events](https://academic.oup.com/mnras/article/495/4/4366/5849447).
 
 ```bibtex
 @article{Almualla:2020hbs,
