@@ -233,23 +233,6 @@ def create_galaxy_from_skyportal(params, map_struct, catalog_struct, regions=Non
 
 
 def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
-    nside = params["nside"]
-    npix = hp.nside2npix(nside)
-
-    if params["doMinimalTiling"]:
-        prob = map_struct["prob"]
-
-        n, cl, dist_exp = (
-            params["powerlaw_n"],
-            params["powerlaw_cl"],
-            params["powerlaw_dist_exp"],
-        )
-        prob_scaled = copy.deepcopy(prob)
-        prob_sorted = np.sort(prob_scaled)[::-1]
-        prob_indexes = np.argsort(prob_scaled)[::-1]
-        prob_cumsum = np.cumsum(prob_sorted)
-        index = np.argmin(np.abs(prob_cumsum - cl)) + 1
-        prob_indexes = prob_indexes[: index + 1]
 
     if "doUsePrimary" in params:
         doUsePrimary = params["doUsePrimary"]
@@ -260,13 +243,6 @@ def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
         doUseSecondary = params["doUseSecondary"]
     else:
         doUseSecondary = False
-
-    npix = hp.nside2npix(nside)
-    pixarea = hp.nside2pixarea(nside)
-
-    theta, phi = hp.pix2ang(nside, np.arange(npix))
-    ra = np.rad2deg(phi)
-    dec = np.rad2deg(0.5 * np.pi - theta)
 
     moc_structs = {}
     for telescope in params["telescopes"]:
@@ -279,7 +255,8 @@ def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
                 if tess.field_id not in field_ids[telescope]:
                     mocs.append(MOC.new_empty(29))
                     continue
-            mocs.append(skyportal2FOV(tess, nside))
+            moc = moc_from_tiles([tile.healpix for tile in tess.tiles], 2**29)
+            mocs.append(moc)
         for ii, tess in enumerate(tesselation):
             index = tess.field_id
 
@@ -301,11 +278,11 @@ def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
             moc_struct_new = copy.copy(moc_struct)
             if params["tilesType"] == "galaxy":
                 tile_probs = gwemopt.tiles.compute_tiles_map(
-                    params, moc_struct_new, prob, func="center"
+                    params, moc_struct_new, map_struct["skymap"], func="center"
                 )
             else:
                 tile_probs = gwemopt.tiles.compute_tiles_map(
-                    params, moc_struct_new, prob, func="np.sum(x)"
+                    params, moc_struct_new, map_struct["skymap"], func="np.sum(x)"
                 )
 
             keys = moc_struct.keys()
@@ -313,9 +290,8 @@ def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
             sort_idx = np.argsort(tile_probs)[::-1]
             csm = np.empty(len(tile_probs))
             csm[sort_idx] = np.cumsum(tile_probs[sort_idx])
-            moc_keep = np.where(csm <= cl)[0]
+            moc_keep = np.where(csm <= params["powerlaw_cl"])[0]
 
-            probs = []
             moc_struct = {}
             cnt = 0
             for ii, key in enumerate(keys):
@@ -326,12 +302,6 @@ def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
         moc_structs[telescope] = moc_struct
 
     return moc_structs
-
-
-def skyportal2FOV(tess, nside):
-    moc = moc_from_tiles([tile.healpix for tile in tess.tiles], 2**29)
-
-    return moc
 
 
 def moc_from_tiles(rangeSet, nside):
