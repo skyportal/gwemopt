@@ -276,7 +276,10 @@ def plot_coverage_scaled(params, map_struct, coverage_struct, plot_sun_moon, max
         moviedir = params["outputDir"].joinpath("movie")
         moviedir.mkdir(exist_ok=True, parents=True)
 
-        for jj in tqdm(range(len(mjds))):
+        def make_plot(jj, params, map_struct, coverage_struct):
+            hdu = map_struct["hdu"]
+            columns = [col.name for col in hdu.columns]
+
             mjd = mjds[jj]
             plot_name = moviedir.joinpath(f"coverage-{jj:04d}.png")
             title = f"Coverage Map: {mjd:.2f}"
@@ -309,6 +312,9 @@ def plot_coverage_scaled(params, map_struct, coverage_struct, plot_sun_moon, max
 
             plt.savefig(plot_name, dpi=200)
             plt.close()
+
+        for jj in tqdm(range(len(mjds))):
+            make_plot(jj, params, map_struct, coverage_struct)
 
         moviefiles = moviedir.joinpath("coverage-%04d.png")
         filename = params["outputDir"].joinpath("coverage.mpg")

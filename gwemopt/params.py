@@ -162,4 +162,8 @@ def params_struct(opts):
         json.loads(opts.milpOptions) if hasattr(opts, "milpOptions") else {}
     )
 
+    params["parallelBackend"] = (
+        opts.parallelBackend if hasattr(opts, "parallelBackend") else "threading"
+    )
+
     return params

@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 from gwemopt.utils.geometry import angular_distance
 from gwemopt.utils.misc import get_exposures
+from gwemopt.utils.parallel import tqdm_joblib
 from gwemopt.utils.sidereal_time import greenwich_sidereal_time
 
 # conversion between MJD (tt) and DJD (what ephem uses)
@@ -288,16 +289,17 @@ def get_segments_tiles(params, config_struct, tile_struct):
     moon_radecs = get_moon_radecs(segmentlist, observer)
 
     if params["doParallel"]:
-        tilesegmentlists = Parallel(
-            n_jobs=params["Ncores"],
-            backend="threading",
-            batch_size=int(len(radecs) / params["Ncores"]) + 1,
-        )(
-            delayed(get_segments_tile)(
-                config_struct, radec, segmentlist, moon_radecs, params["airmass"]
+        with tqdm_joblib(tqdm(desc="MOC creation", total=len(radecs))) as progress_bar:
+            tilesegmentlists = Parallel(
+                n_jobs=params["Ncores"],
+                backend=params["parallelBackend"],
+                batch_size=int(len(radecs) / params["Ncores"]) + 1,
+            )(
+                delayed(get_segments_tile)(
+                    config_struct, radec, segmentlist, moon_radecs, params["airmass"]
+                )
+                for radec in radecs
             )
-            for radec in tqdm(radecs)
-        )
         for ii, key in enumerate(keys):
             tile_struct[key]["segmentlist"] = tilesegmentlists[ii]
     else:

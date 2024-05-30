@@ -122,7 +122,10 @@ def get_order_heuristic(
         if type(tile_struct[key]["exposureTime"]) in [float, np.float64]:
             tileexpdur[jj] = tile_struct[key]["exposureTime"]
         elif type(tile_struct[key]["exposureTime"]) in [list, np.ndarray]:
-            tileexpdur[jj] = tile_struct[key]["exposureTime"][0]
+            if len(tile_struct[key]["exposureTime"]) > 0:
+                tileexpdur[jj] = tile_struct[key]["exposureTime"][0]
+            else:
+                tileexpdur[jj] = 0.0
         else:
             tileexpdur[jj] = 0.0
 

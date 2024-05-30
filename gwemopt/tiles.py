@@ -9,6 +9,7 @@ import pandas as pd
 from astropy import units as u
 from astropy.coordinates import ICRS, SkyCoord
 from astropy.time import Time
+from joblib import Parallel, delayed
 from mocpy import MOC
 from scipy.stats import norm
 from shapely.geometry import MultiPoint
@@ -18,6 +19,7 @@ import gwemopt
 import gwemopt.moc
 import gwemopt.segments
 from gwemopt.utils.geometry import angular_distance
+from gwemopt.utils.parallel import tqdm_joblib
 
 LEVEL = MOC.MAX_ORDER
 HPX = ah.HEALPix(nside=ah.level_to_nside(LEVEL), order="nested", frame=ICRS())
@@ -1083,8 +1085,27 @@ def compute_tiles_map(
     keys = tile_struct.keys()
     ntiles = len(keys)
     vals = np.nan * np.ones((ntiles,))
-    for ii, key in tqdm(enumerate(keys), total=len(keys)):
-        vals[ii] = tile_struct[key]["moc"].probability_in_multiordermap(skymap)
+
+    if params["doParallel"]:
+
+        def calculate_probability(moc, skymap):
+            return moc.probability_in_multiordermap(skymap)
+
+        with tqdm_joblib(
+            tqdm(desc="Probability calcuation", total=len(keys))
+        ) as progress_bar:
+            vals = Parallel(
+                n_jobs=params["Ncores"],
+                backend=params["parallelBackend"],
+                batch_size=int(len(keys) / params["Ncores"]) + 1,
+            )(
+                delayed(calculate_probability)(tile_struct[key]["moc"], skymap)
+                for key in keys
+            )
+            vals = np.array(vals)
+    else:
+        for ii, key in tqdm(enumerate(keys), total=len(keys)):
+            vals[ii] = tile_struct[key]["moc"].probability_in_multiordermap(skymap)
 
     return vals
 

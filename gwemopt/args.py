@@ -128,6 +128,7 @@ def parse_args(args):
 
     parser.add_argument("--doParallel", action="store_true", default=False)
     parser.add_argument("--Ncores", default=4, type=int)
+    parser.add_argument("--parallelBackend", default="threading")
 
     parser.add_argument("--doBlocks", action="store_true", default=False)
     parser.add_argument("--Nblocks", default=4, type=int)

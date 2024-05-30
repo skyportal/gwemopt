@@ -10,6 +10,7 @@ from tqdm import tqdm
 import gwemopt.tiles
 from gwemopt.chipgaps import get_decam_quadrant_moc, get_ztf_quadrant_moc
 from gwemopt.paths import CONFIG_DIR
+from gwemopt.utils.parallel import tqdm_joblib
 from gwemopt.utils.pixels import getCirclePixels, getRegionPixels, getSquarePixels
 
 
@@ -23,16 +24,19 @@ def create_moc(params, map_struct=None):
         moc_struct = {}
 
         if params["doParallel"]:
-            moclists = Parallel(
-                n_jobs=params["Ncores"],
-                backend="threading",
-                batch_size=int(len(tesselation) / params["Ncores"]) + 1,
-            )(
-                delayed(Fov2Moc)(
-                    params, config_struct, telescope, tess[1], tess[2], nside
+            with tqdm_joblib(
+                tqdm(desc="MOC creation", total=len(tesselation))
+            ) as progress_bar:
+                moclists = Parallel(
+                    n_jobs=params["Ncores"],
+                    backend=params["parallelBackend"],
+                    batch_size=int(len(tesselation) / params["Ncores"]) + 1,
+                )(
+                    delayed(Fov2Moc)(
+                        params, config_struct, telescope, tess[1], tess[2], nside
+                    )
+                    for tess in tesselation
                 )
-                for tess in tqdm(tesselation)
-            )
             for ii, tess in tqdm(enumerate(tesselation), total=len(tesselation)):
                 index, ra, dec = tess[0], tess[1], tess[2]
                 if (telescope == "ZTF") and params["doUsePrimary"] and (index > 880):
