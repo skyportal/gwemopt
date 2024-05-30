@@ -19,11 +19,11 @@ def make_tile_plots(params, map_struct, tiles_structs, plot_sun_moon=True):
     columns = [col.name for col in hdu.columns]
 
     fig = plt.figure(figsize=(8, 6), dpi=100)
-    ax = plt.axes(
-        [0.05, 0.05, 0.9, 0.9],
-        center=map_struct["center"],
-        projection=params["projection"],
-    )
+
+    args = {"projection": params["projection"]}
+    if args["projection"] == "astro globe":
+        args["center"] = map_struct["center"]
+    ax = plt.axes([0.05, 0.05, 0.9, 0.9], **args)
     ax.imshow_hpx(hdu, field=columns.index("PROB"), cmap="cylon")
     for telescope in tiles_structs:
         tiles_struct = tiles_structs[telescope]

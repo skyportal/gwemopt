@@ -20,11 +20,14 @@ def plot_skymap(params, map_struct, colnames=["PROB", "DISTMEAN", "DISTSTD"]):
     for col in colnames:
         if col in columns:
 
+            args = {"projection": params["projection"]}
+            if args["projection"] == "astro globe":
+                args["center"] = map_struct["center"]
+
             fig = plt.figure(figsize=(8, 6), dpi=100)
             ax = plt.axes(
                 [0.05, 0.05, 0.9, 0.9],
-                center=map_struct["center"],
-                projection=params["projection"],
+                **args,
             )
             ax.imshow_hpx(hdu, field=columns.index(col), cmap="cylon")
             ax.grid()

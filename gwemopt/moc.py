@@ -25,7 +25,7 @@ def create_moc(params, map_struct=None):
         if params["doParallel"]:
             moclists = Parallel(
                 n_jobs=params["Ncores"],
-                backend="multiprocessing",
+                backend="threading",
                 batch_size=int(len(tesselation) / params["Ncores"]) + 1,
             )(
                 delayed(Fov2Moc)(

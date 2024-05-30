@@ -23,11 +23,10 @@ def plot_tiles_coverage(params, map_struct, coverage_struct, plot_sun_moon=False
     columns = [col.name for col in hdu.columns]
 
     fig = plt.figure(figsize=(8, 6), dpi=100)
-    ax = plt.axes(
-        [0.05, 0.05, 0.9, 0.9],
-        center=map_struct["center"],
-        projection=params["projection"],
-    )
+    args = {"projection": params["projection"]}
+    if args["projection"] == "astro globe":
+        args["center"] = map_struct["center"]
+    ax = plt.axes([0.05, 0.05, 0.9, 0.9], **args)
     ax.imshow_hpx(hdu, field=columns.index("PROB"), cmap="cylon")
     ax.grid()
 
@@ -62,9 +61,10 @@ def plot_tiles_coverage_int(
     fig = plt.figure(figsize=(12, 8))
 
     gs = fig.add_gridspec(4, 1)
-    ax1 = fig.add_subplot(
-        gs[0:3, 0], center=map_struct["center"], projection=params["projection"]
-    )
+    args = {"projection": params["projection"]}
+    if args["projection"] == "astro globe":
+        args["center"] = map_struct["center"]
+    ax1 = fig.add_subplot(gs[0:3, 0], **args)
     ax2 = fig.add_subplot(gs[3, 0])
     ax3 = ax2.twinx()  # mirror them
 
@@ -240,11 +240,10 @@ def plot_coverage_scaled(params, map_struct, coverage_struct, plot_sun_moon, max
     columns = [col.name for col in hdu.columns]
 
     fig = plt.figure(figsize=(8, 6), dpi=100)
-    ax = plt.axes(
-        [0.05, 0.05, 0.9, 0.9],
-        center=map_struct["center"],
-        projection=params["projection"],
-    )
+    args = {"projection": params["projection"]}
+    if args["projection"] == "astro globe":
+        args["center"] = map_struct["center"]
+    ax = plt.axes([0.05, 0.05, 0.9, 0.9], **args)
     ax.imshow_hpx(hdu, field=columns.index("PROB"), cmap="cylon")
     ax.grid()
 
@@ -283,11 +282,10 @@ def plot_coverage_scaled(params, map_struct, coverage_struct, plot_sun_moon, max
             title = f"Coverage Map: {mjd:.2f}"
 
             fig = plt.figure(figsize=(8, 6), dpi=100)
-            ax = plt.axes(
-                [0.05, 0.05, 0.9, 0.9],
-                center=map_struct["center"],
-                projection=params["projection"],
-            )
+            args = {"projection": params["projection"]}
+            if args["projection"] == "astro globe":
+                args["center"] = map_struct["center"]
+            ax = plt.axes([0.05, 0.05, 0.9, 0.9], **args)
             ax.imshow_hpx(hdu, field=columns.index("PROB"), cmap="cylon")
             ax.grid()
 
