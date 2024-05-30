@@ -290,7 +290,7 @@ def get_segments_tiles(params, config_struct, tile_struct):
     if params["doParallel"]:
         tilesegmentlists = Parallel(
             n_jobs=params["Ncores"],
-            backend="multiprocessing",
+            backend="threading",
             batch_size=int(len(radecs) / params["Ncores"]) + 1,
         )(
             delayed(get_segments_tile)(
