@@ -46,6 +46,9 @@ def get_telescope_segments(params):
 
 def get_moon_radecs(segmentlist, observer):
     dt = 1.0 / 24.0
+    if len(segmentlist) == 0:
+        return []
+
     tt = np.arange(segmentlist[0][0], segmentlist[-1][1] + dt, dt)
     tt_DJD = tt - MJD_TO_DJD
 

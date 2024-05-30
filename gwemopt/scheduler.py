@@ -100,6 +100,7 @@ def get_order_heuristic(
         being the exposure time.
     Returns a list of tile indices in the order of observation.
     """
+
     keys = tile_struct.keys()
 
     exposureids_tiles = {}
@@ -205,7 +206,7 @@ def get_order_heuristic(
     idxs = -1 * np.ones((len(exposureids_tiles.keys()),))
     filts = ["n"] * len(exposureids_tiles.keys())
 
-    if nexps == 0:
+    if (nexps == 0) or (len(exposurelist) == 0):
         return idxs, filts
 
     if params["scheduleType"] == "airmass_weighted":
