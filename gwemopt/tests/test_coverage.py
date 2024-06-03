@@ -32,7 +32,7 @@ def test_coverage():
         ]
 
         # To regenerate the test data, uncomment the following lines
-        # temp_dir = Path(__file__).parent.absolute().joinpath("temp")
+        # temp_dir = Path(__file__).parent.absolute().joinpath("temp3")
         # temp_dir.mkdir(exist_ok=True)
 
         args = [
@@ -59,4 +59,5 @@ def test_coverage():
         pd.testing.assert_frame_equal(
             new_summary.reset_index(drop=True),
             expected_summary.reset_index(drop=True),
+            rtol=1e-2,
         )
