@@ -1,17 +1,20 @@
 import copy
 import os
 
+import astropy.units as u
 import healpy as hp
 import numpy as np
+import regions
+from astropy.coordinates import SkyCoord
 from joblib import Parallel, delayed
-from regions import Regions
+from mocpy import MOC
 from tqdm import tqdm
 
 import gwemopt.tiles
 from gwemopt.chipgaps import get_decam_quadrant_moc, get_ztf_quadrant_moc
 from gwemopt.paths import CONFIG_DIR
 from gwemopt.utils.parallel import tqdm_joblib
-from gwemopt.utils.pixels import getCirclePixels, getRegionPixels, getSquarePixels
+from gwemopt.utils.pixels import getRegionPixels
 
 
 def create_moc(params, map_struct=None):
@@ -114,24 +117,22 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
     moc_struct = {}
 
     if config_struct["FOV_type"] == "square":
-        moc = getSquarePixels(
-            ra_pointing,
-            dec_pointing,
-            config_struct["FOV"],
+        center = SkyCoord(ra_pointing, dec_pointing, unit="deg", frame="icrs")
+        region = regions.RectangleSkyRegion(
+            center, config_struct["FOV"] * u.deg, config_struct["FOV"] * u.deg
         )
+        moc = MOC.from_astropy_regions(region, max_depth=10)
     elif config_struct["FOV_type"] == "circle":
-        moc = getCirclePixels(
-            ra_pointing,
-            dec_pointing,
-            config_struct["FOV"],
-        )
+        center = SkyCoord(ra_pointing, dec_pointing, unit="deg", frame="icrs")
+        region = regions.CircleSkyRegion(center, radius=config_struct["FOV"] * u.deg)
+        moc = MOC.from_astropy_regions(region, max_depth=10)
     elif config_struct["FOV_type"] == "region":
         region_file = os.path.join(CONFIG_DIR, config_struct["FOV"])
-        regions = Regions.read(region_file, format="ds9")
+        region = regions.Regions.read(region_file, format="ds9")
         moc = getRegionPixels(
             ra_pointing,
             dec_pointing,
-            regions,
+            region,
             nside,
         )
     else:

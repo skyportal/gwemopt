@@ -212,21 +212,24 @@ def get_decam_ccds(ra, dec, save_footprint=False):
 
 
 def get_decam_quadrant_moc(ra, dec):
-    ccd_coords = get_decam_ccds(0, 0)
+    # ccd_coords = get_decam_ccds(0, 0)
 
-    skyoffset_frames = SkyCoord(ra, dec, unit=u.deg).skyoffset_frame()
-    ccd_coords_icrs = SkyCoord(
-        *np.tile(ccd_coords[:, np.newaxis, ...], (1, 1, 1)),
-        unit=u.deg,
-        frame=skyoffset_frames[:, np.newaxis, np.newaxis],
-    ).transform_to(ICRS)
+    # skyoffset_frames = SkyCoord(ra, dec, unit=u.deg).skyoffset_frame()
+    # ccd_coords_icrs = SkyCoord(
+    #    *np.tile(ccd_coords[:, np.newaxis, ...], (1, 1, 1)),
+    #    unit=u.deg,
+    #    frame=skyoffset_frames[:, np.newaxis, np.newaxis],
+    # ).transform_to(ICRS)
+
+    ccd_coords = get_decam_ccds(ra, dec)
+    ras, decs = ccd_coords[0], ccd_coords[1]
 
     moc = None
-    for subfield_id, coords in enumerate(ccd_coords_icrs[0]):
+    for ra, dec in zip(ras, decs):
         if moc is None:
-            moc = MOC.from_polygon_skycoord(coords)
+            moc = MOC.from_polygon(ra * u.deg, dec * u.deg)
         else:
-            moc = moc + MOC.from_polygon_skycoord(coords)
+            moc = moc + MOC.from_polygon(ra * u.deg, dec * u.deg)
 
     return moc
 

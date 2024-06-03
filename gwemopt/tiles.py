@@ -1087,25 +1087,15 @@ def compute_tiles_map(
     vals = np.nan * np.ones((ntiles,))
 
     if params["doParallel"]:
-
-        def calculate_probability(moc, skymap):
-            return moc.probability_in_multiordermap(skymap)
-
-        with tqdm_joblib(
-            tqdm(desc="Probability calcuation", total=len(keys))
-        ) as progress_bar:
-            vals = Parallel(
-                n_jobs=params["Ncores"],
-                backend=params["parallelBackend"],
-                batch_size=int(len(keys) / params["Ncores"]) + 1,
-            )(
-                delayed(calculate_probability)(tile_struct[key]["moc"], skymap)
-                for key in keys
-            )
-            vals = np.array(vals)
+        vals = MOC.probabilities_in_multiordermap(
+            [tile_struct[key]["moc"] for key in keys],
+            skymap,
+            n_threads=params["Ncores"],
+        )
     else:
-        for ii, key in tqdm(enumerate(keys), total=len(keys)):
-            vals[ii] = tile_struct[key]["moc"].probability_in_multiordermap(skymap)
+        vals = MOC.probabilities_in_multiordermap(
+            [tile_struct[key]["moc"] for key in keys], skymap
+        )
 
     return vals
 

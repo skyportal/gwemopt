@@ -6,9 +6,9 @@ import re
 import urllib.parse
 
 import numpy as np
+import regions
 import requests
-
-from gwemopt.utils.pixels import getCirclePixels, getSquarePixels
+from mocpy import MOC
 
 
 def get_treasuremap_pointings(params):
@@ -67,10 +67,19 @@ def get_treasuremap_pointings(params):
         )  # jump to starting index of instrument id
         instrument_id = int(obs[instrumentidx:].split(",")[0])
 
+        center = SkyCoord(ra, dec, unit="deg", frame="icrs")
         if instrument_id in FOV_square:
-            moc = getSquarePixels(ra, dec, FOV_square[instrument_id])
+            region = regions.RectangleSkyRegion(
+                center,
+                FOV_square[instrument_id] * u.deg,
+                FOV_square[instrument_id] * u.deg,
+            )
+            moc = MOC.from_astropy_regions(region, max_depth=10)
         elif instrument_id in FOV_circle:
-            moc = getCirclePixels(ra, dec, FOV_circle[instrument_id])
+            region = regions.CircleSkyRegion(
+                center, radius=FOV_circle[instrument_id] * u.deg
+            )
+            moc = MOC.from_astropy_regions(region, max_depth=10)
         else:
             continue
 

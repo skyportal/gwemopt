@@ -2,9 +2,11 @@ import copy
 
 import ligo.segments as segments
 import numpy as np
+import regions
 from astropy import units as u
 from astropy.coordinates import SkyCoord, get_sun
 from astropy.time import Time
+from mocpy import MOC
 from tqdm import tqdm
 
 import gwemopt.plotting
@@ -22,7 +24,6 @@ from gwemopt.tiles import (
     slice_map_tiles,
     slice_number_tiles,
 )
-from gwemopt.utils.pixels import getCirclePixels, getSquarePixels
 from gwemopt.utils.treasuremap import get_treasuremap_pointings
 
 
@@ -87,32 +88,20 @@ def read_coverage(params, telescope, filename, moc_struct=None):
         coverage_struct["filters"].append(filt)
 
         if moc_struct is None:
-            if telescope == "ATLAS":
-                alpha = 0.2
-                color = "#6c71c4"
-            elif telescope == "PS1":
-                alpha = 0.1
-                color = "#859900"
-            else:
-                alpha = 0.2
-                color = "#6c71c4"
-
             if config_struct["FOV_coverage_type"] == "square":
-                moc = getSquarePixels(
-                    ra,
-                    dec,
-                    config_struct["FOV_coverage"],
-                    alpha=alpha,
-                    color=color,
+                center = SkyCoord(ra, dec, unit="deg", frame="icrs")
+                region = regions.RectangleSkyRegion(
+                    center,
+                    config_struct["FOV_coverage"] * u.deg,
+                    config_struct["FOV_coverage"] * u.deg,
                 )
+                moc = MOC.from_astropy_regions(region, max_depth=10)
             elif config_struct["FOV_coverage_type"] == "circle":
-                moc = getCirclePixels(
-                    ra,
-                    dec,
-                    config_struct["FOV_coverage"],
-                    alpha=alpha,
-                    color=color,
+                center = SkyCoord(ra, dec, unit="deg", frame="icrs")
+                region = regions.CircleSkyRegion(
+                    center, radius=config_struct["FOV"] * u.deg
                 )
+                moc = MOC.from_astropy_regions(region, max_depth=10)
         else:
             moc = moc_struct[field]["moc"]
 
