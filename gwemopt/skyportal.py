@@ -1,7 +1,6 @@
 import copy
 
 import healpy as hp
-import ligo.segments as segments
 import numpy as np
 from mocpy import MOC
 from regions import CircleSkyRegion, PolygonSkyRegion, RectangleSkyRegion
@@ -255,7 +254,10 @@ def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
                 if tess.field_id not in field_ids[telescope]:
                     mocs.append(MOC.new_empty(29))
                     continue
-            moc = moc_from_tiles([tile.healpix for tile in tess.tiles], 2**29)
+            ranges = np.array(
+                [(tile.healpix.lower, tile.healpix.upper) for tile in tess.tiles]
+            )
+            moc = MOC.from_depth29_ranges(10, ranges)
             mocs.append(moc)
         for ii, tess in enumerate(tesselation):
             index = tess.field_id
@@ -302,15 +304,3 @@ def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
         moc_structs[telescope] = moc_struct
 
     return moc_structs
-
-
-def moc_from_tiles(rangeSet, nside):
-    depth = int(np.log2(nside))
-    segmentlist = segments.segmentlist()
-    for x in rangeSet:
-        segment = segments.segment(x.lower, x.upper - 1)
-        segmentlist = segmentlist + segments.segmentlist([segment])
-    segmentlist.coalesce()
-
-    MOCstr = f"{depth}/" + " ".join(map(lambda x: f"{x[0]}-{x[1]}", segmentlist))
-    return MOC.from_string(MOCstr)
