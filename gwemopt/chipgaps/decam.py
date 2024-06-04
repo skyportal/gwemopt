@@ -18,13 +18,16 @@
 This module contains the DECamtile class, which is used to calculate decam chip gaps
 """
 
+from array import array
+
 import astropy
 import healpy as hp
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import ICRS, SkyCoord
 from astropy.wcs import WCS
-from mocpy import MOC
+from mocpy import MOC, mocpy
+from tqdm import tqdm
 
 
 class DECamtile:
@@ -211,27 +214,26 @@ def get_decam_ccds(ra, dec, save_footprint=False):
     return np.transpose(offsets, (2, 0, 1))
 
 
-def get_decam_quadrant_moc(ra, dec):
-    # ccd_coords = get_decam_ccds(0, 0)
+def get_decam_quadrant_moc(ra, dec, n_threads=None):
+    ccd_coords = get_decam_ccds(0, 0)
 
-    # skyoffset_frames = SkyCoord(ra, dec, unit=u.deg).skyoffset_frame()
-    # ccd_coords_icrs = SkyCoord(
-    #    *np.tile(ccd_coords[:, np.newaxis, ...], (1, 1, 1)),
-    #    unit=u.deg,
-    #    frame=skyoffset_frames[:, np.newaxis, np.newaxis],
-    # ).transform_to(ICRS)
+    skyoffset_frames = SkyCoord(ra, dec, unit=u.deg).skyoffset_frame()
+    ccd_coords_icrs = SkyCoord(
+        *np.tile(ccd_coords[:, np.newaxis, ...], (1, 1, 1)),
+        unit=u.deg,
+        frame=skyoffset_frames[:, np.newaxis, np.newaxis],
+    ).transform_to(ICRS)
 
-    ccd_coords = get_decam_ccds(ra, dec)
-    ras, decs = ccd_coords[0], ccd_coords[1]
+    mocs = []
+    for ccd_coords in tqdm(ccd_coords_icrs):
+        stacked = np.stack((ccd_coords.ra.deg, ccd_coords.dec.deg), axis=1)
+        result = stacked.reshape(-1, ccd_coords.ra.deg.shape[1])
+        lon_lat_list = [row for row in result]
+        indices = mocpy.from_polygons(lon_lat_list, np.uint8(10), n_threads)
+        moc = sum([MOC(index) for index in indices])
+        mocs.append(moc)
 
-    moc = None
-    for ra, dec in zip(ras, decs):
-        if moc is None:
-            moc = MOC.from_polygon(ra * u.deg, dec * u.deg)
-        else:
-            moc = moc + MOC.from_polygon(ra * u.deg, dec * u.deg)
-
-    return moc
+    return mocs
 
 
 def ccd_xy_to_radec(alpha_p, delta_p, ccd_centers_xy):

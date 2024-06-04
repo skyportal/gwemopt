@@ -26,38 +26,81 @@ def create_moc(params, map_struct=None):
         tesselation = config_struct["tesselation"]
         moc_struct = {}
 
-        if params["doParallel"]:
-            with tqdm_joblib(
-                tqdm(desc="MOC creation", total=len(tesselation))
-            ) as progress_bar:
-                moclists = Parallel(
-                    n_jobs=params["Ncores"],
-                    backend=params["parallelBackend"],
-                    batch_size=int(len(tesselation) / params["Ncores"]) + 1,
-                )(
-                    delayed(Fov2Moc)(
-                        params, config_struct, telescope, tess[1], tess[2], nside
-                    )
-                    for tess in tesselation
+        if params["doChipGaps"]:
+            if params["doParallel"]:
+                n_threads = params["Ncores"]
+            else:
+                n_threads = None
+            if telescope == "ZTF":
+                mocs = get_ztf_quadrant_moc(
+                    tesselation[:, 1], tesselation[:, 2], n_threads=n_threads
                 )
-            for ii, tess in tqdm(enumerate(tesselation), total=len(tesselation)):
-                index, ra, dec = tess[0], tess[1], tess[2]
-                if (telescope == "ZTF") and params["doUsePrimary"] and (index > 880):
-                    continue
-                if (telescope == "ZTF") and params["doUseSecondary"] and (index < 1000):
-                    continue
-                moc_struct[index] = moclists[ii]
-        else:
-            for ii, tess in tqdm(enumerate(tesselation), total=len(tesselation)):
+            elif telescope == "DECam":
+                mocs = get_decam_quadrant_moc(
+                    tesselation[:, 1], tesselation[:, 2], n_threads=n_threads
+                )
+            else:
+                raise ValueError("Chip gaps only available for DECam and ZTF")
+
+            for ii, tess in enumerate(tesselation):
                 index, ra, dec = tess[0], tess[1], tess[2]
                 if (telescope == "ZTF") and params["doUsePrimary"] and (index > 880):
                     continue
                 if (telescope == "ZTF") and params["doUseSecondary"] and (index < 1000):
                     continue
                 index = index.astype(int)
-                moc_struct[index] = Fov2Moc(
-                    params, config_struct, telescope, ra, dec, nside
-                )
+                moc_struct[index] = {"ra": ra, "dec": dec, "moc": mocs[ii]}
+        else:
+            if params["doParallel"]:
+                with tqdm_joblib(
+                    tqdm(desc="MOC creation", total=len(tesselation))
+                ) as progress_bar:
+                    moclists = Parallel(
+                        n_jobs=params["Ncores"],
+                        backend=params["parallelBackend"],
+                        batch_size=int(len(tesselation) / params["Ncores"]) + 1,
+                    )(
+                        delayed(Fov2Moc)(
+                            params, config_struct, telescope, tess[1], tess[2], nside
+                        )
+                        for tess in tesselation
+                    )
+                for ii, tess in tqdm(enumerate(tesselation), total=len(tesselation)):
+                    index, ra, dec = tess[0], tess[1], tess[2]
+                    if (
+                        (telescope == "ZTF")
+                        and params["doUsePrimary"]
+                        and (index > 880)
+                    ):
+                        continue
+                    if (
+                        (telescope == "ZTF")
+                        and params["doUseSecondary"]
+                        and (index < 1000)
+                    ):
+                        continue
+                    moc_struct[index] = moclists[ii]
+            else:
+                moc = get_decam_quadrant_moc(tesselation[:, 1], tesselation[:, 2])
+
+                for ii, tess in tqdm(enumerate(tesselation), total=len(tesselation)):
+                    index, ra, dec = tess[0], tess[1], tess[2]
+                    if (
+                        (telescope == "ZTF")
+                        and params["doUsePrimary"]
+                        and (index > 880)
+                    ):
+                        continue
+                    if (
+                        (telescope == "ZTF")
+                        and params["doUseSecondary"]
+                        and (index < 1000)
+                    ):
+                        continue
+                    index = index.astype(int)
+                    moc_struct[index] = Fov2Moc(
+                        params, config_struct, telescope, ra, dec, nside
+                    )
 
         if map_struct is not None:
             moc_keep = map_struct["moc_keep"]
@@ -137,14 +180,6 @@ def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
         )
     else:
         raise ValueError("FOV_type must be square, circle or region")
-
-    if params["doChipGaps"]:
-        if telescope == "ZTF":
-            moc = get_ztf_quadrant_moc(ra_pointing, dec_pointing)
-        elif telescope == "DECam":
-            moc = get_decam_quadrant_moc(ra_pointing, dec_pointing)
-        else:
-            raise ValueError("Chip gaps only available for DECam and ZTF")
 
     moc_struct["ra"] = ra_pointing
     moc_struct["dec"] = dec_pointing

@@ -25,7 +25,8 @@ import numpy as np
 from astropy import units as u
 from astropy.coordinates import ICRS, SkyCoord
 from astropy.wcs import WCS
-from mocpy import MOC
+from mocpy import MOC, mocpy
+from tqdm import tqdm
 
 
 class ZTFtile:
@@ -274,7 +275,7 @@ def get_ztf_quadrants():
     return np.transpose(offsets, (2, 0, 1))
 
 
-def get_ztf_quadrant_moc(ra, dec, subfield_ids=None):
+def get_ztf_quadrant_moc(ra, dec, n_threads=None):
     quadrant_coords = get_ztf_quadrants()
 
     skyoffset_frames = SkyCoord(ra, dec, unit=u.deg).skyoffset_frame()
@@ -284,15 +285,13 @@ def get_ztf_quadrant_moc(ra, dec, subfield_ids=None):
         frame=skyoffset_frames[:, np.newaxis, np.newaxis],
     ).transform_to(ICRS)
 
-    moc = None
-    for subfield_id, coords in enumerate(quadrant_coords_icrs[0]):
-        if subfield_ids is not None:
-            if subfield_id not in subfield_ids:
-                continue
+    mocs = []
+    for ccd_coords in tqdm(quadrant_coords_icrs):
+        stacked = np.stack((ccd_coords.ra.deg, ccd_coords.dec.deg), axis=1)
+        result = stacked.reshape(-1, ccd_coords.ra.deg.shape[1])
+        lon_lat_list = [row for row in result]
+        indices = mocpy.from_polygons(lon_lat_list, np.uint8(10), n_threads)
+        moc = sum([MOC(index) for index in indices])
+        mocs.append(moc)
 
-        if moc is None:
-            moc = MOC.from_polygon_skycoord(coords)
-        else:
-            moc = moc + MOC.from_polygon_skycoord(coords)
-
-    return moc
+    return mocs

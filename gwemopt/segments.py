@@ -292,7 +292,9 @@ def get_segments_tiles(params, config_struct, tile_struct):
     moon_radecs = get_moon_radecs(segmentlist, observer)
 
     if params["doParallel"]:
-        with tqdm_joblib(tqdm(desc="MOC creation", total=len(radecs))) as progress_bar:
+        with tqdm_joblib(
+            tqdm(desc="segment generation", total=len(radecs))
+        ) as progress_bar:
             tilesegmentlists = Parallel(
                 n_jobs=params["Ncores"],
                 backend=params["parallelBackend"],
