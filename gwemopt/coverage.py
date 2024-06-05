@@ -174,9 +174,6 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
             )
 
         if params["doAlternatingFilters"]:
-            if params["doBlocks"]:
-                tile_struct = eject_tiles(params, telescope, tile_struct)
-
             params_hold = copy.copy(params)
             config_struct_hold = copy.copy(config_struct)
 
@@ -411,55 +408,9 @@ def timeallocation(params, map_struct, tile_structs, previous_coverage_struct=No
         if params["treasuremap_token"] is not None and not previous_coverage_struct:
             print("\nNo previous observations were ingested.\n")
 
-        if params["doBlocks"]:
-            exposurelists = {}
-            scheduled_fields = {}
-            for jj, telescope in enumerate(params["telescopes"]):
-                config_struct = params["config"][telescope]
-                exposurelist_split = np.array_split(
-                    config_struct["exposurelist"], params["Nblocks"]
-                )
-                exposurelists[telescope] = exposurelist_split
-                scheduled_fields[telescope] = []
-            tile_structs_hold = copy.copy(tile_structs)
-            coverage_structs = []
-
-            for ii in range(params["Nblocks"]):
-                params_hold = copy.copy(params)
-                params_hold["scheduled_fields"] = scheduled_fields
-                for jj, telescope in enumerate(params["telescopes"]):
-                    exposurelist = segments.segmentlist()
-                    for seg in exposurelists[telescope][ii]:
-                        exposurelist.append(segments.segment(seg[0], seg[1]))
-                    params_hold["config"][telescope]["exposurelist"] = exposurelist
-
-                    tile_structs_hold[telescope] = gwemopt.tiles.powerlaw_tiles_struct(
-                        params_hold,
-                        config_struct,
-                        telescope,
-                        map_struct,
-                        tile_structs_hold[telescope],
-                    )
-
-                tile_structs_hold, coverage_struct = gwemopt.coverage.powerlaw(
-                    params_hold,
-                    map_struct,
-                    tile_structs_hold,
-                    previous_coverage_struct,
-                )
-
-                coverage_structs.append(coverage_struct)
-                for ii in range(len(coverage_struct["moc"])):
-                    telescope = coverage_struct["telescope"][ii]
-                    scheduled_fields[telescope].append(
-                        coverage_struct["data"][ii, 5]
-                    )  # appends all scheduled fields to appropriate list
-
-            coverage_struct = combine_coverage_structs(coverage_structs)
-        else:
-            tile_structs, coverage_struct = gwemopt.coverage.powerlaw(
-                params, map_struct, tile_structs, previous_coverage_struct
-            )
+        tile_structs, coverage_struct = gwemopt.coverage.powerlaw(
+            params, map_struct, tile_structs, previous_coverage_struct
+        )
 
     elif params["timeallocationType"] == "manual":
         print("Generating manual schedule...")

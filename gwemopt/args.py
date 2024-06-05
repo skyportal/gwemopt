@@ -128,11 +128,6 @@ def parse_args(args):
     parser.add_argument("--Ncores", default=4, type=int)
     parser.add_argument("--parallelBackend", default="threading")
 
-    parser.add_argument("--doBlocks", action="store_true", default=False)
-    parser.add_argument("--Nblocks", default=4, type=int)
-
-    parser.add_argument("--absmag", default=-15.0, type=float)
-
     parser.add_argument(
         "--galactic_limit", help="Galactic limit.", default=0.0, type=float
     )
