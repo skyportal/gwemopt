@@ -69,7 +69,6 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
     prob_cumsum = np.cumsum(prob_sorted)
     index = np.argmin(np.abs(prob_cumsum - params["confidence_level"])) + 1
     prob_scaled[prob_indexes[index:]] = 0.0
-    prob_scaled = prob_scaled**n
 
     ipix = hp.ang2pix(
         params["nside"],
