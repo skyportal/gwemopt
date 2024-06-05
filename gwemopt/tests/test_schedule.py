@@ -38,7 +38,6 @@ def test_scheduler():
                     "--doCoverage",
                     "--coverageFiles",
                     os.path.join(temp_dir, "coverage_ZTF.dat"),
-                    "--doMovie",
                 ],
             ),
             (
