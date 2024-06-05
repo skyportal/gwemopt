@@ -47,8 +47,6 @@ def test_scheduler():
                 [
                     "--tilesType",
                     "galaxy",
-                    "--powerlaw_dist_exp",
-                    "1.0",
                     "--plots",
                     "coverage",
                     "--catalog",
