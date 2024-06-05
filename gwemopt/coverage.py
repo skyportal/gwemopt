@@ -144,18 +144,6 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
     full_prob_map = map_struct["skymap"]
 
     for jj, telescope in enumerate(params["telescopes"]):
-        if params["splitType"] is not None:
-            if "observability" in map_struct:
-                map_struct["observability"][telescope]["prob"] = map_struct["groups"][
-                    n_scope
-                ]
-            else:
-                map_struct["prob"] = map_struct["groups"][n_scope]
-            if n_scope < len(map_struct["groups"]) - 1:
-                n_scope += 1
-            else:
-                n_scope = 0
-
         config_struct = params["config"][telescope]
         tile_struct = tile_structs[telescope]
 
