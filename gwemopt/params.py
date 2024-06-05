@@ -11,6 +11,7 @@ from astropy import units as u
 import gwemopt
 from gwemopt.paths import CONFIG_DIR, REFS_DIR, TESSELATION_DIR
 from gwemopt.tiles import TILE_TYPES
+from gwemopt.utils import tesselation
 
 
 def params_struct(opts):
@@ -51,9 +52,9 @@ def params_struct(opts):
             )
             if not os.path.isfile(tessfile):
                 if params["config"][telescope]["FOV_type"] == "circle":
-                    gwemopt.tiles.tesselation_spiral(params["config"][telescope])
+                    tesselation.tesselation_spiral(params["config"][telescope])
                 elif params["config"][telescope]["FOV_type"] == "square":
-                    gwemopt.tiles.tesselation_packing(params["config"][telescope])
+                    tesselation.tesselation_packing(params["config"][telescope])
             if opts.tilesType == "galaxy":
                 params["config"][telescope]["tesselation"] = np.empty((3,))
             else:
@@ -165,5 +166,9 @@ def params_struct(opts):
     params["parallelBackend"] = (
         opts.parallelBackend if hasattr(opts, "parallelBackend") else "threading"
     )
+
+    params["movie"] = opts.movie if hasattr(opts, "movie") else False
+
+    params["plots"] = opts.plots.split(",") if hasattr(opts, "plots") else []
 
     return params

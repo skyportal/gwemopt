@@ -15,6 +15,7 @@ from gwemopt.io import get_skymap, read_skymap, summary
 from gwemopt.params import params_struct
 from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR
 from gwemopt.plotting import (
+    make_coverage_movie,
     make_coverage_plots,
     make_efficiency_plots,
     make_tile_plots,
@@ -64,7 +65,7 @@ def run(args=None):
     else:
         catalog_struct = None
 
-    if args.doPlots:
+    if "skymap" in params["plots"]:
         print("Plotting skymap...")
         plot_skymap(params, map_struct)
         if args.inclination:
@@ -97,7 +98,7 @@ def run(args=None):
         else:
             raise ValueError(f"Unknown tilesType: {params['tilesType']}")
 
-        if args.doPlots:
+        if "tiles" in params["plots"]:
             print("Plotting tiles struct...")
             make_tile_plots(params, map_struct, tile_structs)
 
@@ -120,10 +121,21 @@ def run(args=None):
         print("Summary of coverage...")
         summary(params, map_struct, coverage_struct, catalog_struct=catalog_struct)
 
-        print("Plotting coverage...")
-        make_coverage_plots(
-            params, map_struct, coverage_struct, catalog_struct=catalog_struct
-        )
+        if "coverage" in params["plots"]:
+            print("Plotting coverage...")
+            make_coverage_plots(
+                params,
+                map_struct,
+                coverage_struct,
+                catalog_struct=catalog_struct,
+            )
+
+        if params["movie"]:
+            make_coverage_movie(
+                params,
+                map_struct,
+                coverage_struct,
+            )
 
     if args.doEfficiency:
         if args.doSchedule or args.doCoverage:
@@ -155,7 +167,7 @@ def run(args=None):
                         f'{efficiency_structs[key]["3D"]*100:.2f}% '
                     )
 
-            if args.doPlots:
+            if "efficiency" in params["plots"]:
                 print("Plotting efficiency...")
                 make_efficiency_plots(params, map_struct, efficiency_structs)
         else:

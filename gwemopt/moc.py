@@ -81,8 +81,6 @@ def create_moc(params, map_struct=None):
                         continue
                     moc_struct[index] = moclists[ii]
             else:
-                moc = get_decam_quadrant_moc(tesselation[:, 1], tesselation[:, 2])
-
                 for ii, tess in tqdm(enumerate(tesselation), total=len(tesselation)):
                     index, ra, dec = tess[0], tess[1], tess[2]
                     if (

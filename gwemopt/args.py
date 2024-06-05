@@ -25,8 +25,12 @@ def parse_args(args):
         "--timeallocationType", help="time allocation type", default="powerlaw"
     )
 
-    parser.add_argument("--doPlots", action="store_true", default=False)
-    parser.add_argument("--doMovie", action="store_true", default=False)
+    parser.add_argument(
+        "--plots",
+        help="comma delimited list of plot types (skymap,tiles,coverage,schedule,efficiency)",
+        default="",
+    )
+    parser.add_argument("--movie", action="store_true", default=False)
     parser.add_argument("--doTiles", action="store_true", default=False)
     parser.add_argument("--tilesType", help="tiling type", default="moc")
     parser.add_argument("--doMindifFilt", action="store_true", default=False)

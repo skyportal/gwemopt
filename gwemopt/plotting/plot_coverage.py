@@ -264,62 +264,67 @@ def plot_coverage_scaled(params, map_struct, coverage_struct, plot_sun_moon, max
     plt.savefig(plot_name, dpi=200)
     plt.close()
 
-    if params["doMovie"]:
-        print("Creating movie from schedule...")
 
-        idx = np.isfinite(coverage_struct["data"][:, 2])
-        mjd_min = np.min(coverage_struct["data"][idx, 2])
-        mjd_max = np.max(coverage_struct["data"][idx, 2])
-        mjd_N = 100
+def plot_coverage_movie(params, map_struct, coverage_struct, plot_sun_moon, max_time):
 
-        mjds = np.linspace(mjd_min, mjd_max, num=mjd_N)
-        moviedir = params["outputDir"].joinpath("movie")
-        moviedir.mkdir(exist_ok=True, parents=True)
+    hdu = map_struct["hdu"]
+    columns = [col.name for col in hdu.columns]
 
-        def make_plot(jj, params, map_struct, coverage_struct):
-            hdu = map_struct["hdu"]
-            columns = [col.name for col in hdu.columns]
+    print("Creating movie from schedule...")
 
-            mjd = mjds[jj]
-            plot_name = moviedir.joinpath(f"coverage-{jj:04d}.png")
-            title = f"Coverage Map: {mjd:.2f}"
+    idx = np.isfinite(coverage_struct["data"][:, 2])
+    mjd_min = np.min(coverage_struct["data"][idx, 2])
+    mjd_max = np.max(coverage_struct["data"][idx, 2])
+    mjd_N = 100
 
-            fig = plt.figure(figsize=(8, 6), dpi=100)
-            args = {"projection": params["projection"]}
-            if args["projection"] == "astro globe":
-                args["center"] = map_struct["center"]
-            ax = plt.axes([0.05, 0.05, 0.9, 0.9], **args)
-            ax.imshow_hpx(hdu, field=columns.index("PROB"), cmap="cylon")
-            ax.grid()
+    mjds = np.linspace(mjd_min, mjd_max, num=mjd_N)
+    moviedir = params["outputDir"].joinpath("movie")
+    moviedir.mkdir(exist_ok=True, parents=True)
 
-            idx = np.where(coverage_struct["data"][:, 2] <= mjd)[0]
-            for ii in idx:
-                moc = coverage_struct["moc"][ii]
-                data = coverage_struct["data"][ii]
+    def make_plot(jj, params, map_struct, coverage_struct):
+        hdu = map_struct["hdu"]
+        columns = [col.name for col in hdu.columns]
 
-                alpha = data[4] / max_time
-                if alpha > 1:
-                    alpha = 1.0
+        mjd = mjds[jj]
+        plot_name = moviedir.joinpath(f"coverage-{jj:04d}.png")
+        title = f"Coverage Map: {mjd:.2f}"
 
-                moc.fill(
-                    ax=ax,
-                    wcs=ax.wcs,
-                    alpha=alpha,
-                    fill=True,
-                    color="black",
-                    linewidth=1,
-                )
+        fig = plt.figure(figsize=(8, 6), dpi=100)
+        args = {"projection": params["projection"]}
+        if args["projection"] == "astro globe":
+            args["center"] = map_struct["center"]
+        ax = plt.axes([0.05, 0.05, 0.9, 0.9], **args)
+        ax.imshow_hpx(hdu, field=columns.index("PROB"), cmap="cylon")
+        ax.grid()
 
-            plt.savefig(plot_name, dpi=200)
-            plt.close()
+        idx = np.where(coverage_struct["data"][:, 2] <= mjd)[0]
+        for ii in idx:
+            moc = coverage_struct["moc"][ii]
+            data = coverage_struct["data"][ii]
 
-        for jj in tqdm(range(len(mjds))):
-            make_plot(jj, params, map_struct, coverage_struct)
+            alpha = data[4] / max_time
+            if alpha > 1:
+                alpha = 1.0
 
-        moviefiles = moviedir.joinpath("coverage-%04d.png")
-        filename = params["outputDir"].joinpath("coverage.mpg")
+            moc.fill(
+                ax=ax,
+                wcs=ax.wcs,
+                alpha=alpha,
+                fill=True,
+                color="black",
+                linewidth=1,
+            )
 
-        make_movie(moviefiles, filename)
+        plt.savefig(plot_name, dpi=200)
+        plt.close()
+
+    for jj in tqdm(range(len(mjds))):
+        make_plot(jj, params, map_struct, coverage_struct)
+
+    moviefiles = moviedir.joinpath("coverage-%04d.png")
+    filename = params["outputDir"].joinpath("coverage.mpg")
+
+    make_movie(moviefiles, filename)
 
 
 def make_coverage_plots(
@@ -337,3 +342,16 @@ def make_coverage_plots(
     )
 
     plot_coverage_scaled(params, map_struct, coverage_struct, plot_sun_moon, max_time)
+
+
+def make_coverage_movie(
+    params, map_struct, coverage_struct, plot_sun_moon: bool = True
+):
+
+    idx = np.isfinite(coverage_struct["data"][:, 4])
+    if not idx.size:
+        return
+
+    max_time = np.max(coverage_struct["data"][idx, 4])
+
+    plot_coverage_movie(params, map_struct, coverage_struct, plot_sun_moon, max_time)

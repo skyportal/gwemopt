@@ -43,7 +43,6 @@ def test_coverage():
             "-e",
             str(test_skymap),
             "--doTiles",
-            "--doPlots",
             "--doCoverage",
             "--coverageFiles",
             ",".join(schedule_list),

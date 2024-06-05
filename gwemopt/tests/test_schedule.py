@@ -70,7 +70,6 @@ def test_scheduler():
                 "-e",
                 str(test_skymap),
                 "--doTiles",
-                "--doPlots",
                 "--doSchedule",
                 "--timeallocationType",
                 "powerlaw",

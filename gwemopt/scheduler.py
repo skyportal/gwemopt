@@ -639,7 +639,7 @@ def scheduler(params, config_struct, tile_struct):
     else:
         raise ValueError(f'Unknown solverType {params["solverType"]}')
 
-    if params["doPlots"]:
+    if "schedule" in params["plots"]:
         from gwemopt.plotting import make_schedule_plots
 
         make_schedule_plots(params, exposurelist, keys)
