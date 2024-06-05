@@ -35,6 +35,8 @@ def test_scheduler():
                     "--doReferences",
                     "--doChipGaps",
                     "--doEfficiency",
+                    "--plots",
+                    "coverage",
                     "--doCoverage",
                     "--coverageFiles",
                     os.path.join(temp_dir, "coverage_ZTF.dat"),
