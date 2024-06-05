@@ -300,18 +300,6 @@ def read_skymap(params, map_struct=None):
     map_struct["skymap"]["ra"] = ra.deg
     map_struct["skymap"]["dec"] = dec.deg
 
-    if params["raslice"] is not None:
-        ra_low, ra_high = params["raslice"][0], params["raslice"][1]
-        if ra_low <= ra_high:
-            ipix = np.where(
-                (ra_high * 360.0 / 24.0 < ra.deg) | (ra_low * 360.0 / 24.0 > ra.deg)
-            )[0]
-        else:
-            ipix = np.where(
-                (ra_high * 360.0 / 24.0 < ra.deg) & (ra_low * 360.0 / 24.0 > ra.deg)
-            )[0]
-        map_struct["skymap"]["PROBDENSITY"][ipix] = 0.0
-
     if params["galactic_limit"] > 0.0:
         coords = SkyCoord(ra=ra, dec=dec)
         ipix = np.where(np.abs(coords.galactic.b.deg) <= params["galactic_limit"])[0]

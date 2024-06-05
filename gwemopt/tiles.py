@@ -886,12 +886,6 @@ def powerlaw_tiles_struct(
 
     tot_obs_time = config_struct["tot_obs_time"]
 
-    n, cl, dist_exp = (
-        params["powerlaw_n"],
-        params["powerlaw_cl"],
-        params["powerlaw_dist_exp"],
-    )
-
     if params["tilesType"] == "galaxy":
         tile_probs = compute_tiles_map(
             params,

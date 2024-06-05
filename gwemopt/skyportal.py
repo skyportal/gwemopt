@@ -292,7 +292,7 @@ def create_moc_from_skyportal(params, map_struct=None, field_ids=None):
             sort_idx = np.argsort(tile_probs)[::-1]
             csm = np.empty(len(tile_probs))
             csm[sort_idx] = np.cumsum(tile_probs[sort_idx])
-            moc_keep = np.where(csm <= params["powerlaw_cl"])[0]
+            moc_keep = np.where(csm <= params["confidence_level"])[0]
 
             moc_struct = {}
             cnt = 0

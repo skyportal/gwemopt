@@ -63,13 +63,11 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
             mask = np.where(~np.isnan(cat_df["magb"]))[0]
             cat_df = cat_df.iloc[mask]
 
-    n, cl = params["powerlaw_n"], params["powerlaw_cl"]
-
     prob_scaled = copy.deepcopy(map_struct["skymap_raster"]["PROB"])
     prob_sorted = np.sort(prob_scaled)[::-1]
     prob_indexes = np.argsort(prob_scaled)[::-1]
     prob_cumsum = np.cumsum(prob_sorted)
-    index = np.argmin(np.abs(prob_cumsum - cl)) + 1
+    index = np.argmin(np.abs(prob_cumsum - params["confidence_level"])) + 1
     prob_scaled[prob_indexes[index:]] = 0.0
     prob_scaled = prob_scaled**n
 

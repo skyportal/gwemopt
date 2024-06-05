@@ -129,12 +129,12 @@ def create_moc(params, map_struct=None):
             sort_idx = np.argsort(tile_probs)[::-1]
             csm = np.empty(len(tile_probs))
             csm[sort_idx] = np.cumsum(tile_probs[sort_idx])
-            ipix_keep = np.where(csm <= params["powerlaw_cl"])[0]
+            tiles_keep = np.where(csm <= params["confidence_level"])[0]
 
             moc_struct = {}
             cnt = 0
             for ii, key in enumerate(keys):
-                if ii in ipix_keep:
+                if ii in tiles_keep:
                     moc_struct[key] = moc_struct_new[key]
                     cnt = cnt + 1
 

@@ -89,9 +89,7 @@ def parse_args(args):
 
     parser.add_argument("--mindiff", default=0.0, type=float)
 
-    parser.add_argument("--powerlaw_cl", default=0.9, type=float)
-    parser.add_argument("--powerlaw_n", default=1.0, type=float)
-    parser.add_argument("--powerlaw_dist_exp", default=0, type=float)
+    parser.add_argument("--confidence_level", default=0.9, type=float)
 
     parser.add_argument("--galaxies_FoV_sep", default=1.0, type=float)
 
@@ -126,10 +124,6 @@ def parse_args(args):
     parser.add_argument("--doUsePrimary", action="store_true", default=False)
     parser.add_argument("--doUseSecondary", action="store_true", default=False)
 
-    parser.add_argument("--splitType", help="e.g: regional", default=None)
-
-    parser.add_argument("--Nregions", default=768, type=int)
-
     parser.add_argument("--doParallel", action="store_true", default=False)
     parser.add_argument("--Ncores", default=4, type=int)
     parser.add_argument("--parallelBackend", default="threading")
@@ -138,7 +132,6 @@ def parse_args(args):
     parser.add_argument("--Nblocks", default=4, type=int)
 
     parser.add_argument("--absmag", default=-15.0, type=float)
-    parser.add_argument("--raslice", default=None)
 
     parser.add_argument(
         "--galactic_limit", help="Galactic limit.", default=0.0, type=float

@@ -71,10 +71,6 @@ def run(args=None):
         if args.inclination:
             plot_inclination(params, map_struct)
 
-    if params["splitType"] is not None:
-        print("Splitting skymap...")
-        map_struct["groups"] = gwemopt.mapsplit.similar_range(params, map_struct)
-
     if args.doTiles:
         if params["tilesType"] == "moc":
             print("Generating MOC struct...")

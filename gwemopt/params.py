@@ -100,11 +100,6 @@ def params_struct(opts):
 
     params["treasuremap_status"] = opts.treasuremap_status.split(",")
 
-    if opts.raslice is not None:
-        params["raslice"] = np.array(opts.raslice.split(","), dtype=float)
-    else:
-        params["raslice"] = None
-
     params["unbalanced_tiles"] = None
     params["filters"] = opts.filters.split(",")
     params["exposuretimes"] = np.array(opts.exposuretimes.split(","), dtype=float)
@@ -170,5 +165,9 @@ def params_struct(opts):
     params["movie"] = opts.movie if hasattr(opts, "movie") else False
 
     params["plots"] = opts.plots.split(",") if hasattr(opts, "plots") else []
+
+    params["confidence_level"] = (
+        opts.confidence_level if hasattr(opts, "confidence_level") else 0.9
+    )
 
     return params
