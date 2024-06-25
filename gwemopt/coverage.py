@@ -19,7 +19,6 @@ from gwemopt.tiles import (
     eject_tiles,
     optimize_max_tiles,
     order_by_observability,
-    perturb_tiles,
     slice_galaxy_tiles,
     slice_map_tiles,
     slice_number_tiles,
@@ -157,15 +156,6 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
         if params["doIterativeTiling"] and (params["tilesType"] == "galaxy"):
             tile_struct = slice_galaxy_tiles(
                 params, tile_struct, combine_coverage_structs(coverage_structs)
-            )
-
-        if (
-            params["doPerturbativeTiling"]
-            and (jj > 0)
-            and (not params["tilesType"] == "galaxy")
-        ):
-            tile_struct = perturb_tiles(
-                params, config_struct, telescope, map_struct_hold, tile_struct
             )
 
         if params["doOverlappingScheduling"]:

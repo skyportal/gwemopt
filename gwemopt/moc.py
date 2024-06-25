@@ -17,6 +17,57 @@ from gwemopt.utils.parallel import tqdm_joblib
 from gwemopt.utils.pixels import get_region_moc
 
 
+def construct_moc(params, config_struct, tesselation):
+
+    if params["doParallel"]:
+        n_threads = params["Ncores"]
+    else:
+        n_threads = None
+
+    if params["doChipGaps"]:
+        if telescope == "ZTF":
+            mocs = get_ztf_quadrant_moc(
+                tesselation[:, 1], tesselation[:, 2], n_threads=n_threads
+            )
+        elif telescope == "DECam":
+            mocs = get_decam_quadrant_moc(
+                tesselation[:, 1], tesselation[:, 2], n_threads=n_threads
+            )
+        else:
+            raise ValueError("Chip gaps only available for DECam and ZTF")
+
+    else:
+        if config_struct["FOV_type"] == "circle":
+            mocs = MOC.from_cones(
+                lon=tesselation[:, 1] * u.deg,
+                lat=tesselation[:, 2] * u.deg,
+                radius=config_struct["FOV"] * u.deg,
+                max_depth=np.uint8(10),
+                n_threads=n_threads,
+            )
+        elif config_struct["FOV_type"] == "square":
+            mocs = MOC.from_boxes(
+                lon=tesselation[:, 1] * u.deg,
+                lat=tesselation[:, 2] * u.deg,
+                a=config_struct["FOV"] * u.deg,
+                b=config_struct["FOV"] * u.deg,
+                angle=0 * u.deg,
+                max_depth=np.uint8(10),
+                n_threads=n_threads,
+            )
+        elif config_struct["FOV_type"] == "region":
+            region_file = os.path.join(CONFIG_DIR, config_struct["FOV"])
+            region = regions.Regions.read(region_file, format="ds9")
+            mocs = get_region_moc(
+                tesselation[:, 1], tesselation[:, 2], region, n_threads=n_threads
+            )
+
+    return {
+        tess[0].astype(int): {"ra": tess[1], "dec": tess[2], "moc": mocs[ii]}
+        for ii, tess in enumerate(tesselation)
+    }
+
+
 def create_moc(params, map_struct=None):
     nside = params["nside"]
 
@@ -24,7 +75,6 @@ def create_moc(params, map_struct=None):
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
         tesselation = config_struct["tesselation"]
-        moc_struct = {}
 
         if (telescope == "ZTF") and params["doUsePrimary"]:
             idx = np.where(tesselation[:, 0] <= 880)[0]
@@ -33,58 +83,7 @@ def create_moc(params, map_struct=None):
             idx = np.where(tesselation[:, 0] >= 1000)[0]
             tesselation = tesselation[idx, :]
 
-        if params["doChipGaps"]:
-            if params["doParallel"]:
-                n_threads = params["Ncores"]
-            else:
-                n_threads = None
-            if telescope == "ZTF":
-                mocs = get_ztf_quadrant_moc(
-                    tesselation[:, 1], tesselation[:, 2], n_threads=n_threads
-                )
-            elif telescope == "DECam":
-                mocs = get_decam_quadrant_moc(
-                    tesselation[:, 1], tesselation[:, 2], n_threads=n_threads
-                )
-            else:
-                raise ValueError("Chip gaps only available for DECam and ZTF")
-
-        else:
-            if params["doParallel"]:
-                n_threads = params["Ncores"]
-            else:
-                n_threads = None
-
-            if config_struct["FOV_type"] == "circle":
-                mocs = MOC.from_cones(
-                    lon=tesselation[:, 1] * u.deg,
-                    lat=tesselation[:, 2] * u.deg,
-                    radius=config_struct["FOV"] * u.deg,
-                    max_depth=np.uint8(10),
-                    n_threads=n_threads,
-                )
-            elif config_struct["FOV_type"] == "square":
-                mocs = MOC.from_boxes(
-                    lon=tesselation[:, 1] * u.deg,
-                    lat=tesselation[:, 2] * u.deg,
-                    a=config_struct["FOV"] * u.deg,
-                    b=config_struct["FOV"] * u.deg,
-                    angle=0 * u.deg,
-                    max_depth=np.uint8(10),
-                    n_threads=n_threads,
-                )
-            elif config_struct["FOV_type"] == "region":
-                region_file = os.path.join(CONFIG_DIR, config_struct["FOV"])
-                region = regions.Regions.read(region_file, format="ds9")
-                mocs = get_region_moc(
-                    tesselation[:, 1], tesselation[:, 2], region, n_threads=n_threads
-                )
-
-        moc_struct = {
-            tess[0].astype(int): {"ra": tess[1], "dec": tess[2], "moc": mocs[ii]}
-            for ii, tess in enumerate(tesselation)
-        }
-
+        moc_struct = construct_moc(params, config_struct, tesselation)
         if map_struct is not None:
             moc_keep = map_struct["moc_keep"]
         else:

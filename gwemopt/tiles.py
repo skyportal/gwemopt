@@ -491,88 +491,6 @@ def order_by_observability(params, tile_structs):
     params["telescopes"] = [params["telescopes"][ii] for ii in idx]
 
 
-def perturb_tiles(params, config_struct, telescope, map_struct, tile_struct):
-    map_struct_hold = copy.deepcopy(map_struct)
-    ipix_keep = map_struct_hold["ipix_keep"]
-    nside = params["nside"]
-
-    if config_struct["FOV_type"] == "square":
-        width = config_struct["FOV"] * 0.5
-    elif config_struct["FOV_type"] == "circle":
-        width = config_struct["FOV"] * 1.0
-
-    moc_struct = {}
-    keys = list(tile_struct.keys())
-    for ii, key in enumerate(keys):
-        if tile_struct[key]["prob"] == 0.0:
-            continue
-
-        if np.mod(ii, 100) == 0:
-            print("Optimizing tile %d/%d" % (ii, len(keys)))
-
-        x0 = [tile_struct[key]["ra"], tile_struct[key]["dec"]]
-        FOV = config_struct["FOV"]
-        bounds = [
-            [tile_struct[key]["ra"] - width, tile_struct[key]["ra"] + width],
-            [tile_struct[key]["dec"] - width, tile_struct[key]["dec"] + width],
-        ]
-
-        ras = np.linspace(
-            tile_struct[key]["ra"] - width, tile_struct[key]["ra"] + width, 5
-        )
-        decs = np.linspace(
-            tile_struct[key]["dec"] - width, tile_struct[key]["dec"] + width, 5
-        )
-        RAs, DECs = np.meshgrid(ras, decs)
-        ras, decs = RAs.flatten(), DECs.flatten()
-
-        vals = []
-        for ra, dec in zip(ras, decs):
-            if np.abs(dec) > 90:
-                vals.append(0)
-                continue
-
-            moc_struct_temp = gwemopt.moc.Fov2Moc(
-                params, config_struct, telescope, ra, dec, nside
-            )
-            idx = np.where(map_struct_hold["prob"][moc_struct_temp["ipix"]] == -1)[0]
-            idx = np.setdiff1d(idx, ipix_keep)
-            if len(map_struct_hold["prob"][moc_struct_temp["ipix"]]) == 0:
-                rat = 0.0
-            else:
-                rat = float(len(idx)) / float(
-                    len(map_struct_hold["prob"][moc_struct_temp["ipix"]])
-                )
-            if rat > params["maximumOverlap"]:
-                val = 0.0
-            else:
-                ipix = moc_struct_temp["ipix"]
-                if len(ipix) == 0:
-                    val = 0.0
-                else:
-                    vals_to_sum = map_struct_hold["prob"][ipix]
-                    vals_to_sum[vals_to_sum < 0] = 0
-                    val = np.sum(vals_to_sum)
-            vals.append(val)
-        idx = np.argmax(vals)
-        ra, dec = ras[idx], decs[idx]
-        moc_struct[key] = gwemopt.moc.Fov2Moc(
-            params, config_struct, telescope, ra, dec, nside
-        )
-
-        map_struct_hold["prob"][moc_struct[key]["ipix"]] = -1
-        ipix_keep = np.setdiff1d(ipix_keep, moc_struct[key]["ipix"])
-
-    tile_struct = powerlaw_tiles_struct(
-        params, config_struct, telescope, map_struct, moc_struct
-    )
-    tile_struct = gwemopt.segments.get_segments_tiles(
-        params, config_struct, tile_struct
-    )
-
-    return tile_struct
-
-
 def schedule_alternating(
     params,
     config_struct,
@@ -833,12 +751,16 @@ def galaxy(params, map_struct, catalog_struct: pd.DataFrame):
         # redefine catalog_struct
         catalog_struct_new = pd.DataFrame(new_cat)
 
-        moc_struct = {}
+        tesselation = np.vstack(
+            (
+                np.arange(len(catalog_struct_new["ra"])),
+                catalog_struct_new["ra"],
+                catalog_struct_new["dec"],
+            )
+        ).T
+        moc_struct = gwemopt.moc.construct_moc(params, config_struct, tesselation)
         cnt = 0
         for _, row in catalog_struct_new.iterrows():
-            moc_struct[cnt] = gwemopt.moc.Fov2Moc(
-                params, config_struct, telescope, row["ra"], row["dec"], nside
-            )
             moc_struct[cnt]["galaxies"] = row["galaxies"]
             cnt = cnt + 1
 

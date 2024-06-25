@@ -38,7 +38,6 @@ def parse_args(args):
     parser.add_argument("--doIterativeTiling", action="store_true", default=False)
     parser.add_argument("--doMinimalTiling", action="store_true", default=False)
     parser.add_argument("--doOverlappingScheduling", action="store_true", default=False)
-    parser.add_argument("--doPerturbativeTiling", action="store_true", default=False)
     parser.add_argument("--doOrderByObservability", action="store_true", default=False)
 
     parser.add_argument("--catalogDir", help="catalog directory", default=CATALOG_DIR)
