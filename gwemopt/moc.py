@@ -14,7 +14,7 @@ import gwemopt.tiles
 from gwemopt.chipgaps import get_decam_quadrant_moc, get_ztf_quadrant_moc
 from gwemopt.paths import CONFIG_DIR
 from gwemopt.utils.parallel import tqdm_joblib
-from gwemopt.utils.pixels import getRegionPixels
+from gwemopt.utils.pixels import get_region_moc
 
 
 def create_moc(params, map_struct=None):
@@ -25,6 +25,13 @@ def create_moc(params, map_struct=None):
         config_struct = params["config"][telescope]
         tesselation = config_struct["tesselation"]
         moc_struct = {}
+
+        if (telescope == "ZTF") and params["doUsePrimary"]:
+            idx = np.where(tesselation[:, 0] <= 880)[0]
+            tesselation = tesselation[idx, :]
+        elif (telescope == "ZTF") and params["doUseSecondary"]:
+            idx = np.where(tesselation[:, 0] >= 1000)[0]
+            tesselation = tesselation[idx, :]
 
         if params["doChipGaps"]:
             if params["doParallel"]:
@@ -42,63 +49,41 @@ def create_moc(params, map_struct=None):
             else:
                 raise ValueError("Chip gaps only available for DECam and ZTF")
 
-            for ii, tess in enumerate(tesselation):
-                index, ra, dec = tess[0], tess[1], tess[2]
-                if (telescope == "ZTF") and params["doUsePrimary"] and (index > 880):
-                    continue
-                if (telescope == "ZTF") and params["doUseSecondary"] and (index < 1000):
-                    continue
-                index = index.astype(int)
-                moc_struct[index] = {"ra": ra, "dec": dec, "moc": mocs[ii]}
         else:
             if params["doParallel"]:
-                with tqdm_joblib(
-                    tqdm(desc="MOC creation", total=len(tesselation))
-                ) as progress_bar:
-                    moclists = Parallel(
-                        n_jobs=params["Ncores"],
-                        backend=params["parallelBackend"],
-                        batch_size=int(len(tesselation) / params["Ncores"]) + 1,
-                    )(
-                        delayed(Fov2Moc)(
-                            params, config_struct, telescope, tess[1], tess[2], nside
-                        )
-                        for tess in tesselation
-                    )
-                for ii, tess in tqdm(enumerate(tesselation), total=len(tesselation)):
-                    index, ra, dec = tess[0], tess[1], tess[2]
-                    if (
-                        (telescope == "ZTF")
-                        and params["doUsePrimary"]
-                        and (index > 880)
-                    ):
-                        continue
-                    if (
-                        (telescope == "ZTF")
-                        and params["doUseSecondary"]
-                        and (index < 1000)
-                    ):
-                        continue
-                    moc_struct[index] = moclists[ii]
+                n_threads = params["Ncores"]
             else:
-                for ii, tess in tqdm(enumerate(tesselation), total=len(tesselation)):
-                    index, ra, dec = tess[0], tess[1], tess[2]
-                    if (
-                        (telescope == "ZTF")
-                        and params["doUsePrimary"]
-                        and (index > 880)
-                    ):
-                        continue
-                    if (
-                        (telescope == "ZTF")
-                        and params["doUseSecondary"]
-                        and (index < 1000)
-                    ):
-                        continue
-                    index = index.astype(int)
-                    moc_struct[index] = Fov2Moc(
-                        params, config_struct, telescope, ra, dec, nside
-                    )
+                n_threads = None
+
+            if config_struct["FOV_type"] == "circle":
+                mocs = MOC.from_cones(
+                    lon=tesselation[:, 1] * u.deg,
+                    lat=tesselation[:, 2] * u.deg,
+                    radius=config_struct["FOV"] * u.deg,
+                    max_depth=np.uint8(10),
+                    n_threads=n_threads,
+                )
+            elif config_struct["FOV_type"] == "square":
+                mocs = MOC.from_boxes(
+                    lon=tesselation[:, 1] * u.deg,
+                    lat=tesselation[:, 2] * u.deg,
+                    a=config_struct["FOV"] * u.deg,
+                    b=config_struct["FOV"] * u.deg,
+                    angle=0 * u.deg,
+                    max_depth=np.uint8(10),
+                    n_threads=n_threads,
+                )
+            elif config_struct["FOV_type"] == "region":
+                region_file = os.path.join(CONFIG_DIR, config_struct["FOV"])
+                region = regions.Regions.read(region_file, format="ds9")
+                mocs = get_region_moc(
+                    tesselation[:, 1], tesselation[:, 2], region, n_threads=n_threads
+                )
+
+        moc_struct = {
+            tess[0].astype(int): {"ra": tess[1], "dec": tess[2], "moc": mocs[ii]}
+            for ii, tess in enumerate(tesselation)
+        }
 
         if map_struct is not None:
             moc_keep = map_struct["moc_keep"]
@@ -141,46 +126,3 @@ def create_moc(params, map_struct=None):
         moc_structs[telescope] = moc_struct
 
     return moc_structs
-
-
-def Fov2Moc(params, config_struct, telescope, ra_pointing, dec_pointing, nside):
-    """Return a MOC in fits file of a fov footprint.
-    The MOC fov is displayed in real time in an Aladin plan.
-
-    Input:
-        ra--> right ascention of fov center [deg]
-        dec --> declination of fov center [deg]
-        fov_width --> fov width [deg]
-        fov_height --> fov height [deg]
-        nside --> healpix resolution; by default
-    """
-
-    moc_struct = {}
-
-    if config_struct["FOV_type"] == "square":
-        center = SkyCoord(ra_pointing, dec_pointing, unit="deg", frame="icrs")
-        region = regions.RectangleSkyRegion(
-            center, config_struct["FOV"] * u.deg, config_struct["FOV"] * u.deg
-        )
-        moc = MOC.from_astropy_regions(region, max_depth=10)
-    elif config_struct["FOV_type"] == "circle":
-        center = SkyCoord(ra_pointing, dec_pointing, unit="deg", frame="icrs")
-        region = regions.CircleSkyRegion(center, radius=config_struct["FOV"] * u.deg)
-        moc = MOC.from_astropy_regions(region, max_depth=10)
-    elif config_struct["FOV_type"] == "region":
-        region_file = os.path.join(CONFIG_DIR, config_struct["FOV"])
-        region = regions.Regions.read(region_file, format="ds9")
-        moc = getRegionPixels(
-            ra_pointing,
-            dec_pointing,
-            region,
-            nside,
-        )
-    else:
-        raise ValueError("FOV_type must be square, circle or region")
-
-    moc_struct["ra"] = ra_pointing
-    moc_struct["dec"] = dec_pointing
-    moc_struct["moc"] = moc
-
-    return moc_struct
