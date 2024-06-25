@@ -758,7 +758,9 @@ def galaxy(params, map_struct, catalog_struct: pd.DataFrame):
                 catalog_struct_new["dec"],
             )
         ).T
-        moc_struct = gwemopt.moc.construct_moc(params, config_struct, tesselation)
+        moc_struct = gwemopt.moc.construct_moc(
+            params, config_struct, telescope, tesselation
+        )
         cnt = 0
         for _, row in catalog_struct_new.iterrows():
             moc_struct[cnt]["galaxies"] = row["galaxies"]

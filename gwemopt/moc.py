@@ -17,7 +17,7 @@ from gwemopt.utils.parallel import tqdm_joblib
 from gwemopt.utils.pixels import get_region_moc
 
 
-def construct_moc(params, config_struct, tesselation):
+def construct_moc(params, config_struct, telescope, tesselation):
 
     if params["doParallel"]:
         n_threads = params["Ncores"]
@@ -83,7 +83,7 @@ def create_moc(params, map_struct=None):
             idx = np.where(tesselation[:, 0] >= 1000)[0]
             tesselation = tesselation[idx, :]
 
-        moc_struct = construct_moc(params, config_struct, tesselation)
+        moc_struct = construct_moc(params, config_struct, telescope, tesselation)
         if map_struct is not None:
             moc_keep = map_struct["moc_keep"]
         else:
