@@ -11,6 +11,7 @@ from astropy.coordinates import ICRS, SkyCoord
 from astropy.time import Time
 from joblib import Parallel, delayed
 from mocpy import MOC
+from regions import CircleSkyRegion, PolygonSkyRegion, RectangleSkyRegion
 from scipy.stats import norm
 from shapely.geometry import MultiPoint
 from tqdm import tqdm
@@ -20,10 +21,6 @@ import gwemopt.moc
 import gwemopt.segments
 from gwemopt.utils.geometry import angular_distance
 from gwemopt.utils.parallel import tqdm_joblib
-
-LEVEL = MOC.MAX_ORDER
-HPX = ah.HEALPix(nside=ah.level_to_nside(LEVEL), order="nested", frame=ICRS())
-PIXEL_AREA = HPX.pixel_area.to_value(u.sr)
 
 TILE_TYPES = ["moc", "galaxy"]
 
@@ -609,15 +606,31 @@ def get_rectangle(ras, decs, ra_size, dec_size):
     return np.mod((minx + maxx) / 2.0, 360.0), (miny + maxy) / 2.0
 
 
-def galaxy(params, map_struct, catalog_struct: pd.DataFrame):
+def galaxy(params, map_struct, catalog_struct: pd.DataFrame, regions=None):
     """
     Creates a tile_struct for a galaxy survey
     """
-    nside = params["nside"]
 
     tile_structs = {}
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
+
+        if regions is not None:
+            if type(regions[0]) == RectangleSkyRegion:
+                config_struct["FOV_type"] = "square"
+                config_struct["FOV"] = np.max(
+                    [regions[0].width.value, regions[0].height.value]
+                )
+            elif type(regions[0]) == CircleSkyRegion:
+                config_struct["FOV_type"] = "circle"
+                config_struct["FOV"] = regions[0].radius.value
+            elif type(regions[0]) == PolygonSkyRegion:
+                ra = np.array([regions[0].vertices.ra for reg in regions])
+                dec = np.array([regions[0].vertices.dec for reg in regions])
+                min_ra, max_ra = np.min(ra), np.max(ra)
+                min_dec, max_dec = np.min(dec), np.max(dec)
+                config_struct["FOV_type"] = "square"
+                config_struct["FOV"] = np.max([max_ra - min_ra, max_dec - min_dec])
 
         # Combine in a single pointing, galaxies that are distant by
         # less than fov * params['galaxies_FoV_sep']
@@ -782,7 +795,6 @@ def galaxy(params, map_struct, catalog_struct: pd.DataFrame):
         cnt = 0
         for _, row in catalog_struct_new.iterrows():
             tile_struct[cnt]["prob"] = row[params["galaxy_grade"]]
-
             tile_struct[cnt]["galaxies"] = row["galaxies"]
 
             if config_struct["FOV_type"] == "square":

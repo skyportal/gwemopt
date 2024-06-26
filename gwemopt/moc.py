@@ -68,7 +68,7 @@ def construct_moc(params, config_struct, telescope, tesselation):
     }
 
 
-def create_moc(params, map_struct=None):
+def create_moc(params, map_struct=None, field_ids=None, from_skyportal=False):
     nside = params["nside"]
 
     moc_structs = {}
@@ -76,14 +76,45 @@ def create_moc(params, map_struct=None):
         config_struct = params["config"][telescope]
         tesselation = config_struct["tesselation"]
 
-        if (telescope == "ZTF") and params["doUsePrimary"]:
-            idx = np.where(tesselation[:, 0] <= 880)[0]
-            tesselation = tesselation[idx, :]
-        elif (telescope == "ZTF") and params["doUseSecondary"]:
-            idx = np.where(tesselation[:, 0] >= 1000)[0]
-            tesselation = tesselation[idx, :]
+        if from_skyportal:
+            moc_struct = {}
+            mocs = []
+            for ii, tess in enumerate(tesselation):
+                if field_ids is not None:
+                    if tess.field_id not in field_ids[telescope]:
+                        mocs.append(MOC.new_empty(29))
+                        continue
+                ranges = np.array(
+                    [(tile.healpix.lower, tile.healpix.upper) for tile in tess.tiles]
+                )
+                moc = MOC.from_depth29_ranges(10, ranges)
+                mocs.append(moc)
+            for ii, tess in enumerate(tesselation):
+                index = tess.field_id
 
-        moc_struct = construct_moc(params, config_struct, telescope, tesselation)
+                if (telescope == "ZTF") and params["doUsePrimary"] and (index > 880):
+                    continue
+                if (telescope == "ZTF") and params["doUseSecondary"] and (index < 1000):
+                    continue
+
+                moc = mocs[ii]
+                if moc.empty():
+                    continue
+
+                moc_struct[index] = {}
+                moc_struct[index]["ra"] = tess.ra
+                moc_struct[index]["dec"] = tess.dec
+                moc_struct[index]["moc"] = moc
+
+        else:
+            if (telescope == "ZTF") and params["doUsePrimary"]:
+                idx = np.where(tesselation[:, 0] <= 880)[0]
+                tesselation = tesselation[idx, :]
+            elif (telescope == "ZTF") and params["doUseSecondary"]:
+                idx = np.where(tesselation[:, 0] >= 1000)[0]
+                tesselation = tesselation[idx, :]
+
+            moc_struct = construct_moc(params, config_struct, telescope, tesselation)
         if map_struct is not None:
             moc_keep = map_struct["moc_keep"]
         else:
