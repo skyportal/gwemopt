@@ -5,6 +5,7 @@ import numpy as np
 from mocpy import MOC
 from regions import CircleSkyRegion, PolygonSkyRegion, RectangleSkyRegion
 
+import gwemopt.moc
 import gwemopt.tiles
 from gwemopt.tiles import angular_distance, get_rectangle, powerlaw_tiles_struct
 
@@ -172,20 +173,19 @@ def create_galaxy_from_skyportal(params, map_struct, catalog_struct, regions=Non
         catalog_struct_new["Smass"] = new_Smass
         catalog_struct_new["galaxies"] = galaxies
 
-        moc_struct = {}
-        cnt = 0
-        for ra, dec, Sloc, S, Smass, galaxies in zip(
-            catalog_struct_new["ra"],
-            catalog_struct_new["dec"],
-            catalog_struct_new["Sloc"],
-            catalog_struct_new["S"],
-            catalog_struct_new["Smass"],
-            catalog_struct_new["galaxies"],
-        ):
-            moc_struct[int(cnt)] = gwemopt.moc.Fov2Moc(
-                params, config_struct, telescope, ra, dec, nside
+        tesselation = np.vstack(
+            (
+                np.arange(len(catalog_struct_new["ra"])),
+                catalog_struct_new["ra"],
+                catalog_struct_new["dec"],
             )
-            moc_struct[int(cnt)]["galaxies"] = galaxies
+        ).T
+        moc_struct = gwemopt.moc.construct_moc(
+            params, config_struct, telescope, tesselation
+        )
+        cnt = 0
+        for _, row in catalog_struct_new.iterrows():
+            moc_struct[cnt]["galaxies"] = row["galaxies"]
             cnt = cnt + 1
 
         tile_struct = powerlaw_tiles_struct(
