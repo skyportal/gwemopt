@@ -19,7 +19,6 @@ from ligo.gracedb.rest import GraceDb
 from ligo.skymap import moc
 from ligo.skymap.bayestar import rasterize
 from ligo.skymap.io import read_sky_map
-from mocpy import MOC
 from scipy.interpolate import PchipInterpolator
 from scipy.stats import norm
 
@@ -289,11 +288,7 @@ def read_skymap(params, map_struct=None):
             map_struct["skymap"] = skymap
 
     level, ipix = ah.uniq_to_level_ipix(map_struct["skymap"]["UNIQ"])
-    LEVEL = MOC.MAX_ORDER
-    shift = 2 * (LEVEL - level)
-    hpx = np.array(np.vstack([ipix << shift, (ipix + 1) << shift]), dtype=np.uint64).T
     nside = ah.level_to_nside(level)
-    pixel_area = ah.nside_to_pixel_area(ah.level_to_nside(level))
     ra, dec = ah.healpix_to_lonlat(ipix, nside, order="nested")
     map_struct["skymap"]["ra"] = ra.deg
     map_struct["skymap"]["dec"] = dec.deg
@@ -316,7 +311,7 @@ def read_skymap(params, map_struct=None):
         (
             map_struct["skymap_raster"]["DISTMEAN"],
             map_struct["skymap_raster"]["DISTSTD"],
-            mom_norm,
+            _,
         ) = ligodist.parameters_to_moments(
             map_struct["skymap_raster"]["DISTMU"],
             map_struct["skymap_raster"]["DISTSIGMA"],
@@ -337,19 +332,5 @@ def read_skymap(params, map_struct=None):
     hdu = fits.table_to_hdu(map_struct["skymap_raster"])
     hdu.header.extend(extra_header)
     map_struct["hdu"] = hdu
-
-    skymap_sorted = map_struct["skymap"].copy()
-    skymap_sorted.sort("PROBDENSITY")
-    skymap_sorted.reverse()
-
-    level, ipix = ah.uniq_to_level_ipix(skymap_sorted["UNIQ"])
-    pixel_area = ah.nside_to_pixel_area(ah.level_to_nside(level))
-
-    prob = pixel_area * skymap_sorted["PROBDENSITY"]
-    cumprob = np.cumsum(prob)
-
-    i = cumprob.searchsorted(params["iterativeOverlap"])
-    skymap_keep = skymap_sorted[:i]
-    map_struct["moc_keep"] = skymap_keep
 
     return params, map_struct

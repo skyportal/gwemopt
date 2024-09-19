@@ -36,7 +36,7 @@ def construct_moc(params, config_struct, telescope, tesselation):
                 lon=tesselation[:, 1] * u.deg,
                 lat=tesselation[:, 2] * u.deg,
                 radius=config_struct["FOV"] * u.deg,
-                max_depth=np.uint8(10),
+                max_depth=10,
                 n_threads=n_threads,
             )
         elif config_struct["FOV_type"] == "square":
@@ -46,7 +46,7 @@ def construct_moc(params, config_struct, telescope, tesselation):
                 a=config_struct["FOV"] * u.deg,
                 b=config_struct["FOV"] * u.deg,
                 angle=0 * u.deg,
-                max_depth=np.uint8(10),
+                max_depth=10,
                 n_threads=n_threads,
             )
         elif config_struct["FOV_type"] == "region":
@@ -107,10 +107,6 @@ def create_moc(params, map_struct=None, field_ids=None, from_skyportal=False):
                 tesselation = tesselation[idx, :]
 
             moc_struct = construct_moc(params, config_struct, telescope, tesselation)
-        if map_struct is not None:
-            moc_keep = map_struct["moc_keep"]
-        else:
-            moc_keep = None
 
         if params["doMinimalTiling"]:
             moc_struct_new = copy.copy(moc_struct)
@@ -120,7 +116,6 @@ def create_moc(params, map_struct=None, field_ids=None, from_skyportal=False):
                     moc_struct_new,
                     map_struct["skymap"],
                     func="center",
-                    moc_keep=moc_keep,
                 )
             else:
                 tile_probs = gwemopt.tiles.compute_tiles_map(
@@ -128,7 +123,6 @@ def create_moc(params, map_struct=None, field_ids=None, from_skyportal=False):
                     moc_struct_new,
                     map_struct["skymap"],
                     func="np.sum(x)",
-                    moc_keep=moc_keep,
                 )
 
             keys = moc_struct.keys()

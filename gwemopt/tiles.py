@@ -818,7 +818,6 @@ def powerlaw_tiles_struct(
             tile_struct,
             map_struct["skymap"],
             func="galaxy",
-            moc_keep=map_struct["moc_keep"],
             catalog_struct=catalog_struct,
         )
     else:
@@ -827,7 +826,6 @@ def powerlaw_tiles_struct(
             tile_struct,
             map_struct["skymap"],
             func="np.sum(x)",
-            moc_keep=map_struct["moc_keep"],
         )
 
     tile_probs[tile_probs < np.max(tile_probs) * 0.01] = 0.0

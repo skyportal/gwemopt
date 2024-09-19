@@ -162,7 +162,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
             params_hold = copy.copy(params)
             config_struct_hold = copy.copy(config_struct)
 
-            coverage_struct, tile_struct = gwemopt.scheduler.schedule_alternating(
+            coverage_struct, tile_struct = gwemopt.tiles.schedule_alternating(
                 params_hold,
                 config_struct_hold,
                 telescope,
@@ -191,7 +191,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                     (
                         coverage_struct,
                         tile_struct,
-                    ) = gwemopt.scheduler.schedule_alternating(
+                    ) = gwemopt.tiles.schedule_alternating(
                         params_hold,
                         config_struct_hold,
                         telescope,
@@ -206,7 +206,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                         (
                             coverage_struct,
                             tile_struct,
-                        ) = gwemopt.scheduler.schedule_alternating(
+                        ) = gwemopt.tiles.schedule_alternating(
                             params_hold,
                             config_struct_hold,
                             telescope,

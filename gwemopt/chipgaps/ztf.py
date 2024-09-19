@@ -24,7 +24,7 @@ import numpy as np
 from astropy import units as u
 from astropy.coordinates import ICRS, SkyCoord
 from astropy.wcs import WCS
-from mocpy import MOC, mocpy
+from mocpy import MOC
 from tqdm import tqdm
 
 
@@ -289,8 +289,6 @@ def get_ztf_quadrant_moc(ra, dec, n_threads=None):
         stacked = np.stack((ccd_coords.ra.deg, ccd_coords.dec.deg), axis=1)
         result = stacked.reshape(-1, ccd_coords.ra.deg.shape[1])
         lon_lat_list = [row for row in result]
-        indices = mocpy.from_polygons(lon_lat_list, np.uint8(10), n_threads)
-        moc = sum([MOC(index) for index in indices])
-        mocs.append(moc)
+        mocs.append(sum(MOC.from_polygons(lon_lat_list, False, 10, n_threads)))
 
     return mocs
