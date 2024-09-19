@@ -55,7 +55,17 @@ dependencies = [
     'tables',
     'regions'
 ]
+
 dynamic = ["version"]
+
+[project.optional-dependencies]
+test = [
+    'pytest',
+    'pytest-runner',
+    'pytest-rerunfailures',
+    'coveralls',
+    'freezegun',
+]
 
 [project.scripts]
 gwemopt-run = "gwemopt.run:run"

@@ -40,13 +40,21 @@ jobs:
           cache: 'pip'
           cache-dependency-path: setup.py
 
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
           python -m pip install --upgrade pip
-          pip install pytest pytest-runner pytest-rerunfailures coveralls freezegun
-          pip install -e .
+          pip install -e ".[dev]"
 
       - name: Run tests
         run: coverage run -m pytest -v -s
