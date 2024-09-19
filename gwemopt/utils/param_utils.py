@@ -1,10 +1,4 @@
-import glob
 import os
-
-import astroplan
-import astropy
-import numpy as np
-from astropy import table
 
 
 def readParamsFromFile(file):

@@ -8,7 +8,6 @@ from pathlib import Path
 import astropy_healpix as ah
 import healpy as hp
 import ligo.skymap.distance as ligodist
-import ligo.skymap.plot
 import lxml.etree
 import numpy as np
 import requests
@@ -20,7 +19,6 @@ from ligo.gracedb.rest import GraceDb
 from ligo.skymap import moc
 from ligo.skymap.bayestar import rasterize
 from ligo.skymap.io import read_sky_map
-from matplotlib import pyplot as plt
 from mocpy import MOC
 from scipy.interpolate import PchipInterpolator
 from scipy.stats import norm

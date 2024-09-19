@@ -1,5 +1,3 @@
-import copy
-
 import healpy as hp
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,7 +8,6 @@ from tqdm import tqdm
 from gwemopt.io import export_tiles_coverage_int
 from gwemopt.plotting.movie import make_movie
 from gwemopt.plotting.style import add_sun_moon
-from gwemopt.utils.geometry import angular_distance
 
 
 def plot_tiles_coverage(params, map_struct, coverage_struct, plot_sun_moon=False):
@@ -266,7 +263,6 @@ def plot_coverage_scaled(params, map_struct, coverage_struct, plot_sun_moon, max
 
 
 def plot_coverage_movie(params, map_struct, coverage_struct, plot_sun_moon, max_time):
-
     hdu = map_struct["hdu"]
     columns = [col.name for col in hdu.columns]
 
@@ -330,7 +326,6 @@ def plot_coverage_movie(params, map_struct, coverage_struct, plot_sun_moon, max_
 def make_coverage_plots(
     params, map_struct, coverage_struct, catalog_struct=None, plot_sun_moon: bool = True
 ):
-
     idx = np.isfinite(coverage_struct["data"][:, 4])
     if not idx.size:
         return
@@ -347,7 +342,6 @@ def make_coverage_plots(
 def make_coverage_movie(
     params, map_struct, coverage_struct, plot_sun_moon: bool = True
 ):
-
     idx = np.isfinite(coverage_struct["data"][:, 4])
     if not idx.size:
         return

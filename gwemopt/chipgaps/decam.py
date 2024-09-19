@@ -18,10 +18,7 @@
 This module contains the DECamtile class, which is used to calculate decam chip gaps
 """
 
-from array import array
-
 import astropy
-import healpy as hp
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import ICRS, SkyCoord
@@ -176,7 +173,6 @@ def get_decam_ccds(ra, dec, save_footprint=False):
     #    ccd_prob = CCDProb(ra, dec)
     decam_tile = DECamtile(ra, dec)
     ccd_cents_ra = decam_tile.ccd_RA
-    ccd_cents_dec = decam_tile.ccd_Dec
     offsets = np.asarray(
         [
             decam_tile._wcs[ccd_id].calc_footprint(axes=decam_tile.ccd_size)

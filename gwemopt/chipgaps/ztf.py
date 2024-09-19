@@ -20,7 +20,6 @@ ZTF chip gaps and overlaps.
 """
 
 import astropy
-import healpy as hp
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import ICRS, SkyCoord

@@ -1,7 +1,5 @@
 import copy
 
-import astropy.coordinates
-import astropy.units as u
 import ephem
 import ligo.segments as segments
 import numpy as np
@@ -11,7 +9,6 @@ from tqdm import tqdm
 
 from gwemopt.utils.geometry import angular_distance
 from gwemopt.utils.misc import get_exposures
-from gwemopt.utils.parallel import tqdm_joblib
 from gwemopt.utils.sidereal_time import greenwich_sidereal_time
 
 # conversion between MJD (tt) and DJD (what ephem uses)
@@ -33,7 +30,7 @@ def get_telescope_segments(params):
             params["config"][telescope]["tot_obs_time"] = 0.0
             continue
 
-        nexp, junk = np.array(params["config"][telescope]["exposurelist"]).shape
+        nexp, _ = np.array(params["config"][telescope]["exposurelist"]).shape
         params["config"][telescope]["n_windows"] = nexp
         tot_obs_time = (
             np.sum(np.diff(np.array(params["config"][telescope]["exposurelist"])))
@@ -111,7 +108,7 @@ def get_moon_segments(config_struct, segmentlist, moon_radecs, radec):
     return moonsegmentlist
 
 
-def get_ha_segments(config_struct, segmentlist, observer, radec):
+def get_ha_segments(config_struct, segmentlist, radec):
     if "ha_constraint" in config_struct:
         ha_constraint = config_struct["ha_constraint"].split(",")
         ha_min = float(ha_constraint[0])
@@ -132,7 +129,8 @@ def get_ha_segments(config_struct, segmentlist, observer, radec):
         mjds = np.linspace(seg[0], seg[1], 100)
         tt = Time(mjds, format="mjd", scale="utc")
         lst = np.mod(
-            np.deg2rad(config_struct["longitude"]) + greenwich_sidereal_time(tt),
+            np.deg2rad(config_struct["longitude"])
+            + greenwich_sidereal_time(tt.jd, tt.gps, 0),
             2 * np.pi,
         )
         ha = (lst - np.deg2rad(radec[0])) * 24 / (2 * np.pi)
@@ -148,7 +146,6 @@ def get_segments(params, config_struct):
     event_mjd = Time(gpstime, format="gps", scale="utc").mjd
 
     segmentlist = segments.segmentlist()
-    n_windows = len(params["Tobs"]) // 2
     start_segments = event_mjd + params["Tobs"][::2]
     end_segments = event_mjd + params["Tobs"][1::2]
     for start_segment, end_segment in zip(start_segments, end_segments):
@@ -202,7 +199,6 @@ def get_segments(params, config_struct):
 
 
 def get_segments_tile(config_struct, radec, segmentlist, moon_radecs, airmass):
-
     # check for empty segmentlist and immediately return
     if len(segmentlist) == 0:
         return segments.segmentlistdict()
@@ -247,7 +243,7 @@ def get_segments_tile(config_struct, radec, segmentlist, moon_radecs, airmass):
     # moonsegmentlist = get_skybrightness(\
     #    config_struct,segmentlist,observer,fxdbdy,radec)
 
-    halist = get_ha_segments(config_struct, segmentlist, observer, radec)
+    halist = get_ha_segments(config_struct, segmentlist, radec)
 
     moonsegmentlist = get_moon_segments(config_struct, segmentlist, moon_radecs, radec)
 
@@ -292,19 +288,16 @@ def get_segments_tiles(params, config_struct, tile_struct):
     moon_radecs = get_moon_radecs(segmentlist, observer)
 
     if params["doParallel"]:
-        with tqdm_joblib(
-            tqdm(desc="segment generation", total=len(radecs))
-        ) as progress_bar:
-            tilesegmentlists = Parallel(
-                n_jobs=params["Ncores"],
-                backend=params["parallelBackend"],
-                batch_size=int(len(radecs) / params["Ncores"]) + 1,
-            )(
-                delayed(get_segments_tile)(
-                    config_struct, radec, segmentlist, moon_radecs, params["airmass"]
-                )
-                for radec in radecs
+        tilesegmentlists = Parallel(
+            n_jobs=params["Ncores"],
+            backend=params["parallelBackend"],
+            batch_size=int(len(radecs) / params["Ncores"]) + 1,
+        )(
+            delayed(get_segments_tile)(
+                config_struct, radec, segmentlist, moon_radecs, params["airmass"]
             )
+            for radec in radecs
+        )
         for ii, key in enumerate(keys):
             tile_struct[key]["segmentlist"] = tilesegmentlists[ii]
     else:

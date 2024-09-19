@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 
@@ -22,7 +21,6 @@ from gwemopt.plotting import (
     plot_inclination,
     plot_skymap,
 )
-from gwemopt.utils import calculate_observability
 
 
 def run(args=None):

@@ -1,13 +1,11 @@
 import copy
 
-import ligo.segments as segments
 import numpy as np
 import regions
 from astropy import units as u
 from astropy.coordinates import SkyCoord, get_sun
 from astropy.time import Time
 from mocpy import MOC
-from tqdm import tqdm
 
 import gwemopt.plotting
 import gwemopt.scheduler
@@ -16,7 +14,6 @@ from gwemopt.io.schedule import read_schedule
 from gwemopt.tiles import (
     balance_tiles,
     check_overlapping_tiles,
-    eject_tiles,
     optimize_max_tiles,
     order_by_observability,
     slice_galaxy_tiles,
@@ -60,7 +57,6 @@ def combine_coverage_structs(coverage_structs):
 
 
 def read_coverage(params, telescope, filename, moc_struct=None):
-    nside = params["nside"]
     config_struct = params["config"][telescope]
     schedule_table = read_schedule(filename)
 
@@ -69,7 +65,7 @@ def read_coverage(params, telescope, filename, moc_struct=None):
     coverage_struct["filters"] = []
     coverage_struct["moc"] = []
 
-    for ii, row in schedule_table.iterrows():
+    for _, row in schedule_table.iterrows():
         ra, dec = row["ra"], row["dec"]
         tobs = row["tobs"]
         limmag = row["limmag"]
@@ -139,10 +135,9 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
     map_struct_hold = copy.deepcopy(map_struct)
 
     coverage_structs = []
-    n_scope = 0
     full_prob_map = map_struct["skymap"]
 
-    for jj, telescope in enumerate(params["telescopes"]):
+    for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
         tile_struct = tile_structs[telescope]
 
@@ -204,9 +199,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                         tile_struct,
                         previous_coverage_struct,
                     )
-                    doReschedule, balanced_fields = balance_tiles(
-                        params_hold, tile_struct, coverage_struct
-                    )
+                    doReschedule, _ = balance_tiles(params_hold, coverage_struct)
 
                     if doReschedule:
                         config_struct_hold = copy.copy(config_struct)
@@ -334,9 +327,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
             if params["doBalanceExposure"]:
                 cnt, ntrials = 0, 10
                 while cnt < ntrials:
-                    doReschedule, balanced_fields = balance_tiles(
-                        params, tile_struct, coverage_struct
-                    )
+                    doReschedule, _ = balance_tiles(params, coverage_struct)
                     if doReschedule:
                         for key in params["unbalanced_tiles"]:
                             tile_struct[key]["prob"] = 0.0
@@ -351,7 +342,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
 
             if params["max_nb_tiles"] is not None:
                 tile_struct, doReschedule = slice_number_tiles(
-                    params, telescope, tile_struct, coverage_struct
+                    params, tile_struct, coverage_struct
                 )
                 if doReschedule:
                     coverage_struct = gwemopt.scheduler.scheduler(

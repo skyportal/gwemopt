@@ -1,10 +1,5 @@
-import healpy as hp
-import ligo.skymap.plot
+import ligo.skymap.plot  # noqa: F401
 import matplotlib.pyplot as plt
-import numpy as np
-from astropy.io import fits
-from ligo.skymap import moc
-from matplotlib import pyplot as plt
 
 
 def plot_skymap(params, map_struct, colnames=["PROB", "DISTMEAN", "DISTSTD"]):
@@ -19,7 +14,6 @@ def plot_skymap(params, map_struct, colnames=["PROB", "DISTMEAN", "DISTSTD"]):
 
     for col in colnames:
         if col in columns:
-
             args = {"projection": params["projection"]}
             if args["projection"] == "astro globe":
                 args["center"] = map_struct["center"]

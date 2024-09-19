@@ -1,19 +1,14 @@
 import copy
 
-import astropy.coordinates
-import astropy.units as u
 import ephem
-import ligo.segments as segments
 import numpy as np
 from astropy.time import Time
 from ortools.linear_solver import pywraplp
 
-from gwemopt.tiles import balance_tiles, optimize_max_tiles, schedule_alternating
 from gwemopt.utils import angular_distance, solve_milp
 
 
 def get_altaz_tile(ra, dec, observer, obstime):
-
     observer.date = ephem.Date(obstime.iso)
 
     fxdbdy = ephem.FixedBody()
@@ -601,7 +596,6 @@ def scheduler(params, config_struct, tile_struct):
     config_struct: the telescope configurations
     tile_struct: the tiles, contains time allocation information
     """
-    import gwemopt.segments
 
     # import gwemopt.segments_astroplan
     coverage_struct = {}
@@ -683,7 +677,7 @@ def scheduler(params, config_struct, tile_struct):
 
             # calculate airmass for each tile at the start of its exposure:
             t = Time(mjd_exposure_start, format="mjd")
-            alt, az = get_altaz_tile(
+            alt, _ = get_altaz_tile(
                 tile_struct_hold["ra"], tile_struct_hold["dec"], observer, t
             )
             airmass = 1 / np.cos((90.0 - alt) * np.pi / 180)

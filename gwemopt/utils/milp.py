@@ -1,5 +1,3 @@
-import time
-
 import numpy as np
 import pulp
 from tqdm import tqdm
@@ -16,7 +14,6 @@ def solve_milp(
     milpSolver="PULP_CBC_CMD",
     milpOptions={},
 ):
-
     cost_matrix_mask = cost_matrix > 10 ** (-10)
     optimal_points = []
 

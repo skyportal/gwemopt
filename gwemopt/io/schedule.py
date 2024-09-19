@@ -60,7 +60,7 @@ def read_schedule(schedule_path):
     return schedule
 
 
-def export_schedule_xml(xmlfile, map_struct, coverage_struct, config_struct):
+def export_schedule_xml(xmlfile, coverage_struct, config_struct):
     what = What()
 
     table = Table(name="data", Description=["The datas of GWAlert"])
@@ -157,9 +157,8 @@ def export_schedule_xml(xmlfile, map_struct, coverage_struct, config_struct):
         data = coverage_struct["data"][ii, :]
 
         ra, dec = data[0], data[1]
-        observ_time, exposure_time, field_id, prob, airmass = (
+        observ_time, field_id, prob, airmass = (
             data[2],
-            data[4],
             data[5],
             data[6],
             data[7],
@@ -195,7 +194,6 @@ def export_schedule_xml(xmlfile, map_struct, coverage_struct, config_struct):
 
 
 def summary(params, map_struct, coverage_struct, catalog_struct=None):
-
     filts = list(set(coverage_struct["filters"]))
     for jj, telescope in enumerate(params["telescopes"]):
         schedulefile = params["outputDir"].joinpath(f"schedule_{telescope}.dat")
@@ -203,7 +201,7 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
 
         config_struct = params["config"][telescope]
 
-        export_schedule_xml(schedulexmlfile, map_struct, coverage_struct, config_struct)
+        export_schedule_xml(schedulexmlfile, coverage_struct, config_struct)
 
         if (params["tilesType"] == "hierarchical") or (params["tilesType"] == "greedy"):
             fields = np.zeros((params["Ntiles"][jj], len(filts) + 2))
@@ -294,7 +292,6 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
         for tt in tts:
             mjds_floor = []
             mjds = []
-            ipixs = np.empty((0, 2))
             cum_prob = 0.0
             cum_area = 0.0
 

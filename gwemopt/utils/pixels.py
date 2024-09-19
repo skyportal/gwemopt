@@ -6,7 +6,6 @@ from tqdm import tqdm
 
 
 def get_region_moc(ra, dec, regions, max_depth=12, n_threads=None):
-
     for reg in regions:
         ra_tmp = reg.vertices.ra
         dec_tmp = reg.vertices.dec

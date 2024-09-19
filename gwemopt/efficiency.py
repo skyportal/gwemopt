@@ -6,7 +6,6 @@ import numpy as np
 import scipy.stats
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
-from ligo.skymap import distance
 from scipy.interpolate import interp1d
 
 from gwemopt.io.export_efficiency import (
@@ -92,9 +91,7 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
         efficiency_struct["dists_inj"] = dists_inj
 
     if params["true_location"]:
-        det = compute_true_efficiency(
-            params, map_struct, lightcurve_struct, coverage_struct
-        )
+        det = compute_true_efficiency(params, lightcurve_struct, coverage_struct)
 
         lc_name = lightcurve_struct["name"]
         save_detection_nondetection(
@@ -106,10 +103,7 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
     return efficiency_struct
 
 
-def compute_true_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
-    nside = params["nside"]
-    npix = hp.nside2npix(nside)
-    Ninj = params["Ninj"]
+def compute_true_efficiency(params, lightcurve_struct, coverage_struct):
     gpstime = params["gpstime"]
     mjd_inj = Time(gpstime, format="gps", scale="utc").mjd
 
@@ -131,9 +125,7 @@ def compute_true_efficiency(params, map_struct, lightcurve_struct, coverage_stru
         lightcurve_mag = lightcurve_struct[filt]
         idx = np.where(np.isfinite(lightcurve_mag))[0]
 
-        f = interp.interp1d(
-            lightcurve_t[idx], lightcurve_mag[idx], fill_value="extrapolate"
-        )
+        f = interp1d(lightcurve_t[idx], lightcurve_mag[idx], fill_value="extrapolate")
         lightcurve_mag_interp = f(mjd)
         dist_threshold = (10 ** (((mag - lightcurve_mag_interp) / 5.0) + 1.0)) / 1e6
 
