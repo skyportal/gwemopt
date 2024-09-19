@@ -62,11 +62,12 @@ If you want the latest version, we recommend creating a clean environment:
 ```commandline
 conda create -n gwemopt python=3.11
 git clone git@github.com:skyportal/gwemopt.git
-pip install -e gwemopt
+cd gwemopt
+pip install -e .
 pre-commit install
 ```
 
-or if you just want the latest version on Github:
+or if you just want the latest version released on PyPI:
 
 ```commandline
 pip install gwemopt
@@ -80,7 +81,7 @@ conda install -c astropy astroquery
 conda install -c conda-forge voeventlib astropy-healpix python-ligo-lw ligo-segments ligo.skymap ffmpeg
 ```
 
-And then run `pip install -e gwemopt` again.
+And then run `pip install -e .` again.
 
 # Usage
 
@@ -91,3 +92,17 @@ gwemopt-run ....
 ```
 
 where ... corresponds to the various arguments. 
+
+# Tests
+
+To run the tests, you'll first need to install gwemopt with the testing dependencies:
+
+```commandline
+pip install -e ".[test]"
+```
+
+Then you can run the tests using:
+
+```commandline
+coverage run -m pytest -v -s
+```
