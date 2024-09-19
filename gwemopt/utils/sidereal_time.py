@@ -1,6 +1,7 @@
 from datetime import datetime
 from math import pi
 
+import numpy as np
 from numba import njit
 
 GPS_EPOCH = datetime(1980, 1, 6, 0, 0, 0)
@@ -38,3 +39,29 @@ def greenwich_sidereal_time(jd, gps, equation_of_equinoxes=0):
     sidereal_time += 3155760000.0 * t_hi
 
     return sidereal_time * pi / 43200.0
+
+
+@njit
+def hour_angle(jd, gps, long, ra, equation_of_equinoxes=0):
+    """
+    Compute the hour angle from the Julian date, GPS time, observer's longitude,
+    and equation of equinoxes.
+
+    Parameters
+    ----------
+    jd : float
+        Julian date.
+    gps : float
+        GPS time (in seconds).
+    long : float
+        Observer's longitude (in degrees).
+    ra : float
+        Target's right ascension (in degrees).
+    equation_of_equinoxes : float, optional
+        Equation of equinoxes (default is 0).
+    """
+    lst = np.mod(
+        np.deg2rad(long) + greenwich_sidereal_time(jd, gps, equation_of_equinoxes),
+        2 * np.pi,
+    )
+    return (lst - np.deg2rad(ra)) * 24 / (2 * np.pi)

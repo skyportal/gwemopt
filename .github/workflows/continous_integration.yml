@@ -57,7 +57,9 @@ jobs:
           pip install -e ".[test]"
 
       - name: Run tests
-        run: python -m coverage run -m pytest -v -s
+        run:  |
+          export NUMBA_DISABLE_JIT=1
+          python -m coverage run -m pytest -v -s
 
       - name: Run Coveralls
         if: ${{ success() }}

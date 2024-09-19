@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from gwemopt.utils.geometry import angular_distance
 from gwemopt.utils.misc import get_exposures
-from gwemopt.utils.sidereal_time import greenwich_sidereal_time
+from gwemopt.utils.sidereal_time import hour_angle
 
 # conversion between MJD (tt) and DJD (what ephem uses)
 MJD_TO_DJD = -2400000.5 + 2415020.0
@@ -128,12 +128,7 @@ def get_ha_segments(config_struct, segmentlist, radec):
     for seg in segmentlist:
         mjds = np.linspace(seg[0], seg[1], 100)
         tt = Time(mjds, format="mjd", scale="utc")
-        lst = np.mod(
-            np.deg2rad(config_struct["longitude"])
-            + greenwich_sidereal_time(tt.jd, tt.gps, 0),
-            2 * np.pi,
-        )
-        ha = (lst - np.deg2rad(radec[0])) * 24 / (2 * np.pi)
+        ha = hour_angle(tt.jd, tt.gps, config_struct["longitude"], radec[0], 0)
         idx = np.where((ha >= ha_min) & (ha <= ha_max))[0]
         if len(idx) >= 2:
             halist.append(segments.segment(mjds[idx[0]], mjds[idx[-1]]))
