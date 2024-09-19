@@ -17,8 +17,12 @@ def greenwich_sidereal_time(jd, gps, equation_of_equinoxes=0):
 
     Parameters
     ----------
-    tt: astropy.time.Time
-        The astropy time to convert
+    jd : float
+        Julian date.
+    gps : float
+        GPS time (in seconds).
+    equation_of_equinoxes : float, optional
+        Equation of equinoxes (default is 0).
     """
     t_hi = (jd - EPOCH_J2000_0_JD) / 36525.0
     t_lo = (gps % 1) / (36525.0 * 86400.0)
