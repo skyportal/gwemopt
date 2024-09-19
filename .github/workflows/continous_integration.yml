@@ -57,7 +57,7 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Run tests
-        run: coverage run -m pytest -v -s
+        run: python -m coverage run -m pytest -v -s
 
       - name: Run Coveralls
         if: ${{ success() }}
