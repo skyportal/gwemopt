@@ -115,43 +115,6 @@ def create_moc(params, map_struct=None, field_ids=None, from_skyportal=False):
                 tesselation = tesselation[idx, :]
 
             moc_struct = construct_moc(params, config_struct, telescope, tesselation)
-        if map_struct is not None:
-            moc_keep = map_struct["moc_keep"]
-        else:
-            moc_keep = None
-
-        if params["doMinimalTiling"]:
-            moc_struct_new = copy.copy(moc_struct)
-            if params["tilesType"] == "galaxy":
-                tile_probs = gwemopt.tiles.compute_tiles_map(
-                    params,
-                    moc_struct_new,
-                    map_struct["skymap"],
-                    func="center",
-                    moc_keep=moc_keep,
-                )
-            else:
-                tile_probs = gwemopt.tiles.compute_tiles_map(
-                    params,
-                    moc_struct_new,
-                    map_struct["skymap"],
-                    func="np.sum(x)",
-                    moc_keep=moc_keep,
-                )
-
-            keys = moc_struct.keys()
-
-            sort_idx = np.argsort(tile_probs)[::-1]
-            csm = np.empty(len(tile_probs))
-            csm[sort_idx] = np.cumsum(tile_probs[sort_idx])
-            tiles_keep = np.where(csm <= params["confidence_level"])[0]
-
-            moc_struct = {}
-            cnt = 0
-            for ii, key in enumerate(keys):
-                if ii in tiles_keep:
-                    moc_struct[key] = moc_struct_new[key]
-                    cnt = cnt + 1
 
         moc_structs[telescope] = moc_struct
 

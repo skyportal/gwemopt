@@ -63,7 +63,7 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
             mask = np.where(~np.isnan(cat_df["magb"]))[0]
             cat_df = cat_df.iloc[mask]
 
-    prob_scaled = copy.deepcopy(map_struct["skymap_raster"]["PROB"])
+    prob_scaled = copy.deepcopy(map_struct["skymap_raster_schedule"]["PROB"])
     prob_sorted = np.sort(prob_scaled)[::-1]
     prob_indexes = np.argsort(prob_scaled)[::-1]
     prob_cumsum = np.cumsum(prob_sorted)
@@ -78,7 +78,7 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
     )
 
     if "DISTNORM" in map_struct:
-        if map_struct["skymap_raster"]["DISTNORM"] is not None:
+        if map_struct["skymap_raster_schedule"]["DISTNORM"] is not None:
             # creat an mask to cut at 3 sigma in distance
             mask = np.zeros(len(cat_df["distmpc"]))
 
@@ -86,15 +86,15 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
                 (
                     cat_df["distmpc"]
                     < (
-                        map_struct["skymap_raster"]["DISTMEAN"][ipix]
-                        + (3 * map_struct["skymap_raster"]["DISTSTD"][ipix])
+                        map_struct["skymap_raster_schedule"]["DISTMEAN"][ipix]
+                        + (3 * map_struct["skymap_raster_schedule"]["DISTSTD"][ipix])
                     )
                 )
                 & (
                     cat_df["distmpc"]
                     > (
-                        map_struct["skymap_raster"]["DISTMEAN"][ipix]
-                        - (3 * map_struct["skymap_raster"]["DISTSTD"][ipix])
+                        map_struct["skymap_raster_schedule"]["DISTMEAN"][ipix]
+                        - (3 * map_struct["skymap_raster_schedule"]["DISTSTD"][ipix])
                     )
                 )
             )
@@ -103,10 +103,10 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
             s_loc = (
                 prob_scaled[ipix]
                 * (
-                    map_struct["skymap_raster"]["DISTNORM"][ipix]
+                    map_struct["skymap_raster_schedule"]["DISTNORM"][ipix]
                     * norm(
-                        map_struct["skymap_raster"]["DISTMU"][ipix],
-                        map_struct["skymap_raster"]["DISTSIGMA"][ipix],
+                        map_struct["skymap_raster_schedule"]["DISTMU"][ipix],
+                        map_struct["skymap_raster_schedule"]["DISTSIGMA"][ipix],
                     ).pdf(cat_df["distmpc"])
                 )
                 ** params["powerlaw_dist_exp"]
@@ -209,7 +209,7 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
         s_mass = s_loc * (1 + (alpha_mass * beta_mass * s_mass))
 
     s = np.array(s_loc * Slum * sdet)
-    prob = np.zeros(map_struct["skymap_raster"]["PROB"].shape)
+    prob = np.zeros(map_struct["skymap_raster_schedule"]["PROB"].shape)
     if params["galaxy_grade"] == "Sloc":
         for j in range(len(ipix)):
             prob[ipix[j]] += s_loc[j]
@@ -230,8 +230,8 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
     prob[np.isnan(prob)] = 0.0
     prob = prob / np.sum(prob)
 
-    map_struct["skymap_raster"]["PROB"] = prob
-    skymap = map_struct["skymap_raster"].copy()
+    map_struct["skymap_raster_schedule"]["PROB"] = prob
+    skymap = map_struct["skymap_raster_schedule"].copy()
     map_struct["skymap"] = derasterize(skymap)
 
     cat_df["grade"] = grade

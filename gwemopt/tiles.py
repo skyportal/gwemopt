@@ -826,18 +826,16 @@ def powerlaw_tiles_struct(
         tile_probs = compute_tiles_map(
             params,
             tile_struct,
-            map_struct["skymap"],
+            map_struct["skymap_schedule"],
             func="galaxy",
-            moc_keep=map_struct["moc_keep"],
             catalog_struct=catalog_struct,
         )
     else:
         tile_probs = compute_tiles_map(
             params,
             tile_struct,
-            map_struct["skymap"],
+            map_struct["skymap_schedule"],
             func="np.sum(x)",
-            moc_keep=map_struct["moc_keep"],
         )
 
     tile_probs[tile_probs < np.max(tile_probs) * 0.01] = 0.0
@@ -981,7 +979,6 @@ def compute_tiles_map(
     tile_struct,
     skymap,
     func=None,
-    moc_keep=MOC.new_empty(max_depth=10),
     catalog_struct=None,
 ):
     if func is None:

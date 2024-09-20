@@ -18,7 +18,7 @@ from astropy.io import fits
 from astropy.time import Time
 from ligo.gracedb.rest import GraceDb
 from ligo.skymap import moc
-from ligo.skymap.bayestar import rasterize
+from ligo.skymap.bayestar import derasterize, rasterize
 from ligo.skymap.io import read_sky_map
 from matplotlib import pyplot as plt
 from mocpy import MOC
@@ -300,19 +300,35 @@ def read_skymap(params, map_struct=None):
     map_struct["skymap"]["ra"] = ra.deg
     map_struct["skymap"]["dec"] = dec.deg
 
-    if params["galactic_limit"] > 0.0:
-        coords = SkyCoord(ra=ra, dec=dec)
-        ipix = np.where(np.abs(coords.galactic.b.deg) <= params["galactic_limit"])[0]
-        map_struct["skymap"]["PROBDENSITY"][ipix] = 0.0
-
     map_struct["skymap_raster"] = rasterize(
         map_struct["skymap"], order=hp.nside2order(int(params["nside"]))
     )
+
     peak = map_struct["skymap_raster"][
         map_struct["skymap_raster"]["PROB"]
         == np.max(map_struct["skymap_raster"]["PROB"])
     ]
     map_struct["center"] = SkyCoord(peak["ra"][0] * u.deg, peak["dec"][0] * u.deg)
+
+    map_struct["skymap_schedule"] = map_struct["skymap"].copy()
+
+    if params["galactic_limit"] > 0.0:
+        coords = SkyCoord(ra=ra, dec=dec)
+        ipix = np.where(np.abs(coords.galactic.b.deg) <= params["galactic_limit"])[0]
+        map_struct["skymap_schedule"]["PROBDENSITY"][ipix] = 0.0
+
+    map_struct["skymap_raster_schedule"] = rasterize(
+        map_struct["skymap_schedule"], order=hp.nside2order(int(params["nside"]))
+    )
+
+    if params["confidence_level"] < 1.0:
+        prob = map_struct["skymap_raster_schedule"]["PROB"]
+        ind = np.argsort(prob)[::-1]
+        prob = prob[ind]
+        cumprob = np.cumsum(prob)
+        ii = np.where(cumprob > params["confidence_level"])[0]
+        map_struct["skymap_raster_schedule"]["PROB"][ind[ii]] = 0.0
+        map_struct["skymap_schedule"] = derasterize(map_struct["skymap_raster"].copy())
 
     if "DISTMU" in map_struct["skymap_raster"].columns:
         (
@@ -339,19 +355,5 @@ def read_skymap(params, map_struct=None):
     hdu = fits.table_to_hdu(map_struct["skymap_raster"])
     hdu.header.extend(extra_header)
     map_struct["hdu"] = hdu
-
-    skymap_sorted = map_struct["skymap"].copy()
-    skymap_sorted.sort("PROBDENSITY")
-    skymap_sorted.reverse()
-
-    level, ipix = ah.uniq_to_level_ipix(skymap_sorted["UNIQ"])
-    pixel_area = ah.nside_to_pixel_area(ah.level_to_nside(level))
-
-    prob = pixel_area * skymap_sorted["PROBDENSITY"]
-    cumprob = np.cumsum(prob)
-
-    i = cumprob.searchsorted(params["iterativeOverlap"])
-    skymap_keep = skymap_sorted[:i]
-    map_struct["moc_keep"] = skymap_keep
 
     return params, map_struct

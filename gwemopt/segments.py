@@ -310,49 +310,9 @@ def get_segments_tiles(params, config_struct, tile_struct):
     else:
         for ii, key in tqdm(enumerate(keys), total=len(keys)):
             radec = radecs[ii]
-
-            if params["doMinimalTiling"]:
-                if ii == 0:
-                    keys_computed = [key]
-                    radecs_computed = np.atleast_2d(radec)
-                    tilesegmentlist = get_segments_tile(
-                        config_struct,
-                        radec,
-                        segmentlist,
-                        moon_radecs,
-                        params["airmass"],
-                    )
-                    tile_struct[key]["segmentlist"] = tilesegmentlist
-                else:
-                    seps = angular_distance(
-                        radec[0],
-                        radec[1],
-                        radecs_computed[:, 0],
-                        radecs_computed[:, 1],
-                    )
-                    sepmin = np.min(seps)
-                    sepamin = np.argmin(seps)
-                    if sepmin <= 5.0:
-                        key_computed = keys_computed[sepamin]
-                        tile_struct[key]["segmentlist"] = copy.deepcopy(
-                            tile_struct[key_computed]["segmentlist"]
-                        )
-                    else:
-                        keys_computed.append(key)
-                        radecs_computed = np.vstack((radecs_computed, radec))
-                        tilesegmentlist = get_segments_tile(
-                            config_struct,
-                            radec,
-                            segmentlist,
-                            moon_radecs,
-                            params["airmass"],
-                        )
-                        tile_struct[key]["segmentlist"] = tilesegmentlist
-
-            else:
-                tilesegmentlist = get_segments_tile(
-                    config_struct, radec, segmentlist, moon_radecs, params["airmass"]
-                )
-                tile_struct[key]["segmentlist"] = tilesegmentlist
+            tilesegmentlist = get_segments_tile(
+                config_struct, radec, segmentlist, moon_radecs, params["airmass"]
+            )
+            tile_struct[key]["segmentlist"] = tilesegmentlist
 
     return tile_struct
