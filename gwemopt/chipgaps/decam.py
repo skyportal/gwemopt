@@ -229,10 +229,9 @@ def get_decam_quadrant_moc(ra, dec, n_threads=None):
         stacked = np.stack((ccd_coords.ra.deg, ccd_coords.dec.deg), axis=1)
         result = stacked.reshape(-1, ccd_coords.ra.deg.shape[1])
         lon_lat_list = [row for row in result]
-        indices = mocpy.from_polygons(
-            lon_lat_list, max_depth=np.uint8(10), n_threads=n_threads
+        moc = sum(
+            MOC.from_polygons(lon_lat_list, max_depth=np.uint8(10), n_threads=n_threads)
         )
-        moc = sum([MOC(index) for index in indices])
         mocs.append(moc)
 
     return mocs
