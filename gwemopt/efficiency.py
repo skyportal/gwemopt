@@ -24,9 +24,11 @@ def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct):
     gpstime = params["gpstime"]
     mjd_inj = Time(gpstime, format="gps", scale="utc").mjd
 
-    distn = scipy.stats.rv_discrete(
-        values=(np.arange(npix), map_struct["skymap_raster"]["PROB"])
+    prob_norm = map_struct["skymap_raster"]["PROB"] / np.sum(
+        map_struct["skymap_raster"]["PROB"]
     )
+
+    distn = scipy.stats.rv_discrete(values=(np.arange(npix), prob_norm))
     ipix = distn.rvs(size=Ninj)
     ras, decs = hp.pix2ang(nside, ipix, lonlat=True)
 
@@ -143,9 +145,11 @@ def compute_3d_efficiency(params, map_struct, lightcurve_struct, coverage_struct
     gpstime = params["gpstime"]
     mjd_inj = Time(gpstime, format="gps", scale="utc").mjd
 
-    distn = scipy.stats.rv_discrete(
-        values=(np.arange(npix), map_struct["skymap_raster"]["PROB"])
+    prob_norm = map_struct["skymap_raster"]["PROB"] / np.sum(
+        map_struct["skymap_raster"]["PROB"]
     )
+
+    distn = scipy.stats.rv_discrete(values=(np.arange(npix), prob_norm))
     ipix = distn.rvs(size=Ninj)
     ras, decs = hp.pix2ang(nside, ipix, lonlat=True)
 

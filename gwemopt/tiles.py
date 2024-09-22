@@ -816,7 +816,7 @@ def powerlaw_tiles_struct(
         tile_probs = compute_tiles_map(
             params,
             tile_struct,
-            map_struct["skymap"],
+            map_struct["skymap_schedule"],
             func="galaxy",
             catalog_struct=catalog_struct,
         )
@@ -824,7 +824,7 @@ def powerlaw_tiles_struct(
         tile_probs = compute_tiles_map(
             params,
             tile_struct,
-            map_struct["skymap"],
+            map_struct["skymap_schedule"],
             func="np.sum(x)",
         )
 

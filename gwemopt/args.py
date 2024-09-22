@@ -36,7 +36,6 @@ def parse_args(args):
     parser.add_argument("--doMindifFilt", action="store_true", default=False)
 
     parser.add_argument("--doIterativeTiling", action="store_true", default=False)
-    parser.add_argument("--doMinimalTiling", action="store_true", default=False)
     parser.add_argument("--doOverlappingScheduling", action="store_true", default=False)
     parser.add_argument("--doOrderByObservability", action="store_true", default=False)
 
@@ -88,7 +87,7 @@ def parse_args(args):
 
     parser.add_argument("--mindiff", default=0.0, type=float)
 
-    parser.add_argument("--confidence_level", default=0.9, type=float)
+    parser.add_argument("--confidence_level", default=1.0, type=float)
 
     parser.add_argument("--galaxies_FoV_sep", default=1.0, type=float)
 

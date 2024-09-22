@@ -55,7 +55,7 @@ def test_scheduler():
             ),
             (
                 "DECam",
-                ["--max_nb_tiles", "5", "--doMinimalTiling", "--plots", "coverage"],
+                ["--max_nb_tiles", "5", "--plots", "coverage"],
             ),
             # ('TRE', []),
             # ("WINTER", []),
