@@ -97,7 +97,6 @@ def create_moc(params, map_struct=None, field_ids=None, from_skyportal=False):
                 moc_struct[index]["ra"] = tess.ra
                 moc_struct[index]["dec"] = tess.dec
                 moc_struct[index]["moc"] = moc
-
         else:
             if (telescope == "ZTF") and params["doUsePrimary"]:
                 idx = np.where(tesselation[:, 0] <= 880)[0]
@@ -107,37 +106,6 @@ def create_moc(params, map_struct=None, field_ids=None, from_skyportal=False):
                 tesselation = tesselation[idx, :]
 
             moc_struct = construct_moc(params, config_struct, telescope, tesselation)
-
-        if params["doMinimalTiling"]:
-            moc_struct_new = copy.copy(moc_struct)
-            if params["tilesType"] == "galaxy":
-                tile_probs = gwemopt.tiles.compute_tiles_map(
-                    params,
-                    moc_struct_new,
-                    map_struct["skymap"],
-                    func="center",
-                )
-            else:
-                tile_probs = gwemopt.tiles.compute_tiles_map(
-                    params,
-                    moc_struct_new,
-                    map_struct["skymap"],
-                    func="np.sum(x)",
-                )
-
-            keys = moc_struct.keys()
-
-            sort_idx = np.argsort(tile_probs)[::-1]
-            csm = np.empty(len(tile_probs))
-            csm[sort_idx] = np.cumsum(tile_probs[sort_idx])
-            tiles_keep = np.where(csm <= params["confidence_level"])[0]
-
-            moc_struct = {}
-            cnt = 0
-            for ii, key in enumerate(keys):
-                if ii in tiles_keep:
-                    moc_struct[key] = moc_struct_new[key]
-                    cnt = cnt + 1
 
         moc_structs[telescope] = moc_struct
 
