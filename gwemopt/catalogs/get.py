@@ -2,9 +2,7 @@ import copy
 
 import healpy as hp
 import numpy as np
-from astropy.table import Table
 from astroquery.vizier import Vizier
-from ligo.skymap import distance
 from ligo.skymap.bayestar import derasterize
 from scipy.stats import norm
 

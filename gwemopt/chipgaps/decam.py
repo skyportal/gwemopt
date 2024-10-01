@@ -18,15 +18,12 @@
 This module contains the DECamtile class, which is used to calculate decam chip gaps
 """
 
-from array import array
-
 import astropy
-import healpy as hp
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import ICRS, SkyCoord
 from astropy.wcs import WCS
-from mocpy import MOC, mocpy
+from mocpy import MOC
 from tqdm import tqdm
 
 
@@ -176,7 +173,6 @@ def get_decam_ccds(ra, dec, save_footprint=False):
     #    ccd_prob = CCDProb(ra, dec)
     decam_tile = DECamtile(ra, dec)
     ccd_cents_ra = decam_tile.ccd_RA
-    ccd_cents_dec = decam_tile.ccd_Dec
     offsets = np.asarray(
         [
             decam_tile._wcs[ccd_id].calc_footprint(axes=decam_tile.ccd_size)
@@ -229,10 +225,7 @@ def get_decam_quadrant_moc(ra, dec, n_threads=None):
         stacked = np.stack((ccd_coords.ra.deg, ccd_coords.dec.deg), axis=1)
         result = stacked.reshape(-1, ccd_coords.ra.deg.shape[1])
         lon_lat_list = [row for row in result]
-        moc = sum(
-            MOC.from_polygons(lon_lat_list, max_depth=np.uint8(10), n_threads=n_threads)
-        )
-        mocs.append(moc)
+        mocs.append(sum(MOC.from_polygons(lon_lat_list, False, 10, n_threads)))
 
     return mocs
 

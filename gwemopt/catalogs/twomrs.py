@@ -4,6 +4,7 @@ from astropy import constants as c
 from astropy import units as u
 from astropy.cosmology import WMAP9 as cosmo
 from astropy.io.misc.hdf5 import read_table_hdf5, write_table_hdf5
+from astropy.table import Table
 from astroquery.vizier import Vizier
 from scipy.special import gammaincinv
 

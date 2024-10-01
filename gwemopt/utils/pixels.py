@@ -6,7 +6,6 @@ from tqdm import tqdm
 
 
 def get_region_moc(ra, dec, regions, max_depth=12, n_threads=None):
-
     for reg in regions:
         ra_tmp = reg.vertices.ra
         dec_tmp = reg.vertices.dec
@@ -25,11 +24,6 @@ def get_region_moc(ra, dec, regions, max_depth=12, n_threads=None):
         stacked = np.stack((ccd_coords.ra.deg, ccd_coords.dec.deg), axis=1)
         result = stacked.reshape(-1, ccd_coords.ra.deg.shape[1])
         lon_lat_list = [row for row in result]
-        moc = sum(
-            MOC.from_polygons(
-                lon_lat_list, max_depth=np.uint8(max_depth), n_threads=n_threads
-            )
-        )
-        mocs.append(moc)
+        mocs.append(sum(MOC.from_polygons(lon_lat_list, False, 10, n_threads)))
 
     return mocs

@@ -1,13 +1,5 @@
-import copy
-
-import astropy
-import astropy.coordinates
-import astropy.units as u
-import healpy as hp
 import ligo.segments as segments
-import ligo.skymap.distance as ligodist
 import numpy as np
-from astropy.time import Time, TimeDelta
 
 
 def integrationTime(T_obs, pValTiles, func=None, T_int=60.0):

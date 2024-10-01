@@ -1,18 +1,14 @@
-import bisect
 import copy
 
-import astropy_healpix as ah
 import healpy as hp
 import ligo.segments as segments
 import numpy as np
 import pandas as pd
 from astropy import units as u
-from astropy.coordinates import ICRS, SkyCoord
+from astropy.coordinates import SkyCoord
 from astropy.time import Time
-from joblib import Parallel, delayed
 from mocpy import MOC
 from regions import CircleSkyRegion, PolygonSkyRegion, RectangleSkyRegion
-from scipy.stats import norm
 from shapely.geometry import MultiPoint
 from tqdm import tqdm
 
@@ -20,7 +16,6 @@ import gwemopt
 import gwemopt.moc
 import gwemopt.segments
 from gwemopt.utils.geometry import angular_distance
-from gwemopt.utils.parallel import tqdm_joblib
 
 TILE_TYPES = ["moc", "galaxy"]
 
@@ -35,10 +30,7 @@ def slice_map_tiles(params, map_struct, coverage_struct):
     ipix_keep = np.where(csm <= params["iterativeOverlap"])[0]
 
     for ii in range(len(coverage_struct["ipix"])):
-        data = coverage_struct["data"][ii, :]
         ipix = coverage_struct["ipix"][ii]
-        FOV = coverage_struct["FOV"][ii]
-
         ipix_slice = np.setdiff1d(ipix, ipix_keep)
         if len(ipix_slice) == 0:
             continue
@@ -47,7 +39,7 @@ def slice_map_tiles(params, map_struct, coverage_struct):
     return map_struct
 
 
-def slice_number_tiles(params, telescope, tile_struct, coverage_struct):
+def slice_number_tiles(params, tile_struct, coverage_struct):
     max_nb_tile = params["max_nb_tiles"]
     if max_nb_tile is None:
         return tile_struct, False
@@ -82,8 +74,8 @@ def eject_tiles(params, telescope, tile_struct):
     return tile_struct
 
 
-def balance_tiles(params, tile_struct, coverage_struct):
-    filters, exposuretimes = params["filters"], params["exposuretimes"]
+def balance_tiles(params, coverage_struct):
+    filters = params["filters"]
 
     keys_scheduled = coverage_struct["data"][:, 5]
 
@@ -194,7 +186,7 @@ def optimize_max_tiles(
 
     tile_struct_hold = copy.copy(opt_tile_struct)
     keys_scheduled = opt_coverage_struct["data"][:, 5]
-    unique, freq = np.unique(keys_scheduled, return_counts=True)
+    _, freq = np.unique(keys_scheduled, return_counts=True)
     n_equal = np.sum(freq == len(params["filters"]))
     n_dif = np.sum(freq != len(params["filters"]))
 
@@ -232,7 +224,7 @@ def optimize_max_tiles(
         )
 
         keys_scheduled = coverage_struct_hold["data"][:, 5]
-        unique, freq = np.unique(keys_scheduled, return_counts=True)
+        _, freq = np.unique(keys_scheduled, return_counts=True)
         counter = np.sum(freq == len(params["filters"]))
 
         countervals.append(counter)
@@ -291,7 +283,7 @@ def optimize_max_tiles(
         )
 
         keys_scheduled = coverage_struct_hold["data"][:, 5]
-        unique, freq = np.unique(keys_scheduled, return_counts=True)
+        _, freq = np.unique(keys_scheduled, return_counts=True)
         counter = np.sum(freq == len(params["filters"]))
 
         countervals.append(counter)
@@ -327,9 +319,7 @@ def optimize_max_tiles(
                 tile_struct_hold[key]["prob"] = prob[key]
                 if "epochs" in tile_struct_hold[key]:
                     tile_struct_hold[key]["epochs"] = np.empty((0, 8))
-            doReschedule, balanced_fields = balance_tiles(
-                params_hold, opt_tile_struct, opt_coverage_struct
-            )
+            doReschedule, _ = balance_tiles(params_hold, opt_coverage_struct)
             params_hold["unbalanced_tiles"] = (
                 unbalanced_tiles + params_hold["unbalanced_tiles"]
             )
@@ -347,7 +337,7 @@ def optimize_max_tiles(
                 tile_struct_hold,
             )
             keys_scheduled = coverage_struct["data"][:, 5]
-            unique, freq = np.unique(keys_scheduled, return_counts=True)
+            _, freq = np.unique(keys_scheduled, return_counts=True)
             n_equal = np.sum(freq == len(params["filters"]))
             n_dif = np.sum(freq != len(params["filters"]))
             n_1 = n_equal
@@ -395,7 +385,7 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
         ra=coverage_ras * u.degree, dec=coverage_decs * u.degree, frame="icrs"
     )
     if params["tilesType"] == "galaxy":
-        for ii, key in enumerate(keys):
+        for key in keys:
             catalog2 = SkyCoord(
                 ra=tile_struct[key]["ra"] * u.degree,
                 dec=tile_struct[key]["dec"] * u.degree,
@@ -417,7 +407,7 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                         axis=0,
                     )
     else:
-        for ii, key in enumerate(keys):
+        for key in keys:
             catalog2 = SkyCoord(
                 ra=tile_struct[key]["ra"] * u.degree,
                 dec=tile_struct[key]["dec"] * u.degree,
@@ -501,7 +491,7 @@ def schedule_alternating(
     else:
         filt_change_time = 0
     if params["treasuremap_token"] is not None and previous_coverage_struct:
-        tile_struct_hold = check_overlapping_tiles(
+        check_overlapping_tiles(
             params, tile_struct, previous_coverage_struct
         )  # maps field ids to tile_struct
 
@@ -558,7 +548,7 @@ def schedule_alternating(
         )
         if params["max_nb_tiles"] is not None:
             tile_struct, doReschedule = slice_number_tiles(
-                params, telescope, tile_struct, coverage_struct
+                params, tile_struct, coverage_struct
             )
 
             if doReschedule:
@@ -981,9 +971,7 @@ def compute_tiles_map(
     func=None,
     catalog_struct=None,
 ):
-    if func is None:
-        f = lambda x: np.sum(x)
-    elif func == "center":
+    if func == "center":
         keys = tile_struct.keys()
         ntiles = len(keys)
         vals = np.nan * np.ones((ntiles,))
@@ -1004,10 +992,6 @@ def compute_tiles_map(
             val = np.sum(catalog_struct[params["galaxy_grade"]][galaxies])
             vals[ii] = val
         return vals
-    else:
-        f = lambda x: eval(func)
-
-    prob = copy.deepcopy(skymap)
 
     keys = tile_struct.keys()
     ntiles = len(keys)

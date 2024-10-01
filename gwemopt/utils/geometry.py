@@ -1,6 +1,8 @@
 import numpy as np
+from numba import njit
 
 
+@njit
 def angular_distance(ra1, dec1, ra2, dec2):
     """
     Calculate the angular distance between two points on the sky

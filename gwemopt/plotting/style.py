@@ -1,8 +1,6 @@
-import healpy as hp
-import ligo.skymap.plot
+import ligo.skymap.plot  # noqa: F401
 import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
 from astropy.coordinates import get_body
 from astropy.time import Time
 

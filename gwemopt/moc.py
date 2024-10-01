@@ -2,23 +2,17 @@ import copy
 import os
 
 import astropy.units as u
-import healpy as hp
 import numpy as np
 import regions
-from astropy.coordinates import SkyCoord
-from joblib import Parallel, delayed
 from mocpy import MOC
-from tqdm import tqdm
 
 import gwemopt.tiles
 from gwemopt.chipgaps import get_decam_quadrant_moc, get_ztf_quadrant_moc
 from gwemopt.paths import CONFIG_DIR
-from gwemopt.utils.parallel import tqdm_joblib
 from gwemopt.utils.pixels import get_region_moc
 
 
 def construct_moc(params, config_struct, telescope, tesselation):
-
     if params["doParallel"]:
         n_threads = params["Ncores"]
     else:
@@ -42,7 +36,7 @@ def construct_moc(params, config_struct, telescope, tesselation):
                 lon=tesselation[:, 1] * u.deg,
                 lat=tesselation[:, 2] * u.deg,
                 radius=config_struct["FOV"] * u.deg,
-                max_depth=np.uint8(10),
+                max_depth=10,
                 n_threads=n_threads,
             )
         elif config_struct["FOV_type"] == "square":
@@ -52,7 +46,7 @@ def construct_moc(params, config_struct, telescope, tesselation):
                 a=config_struct["FOV"] * u.deg,
                 b=config_struct["FOV"] * u.deg,
                 angle=0 * u.deg,
-                max_depth=np.uint8(10),
+                max_depth=10,
                 n_threads=n_threads,
             )
         elif config_struct["FOV_type"] == "region":
@@ -69,8 +63,6 @@ def construct_moc(params, config_struct, telescope, tesselation):
 
 
 def create_moc(params, map_struct=None, field_ids=None, from_skyportal=False):
-    nside = params["nside"]
-
     moc_structs = {}
     for telescope in params["telescopes"]:
         config_struct = params["config"][telescope]
@@ -105,7 +97,6 @@ def create_moc(params, map_struct=None, field_ids=None, from_skyportal=False):
                 moc_struct[index]["ra"] = tess.ra
                 moc_struct[index]["dec"] = tess.dec
                 moc_struct[index]["moc"] = moc
-
         else:
             if (telescope == "ZTF") and params["doUsePrimary"]:
                 idx = np.where(tesselation[:, 0] <= 880)[0]

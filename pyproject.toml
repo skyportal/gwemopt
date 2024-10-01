@@ -29,6 +29,7 @@ classifiers = [
     'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
 ]
 dependencies = [
+    'numba',
     'numpy>=1.7.1',
     'scipy>=1.2.1',
     'matplotlib>=1.2.0',
@@ -54,7 +55,18 @@ dependencies = [
     'tables',
     'regions'
 ]
+
 dynamic = ["version"]
+
+[project.optional-dependencies]
+test = [
+    'pytest',
+    'pytest-runner',
+    'pytest-rerunfailures',
+    'coverage',
+    'coveralls',
+    'freezegun',
+]
 
 [project.scripts]
 gwemopt-run = "gwemopt.run:run"
