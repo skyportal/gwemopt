@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
 from astropy.time import Time
-from VOEventLib.VOEvent import Field, Table, What
-from VOEventLib.Vutil import stringVOEvent, utilityTable
 
 from gwemopt.scheduler import computeSlewReadoutTime
 from gwemopt.utils import angular_distance
@@ -60,139 +58,6 @@ def read_schedule(schedule_path):
     return schedule
 
 
-def export_schedule_xml(xmlfile, coverage_struct, config_struct):
-    what = What()
-
-    table = Table(name="data", Description=["The datas of GWAlert"])
-    table.add_Field(
-        Field(
-            name=r"grid_id",
-            ucd="",
-            unit="",
-            dataType="int",
-            Description=["ID of the grid of fov"],
-        )
-    )
-    table.add_Field(
-        Field(
-            name="field_id",
-            ucd="",
-            unit="",
-            dataType="int",
-            Description=["ID of the filed"],
-        )
-    )
-    table.add_Field(
-        Field(
-            name=r"ra",
-            ucd=r"pos.eq.ra ",
-            unit="deg",
-            dataType="float",
-            Description=[
-                "The right ascension at center of fov in equatorial coordinates"
-            ],
-        )
-    )
-    table.add_Field(
-        Field(
-            name="dec",
-            ucd="pos.eq.dec ",
-            unit="deg",
-            dataType="float",
-            Description=["The declination at center of fov in equatorial coordinates"],
-        )
-    )
-    table.add_Field(
-        Field(
-            name="ra_width",
-            ucd=" ",
-            unit="deg",
-            dataType="float",
-            Description=["Width in RA of the fov"],
-        )
-    )
-    table.add_Field(
-        Field(
-            name="dec_width",
-            ucd="",
-            unit="deg",
-            dataType="float",
-            Description=["Width in Dec of the fov"],
-        )
-    )
-    table.add_Field(
-        Field(
-            name="prob_sum",
-            ucd="",
-            unit="None",
-            dataType="float",
-            Description=["The sum of all pixels in the fov"],
-        )
-    )
-    table.add_Field(
-        Field(
-            name="observ_time",
-            ucd="",
-            unit="sec",
-            dataType="float",
-            Description=["Tile mid. observation time in MJD"],
-        )
-    )
-    table.add_Field(
-        Field(
-            name="airmass",
-            ucd="",
-            unit="None",
-            dataType="float",
-            Description=["Airmass of tile at mid. observation time"],
-        )
-    )
-    table.add_Field(
-        Field(name="priority", ucd="", unit="", dataType="int", Description=[""])
-    )
-    table_field = utilityTable(table)
-    table_field.blankTable(len(coverage_struct["moc"]))
-
-    for ii in range(len(coverage_struct["moc"])):
-        data = coverage_struct["data"][ii, :]
-
-        ra, dec = data[0], data[1]
-        observ_time, field_id, prob, airmass = (
-            data[2],
-            data[5],
-            data[6],
-            data[7],
-        )
-
-        table_field.setValue("grid_id", ii, 0)
-        table_field.setValue("field_id", ii, field_id)
-        table_field.setValue("ra", ii, ra)
-        table_field.setValue("dec", ii, dec)
-        table_field.setValue("ra_width", ii, config_struct["FOV"])
-        table_field.setValue("dec_width", ii, config_struct["FOV"])
-        table_field.setValue("observ_time", ii, observ_time)
-        table_field.setValue("airmass", ii, airmass)
-        table_field.setValue("prob_sum", ii, prob)
-        table_field.setValue("priority", ii, ii)
-
-    table = table_field.getTable()
-    what.add_Table(table)
-    xml = stringVOEvent(what)
-    lines = xml.splitlines()
-    linesrep = []
-    for line in lines:
-        linenew = (
-            line.replace(">b'", ">")
-            .replace("'</", "</")
-            .replace("=b'", "=")
-            .replace("'>", ">")
-        )
-        linesrep.append(linenew)
-    xmlnew = "\n".join(linesrep)
-    with open(xmlfile, "w") as fid:
-        fid.write(xmlnew)
-
-
 def summary(params, map_struct, coverage_struct, catalog_struct=None):
     filts = list(set(coverage_struct["filters"]))
     for jj, telescope in enumerate(params["telescopes"]):
@@ -200,8 +65,6 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
         schedulexmlfile = params["outputDir"].joinpath(f"schedule_{telescope}.xml")
 
         config_struct = params["config"][telescope]
-
-        export_schedule_xml(schedulexmlfile, coverage_struct, config_struct)
 
         if (params["tilesType"] == "hierarchical") or (params["tilesType"] == "greedy"):
             fields = np.zeros((params["Ntiles"][jj], len(filts) + 2))

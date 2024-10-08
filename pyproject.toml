@@ -41,7 +41,6 @@ dependencies = [
     'astroplan',
     'ephem',
     'pyyaml',
-    'VOEventLib',
     'joblib',
     'ligo-segments',
     'ligo.skymap',
