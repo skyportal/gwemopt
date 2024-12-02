@@ -258,8 +258,8 @@ def read_skymap(params, map_struct=None, no_hdu=False):
         if params["gpstime"] is None:
             params["gpstime"] = t_obs.gps
 
-        if 'do_3d' not in params:
-            params['do_3d'] = do_3d
+        if "do_3d" not in params:
+            params["do_3d"] = do_3d
 
         map_struct = {}
 
