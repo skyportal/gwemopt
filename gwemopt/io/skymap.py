@@ -214,21 +214,25 @@ def read_inclination(skymap, params, map_struct):
     return map_struct
 
 
-def read_skymap(params, map_struct=None):
+def read_skymap(params, map_struct=None, no_hdu=False):
     """
     Read in a skymap and return a map_struct
 
     :param params: dictionary of parameters
     :param map_struct: dictionary of map parameters
-    :return: map_struct
+    :param no_hdu: do not create an HDU, default False
+    :return: params, map_struct
     """
 
-    geometry = params["geometry"]
-    if geometry is not None:
-        if geometry == "2d":
-            params["do_3d"] = False
-        else:
-            params["do_3d"] = True
+    if params.get("geometry") is None:
+        pass
+    elif params.get("geometry") == "2d":
+        params["do_3d"] = False
+    else:
+        params["do_3d"] = True
+
+    if map_struct is None and params.get("skymap") is None:
+        raise ValueError("No skymap provided")
 
     if map_struct is None:
         # Let's just figure out what's in the skymap first
@@ -236,56 +240,51 @@ def read_skymap(params, map_struct=None):
 
         params["name"] = Path(skymap_path).stem
 
-        is_3d = False
         t_obs = Time.now()
+        do_3d = False
 
         with fits.open(skymap_path) as hdul:
             for x in hdul:
                 if "DATE-OBS" in x.header:
                     t_obs = Time(x.header["DATE-OBS"], format="isot")
-
                 elif "EVENTMJD" in x.header:
-                    t_obs_mjd = x.header["EVENTMJD"]
-                    t_obs = Time(t_obs_mjd, format="mjd")
+                    t_obs = Time(x.header["EVENTMJD"], format="mjd")
 
                 if ("DISTMEAN" in x.header) | ("DISTSTD" in x.header):
-                    is_3d = True
+                    do_3d = True
 
         # Set GPS time from skymap, if not specified. Defaults to today
         params["eventtime"] = t_obs
         if params["gpstime"] is None:
             params["gpstime"] = t_obs.gps
 
-        if "do_3d" not in params:
-            params["do_3d"] = is_3d
+        if 'do_3d' not in params:
+            params['do_3d'] = do_3d
 
         map_struct = {}
 
-        filename = params["skymap"]
+        skymap = read_sky_map(skymap_path, moc=True, distances=params["do_3d"])
 
-        if params["do_3d"]:
-            skymap = read_sky_map(filename, moc=True, distances=True)
+        if (
+            params["do_3d"]
+            and "PROBDENSITY_SAMPLES" in skymap.columns
+        ):
+            if params["inclination"]:
+                map_struct = read_inclination(skymap, params, map_struct)
 
-            if "PROBDENSITY_SAMPLES" in skymap.columns:
-                if params["inclination"]:
-                    map_struct = read_inclination(skymap, params, map_struct)
-
-                skymap.remove_columns(
-                    [
-                        f"{name}_SAMPLES"
-                        for name in [
-                            "PROBDENSITY",
-                            "DISTMU",
-                            "DISTSIGMA",
-                            "DISTNORM",
-                        ]
+            skymap.remove_columns(
+                [
+                    f"{name}_SAMPLES"
+                    for name in [
+                        "PROBDENSITY",
+                        "DISTMU",
+                        "DISTSIGMA",
+                        "DISTNORM",
                     ]
-                )
+                ]
+            )
 
-            map_struct["skymap"] = skymap
-        else:
-            skymap = read_sky_map(filename, moc=True, distances=False)
-            map_struct["skymap"] = skymap
+        map_struct["skymap"] = skymap
 
     level, ipix = ah.uniq_to_level_ipix(map_struct["skymap"]["UNIQ"])
     nside = ah.level_to_nside(level)
@@ -321,7 +320,7 @@ def read_skymap(params, map_struct=None):
         cumprob = np.cumsum(prob)
         ii = np.where(cumprob > params["confidence_level"])[0]
         map_struct["skymap_raster_schedule"]["PROB"][ind[ii]] = 0.0
-        map_struct["skymap_schedule"] = derasterize(map_struct["skymap_raster"].copy())
+        map_struct["skymap_schedule"] = derasterize(map_struct["skymap_raster_schedule"].copy())
 
     if "DISTMU" in map_struct["skymap_raster"].columns:
         (
@@ -333,20 +332,22 @@ def read_skymap(params, map_struct=None):
             map_struct["skymap_raster"]["DISTSIGMA"],
         )
 
-    extra_header = [
-        ("PIXTYPE", "HEALPIX", "HEALPIX pixelisation"),
-        ("ORDERING", "NESTED", "Pixel ordering scheme: RING, NESTED, or NUNIQ"),
-        ("COORDSYS", "C", "Ecliptic, Galactic or Celestial (equatorial)"),
-        (
-            "MOCORDER",
-            moc.uniq2order(map_struct["skymap"]["UNIQ"].max()),
-            "MOC resolution (best order)",
-        ),
-        ("INDXSCHM", "EXPLICIT", "Indexing: IMPLICIT or EXPLICIT"),
-    ]
+    map_struct["hdu"] = None
+    if not no_hdu:
+        extra_header = [
+            ("PIXTYPE", "HEALPIX", "HEALPIX pixelisation"),
+            ("ORDERING", "NESTED", "Pixel ordering scheme: RING, NESTED, or NUNIQ"),
+            ("COORDSYS", "C", "Ecliptic, Galactic or Celestial (equatorial)"),
+            (
+                "MOCORDER",
+                moc.uniq2order(map_struct["skymap"]["UNIQ"].max()),
+                "MOC resolution (best order)",
+            ),
+            ("INDXSCHM", "EXPLICIT", "Indexing: IMPLICIT or EXPLICIT"),
+        ]
 
-    hdu = fits.table_to_hdu(map_struct["skymap_raster"])
-    hdu.header.extend(extra_header)
-    map_struct["hdu"] = hdu
+        hdu = fits.table_to_hdu(map_struct["skymap_raster"])
+        hdu.header.extend(extra_header)
+        map_struct["hdu"] = hdu
 
     return params, map_struct
