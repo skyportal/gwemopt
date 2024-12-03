@@ -214,7 +214,7 @@ def read_inclination(skymap, params, map_struct):
     return map_struct
 
 
-def read_skymap(params, map_struct=None, no_hdu=False):
+def read_skymap(params, map_struct=None, no_plotting=False, no_efficiency=False, no_catalog=False):
     """
     Read in a skymap and return a map_struct
 
@@ -223,6 +223,14 @@ def read_skymap(params, map_struct=None, no_hdu=False):
     :param no_hdu: do not create an HDU, default False
     :return: params, map_struct
     """
+
+    # some of the variables that this function creates
+    # are only necessary if we plan on doing:
+    # 1. loading catalogs (no_catalog=False)
+    # 2. plotting (no_plotting=False)
+    # 3. computing efficiency (no_efficiency=False)
+    # if we don't plan on doing some of these, we can skip
+    # some of the calculations to save time and memory
 
     if params.get("geometry") is None:
         pass
@@ -292,15 +300,19 @@ def read_skymap(params, map_struct=None, no_hdu=False):
     map_struct["skymap"]["ra"] = ra.deg
     map_struct["skymap"]["dec"] = dec.deg
 
-    map_struct["skymap_raster"] = rasterize(
-        map_struct["skymap"], order=hp.nside2order(int(params["nside"]))
-    )
+    if not (no_efficiency and no_plotting):
+        # rasterize the skymap, if plotting or efficiency calculations are needed
+        map_struct["skymap_raster"] = rasterize(
+            map_struct["skymap"], order=hp.nside2order(int(params["nside"]))
+        )
 
-    peak = map_struct["skymap_raster"][
-        map_struct["skymap_raster"]["PROB"]
-        == np.max(map_struct["skymap_raster"]["PROB"])
-    ]
-    map_struct["center"] = SkyCoord(peak["ra"][0] * u.deg, peak["dec"][0] * u.deg)
+    if not no_plotting:
+        # find the peak of the skymap, if plotting is needed
+        peak = map_struct["skymap_raster"][
+            map_struct["skymap_raster"]["PROB"]
+            == np.max(map_struct["skymap_raster"]["PROB"])
+        ]
+        map_struct["center"] = SkyCoord(peak["ra"][0] * u.deg, peak["dec"][0] * u.deg)
 
     map_struct["skymap_schedule"] = map_struct["skymap"].copy()
 
@@ -322,7 +334,14 @@ def read_skymap(params, map_struct=None, no_hdu=False):
         map_struct["skymap_raster_schedule"]["PROB"][ind[ii]] = 0.0
         map_struct["skymap_schedule"] = derasterize(map_struct["skymap_raster_schedule"].copy())
 
-    if "DISTMU" in map_struct["skymap_raster"].columns:
+    if no_catalog:
+        # remove rasterized skymap schedule, if loading a catalog is not needed
+        del map_struct["skymap_raster_schedule"]
+
+    if (
+        "skymap_raster" in map_struct
+        and "DISTMU" in map_struct["skymap_raster"].columns
+    ):
         (
             map_struct["skymap_raster"]["DISTMEAN"],
             map_struct["skymap_raster"]["DISTSTD"],
@@ -333,7 +352,8 @@ def read_skymap(params, map_struct=None, no_hdu=False):
         )
 
     map_struct["hdu"] = None
-    if not no_hdu:
+    if not no_plotting:
+        # create an HDU for the skymap, if plotting is needed
         extra_header = [
             ("PIXTYPE", "HEALPIX", "HEALPIX pixelisation"),
             ("ORDERING", "NESTED", "Pixel ordering scheme: RING, NESTED, or NUNIQ"),
@@ -349,5 +369,9 @@ def read_skymap(params, map_struct=None, no_hdu=False):
         hdu = fits.table_to_hdu(map_struct["skymap_raster"])
         hdu.header.extend(extra_header)
         map_struct["hdu"] = hdu
+
+    if no_efficiency:
+        # remove the rasterized skymap, if efficiency calculations are not needed
+        del map_struct["skymap_raster"]
 
     return params, map_struct
