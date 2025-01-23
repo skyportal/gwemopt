@@ -214,7 +214,14 @@ def read_inclination(skymap, params, map_struct):
     return map_struct
 
 
-def read_skymap(params, map_struct=None):
+def read_skymap(
+    skymap_path: Path,
+    nside_raster: int,
+    galactic_limit: float,
+    confidence_level: float,
+    inclination: bool = False,
+    map_struct=None,
+):
     """
     Read in a skymap and return a map_struct
 
@@ -222,19 +229,8 @@ def read_skymap(params, map_struct=None):
     :param map_struct: dictionary of map parameters
     :return: map_struct
     """
-
-    geometry = params["geometry"]
-    if geometry is not None:
-        if geometry == "2d":
-            params["do_3d"] = False
-        else:
-            params["do_3d"] = True
-
     if map_struct is None:
         # Let's just figure out what's in the skymap first
-        skymap_path = params["skymap"]
-
-        params["name"] = Path(skymap_path).stem
 
         is_3d = False
         t_obs = Time.now()
@@ -251,24 +247,16 @@ def read_skymap(params, map_struct=None):
                 if ("DISTMEAN" in x.header) | ("DISTSTD" in x.header):
                     is_3d = True
 
-        # Set GPS time from skymap, if not specified. Defaults to today
-        params["eventtime"] = t_obs
-        if params["gpstime"] is None:
-            params["gpstime"] = t_obs.gps
-
-        if "do_3d" not in params:
-            params["do_3d"] = is_3d
-
         map_struct = {}
 
-        filename = params["skymap"]
-
-        if params["do_3d"]:
-            skymap = read_sky_map(filename, moc=True, distances=True)
-
+        if is_3d:
+            skymap = read_sky_map(skymap_path, moc=True, distances=True)
+            
+            # TODO read_inclination not tested in tests/test_io_skymap.py
+            # need to find a file with the "PROBDENSITY_SAMPLES" column
             if "PROBDENSITY_SAMPLES" in skymap.columns:
-                if params["inclination"]:
-                    map_struct = read_inclination(skymap, params, map_struct)
+                if inclination:
+                    map_struct = read_inclination(skymap, {}, map_struct)
 
                 skymap.remove_columns(
                     [
@@ -284,7 +272,7 @@ def read_skymap(params, map_struct=None):
 
             map_struct["skymap"] = skymap
         else:
-            skymap = read_sky_map(filename, moc=True, distances=False)
+            skymap = read_sky_map(skymap_path, moc=True, distances=False)
             map_struct["skymap"] = skymap
 
     level, ipix = ah.uniq_to_level_ipix(map_struct["skymap"]["UNIQ"])
@@ -294,7 +282,7 @@ def read_skymap(params, map_struct=None):
     map_struct["skymap"]["dec"] = dec.deg
 
     map_struct["skymap_raster"] = rasterize(
-        map_struct["skymap"], order=hp.nside2order(int(params["nside"]))
+        map_struct["skymap"], order=hp.nside2order(nside_raster)
     )
 
     peak = map_struct["skymap_raster"][
@@ -305,21 +293,21 @@ def read_skymap(params, map_struct=None):
 
     map_struct["skymap_schedule"] = map_struct["skymap"].copy()
 
-    if params["galactic_limit"] > 0.0:
+    if galactic_limit > 0.0:
         coords = SkyCoord(ra=ra, dec=dec)
-        ipix = np.where(np.abs(coords.galactic.b.deg) <= params["galactic_limit"])[0]
+        ipix = np.where(np.abs(coords.galactic.b.deg) <= galactic_limit)[0]
         map_struct["skymap_schedule"]["PROBDENSITY"][ipix] = 0.0
 
     map_struct["skymap_raster_schedule"] = rasterize(
-        map_struct["skymap_schedule"], order=hp.nside2order(int(params["nside"]))
+        map_struct["skymap_schedule"], order=hp.nside2order(nside_raster)
     )
 
-    if params["confidence_level"] < 1.0:
+    if confidence_level < 1.0:
         prob = map_struct["skymap_raster_schedule"]["PROB"]
         ind = np.argsort(prob)[::-1]
         prob = prob[ind]
         cumprob = np.cumsum(prob)
-        ii = np.where(cumprob > params["confidence_level"])[0]
+        ii = np.where(cumprob > confidence_level)[0]
         map_struct["skymap_raster_schedule"]["PROB"][ind[ii]] = 0.0
         map_struct["skymap_schedule"] = derasterize(map_struct["skymap_raster"].copy())
 
@@ -349,4 +337,4 @@ def read_skymap(params, map_struct=None):
     hdu.header.extend(extra_header)
     map_struct["hdu"] = hdu
 
-    return params, map_struct
+    return map_struct

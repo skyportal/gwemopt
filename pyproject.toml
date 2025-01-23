@@ -4,13 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gwemopt"
-authors = [
-    {name = "Michael Coughlin", email = "michael.coughlin@ligo.org"},
-]
+authors = [{ name = "Michael Coughlin", email = "michael.coughlin@ligo.org" }]
 description = "A python package for GW-EM Followup Optimization"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {text = "GPLv3"}
+license = { text = "GPLv3" }
 classifiers = [
     "Programming Language :: Python :: 3",
     'Programming Language :: Python :: 3.10',
@@ -52,7 +50,7 @@ dependencies = [
     'pulp',
     'shapely',
     'tables',
-    'regions'
+    'regions',
 ]
 
 dynamic = ["version"]
@@ -65,6 +63,7 @@ test = [
     'coverage',
     'coveralls',
     'freezegun',
+    'black',
 ]
 
 [project.scripts]
@@ -81,11 +80,7 @@ gwemopt = ['data/*/*']
 
 [tool.coverage.run]
 source = ["gwemopt"]
-omit = [
-    "gwemopt/tests/*",
-    "gwemopt/__main__.py",
-    "gwemopt/_version.py",
-]
+omit = ["gwemopt/tests/*", "gwemopt/__main__.py", "gwemopt/_version.py"]
 
 [tool.coverage.report]
 # Regexes for lines to exclude from consideration
@@ -108,8 +103,8 @@ exclude_lines = [
     'if __name__ == "__main__":',
     "err =",
     "logger.error",
-    "raise"
-    ]
+    "raise",
+]
 ignore_errors = true
 
 [tool.isort]
@@ -135,6 +130,4 @@ tag = true
 push = true
 
 [tool.bumpver.file_patterns]
-"pyproject.toml" = [
-    'current_version = "{version}"',
-]
+"pyproject.toml" = ['current_version = "{version}"']

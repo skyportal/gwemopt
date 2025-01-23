@@ -39,7 +39,7 @@ def run(args=None):
     params["skymap"] = get_skymap(event_name=args.event)
 
     # Function to read maps
-    params, map_struct = read_skymap(params)
+    map_struct = read_skymap(params)
 
     # Set output directory
     if args.outputDir is not None:
