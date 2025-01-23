@@ -220,7 +220,6 @@ def read_skymap(
     galactic_limit: float,
     confidence_level: float,
     inclination: bool = False,
-    map_struct=None,
 ):
     """
     Read in a skymap and return a map_struct
@@ -229,51 +228,50 @@ def read_skymap(
     :param map_struct: dictionary of map parameters
     :return: map_struct
     """
-    if map_struct is None:
-        # Let's just figure out what's in the skymap first
+    # Let's just figure out what's in the skymap first
 
-        is_3d = False
-        t_obs = Time.now()
+    is_3d = False
+    t_obs = Time.now()
 
-        with fits.open(skymap_path) as hdul:
-            for x in hdul:
-                if "DATE-OBS" in x.header:
-                    t_obs = Time(x.header["DATE-OBS"], format="isot")
+    with fits.open(skymap_path) as hdul:
+        for x in hdul:
+            if "DATE-OBS" in x.header:
+                t_obs = Time(x.header["DATE-OBS"], format="isot")
 
-                elif "EVENTMJD" in x.header:
-                    t_obs_mjd = x.header["EVENTMJD"]
-                    t_obs = Time(t_obs_mjd, format="mjd")
+            elif "EVENTMJD" in x.header:
+                t_obs_mjd = x.header["EVENTMJD"]
+                t_obs = Time(t_obs_mjd, format="mjd")
 
-                if ("DISTMEAN" in x.header) | ("DISTSTD" in x.header):
-                    is_3d = True
+            if ("DISTMEAN" in x.header) | ("DISTSTD" in x.header):
+                is_3d = True
 
-        map_struct = {}
+    map_struct = {}
 
-        if is_3d:
-            skymap = read_sky_map(skymap_path, moc=True, distances=True)
-            
-            # TODO read_inclination not tested in tests/test_io_skymap.py
-            # need to find a file with the "PROBDENSITY_SAMPLES" column
-            if "PROBDENSITY_SAMPLES" in skymap.columns:
-                if inclination:
-                    map_struct = read_inclination(skymap, {}, map_struct)
+    if is_3d:
+        skymap = read_sky_map(skymap_path, moc=True, distances=True)
+        
+        # TODO read_inclination not tested in tests/test_io_skymap.py
+        # need to find a file with the "PROBDENSITY_SAMPLES" column
+        if "PROBDENSITY_SAMPLES" in skymap.columns:
+            if inclination:
+                map_struct = read_inclination(skymap, {}, map_struct)
 
-                skymap.remove_columns(
-                    [
-                        f"{name}_SAMPLES"
-                        for name in [
-                            "PROBDENSITY",
-                            "DISTMU",
-                            "DISTSIGMA",
-                            "DISTNORM",
-                        ]
+            skymap.remove_columns(
+                [
+                    f"{name}_SAMPLES"
+                    for name in [
+                        "PROBDENSITY",
+                        "DISTMU",
+                        "DISTSIGMA",
+                        "DISTNORM",
                     ]
-                )
+                ]
+            )
 
-            map_struct["skymap"] = skymap
-        else:
-            skymap = read_sky_map(skymap_path, moc=True, distances=False)
-            map_struct["skymap"] = skymap
+        map_struct["skymap"] = skymap
+    else:
+        skymap = read_sky_map(skymap_path, moc=True, distances=False)
+        map_struct["skymap"] = skymap
 
     level, ipix = ah.uniq_to_level_ipix(map_struct["skymap"]["UNIQ"])
     nside = ah.level_to_nside(level)
@@ -337,4 +335,4 @@ def read_skymap(
     hdu.header.extend(extra_header)
     map_struct["hdu"] = hdu
 
-    return map_struct
+    return map_struct, t_obs.gps

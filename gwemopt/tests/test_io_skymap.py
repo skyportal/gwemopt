@@ -4,7 +4,7 @@ from math import isclose
 
 
 def test_read_skymap(skymap_path):
-    map_struct = read_skymap(
+    map_struct, gpstime = read_skymap(
         skymap_path=skymap_path,
         nside_raster=512,
         galactic_limit=0.0,
@@ -20,6 +20,8 @@ def test_read_skymap(skymap_path):
         "ra",
         "dec",
     ]
+
+    assert isclose(gpstime,1249852256.995869)
 
     assert len(map_struct["skymap"]["PROBDENSITY"]) == 16896
 

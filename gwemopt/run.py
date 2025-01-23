@@ -39,7 +39,13 @@ def run(args=None):
     params["skymap"] = get_skymap(event_name=args.event)
 
     # Function to read maps
-    map_struct = read_skymap(params)
+    map_struct, gpstime = read_skymap(
+        params["skymap"],
+        params["nside"],
+        params["galactic_limit"],
+        params["confidence_level"],
+    )
+    params["gpstime"] = gpstime
 
     # Set output directory
     if args.outputDir is not None:
