@@ -1,16 +1,22 @@
 import healpy as hp
 import numpy as np
+from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-def tesselation_spiral(config_struct, scale=0.80):
-    if config_struct["FOV_type"] == "square":
-        FOV = config_struct["FOV"] * config_struct["FOV"] * scale
-    elif config_struct["FOV_type"] == "circle":
-        FOV = np.pi * config_struct["FOV"] * config_struct["FOV"] * scale
+def tesselation_spiral(
+    fov_type: str, fov: float, scale: float = 0.80, save_path: Path | None = None
+):
+    if fov_type == "square":
+        FOV = fov * fov * scale
+    elif fov_type == "circle":
+        FOV = np.pi * fov * fov * scale
 
     area_of_sphere = 4 * np.pi * (180 / np.pi) ** 2
     n = int(np.ceil(area_of_sphere / FOV))
-    print("Using %d points to tile the sphere..." % n)
+    logger.debug("Using %d points to tile the sphere..." % n)
 
     golden_angle = np.pi * (3 - np.sqrt(5))
     theta = golden_angle * np.arange(n)
@@ -23,18 +29,22 @@ def tesselation_spiral(config_struct, scale=0.80):
     points[:, 2] = z
 
     ra, dec = hp.pixelfunc.vec2ang(points, lonlat=True)
-    fid = open(config_struct["tesselationFile"], "w")
-    for ii in range(len(ra)):
-        fid.write("%d %.5f %.5f\n" % (ii, ra[ii], dec[ii]))
-    fid.close()
+    if save_path:
+        fid = open(save_path, "w")
+        for ii in range(len(ra)):
+            fid.write("%d %.5f %.5f\n" % (ii, ra[ii], dec[ii]))
+        fid.close()
+    return np.stack([np.arange(len(ra)), ra, dec], axis=-1)
 
 
-def tesselation_packing(config_struct, scale=0.97):
+def tesselation_packing(
+    fov_type: str, fov: float, scale: float = 0.97, save_path: Path | None = None
+):
     sphere_radius = 1.0
-    if config_struct["FOV_type"] == "square":
-        circle_radius = np.deg2rad(config_struct["FOV"] / 2.0) * scale
-    elif config_struct["FOV_type"] == "circle":
-        circle_radius = np.deg2rad(config_struct["FOV"]) * scale
+    if fov_type == "square":
+        circle_radius = np.deg2rad(fov / 2.0) * scale
+    elif fov_type == "circle":
+        circle_radius = np.deg2rad(fov) * scale
     vertical_count = int((np.pi * sphere_radius) / (2 * circle_radius))
 
     phis = []
@@ -58,7 +68,9 @@ def tesselation_packing(config_struct, scale=0.97):
     dec = np.array(np.rad2deg(phis))
     ra = np.array(np.rad2deg(thetas))
 
-    fid = open(config_struct["tesselationFile"], "w")
-    for ii in range(len(ra)):
-        fid.write("%d %.5f %.5f\n" % (ii, ra[ii], dec[ii]))
-    fid.close()
+    if save_path:
+        fid = open(save_path, "w")
+        for ii in range(len(ra)):
+            fid.write("%d %.5f %.5f\n" % (ii, ra[ii], dec[ii]))
+        fid.close()
+    return np.stack([np.arange(len(ra)), ra, dec], axis=-1)
