@@ -13,3 +13,11 @@ def skymap_path():
 @fixture
 def ztf_config():
     return readParamsFromFile(CONFIG_DIR.joinpath("ZTF.config"))
+
+@fixture
+def mxt_config():
+    return readParamsFromFile(CONFIG_DIR.joinpath("SVOM-MXT.config"))
+
+@fixture
+def decam_config():
+    return readParamsFromFile(CONFIG_DIR.joinpath("DECam.config"))

@@ -4,6 +4,7 @@ from astropy.time import Time
 
 from gwemopt.scheduler import computeSlewReadoutTime
 from gwemopt.utils import angular_distance
+from gwemopt.telescope import Telescope
 
 
 def read_summary(summary_path):
@@ -58,24 +59,22 @@ def read_schedule(schedule_path):
     return schedule
 
 
-def summary(params, map_struct, coverage_struct, catalog_struct=None):
+def summary(params, telescopes: list[Telescope], map_struct, coverage_struct, catalog_struct=None):
     filts = list(set(coverage_struct["filters"]))
-    for jj, telescope in enumerate(params["telescopes"]):
-        schedulefile = params["outputDir"].joinpath(f"schedule_{telescope}.dat")
-        schedulexmlfile = params["outputDir"].joinpath(f"schedule_{telescope}.xml")
-
-        config_struct = params["config"][telescope]
+    for jj, telescope in enumerate(telescopes):
+        schedulefile = params["outputDir"].joinpath(f"schedule_{telescope.telescope_name}.dat")
+        schedulexmlfile = params["outputDir"].joinpath(f"schedule_{telescope.telescope_name}.xml")
 
         if (params["tilesType"] == "hierarchical") or (params["tilesType"] == "greedy"):
             fields = np.zeros((params["Ntiles"][jj], len(filts) + 2))
         else:
-            fields = np.zeros((len(config_struct["tesselation"]), len(filts) + 2))
+            fields = np.zeros((len(telescope.tesselation), len(filts) + 2))
 
         totexp = 0
 
         with open(schedulefile, "w") as fid:
             for ii in range(len(coverage_struct["filters"])):
-                if not telescope == coverage_struct["telescope"][ii]:
+                if not telescope.telescope_name == coverage_struct["telescope"][ii]:
                     continue
 
                 data = coverage_struct["data"][ii, :]
@@ -113,12 +112,12 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
                 dist = angular_distance(
                     data[0],
                     data[1],
-                    config_struct["tesselation"][:, 1],
-                    config_struct["tesselation"][:, 2],
+                    telescope.tesselation[:, 1],
+                    telescope.tesselation[:, 2],
                 )
                 idx1 = np.argmin(dist)
                 idx2 = filts.index(filt)
-                fields[idx1, 0] = config_struct["tesselation"][idx1, 0]
+                fields[idx1, 0] = telescope.tesselation[idx1, 0]
                 fields[idx1, 1] = prob
                 fields[idx1, idx2 + 2] = fields[idx1, idx2 + 2] + 1
 
@@ -133,10 +132,10 @@ def summary(params, map_struct, coverage_struct, catalog_struct=None):
         idx = np.where(fields_sum >= 2)[0]
         print("%d/%d fields were observed at least twice" % (len(idx), len(fields_sum)))
         print(f"Expected time spent on exposures: {totexp / 3600:.1f} hr.")
-        slew_readout_time = computeSlewReadoutTime(config_struct, coverage_struct)
+        slew_readout_time = computeSlewReadoutTime(telescope, coverage_struct)
         print(f"Expected time spent on slewing and readout: {slew_readout_time:.0f} s.")
 
-        coveragefile = params["outputDir"].joinpath(f"coverage_{telescope}.dat")
+        coveragefile = params["outputDir"].joinpath(f"coverage_{telescope.telescope_name}.dat")
         with open(coveragefile, "w") as fid:
             for field in fields:
                 fid.write("%d %.10f " % (field[0], field[1]))

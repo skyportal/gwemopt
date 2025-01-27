@@ -16,6 +16,10 @@ import gwemopt
 import gwemopt.moc
 import gwemopt.segments
 from gwemopt.utils.geometry import angular_distance
+from gwemopt.telescope import Telescope
+from gwemopt.coverage import combine_coverage_structs
+from gwemopt.scheduler import scheduler
+from gwemopt.utils import integrationTime
 
 TILE_TYPES = ["moc", "galaxy"]
 
@@ -175,8 +179,7 @@ def optimize_max_tiles(
     params,
     opt_tile_struct,
     opt_coverage_struct,
-    config_struct,
-    telescope,
+    telescope: Telescope,
     map_struct_hold,
 ):
     """Returns value of max_tiles_nb optimized for number of scheduled fields with 'balanced' exposures in each filter."""
@@ -197,10 +200,10 @@ def optimize_max_tiles(
     coarse_bool = False
     repeating = False
     if (
-        config_struct["FOV_type"] == "circle"
-        and config_struct["FOV"] <= 2.0
-        or config_struct["FOV_type"] == "square"
-        and config_struct["FOV"] <= 4.0
+        telescope.fov_type == "circle"
+        and telescope.fov <= 2.0
+        or telescope.fov_type == "square"
+        and telescope.fov <= 4.0
     ):
         max_trials = np.linspace(10, 210, 9)
         coarse_bool = True
@@ -459,12 +462,14 @@ def append_tile_epochs(tile_struct, coverage_struct):
     return tile_struct
 
 
-def order_by_observability(params, tile_structs):
+def order_by_observability(
+    telescopes: list[Telescope],
+    exposurelist: segments.segmentlist,
+    tile_structs,
+):
     observability = []
-    for telescope in params["telescopes"]:
-        config_struct = params["config"][telescope]
-        tiles_struct = tile_structs[telescope]
-        exposurelist = config_struct["exposurelist"]
+    for telescope in telescopes:
+        tiles_struct = tile_structs[telescope.telescope_name]
         observability_prob = 0.0
         keys = tiles_struct.keys()
         for jj, key in enumerate(keys):
@@ -475,21 +480,19 @@ def order_by_observability(params, tile_structs):
                 observability_prob = observability_prob + tiles_struct[key]["prob"]
         observability.append(observability_prob)
     idx = np.argsort(observability)[::-1]
-    params["telescopes"] = [params["telescopes"][ii] for ii in idx]
+    return [telescopes[ii] for ii in idx]
 
 
 def schedule_alternating(
     params,
-    config_struct,
-    telescope,
+    telescope: Telescope,
+    exposurelist: segments.segmentlist,
+    tot_obs_time: float,
     map_struct,
     tile_struct,
     previous_coverage_struct=None,
 ):
-    if "filt_change_time" in config_struct.keys():
-        filt_change_time = config_struct["filt_change_time"]
-    else:
-        filt_change_time = 0
+    filt_change_time = telescope.filt_change_time
     if params["treasuremap_token"] is not None and previous_coverage_struct:
         check_overlapping_tiles(
             params, tile_struct, previous_coverage_struct
@@ -502,10 +505,8 @@ def schedule_alternating(
     for i in tqdm(range(len(exposuretimes))):
         params["filters"] = [filters[i]]
         params["exposuretimes"] = [exposuretimes[i]]
-        config_struct["exposurelist"] = segments.segmentlist(
-            config_struct["exposurelist"][maxidx:]
-        )
-        total_nexps = len(config_struct["exposurelist"])
+        exposurelist = segments.segmentlist(exposurelist[maxidx:])
+        total_nexps = len(exposurelist)
 
         # if the duration of a single block is less than 30 min, shift by additional time to add up to 30 min
         if i > 0:
@@ -520,13 +521,11 @@ def schedule_alternating(
                 extra_time = extra_time + filt_change_time
             elif extra_time <= 0:
                 extra_time = filt_change_time
-            config_struct["exposurelist"] = config_struct["exposurelist"].shift(
-                extra_time / 86400.0
-            )
+            exposurelist = exposurelist.shift(extra_time / 86400.0)
 
         if not params["tilesType"] == "galaxy":
             tile_struct = powerlaw_tiles_struct(
-                params, config_struct, telescope, map_struct, tile_struct
+                params, telescope, tot_obs_time, map_struct, tile_struct
             )
 
         # set unbalanced fields to 0
@@ -538,22 +537,20 @@ def schedule_alternating(
             if len(coverage_structs) > 1:
                 tile_struct = append_tile_epochs(
                     tile_struct,
-                    gwemopt.coverage.combine_coverage_structs(coverage_structs),
+                    combine_coverage_structs(coverage_structs),
                 )
             elif len(coverage_structs) == 1:
                 tile_struct = append_tile_epochs(tile_struct, coverage_structs[0])
 
-        coverage_struct = gwemopt.scheduler.scheduler(
-            params, config_struct, tile_struct
-        )
+        coverage_struct = scheduler(params, telescope, exposurelist, tile_struct)
         if params["max_nb_tiles"] is not None:
             tile_struct, doReschedule = slice_number_tiles(
                 params, tile_struct, coverage_struct
             )
 
             if doReschedule:
-                coverage_struct = gwemopt.scheduler.scheduler(
-                    params, config_struct, tile_struct
+                coverage_struct = scheduler(
+                    params, telescope, exposurelist, tile_struct
                 )
 
         if len(coverage_struct["exposureused"]) > 0:
@@ -568,7 +565,7 @@ def schedule_alternating(
             break
     params["filters"], params["exposuretimes"] = filters, exposuretimes
 
-    return gwemopt.coverage.combine_coverage_structs(coverage_structs), tile_struct
+    return combine_coverage_structs(coverage_structs), tile_struct
 
 
 def get_rectangle(ras, decs, ra_size, dec_size):
@@ -803,14 +800,17 @@ def galaxy(params, map_struct, catalog_struct: pd.DataFrame, regions=None):
 
 
 def powerlaw_tiles_struct(
-    params, config_struct, telescope, map_struct, tile_struct, catalog_struct=None
+    params,
+    telescope: Telescope,
+    tot_obs_time,
+    map_struct,
+    tile_struct,
+    catalog_struct=None,
 ):
     keys = tile_struct.keys()
     ntiles = len(keys)
     if ntiles == 0:
         return tile_struct
-
-    tot_obs_time = config_struct["tot_obs_time"]
 
     if params["tilesType"] == "galaxy":
         tile_probs = compute_tiles_map(
@@ -839,10 +839,7 @@ def powerlaw_tiles_struct(
         for key, tileprob, exposureTime in zip(keys, tile_probs, ranked_tile_times):
             # Try to load the minimum duration of time from telescope config file
             # Otherwise set it to zero
-            try:
-                min_obs_duration = config_struct["min_observability_duration"] / 24
-            except:
-                min_obs_duration = 0.0
+            min_obs_duration = telescope.min_observability_duration / 24
 
             # Check that a given tile is observable a minimum amount of time
             # If not set the proba associated to the tile to zero
@@ -870,16 +867,15 @@ def powerlaw_tiles_struct(
                 tile_struct[key]["nexposures"] = 0
                 tile_struct[key]["filt"] = []
             else:
-                if params["doReferences"] and (telescope in ["ZTF", "DECam"]):
+                if params["doReferences"] and (
+                    telescope.telescope_name in ["ZTF", "DECam"]
+                ):
                     tile_struct[key]["exposureTime"] = []
                     tile_struct[key]["nexposures"] = []
                     tile_struct[key]["filt"] = []
-                    if key in config_struct["reference_images"]:
+                    if key in telescope.referenceImages:
                         for ii in range(len(params["filters"])):
-                            if (
-                                params["filters"][ii]
-                                in config_struct["reference_images"][key]
-                            ):
+                            if params["filters"][ii] in telescope.referenceImages[key]:
                                 tile_struct[key]["exposureTime"].append(
                                     exposureTime[ii]
                                 )
@@ -896,11 +892,11 @@ def powerlaw_tiles_struct(
                     tile_struct[key]["nexposures"] = len(params["exposuretimes"])
                     tile_struct[key]["filt"] = params["filters"]
     else:
-        ranked_tile_times = gwemopt.utils.integrationTime(
+        ranked_tile_times = integrationTime(
             tot_obs_time,
             tile_probs,
             func=None,
-            T_int=config_struct["exposuretime"],
+            T_int=telescope.telescope_exptime,
         )
 
         keys = tile_struct.keys()
@@ -908,10 +904,7 @@ def powerlaw_tiles_struct(
         for key, tileprob, exposureTime in zip(keys, tile_probs, ranked_tile_times):
             # Try to load the minimum duration of time from telescope config file
             # Otherwise set it to zero
-            try:
-                min_obs_duration = config_struct["min_observability_duration"] / 24
-            except:
-                min_obs_duration = 0.0
+            min_obs_duration = telescope.min_observability_duration / 24
 
             # Check that a given tile is observable a minimum amount of time
             # If not set the proba associated to the tile to zero
@@ -936,30 +929,38 @@ def powerlaw_tiles_struct(
             tile_struct[key]["prob"] = tileprob
             tile_struct[key]["exposureTime"] = exposureTime
             tile_struct[key]["nexposures"] = int(
-                np.floor(exposureTime / config_struct["exposuretime"])
+                np.floor(exposureTime / telescope.telescope_exptime)
             )
-            tile_struct[key]["filt"] = [config_struct["filt"]] * tile_struct[key][
+            tile_struct[key]["filt"] = [telescope.filters] * tile_struct[key][
                 "nexposures"
             ]
 
     return tile_struct
 
 
-def moc(params, map_struct, moc_structs, doSegments=True):
+def moc(
+    params,
+    telescopes: list[Telescope],
+    segmentList: segments.segmentlist,
+    tot_obs_time: float,
+    airmass: float,
+    map_struct,
+    moc_structs,
+    doSegments=True,
+):
     tile_structs = {}
-    for telescope in params["telescopes"]:
-        config_struct = params["config"][telescope]
-        moc_struct = moc_structs[telescope]
+    for telescope in telescopes:
+        moc_struct = moc_structs[telescope.telescope_name]
 
         tile_struct = powerlaw_tiles_struct(
-            params, config_struct, telescope, map_struct, moc_struct
+            params, telescope, tot_obs_time, map_struct, moc_struct
         )
 
         if doSegments:
             tile_struct = gwemopt.segments.get_segments_tiles(
-                params, config_struct, tile_struct
+                params, segmentList, telescope, airmass, tile_struct
             )
-        tile_structs[telescope] = tile_struct
+        tile_structs[telescope.telescope_name] = tile_struct
 
     return tile_structs
 

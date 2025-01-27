@@ -1,11 +1,8 @@
 import json
-import os
 from pathlib import Path
 
-import astroplan
-import astropy
 import numpy as np
-from astropy import table, time
+from astropy import time
 from astropy import units as u
 
 import gwemopt
@@ -13,9 +10,9 @@ from gwemopt.paths import CONFIG_DIR, REFS_DIR, TESSELATION_DIR
 from gwemopt.tiles import TILE_TYPES
 from gwemopt.utils import tesselation
 from typing import Any
+from gwemopt.telescope import Telescope
 
-
-def params_struct(opts) -> tuple[dict[str, Any], bool]:
+def params_struct(opts) -> tuple[dict[str, Any], Telescope, bool]:
     """@Creates gwemopt params structure
     @param opts
         gwemopt command line options
@@ -38,69 +35,16 @@ def params_struct(opts) -> tuple[dict[str, Any], bool]:
             )
 
     params["config"] = {}
-    for telescope in telescopes:
-        config_file = CONFIG_DIR.joinpath(telescope + ".config")
-        params["config"][telescope] = gwemopt.utils.readParamsFromFile(config_file)
-        params["config"][telescope]["telescope"] = telescope
-        if opts.doSingleExposure:
-            exposuretime = np.array(opts.exposuretimes.split(","), dtype=float)[0]
 
-            params["config"][telescope]["magnitude_orig"] = params["config"][telescope][
-                "magnitude"
-            ]
-            params["config"][telescope]["exposuretime_orig"] = params["config"][
-                telescope
-            ]["exposuretime"]
-
-            nmag = -2.5 * np.log10(
-                np.sqrt(params["config"][telescope]["exposuretime"] / exposuretime)
-            )
-            params["config"][telescope]["magnitude"] = (
-                params["config"][telescope]["magnitude"] + nmag
-            )
-            params["config"][telescope]["exposuretime"] = exposuretime
-        if "tesselationFile" in params["config"][telescope]:
-            tessfile = TESSELATION_DIR.joinpath(
-                params["config"][telescope]["tesselationFile"]
-            )
-            if not os.path.isfile(tessfile):
-                if params["config"][telescope]["FOV_type"] == "circle":
-                    tesselation.tesselation_spiral(params["config"][telescope])
-                elif params["config"][telescope]["FOV_type"] == "square":
-                    tesselation.tesselation_packing(params["config"][telescope])
-            if opts.tilesType == "galaxy":
-                params["config"][telescope]["tesselation"] = np.empty((3,))
-            else:
-                params["config"][telescope]["tesselation"] = np.loadtxt(
-                    tessfile, usecols=(0, 1, 2), comments="%"
-                )
-
-        if "referenceFile" in params["config"][telescope]:
-            reffile = REFS_DIR.joinpath(params["config"][telescope]["referenceFile"])
-
-            refs = table.unique(
-                table.Table.read(reffile, format="ascii", data_start=2, data_end=-1)[
-                    "field", "fid"
-                ]
-            )
-            reference_images = {
-                group[0]["field"]: group["fid"].astype(int).tolist()
-                for group in refs.group_by("field").groups
-            }
-            reference_images_map = {0: "u", 1: "g", 2: "r", 3: "i", 4: "z", 5: "y"}
-            for key in reference_images:
-                reference_images[key] = [
-                    reference_images_map.get(n, n) for n in reference_images[key]
-                ]
-            params["config"][telescope]["reference_images"] = reference_images
-
-        location = astropy.coordinates.EarthLocation(
-            params["config"][telescope]["longitude"],
-            params["config"][telescope]["latitude"],
-            params["config"][telescope]["elevation"],
+    telescopes: list[Telescope] = [
+        Telescope(
+            telescope_name=telescope,
+            telescope_description=gwemopt.utils.readParamsFromFile(
+                CONFIG_DIR.joinpath(telescope + ".config")
+            ),
         )
-        observer = astroplan.Observer(location=location)
-        params["config"][telescope]["observer"] = observer
+        for telescope in telescopes
+    ]
 
     params["coverageFiles"] = (
         opts.coverageFiles.split(",") if opts.coverageFiles else None
@@ -183,4 +127,4 @@ def params_struct(opts) -> tuple[dict[str, Any], bool]:
         opts.confidence_level if hasattr(opts, "confidence_level") else 0.9
     )
 
-    return params, do_3d
+    return params, telescopes, do_3d

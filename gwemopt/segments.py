@@ -10,35 +10,34 @@ from tqdm import tqdm
 from gwemopt.utils.geometry import angular_distance
 from gwemopt.utils.misc import get_exposures
 from gwemopt.utils.sidereal_time import hour_angle
+from gwemopt.telescope import Telescope
 
 # conversion between MJD (tt) and DJD (what ephem uses)
 MJD_TO_DJD = -2400000.5 + 2415020.0
 
 
-def get_telescope_segments(params):
-    for telescope in params["telescopes"]:
-        params["config"][telescope]["segmentlist"] = get_segments(
-            params, params["config"][telescope]
+def get_telescope_segments(
+    telescopes: list[Telescope], gpstime, Tobs, exposuretimes, doAlternatingFilters
+) -> tuple[segments.segmentlist, segments.segmentlist, int, float]:
+    for telescope in telescopes:
+        telescope_segments = get_segments(telescope, gpstime, Tobs)
+        exposurelist = get_exposures(
+            telescope,
+            telescope_segments,
+            exposuretimes,
+            doAlternatingFilters,
         )
-        params["config"][telescope]["exposurelist"] = get_exposures(
-            params,
-            params["config"][telescope],
-            params["config"][telescope]["segmentlist"],
-        )
-        if len(params["config"][telescope]["exposurelist"]) == 0:
-            params["config"][telescope]["n_windows"] = 0
-            params["config"][telescope]["tot_obs_time"] = 0.0
+        if len(exposurelist) == 0:
+            nwindows = 0
+            tot_obs_time = 0.0
             continue
 
-        nexp, _ = np.array(params["config"][telescope]["exposurelist"]).shape
-        params["config"][telescope]["n_windows"] = nexp
-        tot_obs_time = (
-            np.sum(np.diff(np.array(params["config"][telescope]["exposurelist"])))
-            * 86400.0
-        )
-        params["config"][telescope]["tot_obs_time"] = tot_obs_time
+        nexp, _ = np.array(exposurelist).shape
+        nwindows = nexp
+        tot_obs_time = np.sum(np.diff(np.array(exposurelist))) * 86400.0
+        tot_obs_time = tot_obs_time
 
-    return params
+    return telescope_segments, exposurelist, nwindows, tot_obs_time
 
 
 def get_moon_radecs(segmentlist, observer):
@@ -65,11 +64,8 @@ def get_moon_radecs(segmentlist, observer):
     return moon_radecs
 
 
-def get_moon_segments(config_struct, segmentlist, moon_radecs, radec):
-    if "moon_constraint" in config_struct:
-        moon_constraint = float(config_struct["moon_constraint"])
-    else:
-        moon_constraint = 20.0
+def get_moon_segments(telescope: Telescope, segmentlist, moon_radecs, radec):
+    moon_constraint = telescope.moon_constraint
 
     moonsegments = []
     moonsegmentlist = segments.segmentlist()
@@ -108,15 +104,10 @@ def get_moon_segments(config_struct, segmentlist, moon_radecs, radec):
     return moonsegmentlist
 
 
-def get_ha_segments(config_struct, segmentlist, radec):
-    if "ha_constraint" in config_struct:
-        ha_constraint = config_struct["ha_constraint"].split(",")
-        ha_min = float(ha_constraint[0])
-        ha_max = float(ha_constraint[1])
-    else:
-        ha_min, ha_max = -24.0, 24.0
+def get_ha_segments(telescope: Telescope, segmentlist, radec):
+    ha_min, ha_max = telescope.ha_constraint
 
-    if config_struct["telescope"] == "DECam":
+    if telescope.telescope_name == "DECam":
         if radec[1] <= -30.0:
             ha_min, ha_max = -5.2, 5.2
         else:
@@ -128,7 +119,7 @@ def get_ha_segments(config_struct, segmentlist, radec):
     for seg in segmentlist:
         mjds = np.linspace(seg[0], seg[1], 100)
         tt = Time(mjds, format="mjd", scale="utc")
-        ha = hour_angle(tt.jd, tt.gps, config_struct["longitude"], radec[0], 0)
+        ha = hour_angle(tt.jd, tt.gps, telescope.longitude, radec[0], 0)
         idx = np.where((ha >= ha_min) & (ha <= ha_max))[0]
         if len(idx) >= 2:
             halist.append(segments.segment(mjds[idx[0]], mjds[idx[-1]]))
@@ -136,21 +127,25 @@ def get_ha_segments(config_struct, segmentlist, radec):
     return halist
 
 
-def get_segments(params, config_struct):
-    gpstime = params["gpstime"]
+def get_segments(
+    telescope: Telescope, gpstime, Tobs: np.ndarray
+) -> segments.segmentlist:
     event_mjd = Time(gpstime, format="gps", scale="utc").mjd
 
     segmentlist = segments.segmentlist()
-    start_segments = event_mjd + params["Tobs"][::2]
-    end_segments = event_mjd + params["Tobs"][1::2]
+    start_segments = event_mjd + Tobs[::2]
+    end_segments = event_mjd + Tobs[1::2]
     for start_segment, end_segment in zip(start_segments, end_segments):
         segmentlist.append(segments.segment(start_segment, end_segment))
 
     observer = ephem.Observer()
-    observer.lat = str(config_struct["latitude"])
-    observer.lon = str(config_struct["longitude"])
+    # FIXME latitude and longitude are converted into string because
+    # the test_coverage fail if not. Should not be the case as
+    # the value in float is the same.
+    observer.lat = str(telescope.latitude.value)
+    observer.lon = str(telescope.longitude.value)
     observer.horizon = str(-12.0)
-    observer.elevation = config_struct["elevation"]
+    observer.elevation = telescope.elevation.value
 
     date_start = ephem.Date(segmentlist[0][0] - MJD_TO_DJD)
     date_end = ephem.Date(segmentlist[-1][1] - MJD_TO_DJD)
@@ -176,11 +171,7 @@ def get_segments(params, config_struct):
     segmentlistdic["night"] = nightsegmentlist
 
     # load the sun retriction for a satelite
-    try:
-        sat_sun_restriction = config_struct["sat_sun_restriction"]
-    except:
-        sat_sun_restriction = 0.0
-
+    sat_sun_restriction = telescope.sat_sun_restriction
     # in the case of satellite use don't intersect with night segment and take all observation time available
     if sat_sun_restriction:
         segmentlist.coalesce()
@@ -193,16 +184,15 @@ def get_segments(params, config_struct):
     return segmentlist
 
 
-def get_segments_tile(config_struct, radec, segmentlist, moon_radecs, airmass):
+def get_segments_tile(telescope: Telescope, radec, segmentlist, moon_radecs, airmass):
     # check for empty segmentlist and immediately return
     if len(segmentlist) == 0:
         return segments.segmentlistdict()
 
     observer = ephem.Observer()
-    observer.lat = str(config_struct["latitude"])
-    observer.lon = str(config_struct["longitude"])
-    observer.horizon = str(config_struct["horizon"])
-    observer.elevation = config_struct["elevation"]
+    observer.lat = str(telescope.latitude.value)
+    observer.lon = str(telescope.longitude.value)
+    observer.elevation = telescope.elevation.value
     observer.horizon = ephem.degrees(str(90 - np.arccos(1 / airmass) * 180 / np.pi))
     observer.date = ephem.Date(segmentlist[0][0] - MJD_TO_DJD)
 
@@ -235,12 +225,9 @@ def get_segments_tile(config_struct, radec, segmentlist, moon_radecs, airmass):
         date_start = date_set
         observer.date = date_set
 
-    # moonsegmentlist = get_skybrightness(\
-    #    config_struct,segmentlist,observer,fxdbdy,radec)
+    halist = get_ha_segments(telescope, segmentlist, radec)
 
-    halist = get_ha_segments(config_struct, segmentlist, radec)
-
-    moonsegmentlist = get_moon_segments(config_struct, segmentlist, moon_radecs, radec)
+    moonsegmentlist = get_moon_segments(telescope, segmentlist, moon_radecs, radec)
 
     tilesegmentlistdic = segments.segmentlistdict()
     tilesegmentlistdic["observations"] = segmentlist
@@ -250,14 +237,14 @@ def get_segments_tile(config_struct, radec, segmentlist, moon_radecs, airmass):
     tilesegmentlist = tilesegmentlistdic.intersection(
         ["observations", "tile", "moon", "halist"]
     )
-    # tilesegmentlist = tilesegmentlistdic.intersection(["observations","tile"])
     tilesegmentlist.coalesce()
 
     return tilesegmentlist
 
 
-def get_segments_tiles(params, config_struct, tile_struct):
-    segmentlist = config_struct["segmentlist"]
+def get_segments_tiles(
+    params, segmentList: segments.segmentlist, telescope: Telescope, airmass: float, tile_struct
+):
 
     print("Generating segments for tiles...")
 
@@ -268,19 +255,18 @@ def get_segments_tiles(params, config_struct, tile_struct):
 
     if params["ignore_observability"]:
         for ii, key in enumerate(keys):
-            tile_struct[key]["segmentlist"] = copy.deepcopy(segmentlist)
+            tile_struct[key]["segmentlist"] = copy.deepcopy(segmentList)
         return tile_struct
 
     observer = ephem.Observer()
-    observer.lat = str(config_struct["latitude"])
-    observer.lon = str(config_struct["longitude"])
-    observer.horizon = str(config_struct["horizon"])
-    observer.elevation = config_struct["elevation"]
+    observer.lat = str(telescope.latitude.value)
+    observer.lon = str(telescope.longitude.value)
+    observer.elevation = telescope.elevation.value
     observer.horizon = ephem.degrees(
-        str(90 - np.arccos(1 / params["airmass"]) * 180 / np.pi)
+        str(90 - np.arccos(1 / airmass) * 180 / np.pi)
     )
 
-    moon_radecs = get_moon_radecs(segmentlist, observer)
+    moon_radecs = get_moon_radecs(segmentList, observer)
 
     if params["doParallel"]:
         tilesegmentlists = Parallel(
@@ -289,7 +275,7 @@ def get_segments_tiles(params, config_struct, tile_struct):
             batch_size=int(len(radecs) / params["Ncores"]) + 1,
         )(
             delayed(get_segments_tile)(
-                config_struct, radec, segmentlist, moon_radecs, params["airmass"]
+                telescope, radec, segmentList, moon_radecs, airmass
             )
             for radec in radecs
         )
@@ -299,7 +285,7 @@ def get_segments_tiles(params, config_struct, tile_struct):
         for ii, key in tqdm(enumerate(keys), total=len(keys)):
             radec = radecs[ii]
             tilesegmentlist = get_segments_tile(
-                config_struct, radec, segmentlist, moon_radecs, params["airmass"]
+                telescope, radec, segmentList, moon_radecs, airmass
             )
             tile_struct[key]["segmentlist"] = tilesegmentlist
 

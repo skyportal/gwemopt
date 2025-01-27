@@ -6,6 +6,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord, get_sun
 from astropy.time import Time
 from mocpy import MOC
+import ligo.segments as segments
 
 import gwemopt.plotting
 import gwemopt.scheduler
@@ -21,6 +22,7 @@ from gwemopt.tiles import (
     slice_number_tiles,
 )
 from gwemopt.utils.treasuremap import get_treasuremap_pointings
+from gwemopt.telescope import Telescope
 
 
 def combine_coverage_structs(coverage_structs):
@@ -56,8 +58,7 @@ def combine_coverage_structs(coverage_structs):
     return coverage_struct_combined
 
 
-def read_coverage(params, telescope, filename, moc_struct=None):
-    config_struct = params["config"][telescope]
+def read_coverage(telescope: Telescope, filename, moc_struct=None):
     schedule_table = read_schedule(filename)
 
     coverage_struct = {}
@@ -83,19 +84,17 @@ def read_coverage(params, telescope, filename, moc_struct=None):
         coverage_struct["filters"].append(filt)
 
         if moc_struct is None:
-            if config_struct["FOV_coverage_type"] == "square":
+            if telescope.fov_type == "square":
                 center = SkyCoord(ra, dec, unit="deg", frame="icrs")
                 region = regions.RectangleSkyRegion(
                     center,
-                    config_struct["FOV_coverage"] * u.deg,
-                    config_struct["FOV_coverage"] * u.deg,
+                    telescope.fov_coverage * u.deg,
+                    telescope.fov_coverage * u.deg,
                 )
                 moc = MOC.from_astropy_regions(region, max_depth=10)
-            elif config_struct["FOV_coverage_type"] == "circle":
+            elif telescope.fov_type == "circle":
                 center = SkyCoord(ra, dec, unit="deg", frame="icrs")
-                region = regions.CircleSkyRegion(
-                    center, radius=config_struct["FOV"] * u.deg
-                )
+                region = regions.CircleSkyRegion(center, radius=telescope.fov * u.deg)
                 moc = MOC.from_astropy_regions(region, max_depth=10)
         else:
             moc = moc_struct[field]["moc"]
@@ -103,10 +102,10 @@ def read_coverage(params, telescope, filename, moc_struct=None):
         coverage_struct["moc"].append(moc)
 
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
-    coverage_struct["FOV"] = config_struct["FOV_coverage"] * np.ones(
+    coverage_struct["FOV"] = telescope.fov_coverage * np.ones(
         (len(coverage_struct["filters"]),)
     )
-    coverage_struct["telescope"] = [config_struct["telescope"]] * len(
+    coverage_struct["telescope"] = [telescope.telescope_name] * len(
         coverage_struct["filters"]
     )
     coverage_struct["exposureused"] = []
@@ -114,39 +113,42 @@ def read_coverage(params, telescope, filename, moc_struct=None):
     return coverage_struct
 
 
-def read_coverage_files(params, moc_structs):
+def read_coverage_files(params, telescopes: list[Telescope], moc_structs):
     if params["coverageFiles"]:
-        if not (len(params["telescopes"]) == len(params["coverageFiles"])):
+        if not (len(telescopes) == len(params["coverageFiles"])):
             return ValueError("Need same number of coverageFiles as telescopes")
     else:
         return ValueError("Need coverageFiles if doCoverage is enabled.")
 
     coverage_structs = []
-    for telescope, coverageFile in zip(params["telescopes"], params["coverageFiles"]):
+    for telescope, coverageFile in zip(telescopes, params["coverageFiles"]):
         coverage_struct = read_coverage(
-            params, telescope, coverageFile, moc_struct=moc_structs[telescope]
+            telescope, coverageFile, moc_struct=moc_structs[telescope.telescope_name]
         )
         coverage_structs.append(coverage_struct)
 
     return combine_coverage_structs(coverage_structs)
 
 
-def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
+def powerlaw(
+    params,
+    map_struct,
+    telescopes: list[Telescope],
+    exposurelist: segments.segmentlist,
+    tile_structs,
+    previous_coverage_struct=None,
+):
     map_struct_hold = copy.deepcopy(map_struct)
 
     coverage_structs = []
     full_prob_map = map_struct["skymap"]
 
-    for telescope in params["telescopes"]:
-        config_struct = params["config"][telescope]
-        tile_struct = tile_structs[telescope]
+    for telescope in telescopes:
+        tile_struct = tile_structs[telescope.telescope_name]
 
         # Try to load the minimum duration of time from telescope config file
         # Otherwise set it to zero
-        try:
-            min_obs_duration = config_struct["min_observability_duration"] / 24
-        except:
-            min_obs_duration = 0.0
+        min_obs_duration = telescope.min_observability_duration / 24
 
         if params["doIterativeTiling"] and (params["tilesType"] == "galaxy"):
             tile_struct = slice_galaxy_tiles(
@@ -160,12 +162,12 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
 
         if params["doAlternatingFilters"]:
             params_hold = copy.copy(params)
-            config_struct_hold = copy.copy(config_struct)
+            # config_struct_hold = copy.copy(config_struct)
 
             coverage_struct, tile_struct = gwemopt.tiles.schedule_alternating(
                 params_hold,
-                config_struct_hold,
                 telescope,
+                exposurelist,
                 map_struct_hold,
                 tile_struct,
                 previous_coverage_struct,
@@ -186,7 +188,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                     params["max_nb_tiles"] = np.array([optimized_max], dtype=float)
                 else:
                     params_hold = copy.copy(params)
-                    config_struct_hold = copy.copy(config_struct)
+                    # config_struct_hold = copy.copy(config_struct)
 
                     (
                         coverage_struct,
@@ -202,7 +204,7 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                     doReschedule, _ = balance_tiles(params_hold, coverage_struct)
 
                     if doReschedule:
-                        config_struct_hold = copy.copy(config_struct)
+                        # config_struct_hold = copy.copy(config_struct)
                         (
                             coverage_struct,
                             tile_struct,
@@ -215,7 +217,6 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                             previous_coverage_struct,
                         )
 
-        #                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params_hold,coverage_struct)
         else:
             # load the sun retriction for a satelite
             try:
@@ -338,8 +339,6 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
                     else:
                         break
 
-            #                coverage_struct = gwemopt.utils.erase_unbalanced_tiles(params,coverage_struct)
-
             if params["max_nb_tiles"] is not None:
                 tile_struct, doReschedule = slice_number_tiles(
                     params, tile_struct, coverage_struct
@@ -360,9 +359,16 @@ def powerlaw(params, map_struct, tile_structs, previous_coverage_struct=None):
     return tile_structs, combine_coverage_structs(coverage_structs)
 
 
-def timeallocation(params, map_struct, tile_structs, previous_coverage_struct=None):
-    if len(params["telescopes"]) > 1 and params["doOrderByObservability"]:
-        order_by_observability(params, tile_structs)
+def timeallocation(
+    params,
+    map_struct,
+    telescopes: list[Telescope],
+    exposurelist: segments.segmentlist,
+    tile_structs,
+    previous_coverage_struct=None,
+):
+    if len(telescopes) > 1 and params["doOrderByObservability"]:
+        telescopes = order_by_observability(telescopes, exposurelist, tile_structs)
 
     if params["timeallocationType"] == "powerlaw":
         print("Generating powerlaw schedule...")
@@ -389,14 +395,14 @@ def timeallocation(params, map_struct, tile_structs, previous_coverage_struct=No
         if params["treasuremap_token"] is not None and not previous_coverage_struct:
             print("\nNo previous observations were ingested.\n")
 
-        tile_structs, coverage_struct = gwemopt.coverage.powerlaw(
-            params, map_struct, tile_structs, previous_coverage_struct
+        tile_structs, coverage_struct = powerlaw(
+            params, map_struct, telescopes, tile_structs, previous_coverage_struct
         )
 
     elif params["timeallocationType"] == "manual":
         print("Generating manual schedule...")
-        tile_structs, coverage_struct = gwemopt.coverage.powerlaw(
-            params, map_struct, tile_structs
+        tile_structs, coverage_struct = powerlaw(
+            params, map_struct, telescopes, tile_structs
         )
 
     return tile_structs, coverage_struct

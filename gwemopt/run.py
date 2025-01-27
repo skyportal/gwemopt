@@ -8,6 +8,8 @@ import gwemopt.efficiency
 import gwemopt.lightcurve
 import gwemopt.plotting
 import gwemopt.segments
+from gwemopt.moc import create_moc
+from gwemopt.tiles import moc
 from gwemopt.args import parse_args
 from gwemopt.catalogs import get_catalog
 from gwemopt.io import get_skymap, read_skymap, summary
@@ -29,7 +31,7 @@ def run(args=None):
 
     args = parse_args(args)
 
-    params, do_3d = params_struct(args)
+    params, telescopes, do_3d = params_struct(args)
 
     if len(params["filters"]) != len(params["exposuretimes"]):
         raise ValueError(
@@ -59,7 +61,15 @@ def run(args=None):
     params["outputDir"] = output_dir
     print(f"Output directory: {output_dir}")
 
-    params = gwemopt.segments.get_telescope_segments(params)
+    telescope_segments, exposurelist, nwindows, tot_obs_time = (
+        gwemopt.segments.get_telescope_segments(
+            telescopes,
+            params["gpstime"],
+            params["Tobs"],
+            params["exposuretimes"],
+            params["doAlternatingFilters"],
+        )
+    )
 
     print("Loading skymap...")
 
@@ -78,9 +88,17 @@ def run(args=None):
     if args.doTiles:
         if params["tilesType"] == "moc":
             print("Generating MOC struct...")
-            moc_structs = gwemopt.moc.create_moc(params, map_struct=map_struct)
+            moc_structs = create_moc(params, telescopes, map_struct=map_struct)
             print("Generating tile struct for MOC...")
-            tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
+            tile_structs = moc(
+                params,
+                telescopes,
+                telescope_segments,
+                tot_obs_time,
+                params["airmass"],
+                map_struct,
+                moc_structs,
+            )
 
         elif params["tilesType"] == "galaxy":
             print("Generating galaxy struct...")
@@ -114,12 +132,18 @@ def run(args=None):
     elif args.doCoverage:
         print("Reading coverage from file...")
         coverage_struct = gwemopt.coverage.read_coverage_files(
-            params, moc_structs=moc_structs
+            params, telescopes, moc_structs=moc_structs
         )
 
     if args.doSchedule or args.doCoverage:
         print("Summary of coverage...")
-        summary(params, map_struct, coverage_struct, catalog_struct=catalog_struct)
+        summary(
+            params,
+            telescopes,
+            map_struct,
+            coverage_struct,
+            catalog_struct=catalog_struct,
+        )
 
         if "coverage" in params["plots"]:
             print("Plotting coverage...")

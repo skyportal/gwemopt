@@ -13,7 +13,7 @@ class Telescope(astroplan.Observer):
     def __init__(
         self,
         telescope_name: str,
-        _telescope_description: dict,
+        telescope_description: dict,
         timezone="UTC",
         name=None,
         latitude=None,
@@ -25,9 +25,9 @@ class Telescope(astroplan.Observer):
         description=None,
     ):
         self._name = telescope_name
-        self._telescope_description = _telescope_description
+        self._telescope_description = telescope_description
         self._tesselation = None
-        self._referenceField = None
+        self._referenceImage = None
         location = EarthLocation(
             self._telescope_description["longitude"],
             self._telescope_description["latitude"],
@@ -81,6 +81,26 @@ class Telescope(astroplan.Observer):
             field of view in degree
         """
         return float(self._telescope_description["FOV"])
+
+    @property
+    def fov_coverage(self) -> float:
+        """
+        get the size of the field of view.
+
+        Returns
+        -------
+        float
+            field of view in degree
+        """
+        return float(self._telescope_description["FOV_coverage"])
+
+    @property
+    def slew_rate(self) -> float:
+        return float(self._telescope_description["slew_rate"])
+
+    @property
+    def readout(self) -> float:
+        return float(self._telescope_description["readout"])
 
     @property
     def filters(self) -> str:
@@ -139,8 +159,14 @@ tesselation error for telescope {self.telescope_name},
             )
 
     @property
-    def referenceFields(self) -> dict:
-        if not self._referenceField and "referenceFile" in self._telescope_description:
+    def tesselation(self) -> ndarray:
+        if self._tesselation is None:
+            self._tesselation == self.generate_tesselation()
+        return self._tesselation
+
+    @property
+    def referenceImages(self) -> dict:
+        if not self._referenceImage and "referenceFile" in self._telescope_description:
             reffile = REFS_DIR.joinpath(self._telescope_description["referenceFile"])
 
             refs = table.unique(
@@ -157,11 +183,55 @@ tesselation error for telescope {self.telescope_name},
                 reference_images[key] = [
                     reference_images_map.get(n, n) for n in reference_images[key]
                 ]
-            self._referenceField = reference_images
-        return self._referenceField
+            self._referenceImage = reference_images
+        return self._referenceImage
 
     @property
-    def tesselation(self) -> ndarray:
-        if not self._tesselation:
-            self._tesselation == self.generate_tesselation()
-        return self._tesselation
+    def sat_sun_restriction(self) -> float:
+        return float(self._telescope_description.get("sat_sun_restriction", "0.0"))
+
+    @property
+    def overhead_per_exposure(self) -> float:
+        return float(self._telescope_description.get("overhead_per_exposure", "0.0"))
+
+    @property
+    def filt_change_time(self) -> float:
+        return float(self._telescope_description.get("filt_change_time", "0.0"))
+
+    @property
+    def min_observability_duration(self) -> float:
+        return float(
+            self._telescope_description.get("min_observability_duration", "0.0")
+        )
+
+    @property
+    def horizon(self) -> float:
+        return float(self._telescope_description.get("horizon"))
+
+    @property
+    def ha_constraint(self) -> tuple[float, float]:
+        ha_constraint = self._telescope_description.get(
+            "ha_constraint", "-24.0,24.0"
+        ).split(",")
+        return float(ha_constraint[0]), float(ha_constraint[1])
+
+    @property
+    def moon_constraint(self) -> float:
+        return float(
+            self._telescope_description.get("moon_constraint", "20.0")
+        )
+    
+    @property
+    def exposure_time(self) -> float:
+        return float(
+            self._telescope_description.get("exposuretime")
+        )
+    
+    @property
+    def dec_constraint(self) -> tuple[float, float] | None:
+        dec_constraint = self._telescope_description.get("dec_constraint", None)
+        if dec_constraint:
+            dec_min, dec_max = dec_constraint.split(",")
+            return float(dec_min), float(dec_max)
+        else:
+            return None

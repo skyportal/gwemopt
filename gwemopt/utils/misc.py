@@ -1,5 +1,6 @@
 import ligo.segments as segments
 import numpy as np
+from gwemopt.telescope import Telescope
 
 
 def integrationTime(T_obs, pValTiles, func=None, T_int=60.0):
@@ -34,22 +35,21 @@ def integrationTime(T_obs, pValTiles, func=None, T_int=60.0):
     return t_tiles
 
 
-def get_exposures(params, config_struct, segmentlist):
+def get_exposures(
+    telescope: Telescope, segmentlist, exposuretimes: list, doAlternatingFilters: bool
+) -> segments.segmentlist:
     """
     Convert the availability times to a list segments with the length of telescope exposures.
     segmentlist: the segments that the telescope can do the follow-up.
     """
     exposurelist = segments.segmentlist()
-    if "overhead_per_exposure" in config_struct.keys():
-        overhead = config_struct["overhead_per_exposure"]
-    else:
-        overhead = 0.0
+    overhead = telescope.overhead_per_exposure
 
     # add the filter change time to the total overheads for integrated
-    if not params["doAlternatingFilters"]:
-        overhead = overhead + config_struct.get("filt_change_time", 0)
+    if not doAlternatingFilters:
+        overhead = overhead + telescope.filt_change_time
 
-    exposure_time = np.max(params["exposuretimes"])
+    exposure_time = np.max(exposuretimes)
 
     for ii in range(len(segmentlist)):
         start_segment, end_segment = segmentlist[ii][0], segmentlist[ii][1]

@@ -2,8 +2,10 @@ from gwemopt.telescope import Telescope
 from math import isclose
 from pytest import raises
 
-def test_ztf_telescope(ztf_config: dict):
+def test_attribute_telescope(ztf_config: dict, mxt_config: dict, decam_config: dict):
     ztf = Telescope("ZTF", ztf_config)
+    mxt = Telescope("MXT", mxt_config)
+    decam = Telescope("DECam", decam_config)
     assert ztf.telescope_mag == 20.4
     assert ztf.telescope_exptime == 30.0
     assert ztf.telescope_name == "ZTF"
@@ -11,6 +13,19 @@ def test_ztf_telescope(ztf_config: dict):
     assert ztf.fov == 6.86
     assert ztf.fov_type == "square"
     assert isclose(ztf.mag_exposure(1/60), 16.33090936)
+    assert ztf.sat_sun_restriction == 0.0
+    assert mxt.sat_sun_restriction == 30.0
+    assert ztf.overhead_per_exposure == 10.0
+    assert mxt.overhead_per_exposure == 0.0
+    assert ztf.filt_change_time == 60.0
+    assert mxt.filt_change_time == 0.0
+    assert ztf.min_observability_duration == 0.0
+    assert mxt.min_observability_duration == 0.0
+    assert ztf.ha_constraint == (-24.0, 24.0)
+    assert decam.ha_constraint == (-5.0, 5.0)
+    assert mxt.moon_constraint == 0.0
+    assert ztf.moon_constraint == 20.0
+    
 
 def test_tesselation(ztf_config: dict):
     ztf = Telescope("ZTF", ztf_config)
@@ -59,7 +74,7 @@ def test_tesselation(ztf_config: dict):
 
 def test_referenceField(ztf_config: dict):
     ztf = Telescope("ZTF", ztf_config)
-    assert len(ztf.referenceFields)== 930
+    assert len(ztf.referenceImages)== 930
 
     fake = Telescope("Fake", {
             "FOV_type": "triangle",
@@ -69,4 +84,4 @@ def test_referenceField(ztf_config: dict):
             "elevation": 1,
             "tesselationFile": "no"
         })
-    assert fake.referenceFields is None
+    assert fake.referenceImages is None
