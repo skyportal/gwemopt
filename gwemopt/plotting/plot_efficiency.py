@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def make_efficiency_plots(params, map_struct, efficiency_structs):
+def make_efficiency_plots(params, map_struct, efficiency_structs, do_3d: bool = False):
     plot_name = params["outputDir"].joinpath("efficiency.pdf")
     plt.figure()
     for key in efficiency_structs:
@@ -27,7 +27,7 @@ def make_efficiency_plots(params, map_struct, efficiency_structs):
     plt.savefig(plot_name, dpi=200)
     plt.close()
 
-    if params["do_3d"]:
+    if do_3d:
         for key in efficiency_structs:
             efficiency_struct = efficiency_structs[key]
             plot_name = params["outputDir"].joinpath(

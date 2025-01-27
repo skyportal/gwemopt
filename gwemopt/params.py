@@ -12,9 +12,10 @@ import gwemopt
 from gwemopt.paths import CONFIG_DIR, REFS_DIR, TESSELATION_DIR
 from gwemopt.tiles import TILE_TYPES
 from gwemopt.utils import tesselation
+from typing import Any
 
 
-def params_struct(opts):
+def params_struct(opts) -> tuple[dict[str, Any], bool]:
     """@Creates gwemopt params structure
     @param opts
         gwemopt command line options
@@ -23,6 +24,18 @@ def params_struct(opts):
     telescopes = str(opts.telescopes).split(",")
 
     params = dict(opts.__dict__)
+
+    match params["geometry"]:
+        case "2d":
+            do_3d = False
+        case "3d":
+            do_3d = True
+        case None:
+            do_3d = False
+        case _:
+            raise ValueError(
+                f"The geometry argument from the command-line should be either '2d' or '3d', is {params['geometry']}"
+            )
 
     params["config"] = {}
     for telescope in telescopes:
@@ -170,4 +183,4 @@ def params_struct(opts):
         opts.confidence_level if hasattr(opts, "confidence_level") else 0.9
     )
 
-    return params
+    return params, do_3d

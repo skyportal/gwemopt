@@ -29,7 +29,7 @@ def run(args=None):
 
     args = parse_args(args)
 
-    params = params_struct(args)
+    params, do_3d = params_struct(args)
 
     if len(params["filters"]) != len(params["exposuretimes"]):
         raise ValueError(
@@ -156,12 +156,13 @@ def run(args=None):
                     map_struct,
                     lightcurve_struct,
                     coverage_struct,
+                    do_3d
                 )
                 efficiency_structs[key] = efficiency_struct
                 efficiency_structs[key]["legend_label"] = lightcurve_struct[
                     "legend_label"
                 ]
-                if params["do_3d"]:
+                if do_3d:
                     print(
                         f'Percent detections out of {params["Ninj"]} injected KNe: '
                         f'{efficiency_structs[key]["3D"]*100:.2f}% '
