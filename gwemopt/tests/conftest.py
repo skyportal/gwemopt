@@ -3,7 +3,7 @@ from pathlib import Path
 from pytest import fixture
 
 from gwemopt.paths import CONFIG_DIR
-from gwemopt.utils import readParamsFromFile
+from gwemopt.utils.param_utils import readParamsFromFile
 
 
 @fixture

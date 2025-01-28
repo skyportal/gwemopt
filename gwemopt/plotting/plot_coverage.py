@@ -5,7 +5,7 @@ from astropy.time import Time
 from matplotlib.pyplot import cm
 from tqdm import tqdm
 
-from gwemopt.io import export_tiles_coverage_int
+from gwemopt.io.export_tiles import export_tiles_coverage_int
 from gwemopt.plotting.movie import make_movie
 from gwemopt.plotting.style import add_sun_moon
 from gwemopt.telescope import Telescope

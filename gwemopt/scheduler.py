@@ -7,7 +7,8 @@ from astropy.time import Time
 from ortools.linear_solver import pywraplp
 
 from gwemopt.telescope import Telescope
-from gwemopt.utils import angular_distance, solve_milp
+from gwemopt.utils.geometry import angular_distance
+from gwemopt.utils.milp import solve_milp
 
 
 def get_altaz_tile(ra, dec, observer, obstime):

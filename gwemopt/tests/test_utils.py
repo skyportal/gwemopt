@@ -1,7 +1,8 @@
 import numpy as np
 from astropy.time import Time
 
-from gwemopt.utils import angular_distance, greenwich_sidereal_time, hour_angle
+from gwemopt.utils.geometry import angular_distance
+from gwemopt.utils.sidereal_time import greenwich_sidereal_time, hour_angle
 
 
 def test_greenwich_sidereal_time():

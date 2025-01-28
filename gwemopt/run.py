@@ -7,19 +7,20 @@ import gwemopt.lightcurve
 import gwemopt.plotting
 import gwemopt.segments
 from gwemopt.args import parse_args
-from gwemopt.catalogs import get_catalog
-from gwemopt.io import get_skymap, read_skymap, summary
+from gwemopt.catalogs.get import get_catalog
+from gwemopt.io.schedule import summary
+from gwemopt.io.skymap import get_skymap, read_skymap
 from gwemopt.moc import create_moc
 from gwemopt.params import params_struct
 from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR
-from gwemopt.plotting import (
+from gwemopt.plotting.plot_coverage import (
     make_coverage_movie,
     make_coverage_plots,
-    make_efficiency_plots,
-    make_tile_plots,
-    plot_inclination,
-    plot_skymap,
 )
+from gwemopt.plotting.plot_efficiency import make_efficiency_plots
+from gwemopt.plotting.plot_inclination import plot_inclination
+from gwemopt.plotting.plot_skymap import plot_skymap
+from gwemopt.plotting.plot_tiles import make_tile_plots
 from gwemopt.tiles import galaxy, moc
 
 

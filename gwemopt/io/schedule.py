@@ -4,7 +4,7 @@ from astropy.time import Time
 
 from gwemopt.scheduler import computeSlewReadoutTime
 from gwemopt.telescope import Telescope
-from gwemopt.utils import angular_distance
+from gwemopt.utils.geometry import angular_distance
 
 
 def read_summary(summary_path):

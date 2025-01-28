@@ -5,7 +5,8 @@ import numpy as np
 import regions
 from mocpy import MOC
 
-from gwemopt.chipgaps import get_decam_quadrant_moc, get_ztf_quadrant_moc
+from gwemopt.chipgaps.decam import get_decam_quadrant_moc
+from gwemopt.chipgaps.ztf import get_ztf_quadrant_moc
 from gwemopt.paths import CONFIG_DIR
 from gwemopt.telescope import Telescope
 from gwemopt.utils.pixels import get_region_moc

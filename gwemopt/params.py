@@ -6,10 +6,10 @@ import numpy as np
 from astropy import time
 from astropy import units as u
 
-import gwemopt
 from gwemopt.paths import CONFIG_DIR
 from gwemopt.telescope import Telescope
 from gwemopt.tiles import TILE_TYPES
+from gwemopt.utils.param_utils import readParamsFromFile
 
 
 def params_struct(opts) -> tuple[dict[str, Any], list[Telescope], bool]:
@@ -39,7 +39,7 @@ def params_struct(opts) -> tuple[dict[str, Any], list[Telescope], bool]:
     telescopes: list[Telescope] = [
         Telescope(
             telescope_name=telescope,
-            telescope_description=gwemopt.utils.readParamsFromFile(
+            telescope_description=readParamsFromFile(
                 CONFIG_DIR.joinpath(telescope + ".config")
             ),
         )

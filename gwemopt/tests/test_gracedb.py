@@ -1,6 +1,6 @@
 import pytest
 
-from gwemopt.io import get_skymap
+from gwemopt.io.skymap import get_skymap
 from gwemopt.tests.test_schedule import test_data_dir
 
 

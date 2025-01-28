@@ -17,9 +17,9 @@ import gwemopt.moc
 import gwemopt.segments
 from gwemopt.scheduler import scheduler
 from gwemopt.telescope import Telescope
-from gwemopt.utils import integrationTime
 from gwemopt.utils.coverage_utils import combine_coverage_structs
 from gwemopt.utils.geometry import angular_distance
+from gwemopt.utils.misc import integrationTime
 
 TILE_TYPES = ["moc", "galaxy"]
 
