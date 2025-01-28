@@ -1,18 +1,15 @@
 import sys
 from pathlib import Path
 
-import numpy as np
-
 import gwemopt.coverage
 import gwemopt.efficiency
 import gwemopt.lightcurve
 import gwemopt.plotting
 import gwemopt.segments
-from gwemopt.moc import create_moc
-from gwemopt.tiles import moc, galaxy
 from gwemopt.args import parse_args
 from gwemopt.catalogs import get_catalog
 from gwemopt.io import get_skymap, read_skymap, summary
+from gwemopt.moc import create_moc
 from gwemopt.params import params_struct
 from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR
 from gwemopt.plotting import (
@@ -23,6 +20,7 @@ from gwemopt.plotting import (
     plot_inclination,
     plot_skymap,
 )
+from gwemopt.tiles import galaxy, moc
 
 
 def run(args=None):

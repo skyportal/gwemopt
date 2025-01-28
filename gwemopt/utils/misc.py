@@ -1,5 +1,6 @@
 import ligo.segments as segments
 import numpy as np
+
 from gwemopt.telescope import Telescope
 
 
@@ -18,19 +19,21 @@ def integrationTime(T_obs, pValTiles, func=None, T_int=60.0):
                              For example, use x**2 to use a quadratic function.
     """
 
+    def identity(x):
+        return x
+
+    def eval_arg(x):
+        return eval(func)
+
     if func is None:
-        f = lambda x: x
+        f = identity
     else:
-        f = lambda x: eval(func)
+        f = eval_arg
     fpValTiles = f(pValTiles)
     modified_prob = fpValTiles / np.sum(fpValTiles)
     modified_prob[np.isnan(modified_prob)] = 0.0
-    t_tiles = modified_prob * T_obs  ### Time spent in each tile if not constrained
-    # t_tiles[t_tiles > 1200.0] = 1200.0 ### Upper limit of exposure time
-    # t_tiles[t_tiles < 60] = 60.0 ### Lower limit of exposure time
+    t_tiles = modified_prob * T_obs  # Time spent in each tile if not constrained
     t_tiles = T_int * np.round(t_tiles / T_int)
-    # Obs = np.cumsum(t_tiles) <= T_obs ### Tiles observable in T_obs seconds
-    # time_per_tile = t_tiles[Obs] ### Actual time spent per tile
 
     return t_tiles
 

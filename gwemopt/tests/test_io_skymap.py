@@ -1,6 +1,8 @@
-from gwemopt.io.skymap import read_skymap
-from numpy import median
 from math import isclose
+
+from numpy import median
+
+from gwemopt.io.skymap import read_skymap
 
 
 def test_read_skymap(skymap_path):
@@ -21,7 +23,7 @@ def test_read_skymap(skymap_path):
         "dec",
     ]
 
-    assert isclose(gpstime,1249852256.995869)
+    assert isclose(gpstime, 1249852256.995869)
 
     assert len(map_struct["skymap"]["PROBDENSITY"]) == 16896
 

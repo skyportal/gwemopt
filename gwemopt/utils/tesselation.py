@@ -1,7 +1,8 @@
+import logging
+from pathlib import Path
+
 import healpy as hp
 import numpy as np
-from pathlib import Path
-import logging
 
 logger = logging.getLogger(__name__)
 

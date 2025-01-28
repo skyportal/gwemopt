@@ -1,7 +1,10 @@
-from gwemopt.telescope import Telescope
 from math import isclose
+
+from numpy import all as np_all
+from numpy import array, float64, int64
 from pytest import raises
-from numpy import int64, float64, all as np_all, array
+
+from gwemopt.telescope import Telescope
 
 
 def test_attribute_telescope(ztf_config: dict, mxt_config: dict, decam_config: dict):

@@ -1,4 +1,3 @@
-import copy
 import os
 
 import astropy.units as u
@@ -6,11 +5,10 @@ import numpy as np
 import regions
 from mocpy import MOC
 
-import gwemopt.tiles
 from gwemopt.chipgaps import get_decam_quadrant_moc, get_ztf_quadrant_moc
 from gwemopt.paths import CONFIG_DIR
-from gwemopt.utils.pixels import get_region_moc
 from gwemopt.telescope import Telescope
+from gwemopt.utils.pixels import get_region_moc
 
 
 def construct_moc(params, telescope: Telescope, tesselation):
@@ -63,7 +61,13 @@ def construct_moc(params, telescope: Telescope, tesselation):
     }
 
 
-def create_moc(params, telescopes: list[Telescope], map_struct=None, field_ids=None, from_skyportal=False):
+def create_moc(
+    params,
+    telescopes: list[Telescope],
+    map_struct=None,
+    field_ids=None,
+    from_skyportal=False,
+):
     moc_structs = {}
     for telescope in telescopes:
         if from_skyportal:
@@ -82,9 +86,17 @@ def create_moc(params, telescopes: list[Telescope], map_struct=None, field_ids=N
             for ii, tess in enumerate(telescope.tesselation):
                 index = tess.field_id
 
-                if (telescope.telescope_name == "ZTF") and params["doUsePrimary"] and (index > 880):
+                if (
+                    (telescope.telescope_name == "ZTF")
+                    and params["doUsePrimary"]
+                    and (index > 880)
+                ):
                     continue
-                if (telescope.telescope_name == "ZTF") and params["doUseSecondary"] and (index < 1000):
+                if (
+                    (telescope.telescope_name == "ZTF")
+                    and params["doUseSecondary"]
+                    and (index < 1000)
+                ):
                     continue
 
                 moc = mocs[ii]

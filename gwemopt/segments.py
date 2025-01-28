@@ -7,10 +7,9 @@ from astropy.time import Time
 from joblib import Parallel, delayed
 from tqdm import tqdm
 
-from gwemopt.utils.geometry import angular_distance
+from gwemopt.telescope import Telescope
 from gwemopt.utils.misc import get_exposures
 from gwemopt.utils.sidereal_time import hour_angle
-from gwemopt.telescope import Telescope
 
 # conversion between MJD (tt) and DJD (what ephem uses)
 MJD_TO_DJD = -2400000.5 + 2415020.0
@@ -243,7 +242,11 @@ def get_segments_tile(telescope: Telescope, radec, segmentlist, moon_radecs, air
 
 
 def get_segments_tiles(
-    params, segmentList: segments.segmentlist, telescope: Telescope, airmass: float, tile_struct
+    params,
+    segmentList: segments.segmentlist,
+    telescope: Telescope,
+    airmass: float,
+    tile_struct,
 ):
 
     print("Generating segments for tiles...")
@@ -262,9 +265,7 @@ def get_segments_tiles(
     observer.lat = str(telescope.latitude.value)
     observer.lon = str(telescope.longitude.value)
     observer.elevation = telescope.elevation.value
-    observer.horizon = ephem.degrees(
-        str(90 - np.arccos(1 / airmass) * 180 / np.pi)
-    )
+    observer.horizon = ephem.degrees(str(90 - np.arccos(1 / airmass) * 180 / np.pi))
 
     moon_radecs = get_moon_radecs(segmentList, observer)
 

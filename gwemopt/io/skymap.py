@@ -249,7 +249,7 @@ def read_skymap(
 
     if is_3d:
         skymap = read_sky_map(skymap_path, moc=True, distances=True)
-        
+
         # TODO read_inclination not tested in tests/test_io_skymap.py
         # need to find a file with the "PROBDENSITY_SAMPLES" column
         if "PROBDENSITY_SAMPLES" in skymap.columns:

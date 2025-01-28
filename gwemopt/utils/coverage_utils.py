@@ -1,4 +1,5 @@
-from numpy import empty, append
+from numpy import append, empty
+
 
 def combine_coverage_structs(coverage_structs):
     coverage_struct_combined = {}

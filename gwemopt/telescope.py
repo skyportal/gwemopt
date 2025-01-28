@@ -1,13 +1,15 @@
-from numpy import log10, sqrt
-import astroplan
-from astropy.units import meter
-from astropy.coordinates import EarthLocation
-from gwemopt.paths import TESSELATION_DIR, REFS_DIR
 from pathlib import Path
-from numpy import loadtxt, empty, ndarray, empty, append as np_append, array
-from gwemopt.utils import tesselation
-from astropy import table
 from typing import Any
+
+import astroplan
+from astropy import table
+from astropy.coordinates import EarthLocation
+from astropy.units import meter
+from numpy import append as np_append
+from numpy import array, empty, loadtxt, log10, ndarray, sqrt
+
+from gwemopt.paths import REFS_DIR, TESSELATION_DIR
+from gwemopt.utils import tesselation
 
 
 class Telescope(astroplan.Observer):
@@ -165,7 +167,7 @@ class Telescope(astroplan.Observer):
         else:
             raise RuntimeError(
                 f"""
-tesselation error for telescope {self.telescope_name}, 
+tesselation error for telescope {self.telescope_name},
     either fov_type is different than 'square' or 'circle' (fov_type is {self.fov_type}),
     the galaxy argument is false or no tesselation file exist
 """

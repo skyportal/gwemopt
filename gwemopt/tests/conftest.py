@@ -1,8 +1,10 @@
-from pytest import fixture
 from pathlib import Path
-from importlib.resources import files
+
+from pytest import fixture
+
 from gwemopt.paths import CONFIG_DIR
 from gwemopt.utils import readParamsFromFile
+
 
 @fixture
 def skymap_path():
@@ -14,9 +16,11 @@ def skymap_path():
 def ztf_config():
     return readParamsFromFile(CONFIG_DIR.joinpath("ZTF.config"))
 
+
 @fixture
 def mxt_config():
     return readParamsFromFile(CONFIG_DIR.joinpath("SVOM-MXT.config"))
+
 
 @fixture
 def decam_config():

@@ -3,8 +3,8 @@ import pandas as pd
 from astropy.time import Time
 
 from gwemopt.scheduler import computeSlewReadoutTime
-from gwemopt.utils import angular_distance
 from gwemopt.telescope import Telescope
+from gwemopt.utils import angular_distance
 
 
 def read_summary(summary_path):
@@ -59,11 +59,18 @@ def read_schedule(schedule_path):
     return schedule
 
 
-def summary(params, telescopes: list[Telescope], map_struct, coverage_struct, catalog_struct=None):
+def summary(
+    params,
+    telescopes: list[Telescope],
+    map_struct,
+    coverage_struct,
+    catalog_struct=None,
+):
     filts = list(set(coverage_struct["filters"]))
     for jj, telescope in enumerate(telescopes):
-        schedulefile = params["outputDir"].joinpath(f"schedule_{telescope.telescope_name}.dat")
-        schedulexmlfile = params["outputDir"].joinpath(f"schedule_{telescope.telescope_name}.xml")
+        schedulefile = params["outputDir"].joinpath(
+            f"schedule_{telescope.telescope_name}.dat"
+        )
 
         if (params["tilesType"] == "hierarchical") or (params["tilesType"] == "greedy"):
             fields = np.zeros((params["Ntiles"][jj], len(filts) + 2))
@@ -135,7 +142,9 @@ def summary(params, telescopes: list[Telescope], map_struct, coverage_struct, ca
         slew_readout_time = computeSlewReadoutTime(telescope, coverage_struct)
         print(f"Expected time spent on slewing and readout: {slew_readout_time:.0f} s.")
 
-        coveragefile = params["outputDir"].joinpath(f"coverage_{telescope.telescope_name}.dat")
+        coveragefile = params["outputDir"].joinpath(
+            f"coverage_{telescope.telescope_name}.dat"
+        )
         with open(coveragefile, "w") as fid:
             for field in fields:
                 fid.write("%d %.10f " % (field[0], field[1]))

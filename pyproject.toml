@@ -64,6 +64,8 @@ test = [
     'coveralls',
     'freezegun',
     'black',
+    'pylint',
+    'flake8',
 ]
 
 [project.scripts]

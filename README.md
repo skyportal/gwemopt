@@ -91,7 +91,7 @@ Once installed, You can use gwemopt via the command line:
 gwemopt-run ....
 ```
 
-where ... corresponds to the various arguments. 
+where ... corresponds to the various arguments.
 
 # Tests
 

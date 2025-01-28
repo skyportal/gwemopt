@@ -1,16 +1,16 @@
 import json
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from astropy import time
 from astropy import units as u
 
 import gwemopt
-from gwemopt.paths import CONFIG_DIR, REFS_DIR, TESSELATION_DIR
-from gwemopt.tiles import TILE_TYPES
-from gwemopt.utils import tesselation
-from typing import Any
+from gwemopt.paths import CONFIG_DIR
 from gwemopt.telescope import Telescope
+from gwemopt.tiles import TILE_TYPES
+
 
 def params_struct(opts) -> tuple[dict[str, Any], list[Telescope], bool]:
     """@Creates gwemopt params structure

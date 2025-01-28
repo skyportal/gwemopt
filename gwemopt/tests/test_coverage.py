@@ -36,7 +36,7 @@ def test_coverage():
         # temp_dir.mkdir(exist_ok=True)
 
         args = [
-            f"-t",
+            "-t",
             ",".join(telescope_list),
             "-o",
             str(temp_dir),
@@ -50,9 +50,9 @@ def test_coverage():
 
         run(args)
 
-        new_summary = read_summary(Path(temp_dir).joinpath(f"summary.dat"))
+        new_summary = read_summary(Path(temp_dir).joinpath("summary.dat"))
         expected_summary = read_summary(
-            expected_results_dir.joinpath(f"summary_coverage.dat")
+            expected_results_dir.joinpath("summary_coverage.dat")
         )
 
         pd.testing.assert_frame_equal(

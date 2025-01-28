@@ -15,7 +15,9 @@ from gwemopt.io.export_efficiency import (
 )
 
 
-def compute_efficiency(params, map_struct, lightcurve_struct, coverage_struct, do_3d=False):
+def compute_efficiency(
+    params, map_struct, lightcurve_struct, coverage_struct, do_3d=False
+):
     nside = params["nside"]
     npix = hp.nside2npix(nside)
 

@@ -15,11 +15,11 @@ from tqdm import tqdm
 import gwemopt
 import gwemopt.moc
 import gwemopt.segments
-from gwemopt.utils.geometry import angular_distance
-from gwemopt.telescope import Telescope
-from gwemopt.utils.coverage_utils import combine_coverage_structs
 from gwemopt.scheduler import scheduler
+from gwemopt.telescope import Telescope
 from gwemopt.utils import integrationTime
+from gwemopt.utils.coverage_utils import combine_coverage_structs
+from gwemopt.utils.geometry import angular_distance
 
 TILE_TYPES = ["moc", "galaxy"]
 
@@ -257,7 +257,7 @@ def optimize_max_tiles(
             break
 
     # optimize within narrower range for more precision
-    if coarse_bool == True:
+    if coarse_bool:
         max_trials = np.linspace(optimized_max, optimized_max + 24, 4)
     else:
         if optimized_max < 100:
@@ -406,7 +406,7 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                 galaxies2 = coverage_struct["galaxies"][jj]
                 overlap = np.setdiff1d(galaxies, galaxies2)
                 if len(overlap) == 0:
-                    if not "epochs" in tile_struct[key]:
+                    if "epochs" not in tile_struct[key]:
                         tile_struct[key]["epochs"] = np.empty((0, 8))
                     tile_struct[key]["epochs"] = np.append(
                         tile_struct[key]["epochs"],
@@ -431,7 +431,7 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
                 if len(overlap) == 0:
                     continue
 
-                if not "epochs" in tile_struct[key]:
+                if "epochs" not in tile_struct[key]:
                     tile_struct[key]["epochs"] = np.empty((0, 8))
                     tile_struct[key]["epochs_overlap"] = []
                     tile_struct[key]["epochs_filters"] = []
@@ -514,8 +514,10 @@ def schedule_alternating(
 
         # if the duration of a single block is less than 30 min, shift by additional time to add up to 30 min
         if i > 0:
-            start = Time(coverage_struct["data"][0][2], format="mjd")
-            end = Time(coverage_struct["data"][-1][2], format="mjd")
+            # FIXME coverage_struct undefined, will raise an exception if this branch is executed
+            # need to know what this branch do before removing or refactoring it
+            start = Time(coverage_struct["data"][0][2], format="mjd")  # noqa: F821
+            end = Time(coverage_struct["data"][-1][2], format="mjd")  # noqa: F821
 
             delta = end - start
             delta.format = "sec"
@@ -615,15 +617,15 @@ def galaxy(
     for telescope in telescopes:
 
         if regions is not None:
-            if type(regions[0]) == RectangleSkyRegion:
+            if isinstance(regions[0], RectangleSkyRegion):
                 telescope.fov_type = "square"
                 telescope.fov = np.max(
                     [regions[0].width.value, regions[0].height.value]
                 )
-            elif type(regions[0]) == CircleSkyRegion:
+            elif isinstance(regions[0], CircleSkyRegion):
                 telescope.fov_type = "circle"
                 telescope.fov = regions[0].radius.value
-            elif type(regions[0]) == PolygonSkyRegion:
+            elif isinstance(regions[0], PolygonSkyRegion):
                 ra = np.array([regions[0].vertices.ra for reg in regions])
                 dec = np.array([regions[0].vertices.dec for reg in regions])
                 min_ra, max_ra = np.min(ra), np.max(ra)
@@ -765,9 +767,7 @@ def galaxy(
                 catalog_struct_new["dec"],
             )
         ).T
-        moc_struct = gwemopt.moc.construct_moc(
-            params, telescope, tesselation
-        )
+        moc_struct = gwemopt.moc.construct_moc(params, telescope, tesselation)
         cnt = 0
         for _, row in catalog_struct_new.iterrows():
             moc_struct[cnt]["galaxies"] = row["galaxies"]

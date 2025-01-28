@@ -67,7 +67,7 @@ def test_scheduler():
             # temp_dir.mkdir(exist_ok=True)
 
             args = [
-                f"-t",
+                "-t",
                 telescope,
                 "-o",
                 str(temp_dir),

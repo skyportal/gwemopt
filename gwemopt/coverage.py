@@ -1,30 +1,31 @@
 import copy
 
+import ligo.segments as segments
 import numpy as np
 import regions
 from astropy import units as u
 from astropy.coordinates import SkyCoord, get_sun
 from astropy.time import Time
 from mocpy import MOC
-import ligo.segments as segments
 
 import gwemopt.plotting
 import gwemopt.scheduler
 from gwemopt.io.schedule import read_schedule
+from gwemopt.telescope import Telescope
 from gwemopt.tiles import (
     balance_tiles,
     check_overlapping_tiles,
     optimize_max_tiles,
     order_by_observability,
+    powerlaw_tiles_struct,
+    schedule_alternating,
     slice_galaxy_tiles,
     slice_map_tiles,
     slice_number_tiles,
-    schedule_alternating,
-    powerlaw_tiles_struct
 )
-from gwemopt.utils.treasuremap import get_treasuremap_pointings
-from gwemopt.telescope import Telescope
 from gwemopt.utils.coverage_utils import combine_coverage_structs
+from gwemopt.utils.treasuremap import get_treasuremap_pointings
+
 
 def read_coverage(telescope: Telescope, filename, moc_struct=None):
     schedule_table = read_schedule(filename)
@@ -286,7 +287,7 @@ def powerlaw(
                         if field_id in tile_struct:
                             tile_struct[field_id]["prob"] = 0.0
 
-                except:
+                except ValueError:
                     raise ValueError(
                         "need to specify tiles that have been observed using --observedTiles"
                     )
@@ -367,7 +368,13 @@ def timeallocation(
             print("\nNo previous observations were ingested.\n")
 
         tile_structs, coverage_struct = powerlaw(
-            params, map_struct, telescopes, exposurelist, tot_obs_time, tile_structs, previous_coverage_struct
+            params,
+            map_struct,
+            telescopes,
+            exposurelist,
+            tot_obs_time,
+            tile_structs,
+            previous_coverage_struct,
         )
 
     elif params["timeallocationType"] == "manual":

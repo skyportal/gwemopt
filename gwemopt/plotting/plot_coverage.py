@@ -20,7 +20,7 @@ def plot_tiles_coverage(params, map_struct, coverage_struct, plot_sun_moon=False
     hdu = map_struct["hdu"]
     columns = [col.name for col in hdu.columns]
 
-    fig = plt.figure(figsize=(8, 6), dpi=100)
+    _ = plt.figure(figsize=(8, 6), dpi=100)
     args = {"projection": params["projection"]}
     if args["projection"] == "astro globe":
         args["center"] = map_struct["center"]
@@ -247,7 +247,7 @@ def plot_coverage_scaled(params, map_struct, coverage_struct, plot_sun_moon, max
     hdu = map_struct["hdu"]
     columns = [col.name for col in hdu.columns]
 
-    fig = plt.figure(figsize=(8, 6), dpi=100)
+    _ = plt.figure(figsize=(8, 6), dpi=100)
     args = {"projection": params["projection"]}
     if args["projection"] == "astro globe":
         args["center"] = map_struct["center"]
@@ -274,9 +274,6 @@ def plot_coverage_scaled(params, map_struct, coverage_struct, plot_sun_moon, max
 
 
 def plot_coverage_movie(params, map_struct, coverage_struct, plot_sun_moon, max_time):
-    hdu = map_struct["hdu"]
-    columns = [col.name for col in hdu.columns]
-
     print("Creating movie from schedule...")
 
     idx = np.isfinite(coverage_struct["data"][:, 2])
@@ -294,9 +291,8 @@ def plot_coverage_movie(params, map_struct, coverage_struct, plot_sun_moon, max_
 
         mjd = mjds[jj]
         plot_name = moviedir.joinpath(f"coverage-{jj:04d}.png")
-        title = f"Coverage Map: {mjd:.2f}"
 
-        fig = plt.figure(figsize=(8, 6), dpi=100)
+        _ = plt.figure(figsize=(8, 6), dpi=100)
         args = {"projection": params["projection"]}
         if args["projection"] == "astro globe":
             args["center"] = map_struct["center"]

@@ -18,7 +18,7 @@ def plot_skymap(params, map_struct, colnames=["PROB", "DISTMEAN", "DISTSTD"]):
             if args["projection"] == "astro globe":
                 args["center"] = map_struct["center"]
 
-            fig = plt.figure(figsize=(8, 6), dpi=100)
+            _ = plt.figure(figsize=(8, 6), dpi=100)
             ax = plt.axes(
                 [0.05, 0.05, 0.9, 0.9],
                 **args,

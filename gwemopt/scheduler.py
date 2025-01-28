@@ -1,13 +1,13 @@
 import copy
 
 import ephem
+import ligo.segments as segments
 import numpy as np
 from astropy.time import Time
 from ortools.linear_solver import pywraplp
-import ligo.segments as segments
 
-from gwemopt.utils import angular_distance, solve_milp
 from gwemopt.telescope import Telescope
+from gwemopt.utils import angular_distance, solve_milp
 
 
 def get_altaz_tile(ra, dec, observer, obstime):
@@ -42,7 +42,7 @@ def find_tile(
             if len(exposureids_tile["exposureids"]) - 1 < idx:
                 continue
             idx2 = exposureids_tile["exposureids"][idx]
-            if idx2 in exposureids and not idx2 in exptimecheckkeys:
+            if idx2 in exposureids and idx2 not in exptimecheckkeys:
                 idx = exposureids.index(idx2)
                 exposureids.pop(idx)
                 probs.pop(idx)
@@ -69,7 +69,7 @@ def find_tile(
             idx = np.argmax(exposureids_tile["probs"])
         idx2 = exposureids_tile["exposureids"][idx]
         if exposureids:
-            if idx2 in exposureids and not idx2 in exptimecheckkeys:
+            if idx2 in exposureids and idx2 not in exptimecheckkeys:
                 idx = exposureids.index(idx2)
                 exposureids.pop(idx)
                 probs.pop(idx)
@@ -265,12 +265,12 @@ def get_order_heuristic(
                     for jj in range(num):
                         try:
                             filts[ii + jj] = filt
-                        except:
+                        except IndexError:
                             pass
                 for jj in range(num):
                     try:
                         idxs[ii + jj] = idx2
-                    except:
+                    except IndexError:
                         pass
             else:
                 idxs[ii] = idx2
@@ -310,12 +310,12 @@ def get_order_heuristic(
                     for jj in range(num):
                         try:
                             filts[ii + jj] = filt
-                        except:
+                        except IndexError:
                             pass
                 for jj in range(num):
                     try:
                         idxs[ii + jj] = idx2
-                    except:
+                    except IndexError:
                         pass
                 current_ra = tile_struct[idx2]["ra"]
                 current_dec = tile_struct[idx2]["dec"]
@@ -399,7 +399,9 @@ def get_order_heuristic(
             total_cost = 0
 
             maximum = max(max(row) for row in tilematrix)
-            inversion_function = lambda x: maximum - x
+
+            def inversion_function(x):
+                maximum - x
 
             cost_matrix = []
             for row in tilematrix:
@@ -457,7 +459,7 @@ def get_order_heuristic(
                     if len(tilefilts[idx2]) > 0:
                         filt = tilefilts[idx2].pop(0)
                         filts[idx0] = filt
-                except:
+                except Exception:
                     continue
 
                 idxs[idx0] = idx2
