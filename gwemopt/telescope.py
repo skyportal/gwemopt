@@ -4,9 +4,10 @@ from astropy.units import meter
 from astropy.coordinates import EarthLocation
 from gwemopt.paths import TESSELATION_DIR, REFS_DIR
 from pathlib import Path
-from numpy import loadtxt, empty, ndarray
+from numpy import loadtxt, empty, ndarray, empty, append as np_append, array
 from gwemopt.utils import tesselation
 from astropy import table
+from typing import Any
 
 
 class Telescope(astroplan.Observer):
@@ -70,6 +71,14 @@ class Telescope(astroplan.Observer):
     def fov_type(self) -> str:
         return self._telescope_description["FOV_type"]
 
+    @fov_type.setter
+    def fov_type(self, new_fov_type):
+        if new_fov_type not in ["square", "circle", "region"]:
+            raise ValueError(
+                f"Trying to assign a fov_type={new_fov_type}, Allowed fov_type are ['square', 'circle', 'region']. "
+            )
+        self.fov_type = new_fov_type
+
     @property
     def fov(self) -> float:
         """
@@ -81,6 +90,10 @@ class Telescope(astroplan.Observer):
             field of view in degree
         """
         return float(self._telescope_description["FOV"])
+
+    @fov.setter
+    def fov(self, new_fov):
+        self.fov = new_fov
 
     @property
     def fov_coverage(self) -> float:
@@ -164,6 +177,19 @@ tesselation error for telescope {self.telescope_name},
             self._tesselation == self.generate_tesselation()
         return self._tesselation
 
+    @tesselation.setter
+    def tesselation(self, tile_structs: dict[str, Any]):
+        new_tess = empty((0, 3))
+        tiles_struct = tile_structs[self.telescope_name]
+        for index in tiles_struct.keys():
+            ra, dec = tiles_struct[index]["ra"], tiles_struct[index]["dec"]
+            new_tess = np_append(
+                new_tess,
+                [[index, ra, dec]],
+                axis=0,
+            )
+        self._tesselation = array(new_tess)
+
     @property
     def referenceImages(self) -> dict:
         if not self._referenceImage and "referenceFile" in self._telescope_description:
@@ -217,16 +243,12 @@ tesselation error for telescope {self.telescope_name},
 
     @property
     def moon_constraint(self) -> float:
-        return float(
-            self._telescope_description.get("moon_constraint", "20.0")
-        )
-    
+        return float(self._telescope_description.get("moon_constraint", "20.0"))
+
     @property
     def exposure_time(self) -> float:
-        return float(
-            self._telescope_description.get("exposuretime")
-        )
-    
+        return float(self._telescope_description.get("exposuretime"))
+
     @property
     def dec_constraint(self) -> tuple[float, float] | None:
         dec_constraint = self._telescope_description.get("dec_constraint", None)
@@ -235,3 +257,7 @@ tesselation error for telescope {self.telescope_name},
             return float(dec_min), float(dec_max)
         else:
             return None
+
+    def fov_center(self, galaxies_fov_sep: float) -> float:
+        fov_center = self._telescope_description.get("FOV_center", self.fov)
+        return fov_center * galaxies_fov_sep

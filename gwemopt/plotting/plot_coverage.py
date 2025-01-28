@@ -8,6 +8,7 @@ from tqdm import tqdm
 from gwemopt.io import export_tiles_coverage_int
 from gwemopt.plotting.movie import make_movie
 from gwemopt.plotting.style import add_sun_moon
+from gwemopt.telescope import Telescope
 
 
 def plot_tiles_coverage(params, map_struct, coverage_struct, plot_sun_moon=False):
@@ -44,12 +45,17 @@ def plot_tiles_coverage(params, map_struct, coverage_struct, plot_sun_moon=False
 
 
 def plot_tiles_coverage_int(
-    params, map_struct, catalog_struct, coverage_struct, plot_sun_moon=False
+    params,
+    telescopes: list[Telescope],
+    map_struct,
+    catalog_struct,
+    coverage_struct,
+    plot_sun_moon=False,
 ):
     gpstime = params["gpstime"]
     event_mjd = Time(gpstime, format="gps", scale="utc").mjd
 
-    colors = cm.rainbow(np.linspace(0, 1, len(params["telescopes"])))
+    colors = cm.rainbow(np.linspace(0, 1, len(telescopes)))
 
     hdu = map_struct["hdu"]
     columns = [col.name for col in hdu.columns]
@@ -71,8 +77,8 @@ def plot_tiles_coverage_int(
     ax = plt.gca()
 
     if params["tilesType"] == "galaxy":
-        for telescope, color in zip(params["telescopes"], colors):
-            idx = np.where(coverage_struct["telescope"] == telescope)[0]
+        for telescope, color in zip(telescopes, colors):
+            idx = np.where(coverage_struct["telescope"] == telescope.telescope_name)[0]
             hp.projscatter(
                 coverage_struct["data"][idx, 0],
                 coverage_struct["data"][idx, 1],
@@ -91,7 +97,7 @@ def plot_tiles_coverage_int(
 
     idxs = np.argsort(coverage_struct["data"][:, 2])
     plt.axes(ax2)
-    for telescope, color in zip(params["telescopes"], colors):
+    for telescope, color in zip(telescopes, colors):
         moc = None
         cum_prob = 0.0
 
@@ -101,14 +107,14 @@ def plot_tiles_coverage_int(
 
         for jj, ii in enumerate(idxs):
             if np.mod(jj, 100) == 0:
-                print("%s: %d/%d" % (telescope, jj, len(idxs)))
+                print("%s: %d/%d" % (telescope.telescope_name, jj, len(idxs)))
 
             data = coverage_struct["data"][ii, :]
             m = coverage_struct["moc"][ii]
             if params["tilesType"] == "galaxy":
                 galaxies = coverage_struct["galaxies"][ii]
 
-            if not telescope == coverage_struct["telescope"][ii]:
+            if not telescope.telescope_name == coverage_struct["telescope"][ii]:
                 continue
 
             if params["tilesType"] == "galaxy":
@@ -141,10 +147,14 @@ def plot_tiles_coverage_int(
             cum_areas.append(cum_area)
             tts.append(data[2] - event_mjd)
 
-        ax2.plot(tts, cum_probs, color=color, linestyle="-", label=telescope)
+        ax2.plot(
+            tts, cum_probs, color=color, linestyle="-", label=telescope.telescope_name
+        )
         ax3.plot(tts, cum_areas, color=color, linestyle="--")
 
-        filename = params["outputDir"].joinpath(f"tiles_coverage_int_{telescope}.txt")
+        filename = params["outputDir"].joinpath(
+            f"tiles_coverage_int_{telescope.telescope_name}.txt"
+        )
         export_tiles_coverage_int(filename, tts, cum_probs, cum_areas)
 
     ax2.set_xlabel("Time since event [days]")
@@ -204,19 +214,20 @@ def plot_tiles_coverage_int(
     ax2.plot(tts, cum_probs, color="k", linestyle="-", label="All")
     ax3.plot(tts, cum_areas, color="k", linestyle="--")
 
-    if len(params["telescopes"]) > 3:
+    telescope_names = [telescope.telescope_name for telescope in telescopes]
+    if len(telescopes) > 3:
         ax2.legend(loc=1, ncol=3, fontsize=10)
         ax2.set_ylim([0, 1])
         ax3.set_ylim([0, 10000])
-    elif "IRIS" in params["telescopes"]:
+    elif "IRIS" in telescope_names:
         ax2.set_ylim([0, 1.0])
         ax3.set_ylim([0, 10000])
         ax2.legend(loc=1)
-    elif "ZTF" in params["telescopes"]:
+    elif "ZTF" in telescope_names:
         ax2.set_ylim([0, 1.0])
         ax3.set_ylim([0, 10000])
         ax2.legend(loc=1)
-    elif "PS1" in params["telescopes"]:
+    elif "PS1" in telescope_names:
         ax2.set_ylim([0, 1.0])
         ax3.set_ylim([0, 10000])
         ax2.legend(loc=1)
@@ -324,7 +335,12 @@ def plot_coverage_movie(params, map_struct, coverage_struct, plot_sun_moon, max_
 
 
 def make_coverage_plots(
-    params, map_struct, coverage_struct, catalog_struct=None, plot_sun_moon: bool = True
+    params,
+    telescopes: list[Telescope],
+    map_struct,
+    coverage_struct,
+    catalog_struct=None,
+    plot_sun_moon: bool = True,
 ):
     idx = np.isfinite(coverage_struct["data"][:, 4])
     if not idx.size:
@@ -333,7 +349,7 @@ def make_coverage_plots(
     max_time = np.max(coverage_struct["data"][idx, 4])
 
     plot_tiles_coverage_int(
-        params, map_struct, catalog_struct, coverage_struct, plot_sun_moon
+        params, telescopes, map_struct, catalog_struct, coverage_struct, plot_sun_moon
     )
 
     plot_coverage_scaled(params, map_struct, coverage_struct, plot_sun_moon, max_time)

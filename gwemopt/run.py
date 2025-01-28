@@ -9,7 +9,7 @@ import gwemopt.lightcurve
 import gwemopt.plotting
 import gwemopt.segments
 from gwemopt.moc import create_moc
-from gwemopt.tiles import moc
+from gwemopt.tiles import moc, galaxy
 from gwemopt.args import parse_args
 from gwemopt.catalogs import get_catalog
 from gwemopt.io import get_skymap, read_skymap, summary
@@ -102,17 +102,17 @@ def run(args=None):
 
         elif params["tilesType"] == "galaxy":
             print("Generating galaxy struct...")
-            tile_structs = gwemopt.tiles.galaxy(params, map_struct, catalog_struct)
-            for telescope in params["telescopes"]:
-                params["config"][telescope]["tesselation"] = np.empty((0, 3))
-                tiles_struct = tile_structs[telescope]
-                for index in tiles_struct.keys():
-                    ra, dec = tiles_struct[index]["ra"], tiles_struct[index]["dec"]
-                    params["config"][telescope]["tesselation"] = np.append(
-                        params["config"][telescope]["tesselation"],
-                        [[index, ra, dec]],
-                        axis=0,
-                    )
+            tile_structs = galaxy(
+                params,
+                telescopes,
+                telescope_segments,
+                tot_obs_time,
+                params["airmass"],
+                map_struct,
+                catalog_struct,
+            )
+            for telescope in telescopes:
+                telescope.tesselation = tile_structs
         else:
             raise ValueError(f"Unknown tilesType: {params['tilesType']}")
 
@@ -124,7 +124,7 @@ def run(args=None):
         if args.doTiles:
             print("Generating coverage...")
             tile_structs, coverage_struct = gwemopt.coverage.timeallocation(
-                params, map_struct, tile_structs
+                params, map_struct, telescopes, exposurelist, tot_obs_time, tile_structs
             )
         else:
             print("Need to enable --doTiles to use --doSchedule")
@@ -149,6 +149,7 @@ def run(args=None):
             print("Plotting coverage...")
             make_coverage_plots(
                 params,
+                telescopes,
                 map_struct,
                 coverage_struct,
                 catalog_struct=catalog_struct,
@@ -176,11 +177,7 @@ def run(args=None):
             for key in lightcurve_structs.keys():
                 lightcurve_struct = lightcurve_structs[key]
                 efficiency_struct = gwemopt.efficiency.compute_efficiency(
-                    params,
-                    map_struct,
-                    lightcurve_struct,
-                    coverage_struct,
-                    do_3d
+                    params, map_struct, lightcurve_struct, coverage_struct, do_3d
                 )
                 efficiency_structs[key] = efficiency_struct
                 efficiency_structs[key]["legend_label"] = lightcurve_struct[

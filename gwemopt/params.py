@@ -12,7 +12,7 @@ from gwemopt.utils import tesselation
 from typing import Any
 from gwemopt.telescope import Telescope
 
-def params_struct(opts) -> tuple[dict[str, Any], Telescope, bool]:
+def params_struct(opts) -> tuple[dict[str, Any], list[Telescope], bool]:
     """@Creates gwemopt params structure
     @param opts
         gwemopt command line options
@@ -49,7 +49,6 @@ def params_struct(opts) -> tuple[dict[str, Any], Telescope, bool]:
     params["coverageFiles"] = (
         opts.coverageFiles.split(",") if opts.coverageFiles else None
     )
-    params["telescopes"] = telescopes
     params["lightcurveFiles"] = str(opts.lightcurveFiles).split(",")
 
     params["Tobs"] = np.array(opts.Tobs.split(","), dtype=float)

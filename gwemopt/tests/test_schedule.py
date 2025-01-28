@@ -133,5 +133,3 @@ def test_scheduler():
                 expected.reset_index(drop=True),
                 rtol=1e-2,
             )
-
-test_scheduler()

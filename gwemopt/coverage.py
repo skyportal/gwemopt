@@ -10,7 +10,6 @@ import ligo.segments as segments
 
 import gwemopt.plotting
 import gwemopt.scheduler
-import gwemopt.tiles
 from gwemopt.io.schedule import read_schedule
 from gwemopt.tiles import (
     balance_tiles,
@@ -20,43 +19,12 @@ from gwemopt.tiles import (
     slice_galaxy_tiles,
     slice_map_tiles,
     slice_number_tiles,
+    schedule_alternating,
+    powerlaw_tiles_struct
 )
 from gwemopt.utils.treasuremap import get_treasuremap_pointings
 from gwemopt.telescope import Telescope
-
-
-def combine_coverage_structs(coverage_structs):
-    coverage_struct_combined = {}
-    coverage_struct_combined["data"] = np.empty((0, 8))
-    coverage_struct_combined["filters"] = np.empty((0, 1))
-    coverage_struct_combined["moc"] = []
-    coverage_struct_combined["telescope"] = np.empty((0, 1))
-    coverage_struct_combined["galaxies"] = []
-    coverage_struct_combined["exposureused"] = []
-
-    for coverage_struct in coverage_structs:
-        coverage_struct_combined["data"] = np.append(
-            coverage_struct_combined["data"], coverage_struct["data"], axis=0
-        )
-        coverage_struct_combined["filters"] = np.append(
-            coverage_struct_combined["filters"], coverage_struct["filters"]
-        )
-        coverage_struct_combined["moc"] = (
-            coverage_struct_combined["moc"] + coverage_struct["moc"]
-        )
-        coverage_struct_combined["telescope"] = np.append(
-            coverage_struct_combined["telescope"], coverage_struct["telescope"]
-        )
-        coverage_struct_combined["exposureused"] += list(
-            coverage_struct["exposureused"]
-        )
-        if "galaxies" in coverage_struct:
-            coverage_struct_combined["galaxies"] = (
-                coverage_struct_combined["galaxies"] + coverage_struct["galaxies"]
-            )
-
-    return coverage_struct_combined
-
+from gwemopt.utils.coverage_utils import combine_coverage_structs
 
 def read_coverage(telescope: Telescope, filename, moc_struct=None):
     schedule_table = read_schedule(filename)
@@ -135,6 +103,7 @@ def powerlaw(
     map_struct,
     telescopes: list[Telescope],
     exposurelist: segments.segmentlist,
+    tot_obs_time: float,
     tile_structs,
     previous_coverage_struct=None,
 ):
@@ -164,10 +133,11 @@ def powerlaw(
             params_hold = copy.copy(params)
             # config_struct_hold = copy.copy(config_struct)
 
-            coverage_struct, tile_struct = gwemopt.tiles.schedule_alternating(
+            coverage_struct, tile_struct = schedule_alternating(
                 params_hold,
                 telescope,
                 exposurelist,
+                tot_obs_time,
                 map_struct_hold,
                 tile_struct,
                 previous_coverage_struct,
@@ -179,10 +149,11 @@ def powerlaw(
                 ):  # optimize max tiles (iff max tiles not already specified)
                     optimized_max, coverage_struct, tile_struct = optimize_max_tiles(
                         params,
+                        telescope,
+                        exposurelist,
+                        tot_obs_time,
                         tile_struct,
                         coverage_struct,
-                        config_struct,
-                        telescope,
                         map_struct_hold,
                     )
                     params["max_nb_tiles"] = np.array([optimized_max], dtype=float)
@@ -193,10 +164,11 @@ def powerlaw(
                     (
                         coverage_struct,
                         tile_struct,
-                    ) = gwemopt.tiles.schedule_alternating(
+                    ) = schedule_alternating(
                         params_hold,
-                        config_struct_hold,
                         telescope,
+                        exposurelist,
+                        tot_obs_time,
                         map_struct_hold,
                         tile_struct,
                         previous_coverage_struct,
@@ -208,10 +180,11 @@ def powerlaw(
                         (
                             coverage_struct,
                             tile_struct,
-                        ) = gwemopt.tiles.schedule_alternating(
+                        ) = schedule_alternating(
                             params_hold,
-                            config_struct_hold,
                             telescope,
+                            exposurelist,
+                            tot_obs_time,
                             map_struct_hold,
                             tile_struct,
                             previous_coverage_struct,
@@ -219,14 +192,11 @@ def powerlaw(
 
         else:
             # load the sun retriction for a satelite
-            try:
-                sat_sun_restriction = config_struct["sat_sun_restriction"]
-            except:
-                sat_sun_restriction = 0.0
+            sat_sun_restriction = telescope.sat_sun_restriction
 
             if not params["tilesType"] == "galaxy":
-                tile_struct = gwemopt.tiles.powerlaw_tiles_struct(
-                    params, config_struct, telescope, map_struct_hold, tile_struct
+                tile_struct = powerlaw_tiles_struct(
+                    params, telescope, tot_obs_time, map_struct_hold, tile_struct
                 )
 
                 if sat_sun_restriction != 0.0:
@@ -322,7 +292,7 @@ def powerlaw(
                     )
 
             coverage_struct = gwemopt.scheduler.scheduler(
-                params, config_struct, tile_struct
+                params, telescope, exposurelist, tile_struct
             )
 
             if params["doBalanceExposure"]:
@@ -333,7 +303,7 @@ def powerlaw(
                         for key in params["unbalanced_tiles"]:
                             tile_struct[key]["prob"] = 0.0
                         coverage_struct = gwemopt.scheduler.scheduler(
-                            params, config_struct, tile_struct
+                            params, telescope, exposurelist, tile_struct
                         )
                         cnt = cnt + 1
                     else:
@@ -345,7 +315,7 @@ def powerlaw(
                 )
                 if doReschedule:
                     coverage_struct = gwemopt.scheduler.scheduler(
-                        params, config_struct, tile_struct
+                        params, telescope, exposurelist, tile_struct
                     )
 
         tile_structs[telescope] = tile_struct
@@ -364,6 +334,7 @@ def timeallocation(
     map_struct,
     telescopes: list[Telescope],
     exposurelist: segments.segmentlist,
+    tot_obs_time: float,
     tile_structs,
     previous_coverage_struct=None,
 ):
@@ -396,13 +367,13 @@ def timeallocation(
             print("\nNo previous observations were ingested.\n")
 
         tile_structs, coverage_struct = powerlaw(
-            params, map_struct, telescopes, tile_structs, previous_coverage_struct
+            params, map_struct, telescopes, exposurelist, tot_obs_time, tile_structs, previous_coverage_struct
         )
 
     elif params["timeallocationType"] == "manual":
         print("Generating manual schedule...")
         tile_structs, coverage_struct = powerlaw(
-            params, map_struct, telescopes, tile_structs
+            params, map_struct, telescopes, exposurelist, tot_obs_time, tile_structs
         )
 
     return tile_structs, coverage_struct

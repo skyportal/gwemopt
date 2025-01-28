@@ -607,10 +607,10 @@ def scheduler(
         coverage_struct["galaxies"] = []
 
     observer = ephem.Observer()
-    observer.lat = str(telescope.latitude)
-    observer.lon = str(telescope.longitude)
+    observer.lat = str(telescope.latitude.value)
+    observer.lon = str(telescope.longitude.value)
     observer.horizon = str(telescope.horizon)
-    observer.elevation = telescope.elevation
+    observer.elevation = telescope.elevation.value
     observer.horizon = ephem.degrees(
         str(90 - np.arccos(1 / params["airmass"]) * 180 / np.pi)
     )

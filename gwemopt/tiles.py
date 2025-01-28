@@ -17,7 +17,7 @@ import gwemopt.moc
 import gwemopt.segments
 from gwemopt.utils.geometry import angular_distance
 from gwemopt.telescope import Telescope
-from gwemopt.coverage import combine_coverage_structs
+from gwemopt.utils.coverage_utils import combine_coverage_structs
 from gwemopt.scheduler import scheduler
 from gwemopt.utils import integrationTime
 
@@ -177,9 +177,11 @@ def slice_galaxy_tiles(params, tile_struct, coverage_struct):
 
 def optimize_max_tiles(
     params,
+    telescope: Telescope,
+    exposurelist: segments.segmentlist,
+    tot_obs_time: float,
     opt_tile_struct,
     opt_coverage_struct,
-    telescope: Telescope,
     map_struct_hold,
 ):
     """Returns value of max_tiles_nb optimized for number of scheduled fields with 'balanced' exposures in each filter."""
@@ -217,11 +219,12 @@ def optimize_max_tiles(
                 tile_struct_hold[key]["epochs"] = np.empty((0, 8))
         params["max_nb_tiles"] = np.array([max_trial], dtype=float)
         params_hold = copy.copy(params)
-        config_struct_hold = copy.copy(config_struct)
+
         coverage_struct_hold, tile_struct_hold = schedule_alternating(
             params_hold,
-            config_struct_hold,
             telescope,
+            exposurelist,
+            tot_obs_time,
             map_struct_hold,
             tile_struct_hold,
         )
@@ -275,12 +278,12 @@ def optimize_max_tiles(
                 tile_struct_hold[key]["epochs"] = np.empty((0, 8))
         params["max_nb_tiles"] = np.array([max_trial], dtype=float)
         params_hold = copy.copy(params)
-        config_struct_hold = copy.copy(config_struct)
 
         coverage_struct_hold, tile_struct_hold = schedule_alternating(
             params_hold,
-            config_struct_hold,
             telescope,
+            exposurelist,
+            tot_obs_time,
             map_struct_hold,
             tile_struct_hold,
         )
@@ -328,14 +331,15 @@ def optimize_max_tiles(
             )
             if not doReschedule:
                 break
-            config_struct_hold = copy.copy(config_struct)
+
             params_hold["max_nb_tiles"] = np.array(
                 [np.ceil(optimized_max)], dtype=float
             )
             coverage_struct, tile_struct_hold = schedule_alternating(
                 params_hold,
-                config_struct_hold,
                 telescope,
+                exposurelist,
+                tot_obs_time,
                 map_struct_hold,
                 tile_struct_hold,
             )
@@ -593,42 +597,44 @@ def get_rectangle(ras, decs, ra_size, dec_size):
     return np.mod((minx + maxx) / 2.0, 360.0), (miny + maxy) / 2.0
 
 
-def galaxy(params, map_struct, catalog_struct: pd.DataFrame, regions=None):
+def galaxy(
+    params,
+    telescopes: list[Telescope],
+    telescope_segment: segments.segmentlist,
+    tot_obs_time: float,
+    airmass: float,
+    map_struct,
+    catalog_struct: pd.DataFrame,
+    regions=None,
+):
     """
     Creates a tile_struct for a galaxy survey
     """
 
     tile_structs = {}
-    for telescope in params["telescopes"]:
-        config_struct = params["config"][telescope]
+    for telescope in telescopes:
 
         if regions is not None:
             if type(regions[0]) == RectangleSkyRegion:
-                config_struct["FOV_type"] = "square"
-                config_struct["FOV"] = np.max(
+                telescope.fov_type = "square"
+                telescope.fov = np.max(
                     [regions[0].width.value, regions[0].height.value]
                 )
             elif type(regions[0]) == CircleSkyRegion:
-                config_struct["FOV_type"] = "circle"
-                config_struct["FOV"] = regions[0].radius.value
+                telescope.fov_type = "circle"
+                telescope.fov = regions[0].radius.value
             elif type(regions[0]) == PolygonSkyRegion:
                 ra = np.array([regions[0].vertices.ra for reg in regions])
                 dec = np.array([regions[0].vertices.dec for reg in regions])
                 min_ra, max_ra = np.min(ra), np.max(ra)
                 min_dec, max_dec = np.min(dec), np.max(dec)
-                config_struct["FOV_type"] = "square"
-                config_struct["FOV"] = np.max([max_ra - min_ra, max_dec - min_dec])
+                telescope.fov_type = "square"
+                telescope.fov = np.max([max_ra - min_ra, max_dec - min_dec])
 
         # Combine in a single pointing, galaxies that are distant by
         # less than fov * params['galaxies_FoV_sep']
         # Take galaxy with highest proba at the center of new pointing
-        fov = params["config"][telescope]["FOV"] * params["galaxies_FoV_sep"]
-        if "FOV_center" in params["config"][telescope]:
-            fov_center = (
-                params["config"][telescope]["FOV_center"] * params["galaxies_FoV_sep"]
-            )
-        else:
-            fov_center = params["config"][telescope]["FOV"] * params["galaxies_FoV_sep"]
+        fov = telescope.fov * params["galaxies_FoV_sep"]
 
         new_cat = []
 
@@ -642,7 +648,7 @@ def galaxy(params, map_struct, catalog_struct: pd.DataFrame, regions=None):
 
             ra, dec = row["ra"], row["dec"]
 
-            if config_struct["FOV_type"] == "square":
+            if telescope.fov_type == "square":
                 dec_corners = (dec - fov, dec + fov)
                 # assume small enough to use average dec for corners
                 ra_corners = (
@@ -680,6 +686,7 @@ def galaxy(params, map_struct, catalog_struct: pd.DataFrame, regions=None):
                         & (remaining["dec"] <= dec_corners[1])
                     )
 
+                    fov_center = telescope.fov_center(params["galaxies_FoV_sep"])
                     dec_corners = (
                         dec_center - fov_center / 2.0,
                         dec_center + fov_center / 2.0,
@@ -702,7 +709,7 @@ def galaxy(params, map_struct, catalog_struct: pd.DataFrame, regions=None):
                 else:
                     ra_center, dec_center = row["ra"], row["dec"]
 
-            elif config_struct["FOV_type"] == "circle":
+            elif telescope.fov_type == "circle":
                 dist = angular_distance(
                     ra,
                     dec,
@@ -759,7 +766,7 @@ def galaxy(params, map_struct, catalog_struct: pd.DataFrame, regions=None):
             )
         ).T
         moc_struct = gwemopt.moc.construct_moc(
-            params, config_struct, telescope, tesselation
+            params, telescope, tesselation
         )
         cnt = 0
         for _, row in catalog_struct_new.iterrows():
@@ -768,15 +775,15 @@ def galaxy(params, map_struct, catalog_struct: pd.DataFrame, regions=None):
 
         tile_struct = powerlaw_tiles_struct(
             params,
-            config_struct,
             telescope,
+            tot_obs_time,
             map_struct,
             moc_struct,
             catalog_struct=catalog_struct,
         )
 
         tile_struct = gwemopt.segments.get_segments_tiles(
-            params, config_struct, tile_struct
+            params, telescope_segment, telescope, airmass, tile_struct
         )
 
         cnt = 0
@@ -784,17 +791,15 @@ def galaxy(params, map_struct, catalog_struct: pd.DataFrame, regions=None):
             tile_struct[cnt]["prob"] = row[params["galaxy_grade"]]
             tile_struct[cnt]["galaxies"] = row["galaxies"]
 
-            if config_struct["FOV_type"] == "square":
-                tile_struct[cnt]["area"] = params["config"][telescope]["FOV"] ** 2
-            elif config_struct["FOV_type"] == "circle":
-                tile_struct[cnt]["area"] = (
-                    4 * np.pi * params["config"][telescope]["FOV"] ** 2
-                )
+            if telescope.fov_type == "square":
+                tile_struct[cnt]["area"] = telescope.fov**2
+            elif telescope.fov_type == "circle":
+                tile_struct[cnt]["area"] = 4 * np.pi * telescope.fov**2
             else:
                 raise ValueError("FOV_type not recognized")
             cnt = cnt + 1
 
-        tile_structs[telescope] = tile_struct
+        tile_structs[telescope.telescope_name] = tile_struct
 
     return tile_structs
 
