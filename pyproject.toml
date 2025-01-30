@@ -63,7 +63,7 @@ test = [
     'coverage',
     'coveralls',
     'freezegun',
-    'black',
+    'black>=25',
     'pylint',
     'flake8',
 ]
