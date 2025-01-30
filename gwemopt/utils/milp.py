@@ -78,7 +78,7 @@ def solve_milp(
 
         if useTaskSepration:
             print("Define constraints: enforce minimum task separation...")
-            ## Define constraints: enforce minimum task separation
+            # Define constraints: enforce minimum task separation
             for i in tqdm(range(num_exposures)):
                 for j in range(num_fields):
                     for k in range(j + 1, num_fields):
@@ -87,8 +87,6 @@ def solve_milp(
 
         print("Number of variables:", len(problem.variables()))
         print("Number of constraints:", len(problem.constraints))
-
-        time_limit = 60  # Stop the solver after 60 seconds
 
         if milpSolver == "PULP_CBC_CMD":
             solver = pulp.getSolver(milpSolver)

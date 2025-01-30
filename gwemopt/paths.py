@@ -2,9 +2,10 @@
 Module for defining paths to data directories.
 """
 
+from importlib.resources import files
 from pathlib import Path
 
-DATA_DIR = Path(__file__).parent.absolute().joinpath("data")
+DATA_DIR = files("gwemopt.data")
 
 DEFAULT_LIGHTCURVE_DIR = DATA_DIR.joinpath("lightcurves")
 DEFAULT_BASE_OUTPUT_DIR = Path.home().joinpath("Data/gwemopt/")

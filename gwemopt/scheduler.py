@@ -1,11 +1,14 @@
 import copy
 
 import ephem
+import ligo.segments as segments
 import numpy as np
 from astropy.time import Time
 from ortools.linear_solver import pywraplp
 
-from gwemopt.utils import angular_distance, solve_milp
+from gwemopt.telescope import Telescope
+from gwemopt.utils.geometry import angular_distance
+from gwemopt.utils.milp import solve_milp
 
 
 def get_altaz_tile(ra, dec, observer, obstime):
@@ -40,7 +43,7 @@ def find_tile(
             if len(exposureids_tile["exposureids"]) - 1 < idx:
                 continue
             idx2 = exposureids_tile["exposureids"][idx]
-            if idx2 in exposureids and not idx2 in exptimecheckkeys:
+            if idx2 in exposureids and idx2 not in exptimecheckkeys:
                 idx = exposureids.index(idx2)
                 exposureids.pop(idx)
                 probs.pop(idx)
@@ -67,7 +70,7 @@ def find_tile(
             idx = np.argmax(exposureids_tile["probs"])
         idx2 = exposureids_tile["exposureids"][idx]
         if exposureids:
-            if idx2 in exposureids and not idx2 in exptimecheckkeys:
+            if idx2 in exposureids and idx2 not in exptimecheckkeys:
                 idx = exposureids.index(idx2)
                 exposureids.pop(idx)
                 probs.pop(idx)
@@ -84,7 +87,12 @@ def find_tile(
 
 
 def get_order_heuristic(
-    params, tile_struct, tilesegmentlists, exposurelist, observer, config_struct
+    params,
+    telescope: Telescope,
+    tile_struct,
+    tilesegmentlists,
+    exposurelist,
+    observer,
 ):
     """
     tile_struct: dictionary. key -> struct info.
@@ -131,11 +139,6 @@ def get_order_heuristic(
 
         nexps = nexps + tile_struct[key]["nexposures"]
 
-    if "dec_constraint" in config_struct:
-        dec_constraint = config_struct["dec_constraint"].split(",")
-        dec_min = float(dec_constraint[0])
-        dec_max = float(dec_constraint[1])
-
     for ii in range(len(exposurelist)):
         exposureids_tiles[ii] = {}
         exposureids = []
@@ -145,7 +148,8 @@ def get_order_heuristic(
             tilesegmentlist = tilesegmentlists[jj]
             if tile_struct[key]["prob"] == 0:
                 continue
-            if "dec_constraint" in config_struct:
+            if telescope.dec_constraint:
+                dec_min, dec_max = telescope.dec_constraint
                 if (tile_struct[key]["dec"] < dec_min) or (
                     tile_struct[key]["dec"] > dec_max
                 ):
@@ -222,7 +226,7 @@ def get_order_heuristic(
                 get_altaz_tile(ra, dec, observer, t) for ra, dec in zip(ras, decs)
             ]
             alts = np.array([altaz[0] for altaz in altazs])
-            horizon = config_struct["horizon"]
+            horizon = telescope.horizon
             horizon_mask = alts <= horizon
             airmass = 1 / np.cos((90.0 - alts) * np.pi / 180.0)
             below_horizon_mask = horizon_mask * 10.0**100
@@ -262,12 +266,12 @@ def get_order_heuristic(
                     for jj in range(num):
                         try:
                             filts[ii + jj] = filt
-                        except:
+                        except IndexError:
                             pass
                 for jj in range(num):
                     try:
                         idxs[ii + jj] = idx2
-                    except:
+                    except IndexError:
                         pass
             else:
                 idxs[ii] = idx2
@@ -291,8 +295,8 @@ def get_order_heuristic(
                 exptimecheckkeys=exptimecheckkeys,
                 current_ra=current_ra,
                 current_dec=current_dec,
-                slew_rate=config_struct["slew_rate"],
-                readout=config_struct["readout"],
+                slew_rate=telescope.slew_rate,
+                readout=telescope.readout,
             )
             if idx2 in keynames:
                 idx = keynames.index(idx2)
@@ -307,12 +311,12 @@ def get_order_heuristic(
                     for jj in range(num):
                         try:
                             filts[ii + jj] = filt
-                        except:
+                        except IndexError:
                             pass
                 for jj in range(num):
                     try:
                         idxs[ii + jj] = idx2
-                    except:
+                    except IndexError:
                         pass
                 current_ra = tile_struct[idx2]["ra"]
                 current_dec = tile_struct[idx2]["dec"]
@@ -396,7 +400,9 @@ def get_order_heuristic(
             total_cost = 0
 
             maximum = max(max(row) for row in tilematrix)
-            inversion_function = lambda x: maximum - x
+
+            def inversion_function(x):
+                maximum - x
 
             cost_matrix = []
             for row in tilematrix:
@@ -454,7 +460,7 @@ def get_order_heuristic(
                     if len(tilefilts[idx2]) > 0:
                         filt = tilefilts[idx2].pop(0)
                         filts[idx0] = filt
-                except:
+                except Exception:
                     continue
 
                 idxs[idx0] = idx2
@@ -470,7 +476,7 @@ def get_order_heuristic(
     return idxs, filts
 
 
-def get_order_milp(params, tile_struct, exposurelist, observer, config_struct):
+def get_order_milp(params, telescope: Telescope, tile_struct, exposurelist, observer):
     """
     tile_struct: dictionary. key -> struct info.
     exposurelist: list of segments that the telescope is supposed to be working.
@@ -479,18 +485,14 @@ def get_order_milp(params, tile_struct, exposurelist, observer, config_struct):
     Returns a list of tile indices in the order of observation.
     """
 
-    if "dec_constraint" in config_struct:
-        dec_constraint = config_struct["dec_constraint"].split(",")
-        dec_min = float(dec_constraint[0])
-        dec_max = float(dec_constraint[1])
-
     exposureids = []
     probs = []
     ras, decs, filts, keys = [], [], [], []
     for ii, key in enumerate(list(tile_struct.keys())):
         if tile_struct[key]["prob"] == 0:
             continue
-        if "dec_constraint" in config_struct:
+        if telescope.dec_constraint:
+            dec_min, dec_max = telescope.dec_constraint
             if (tile_struct[key]["dec"] < dec_min) or (
                 tile_struct[key]["dec"] > dec_max
             ):
@@ -522,7 +524,7 @@ def get_order_milp(params, tile_struct, exposurelist, observer, config_struct):
         t = Time(exposurelist[ii][0], format="mjd")
         altazs = [get_altaz_tile(ra, dec, observer, t) for ra, dec in zip(ras, decs)]
         alts = np.array([altaz[0] for altaz in altazs])
-        horizon = config_struct["horizon"]
+        horizon = telescope.horizon
         horizon_mask = alts <= horizon
         airmass = 1 / np.cos((90.0 - alts) * np.pi / 180.0)
         airmass_mask = airmass > params["airmass"]
@@ -562,8 +564,8 @@ def get_order_milp(params, tile_struct, exposurelist, observer, config_struct):
     for ii, (r, d) in enumerate(zip(ras, decs)):
         dist = angular_distance(r, d, ras, decs)
         if "slew" in params["scheduleType"]:
-            dist = dist / config_struct["slew_rate"]
-            dist = dist - config_struct["readout"]
+            dist = dist / telescope.slew_rate
+            dist = dist - telescope.readout
             dist[dist < 0] = 0
         else:
             distmatrix[ii, :] = dist
@@ -591,7 +593,9 @@ def get_order_milp(params, tile_struct, exposurelist, observer, config_struct):
     return fields, filters
 
 
-def scheduler(params, config_struct, tile_struct):
+def scheduler(
+    params, telescope: Telescope, exposurelist: segments.segmentlist, tile_struct
+):
     """
     config_struct: the telescope configurations
     tile_struct: the tiles, contains time allocation information
@@ -606,16 +610,14 @@ def scheduler(params, config_struct, tile_struct):
         coverage_struct["galaxies"] = []
 
     observer = ephem.Observer()
-    observer.lat = str(config_struct["latitude"])
-    observer.lon = str(config_struct["longitude"])
-    observer.horizon = str(config_struct["horizon"])
-    observer.elevation = config_struct["elevation"]
+    observer.lat = str(telescope.latitude.value)
+    observer.lon = str(telescope.longitude.value)
+    observer.horizon = str(telescope.horizon)
+    observer.elevation = telescope.elevation.value
     observer.horizon = ephem.degrees(
         str(90 - np.arccos(1 / params["airmass"]) * 180 / np.pi)
     )
 
-    exposurelist = config_struct["exposurelist"]
-    # tilesegmentlists = gwemopt.segments_astroplan.get_segments_tiles(config_struct, tile_struct, observatory, segmentlist)
     tilesegmentlists = []
     keys = tile_struct.keys()
     for key in keys:
@@ -624,11 +626,11 @@ def scheduler(params, config_struct, tile_struct):
 
     if params["solverType"] == "heuristic":
         keys, filts = get_order_heuristic(
-            params, tile_struct, tilesegmentlists, exposurelist, observer, config_struct
+            params, telescope, tile_struct, tilesegmentlists, exposurelist, observer
         )
     elif params["solverType"] == "milp":
         keys, filts = get_order_milp(
-            params, tile_struct, exposurelist, observer, config_struct
+            params, telescope, tile_struct, exposurelist, observer
         )
     else:
         raise ValueError(f'Unknown solverType {params["solverType"]}')
@@ -685,10 +687,8 @@ def scheduler(params, config_struct, tile_struct):
             # total duration of the observation (?)
             exposureTime = (mjd_exposure_end - mjd_exposure_start) * 86400.0
 
-            nmag = -2.5 * np.log10(
-                np.sqrt(config_struct["exposuretime"] / exposureTime)
-            )
-            mag = config_struct["magnitude"] + nmag
+            nmag = -2.5 * np.log10(np.sqrt(telescope.exposure_time / exposureTime))
+            mag = telescope.telescope_mag + nmag
 
             coverage_struct["data"] = np.append(
                 coverage_struct["data"],
@@ -715,19 +715,19 @@ def scheduler(params, config_struct, tile_struct):
                 coverage_struct["galaxies"].append(tile_struct_hold["galaxies"])
 
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
-    coverage_struct["FOV"] = [config_struct["FOV"]] * len(coverage_struct["filters"])
-    coverage_struct["telescope"] = [config_struct["telescope"]] * len(
+    coverage_struct["FOV"] = [telescope.fov] * len(coverage_struct["filters"])
+    coverage_struct["telescope"] = [telescope.telescope_name] * len(
         coverage_struct["filters"]
     )
 
     return coverage_struct
 
 
-def computeSlewReadoutTime(config_struct, coverage_struct):
-    slew_rate = config_struct["slew_rate"]
-    readout = config_struct["readout"]
-    prev_ra = config_struct["latitude"]
-    prev_dec = config_struct["longitude"]
+def computeSlewReadoutTime(telescope: Telescope, coverage_struct):
+    slew_rate = telescope.slew_rate
+    readout = telescope.readout
+    prev_ra = telescope.latitude
+    prev_dec = telescope.longitude
     acc_time = 0
     for dat in coverage_struct["data"]:
         dist = angular_distance(prev_ra, prev_dec, dat[0], dat[1])

@@ -15,7 +15,7 @@ def make_tile_plots(params, map_struct, tiles_structs, plot_sun_moon=True):
     hdu = map_struct["hdu"]
     columns = [col.name for col in hdu.columns]
 
-    fig = plt.figure(figsize=(8, 6), dpi=100)
+    _ = plt.figure(figsize=(8, 6), dpi=100)
 
     args = {"projection": params["projection"]}
     if args["projection"] == "astro globe":

@@ -1,26 +1,27 @@
 import sys
 from pathlib import Path
 
-import numpy as np
-
 import gwemopt.coverage
 import gwemopt.efficiency
 import gwemopt.lightcurve
 import gwemopt.plotting
 import gwemopt.segments
 from gwemopt.args import parse_args
-from gwemopt.catalogs import get_catalog
-from gwemopt.io import get_skymap, read_skymap, summary
+from gwemopt.catalogs.get import get_catalog
+from gwemopt.io.schedule import summary
+from gwemopt.io.skymap import get_skymap, read_skymap
+from gwemopt.moc import create_moc
 from gwemopt.params import params_struct
 from gwemopt.paths import DEFAULT_BASE_OUTPUT_DIR
-from gwemopt.plotting import (
+from gwemopt.plotting.plot_coverage import (
     make_coverage_movie,
     make_coverage_plots,
-    make_efficiency_plots,
-    make_tile_plots,
-    plot_inclination,
-    plot_skymap,
 )
+from gwemopt.plotting.plot_efficiency import make_efficiency_plots
+from gwemopt.plotting.plot_inclination import plot_inclination
+from gwemopt.plotting.plot_skymap import plot_skymap
+from gwemopt.plotting.plot_tiles import make_tile_plots
+from gwemopt.tiles import galaxy, moc
 
 
 def run(args=None):
@@ -29,7 +30,7 @@ def run(args=None):
 
     args = parse_args(args)
 
-    params = params_struct(args)
+    params, telescopes, do_3d = params_struct(args)
 
     if len(params["filters"]) != len(params["exposuretimes"]):
         raise ValueError(
@@ -39,7 +40,13 @@ def run(args=None):
     params["skymap"] = get_skymap(event_name=args.event)
 
     # Function to read maps
-    params, map_struct = read_skymap(params)
+    map_struct, gpstime = read_skymap(
+        params["skymap"],
+        params["nside"],
+        params["galactic_limit"],
+        params["confidence_level"],
+    )
+    params["gpstime"] = gpstime
 
     # Set output directory
     if args.outputDir is not None:
@@ -53,7 +60,15 @@ def run(args=None):
     params["outputDir"] = output_dir
     print(f"Output directory: {output_dir}")
 
-    params = gwemopt.segments.get_telescope_segments(params)
+    telescope_segments, exposurelist, nwindows, tot_obs_time = (
+        gwemopt.segments.get_telescope_segments(
+            telescopes,
+            params["gpstime"],
+            params["Tobs"],
+            params["exposuretimes"],
+            params["doAlternatingFilters"],
+        )
+    )
 
     print("Loading skymap...")
 
@@ -72,23 +87,31 @@ def run(args=None):
     if args.doTiles:
         if params["tilesType"] == "moc":
             print("Generating MOC struct...")
-            moc_structs = gwemopt.moc.create_moc(params, map_struct=map_struct)
+            moc_structs = create_moc(params, telescopes, map_struct=map_struct)
             print("Generating tile struct for MOC...")
-            tile_structs = gwemopt.tiles.moc(params, map_struct, moc_structs)
+            tile_structs = moc(
+                params,
+                telescopes,
+                telescope_segments,
+                tot_obs_time,
+                params["airmass"],
+                map_struct,
+                moc_structs,
+            )
 
         elif params["tilesType"] == "galaxy":
             print("Generating galaxy struct...")
-            tile_structs = gwemopt.tiles.galaxy(params, map_struct, catalog_struct)
-            for telescope in params["telescopes"]:
-                params["config"][telescope]["tesselation"] = np.empty((0, 3))
-                tiles_struct = tile_structs[telescope]
-                for index in tiles_struct.keys():
-                    ra, dec = tiles_struct[index]["ra"], tiles_struct[index]["dec"]
-                    params["config"][telescope]["tesselation"] = np.append(
-                        params["config"][telescope]["tesselation"],
-                        [[index, ra, dec]],
-                        axis=0,
-                    )
+            tile_structs = galaxy(
+                params,
+                telescopes,
+                telescope_segments,
+                tot_obs_time,
+                params["airmass"],
+                map_struct,
+                catalog_struct,
+            )
+            for telescope in telescopes:
+                telescope.tesselation = tile_structs
         else:
             raise ValueError(f"Unknown tilesType: {params['tilesType']}")
 
@@ -100,7 +123,7 @@ def run(args=None):
         if args.doTiles:
             print("Generating coverage...")
             tile_structs, coverage_struct = gwemopt.coverage.timeallocation(
-                params, map_struct, tile_structs
+                params, map_struct, telescopes, exposurelist, tot_obs_time, tile_structs
             )
         else:
             print("Need to enable --doTiles to use --doSchedule")
@@ -108,17 +131,24 @@ def run(args=None):
     elif args.doCoverage:
         print("Reading coverage from file...")
         coverage_struct = gwemopt.coverage.read_coverage_files(
-            params, moc_structs=moc_structs
+            params, telescopes, moc_structs=moc_structs
         )
 
     if args.doSchedule or args.doCoverage:
         print("Summary of coverage...")
-        summary(params, map_struct, coverage_struct, catalog_struct=catalog_struct)
+        summary(
+            params,
+            telescopes,
+            map_struct,
+            coverage_struct,
+            catalog_struct=catalog_struct,
+        )
 
         if "coverage" in params["plots"]:
             print("Plotting coverage...")
             make_coverage_plots(
                 params,
+                telescopes,
                 map_struct,
                 coverage_struct,
                 catalog_struct=catalog_struct,
@@ -146,16 +176,13 @@ def run(args=None):
             for key in lightcurve_structs.keys():
                 lightcurve_struct = lightcurve_structs[key]
                 efficiency_struct = gwemopt.efficiency.compute_efficiency(
-                    params,
-                    map_struct,
-                    lightcurve_struct,
-                    coverage_struct,
+                    params, map_struct, lightcurve_struct, coverage_struct, do_3d
                 )
                 efficiency_structs[key] = efficiency_struct
                 efficiency_structs[key]["legend_label"] = lightcurve_struct[
                     "legend_label"
                 ]
-                if params["do_3d"]:
+                if do_3d:
                     print(
                         f'Percent detections out of {params["Ninj"]} injected KNe: '
                         f'{efficiency_structs[key]["3D"]*100:.2f}% '

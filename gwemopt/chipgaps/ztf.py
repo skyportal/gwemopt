@@ -278,11 +278,12 @@ def get_ztf_quadrant_moc(ra, dec, n_threads=None):
     quadrant_coords = get_ztf_quadrants()
 
     skyoffset_frames = SkyCoord(ra, dec, unit=u.deg).skyoffset_frame()
-    quadrant_coords_icrs = SkyCoord(
+    quadrant_coords = SkyCoord(
         *np.tile(quadrant_coords[:, np.newaxis, ...], (1, 1, 1)),
         unit=u.deg,
         frame=skyoffset_frames[:, np.newaxis, np.newaxis],
-    ).transform_to(ICRS)
+    )
+    quadrant_coords_icrs = quadrant_coords.transform_to(ICRS)
 
     mocs = []
     for ccd_coords in tqdm(quadrant_coords_icrs):

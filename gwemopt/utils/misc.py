@@ -1,6 +1,8 @@
 import ligo.segments as segments
 import numpy as np
 
+from gwemopt.telescope import Telescope
+
 
 def integrationTime(T_obs, pValTiles, func=None, T_int=60.0):
     """
@@ -17,39 +19,40 @@ def integrationTime(T_obs, pValTiles, func=None, T_int=60.0):
                              For example, use x**2 to use a quadratic function.
     """
 
+    def identity(x):
+        return x
+
+    def eval_arg(x):
+        return eval(func)
+
     if func is None:
-        f = lambda x: x
+        f = identity
     else:
-        f = lambda x: eval(func)
+        f = eval_arg
     fpValTiles = f(pValTiles)
     modified_prob = fpValTiles / np.sum(fpValTiles)
     modified_prob[np.isnan(modified_prob)] = 0.0
-    t_tiles = modified_prob * T_obs  ### Time spent in each tile if not constrained
-    # t_tiles[t_tiles > 1200.0] = 1200.0 ### Upper limit of exposure time
-    # t_tiles[t_tiles < 60] = 60.0 ### Lower limit of exposure time
+    t_tiles = modified_prob * T_obs  # Time spent in each tile if not constrained
     t_tiles = T_int * np.round(t_tiles / T_int)
-    # Obs = np.cumsum(t_tiles) <= T_obs ### Tiles observable in T_obs seconds
-    # time_per_tile = t_tiles[Obs] ### Actual time spent per tile
 
     return t_tiles
 
 
-def get_exposures(params, config_struct, segmentlist):
+def get_exposures(
+    telescope: Telescope, segmentlist, exposuretimes: list, doAlternatingFilters: bool
+) -> segments.segmentlist:
     """
     Convert the availability times to a list segments with the length of telescope exposures.
     segmentlist: the segments that the telescope can do the follow-up.
     """
     exposurelist = segments.segmentlist()
-    if "overhead_per_exposure" in config_struct.keys():
-        overhead = config_struct["overhead_per_exposure"]
-    else:
-        overhead = 0.0
+    overhead = telescope.overhead_per_exposure
 
     # add the filter change time to the total overheads for integrated
-    if not params["doAlternatingFilters"]:
-        overhead = overhead + config_struct.get("filt_change_time", 0)
+    if not doAlternatingFilters:
+        overhead = overhead + telescope.filt_change_time
 
-    exposure_time = np.max(params["exposuretimes"])
+    exposure_time = np.max(exposuretimes)
 
     for ii in range(len(segmentlist)):
         start_segment, end_segment = segmentlist[ii][0], segmentlist[ii][1]

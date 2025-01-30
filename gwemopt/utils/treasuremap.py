@@ -5,9 +5,11 @@ Module for interacting with the Treasure Map API.
 import re
 import urllib.parse
 
+import astropy.units as u
 import numpy as np
 import regions
 import requests
+from astropy.coordinates import SkyCoord
 from mocpy import MOC
 
 
@@ -55,7 +57,7 @@ def get_treasuremap_pointings(params):
         elif "POINT" not in obs:
             continue
 
-        pointing = re.search("\(([^)]+)", obs).group(1)
+        pointing = re.search("\(([^)]+)", obs).group(1)  # noqa: W605
         pointing = pointing.split(" ")
         ra, dec = float(pointing[0]), float(pointing[1])
 

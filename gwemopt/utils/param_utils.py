@@ -18,6 +18,6 @@ def readParamsFromFile(file):
                 if line_split:
                     try:
                         params[line_split[0]] = float(line_split[1])
-                    except:
+                    except Exception:
                         params[line_split[0]] = line_split[1]
     return params
