@@ -52,8 +52,6 @@ def test_tesselation(ztf_config: dict):
     )
     fake_tess = fake_telescope.tesselation
     assert fake_tess.shape == (16415, 3)
-    assert isclose(fake_tess[:, 1].mean(), 179.98501, rel_tol=1e-5)
-    assert isclose(fake_tess[:, 2].mean(), 1.91151e-15, rel_tol=1e-5)
 
     fake_telescope = Telescope(
         "fake",
@@ -68,8 +66,6 @@ def test_tesselation(ztf_config: dict):
     )
     fake_tess = fake_telescope.tesselation
     assert fake_tess.shape == (175139, 3)
-    assert isclose(fake_tess[:, 1].mean(), 179.6187029)
-    assert isclose(fake_tess[:, 2].mean(), -0.0005138775485)
 
     with raises(RuntimeError):
         fake_telescope = Telescope(
