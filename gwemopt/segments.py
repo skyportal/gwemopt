@@ -118,7 +118,7 @@ def get_ha_segments(telescope: Telescope, segmentlist, radec):
     for seg in segmentlist:
         mjds = np.linspace(seg[0], seg[1], 100)
         tt = Time(mjds, format="mjd", scale="utc")
-        ha = hour_angle(tt.jd, tt.gps, telescope.longitude, radec[0], 0)
+        ha = hour_angle(tt.jd, tt.gps, telescope.longitude.value, radec[0], 0)
         idx = np.where((ha >= ha_min) & (ha <= ha_max))[0]
         if len(idx) >= 2:
             halist.append(segments.segment(mjds[idx[0]], mjds[idx[-1]]))
