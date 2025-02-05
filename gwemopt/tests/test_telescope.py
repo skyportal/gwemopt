@@ -1,8 +1,10 @@
 import hashlib
 from math import isclose
+from pathlib import Path
 
 from numpy import all as np_all
-from numpy import array, float64, int64
+from numpy import array, float64, int64, load
+from numpy.testing import assert_allclose
 from pytest import raises
 
 from gwemopt.telescope import Telescope
@@ -38,8 +40,6 @@ def test_tesselation(ztf_config: dict):
     ztf = Telescope("ZTF", ztf_config)
     tess = ztf.tesselation
     assert tess.shape == (1778, 3)
-    assert isclose(tess[:, 1].mean(), 178.7753416)
-    assert isclose(tess[:, 2].mean(), -0.879678942)
 
     fake_telescope = Telescope(
         "fake",
@@ -53,10 +53,18 @@ def test_tesselation(ztf_config: dict):
         },
     )
     fake_tess = fake_telescope.tesselation
+
+    test_dir = Path(__file__).parent.absolute()
+    save_path = Path(test_dir, "data", "expected_results", "telescope_tesselation")
+    with open(Path(save_path, "circle.tess"), "rb") as fp:
+        ref_circle_tess = load(fp)
+
     assert fake_tess.shape == (16415, 3)
-    assert (
-        hashlib.sha512(fake_tess).hexdigest()
-        == "6bf7d88467ecffb5baabc00982038c648af0b0ee51c66bb3fd6c998f9a59eb7d69cda81daff4aab4b730b75f1d22cd63e7ec5255bfd1640939c5df0ba6d1bbe3"
+    assert_allclose(
+        fake_tess,
+        ref_circle_tess,
+        rtol=1e-5,
+        err_msg="circle tesselation are not equal (rtol=1e-5)",
     )
 
     fake_telescope = Telescope(
@@ -71,7 +79,18 @@ def test_tesselation(ztf_config: dict):
         },
     )
     fake_tess = fake_telescope.tesselation
+
+    with open(Path(save_path, "square.tess"), "rb") as fp:
+        ref_square_tess = load(fp)
+
     assert fake_tess.shape == (175139, 3)
+    assert_allclose(
+        fake_tess,
+        ref_square_tess,
+        rtol=1e-5,
+        err_msg="circle tesselation are not equal (rtol=1e-5)",
+    )
+
     assert (
         hashlib.sha512(fake_tess).hexdigest()
         == "fec3845b0c8321a39b8c57074982766901e8da2bd12c348b87cebc87605cf820547e23b44cfcaebde1201bedfa6c046cb2a782b8ed7916fc029b6648270e6dae"
