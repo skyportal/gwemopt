@@ -1,10 +1,14 @@
+import hashlib
 from math import isclose
+from pathlib import Path
 
 from numpy import all as np_all
-from numpy import array, float64, int64
+from numpy import array, float64, int64, load
+from numpy.testing import assert_allclose
 from pytest import raises
 
 from gwemopt.telescope import Telescope
+from gwemopt.tests.conftest import make_hash_sha256
 
 
 def test_attribute_telescope(ztf_config: dict, mxt_config: dict, decam_config: dict):
@@ -36,8 +40,6 @@ def test_tesselation(ztf_config: dict):
     ztf = Telescope("ZTF", ztf_config)
     tess = ztf.tesselation
     assert tess.shape == (1778, 3)
-    assert isclose(tess[:, 1].mean(), 178.7753416)
-    assert isclose(tess[:, 2].mean(), -0.879678942)
 
     fake_telescope = Telescope(
         "fake",
@@ -51,9 +53,19 @@ def test_tesselation(ztf_config: dict):
         },
     )
     fake_tess = fake_telescope.tesselation
+
+    test_dir = Path(__file__).parent.absolute()
+    save_path = Path(test_dir, "data", "expected_results", "telescope_tesselation")
+    with open(Path(save_path, "circle.tess"), "rb") as fp:
+        ref_circle_tess = load(fp)
+
     assert fake_tess.shape == (16415, 3)
-    assert isclose(fake_tess[:, 1].mean(), 179.98501, rel_tol=1e-5)
-    assert isclose(fake_tess[:, 2].mean(), 1.91151e-15, rel_tol=1e-5)
+    assert_allclose(
+        fake_tess,
+        ref_circle_tess,
+        rtol=1e-5,
+        err_msg="circle tesselation are not equal (rtol=1e-5)",
+    )
 
     fake_telescope = Telescope(
         "fake",
@@ -67,9 +79,22 @@ def test_tesselation(ztf_config: dict):
         },
     )
     fake_tess = fake_telescope.tesselation
+
+    with open(Path(save_path, "square.tess"), "rb") as fp:
+        ref_square_tess = load(fp)
+
     assert fake_tess.shape == (175139, 3)
-    assert isclose(fake_tess[:, 1].mean(), 179.6187029)
-    assert isclose(fake_tess[:, 2].mean(), -0.0005138775485)
+    assert_allclose(
+        fake_tess,
+        ref_square_tess,
+        rtol=1e-5,
+        err_msg="circle tesselation are not equal (rtol=1e-5)",
+    )
+
+    assert (
+        hashlib.sha512(fake_tess).hexdigest()
+        == "fec3845b0c8321a39b8c57074982766901e8da2bd12c348b87cebc87605cf820547e23b44cfcaebde1201bedfa6c046cb2a782b8ed7916fc029b6648270e6dae"
+    )
 
     with raises(RuntimeError):
         fake_telescope = Telescope(
@@ -89,6 +114,10 @@ def test_tesselation(ztf_config: dict):
 def test_referenceField(ztf_config: dict):
     ztf = Telescope("ZTF", ztf_config)
     assert len(ztf.referenceImages) == 930
+    assert (
+        make_hash_sha256(ztf.referenceImages)
+        == "8/mZfifCETVG5X5TH/5L90D4KJnhsgc9acMS0qpYUHs="
+    )
 
     fake = Telescope(
         "Fake",

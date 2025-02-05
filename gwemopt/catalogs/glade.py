@@ -25,7 +25,7 @@ class GladeCatalog(BaseCatalog):
             "Dist": "distmpc",
             "Bmag": "magb",
             "Kmag": "magk",
-            "_2MASS": "2MASS",
+            "2MASS": "2MASS",
         }
 
         copy_keys = ["GWGC", "PGC", "HyperLEDA", "z"]

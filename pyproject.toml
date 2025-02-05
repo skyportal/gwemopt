@@ -31,7 +31,7 @@ dependencies = [
     'numpy>=1.7.1',
     'scipy>=1.2.1',
     'matplotlib>=1.2.0',
-    "astropy==6.1.7",
+    "astropy>=6.1.0",
     'astropy-healpix',
     'python-dateutil',
     'mocpy>=0.16.0',
@@ -122,6 +122,9 @@ parentdir_prefix = "gwemopt-"
 
 [tool.pytest.ini_options]
 addopts = "--verbose -r s"
+markers = [
+    "gwemopt_run: marks tests running a full gwemopt CLI execution, slow test (deselect with '-m \"not slow\"'",
+]
 
 [tool.bumpver]
 current_version = "0.3.6"

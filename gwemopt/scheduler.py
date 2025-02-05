@@ -726,8 +726,8 @@ def scheduler(
 def computeSlewReadoutTime(telescope: Telescope, coverage_struct):
     slew_rate = telescope.slew_rate
     readout = telescope.readout
-    prev_ra = telescope.latitude
-    prev_dec = telescope.longitude
+    prev_ra = telescope.latitude.value
+    prev_dec = telescope.longitude.value
     acc_time = 0
     for dat in coverage_struct["data"]:
         dist = angular_distance(prev_ra, prev_dec, dat[0], dat[1])

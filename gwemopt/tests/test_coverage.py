@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from pytest import mark
 
 from gwemopt.io.schedule import read_summary
 from gwemopt.run import run
@@ -17,6 +18,7 @@ expected_results_dir = test_data_dir.joinpath("expected_results")
 test_skymap = test_data_dir.joinpath("S190814bv_5_LALInference.v1.fits.gz")
 
 
+@mark.gwemopt_run
 def test_coverage():
     """
     Test coverage
