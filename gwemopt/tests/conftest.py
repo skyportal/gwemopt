@@ -1,4 +1,7 @@
+import base64
+import hashlib
 from pathlib import Path
+from typing import Any
 
 from pytest import fixture
 
@@ -25,3 +28,48 @@ def mxt_config():
 @fixture
 def decam_config():
     return readParamsFromFile(CONFIG_DIR.joinpath("DECam.config"))
+
+
+def make_hash_sha256(o: tuple | list | dict | set | frozenset | Any) -> str:
+    """
+    Generate a hash from an arbitrary python types
+
+    Parameters
+    ----------
+    o : tuple | list | dict | set | frozenset | Any
+        an object to hash
+
+    Returns
+    -------
+    str
+        the hash of the object o
+    """
+    hasher = hashlib.sha256()
+    hasher.update(repr(make_hashable(o)).encode())
+    return base64.b64encode(hasher.digest()).decode()
+
+
+def make_hashable(o: tuple | list | dict | set | frozenset | Any) -> tuple:
+    """
+    Make the object o hashable
+
+    Parameters
+    ----------
+    o : tuple | list | dict | set | frozenset | Any
+        an object to transform to be hashable
+
+    Returns
+    -------
+    tuple
+        the object is now ready to be hashable
+    """
+    if isinstance(o, (tuple, list)):
+        return tuple((make_hashable(e) for e in o))
+
+    if isinstance(o, dict):
+        return tuple(sorted((k, make_hashable(v)) for k, v in o.items()))
+
+    if isinstance(o, (set, frozenset)):
+        return tuple(sorted(make_hashable(e) for e in o))
+
+    return o
