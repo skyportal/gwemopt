@@ -44,14 +44,18 @@ and for the ability to balance field exposures [Dynamic scheduling: target of op
 
 ```bibtex
 @article{Almualla:2020hbs,
-    author = "Almualla, Mouza and Coughlin, Michael W. and Anand, Shreya and Alqassimi, Khalid and Guessoum, Nidhal and Singer, Leo P.",
-    title = "{Dynamic Scheduling: Target of Opportunity Observations of Gravitational Wave Events}",
-    eprint = "2003.09718",
-    archivePrefix = "arXiv",
-    primaryClass = "astro-ph.HE",
-    doi = "10.1093/mnras/staa1498",
-    month = "3",
-    year = "2020"
+    author = {Almualla, Mouza and Coughlin, Michael W and Anand, Shreya and Alqassimi, Khalid and Guessoum, Nidhal and Singer, Leo P},
+    title = {Dynamic scheduling: target of opportunity observations of gravitational wave events},
+    journal = {Monthly Notices of the Royal Astronomical Society},
+    volume = {495},
+    number = {4},
+    pages = {4366-4371},
+    year = {2020},
+    month = {06},
+    issn = {0035-8711},
+    doi = {10.1093/mnras/staa1498},
+    url = {https://doi.org/10.1093/mnras/staa1498},
+    eprint = {https://academic.oup.com/mnras/article-pdf/495/4/4366/33371783/staa1498.pdf},
 }
 ```
 
