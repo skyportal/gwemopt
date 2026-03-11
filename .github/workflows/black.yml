@@ -28,4 +28,4 @@ jobs:
 
       - name: Reformat the code with black
         run: |
-          black gwemopt --check
+          uv run black gwemopt --check
