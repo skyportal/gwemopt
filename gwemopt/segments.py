@@ -1,7 +1,7 @@
 import copy
 
 import ephem
-import ligo.segments as segments
+import igwn_segments as segments
 import numpy as np
 from astropy.time import Time
 from joblib import Parallel, delayed

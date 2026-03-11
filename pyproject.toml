@@ -42,7 +42,7 @@ dependencies = [
     'ephem',
     'pyyaml',
     'joblib',
-    'ligo-segments',
+    'igwn-segments',
     'ligo.skymap',
     'lxml',
     'h5py',

@@ -1,7 +1,7 @@
 import copy
 
 import healpy as hp
-import ligo.segments as segments
+import igwn_segments as segments
 import numpy as np
 import pandas as pd
 from astropy import units as u

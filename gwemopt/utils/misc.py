@@ -1,4 +1,4 @@
-import ligo.segments as segments
+import igwn_segments as segments
 import numpy as np
 
 
