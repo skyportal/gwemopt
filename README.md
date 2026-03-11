@@ -82,7 +82,7 @@ If you run into dependency issues, you can try installing dependencies via conda
 ```
 conda install numpy scipy matplotlib astropy h5py shapely
 conda install -c astropy astroquery
-conda install -c conda-forge voeventlib astropy-healpix python-ligo-lw ligo-segments ligo.skymap ffmpeg
+conda install -c conda-forge voeventlib astropy-healpix python-ligo-lw igwn-segments ligo.skymap ffmpeg
 ```
 
 And then run `pip install -e .` again.
