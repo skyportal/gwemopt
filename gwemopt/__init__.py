@@ -17,8 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with gwemopt.  If not, see <http://www.gnu.org/licenses/>
 
-"""Gravitational-wave Electromagnetic Optimization
-"""
+"""Gravitational-wave Electromagnetic Optimization"""
 
 __author__ = "Michael Coughlin <michael.coughlin@ligo.org>"
 from importlib.metadata import PackageNotFoundError, version
