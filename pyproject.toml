@@ -57,7 +57,14 @@ dependencies = [
 
 dynamic = ["version"]
 
-[project.optional-dependencies]
+[dependency-groups]
+dev = [
+    'black',
+    'isort',
+    'pre-commit',
+    'bumpver',
+    'versioneer',
+]
 test = [
     'pytest',
     'pytest-runner',
