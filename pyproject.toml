@@ -9,7 +9,7 @@ authors = [
 ]
 description = "A python package for GW-EM Followup Optimization"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 license = {text = "GPLv3"}
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -67,7 +67,15 @@ test = [
     'coverage',
     'coveralls',
     'freezegun',
-    'mocpy[plot]',
+    'cdshealpix',
+]
+
+[dependency-groups]
+dev = [
+    'black',
+    'isort',
+    'pre-commit',
+    'bumpver',
 ]
 
 [project.scripts]
