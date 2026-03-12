@@ -135,7 +135,10 @@ tag_prefix = "v"
 parentdir_prefix = "gwemopt-"
 
 [tool.pytest.ini_options]
-addopts = "--verbose -r s"
+addopts = "--verbose -r s -m 'not network'"
+markers = [
+    "network: tests that require network access (e.g. catalog downloads)",
+]
 
 [tool.bumpver]
 current_version = "0.3.6"
