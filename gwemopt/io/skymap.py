@@ -201,7 +201,7 @@ def read_inclination(skymap, params, map_struct):
     prob_iota_EM = prob_lt_pi2 + prob_gt_pi2[::-1]
 
     # normalize
-    prob_iota /= np.trapz(iota_EM, prob_iota_EM)
+    prob_iota /= np.trapezoid(prob_iota_EM, iota_EM)
 
     map_struct["iota_EM"] = iota_EM
     map_struct["prob_iota_EM"] = prob_iota_EM

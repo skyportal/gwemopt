@@ -26,7 +26,7 @@ def find_tile(
     exposureids,
     probs,
     idxs=None,
-    exptimecheckkeys=[],
+    exptimecheckkeys=None,
     current_ra=np.nan,
     current_dec=np.nan,
     slew_rate=1,
@@ -34,13 +34,18 @@ def find_tile(
 ):
     # exposureids_tile: {expo id}-> list of the tiles available for observation
     # exposureids: list of tile ids for every exposure it is allocated to observe
+    if exptimecheckkeys is None:
+        exptimecheckkeys = []
+
+    exposureids_set = set(exposureids)
+    exptimecheckkeys_set = set(exptimecheckkeys)
 
     if idxs is not None:
         for idx in idxs:
             if len(exposureids_tile["exposureids"]) - 1 < idx:
                 continue
             idx2 = exposureids_tile["exposureids"][idx]
-            if idx2 in exposureids and not idx2 in exptimecheckkeys:
+            if idx2 in exposureids_set and idx2 not in exptimecheckkeys_set:
                 idx = exposureids.index(idx2)
                 exposureids.pop(idx)
                 probs.pop(idx)
@@ -67,10 +72,11 @@ def find_tile(
             idx = np.argmax(exposureids_tile["probs"])
         idx2 = exposureids_tile["exposureids"][idx]
         if exposureids:
-            if idx2 in exposureids and not idx2 in exptimecheckkeys:
+            if idx2 in exposureids_set and idx2 not in exptimecheckkeys_set:
                 idx = exposureids.index(idx2)
                 exposureids.pop(idx)
                 probs.pop(idx)
+                exposureids_set.discard(idx2)
                 findTile = False
             else:
                 exposureids_tile["exposureids"].pop(idx)
@@ -109,15 +115,16 @@ def get_order_heuristic(
     tileavailable = np.zeros((len(keys),))
     tileavailable_tiles = {}
     keynames = []
+    keyname_to_idx = {}
 
     nexps = 0
     for jj, key in enumerate(keys):
         tileprobs[jj] = tile_struct[key]["prob"]
         tilenexps[jj] = tile_struct[key]["nexposures"]
 
-        if type(tile_struct[key]["exposureTime"]) in [float, np.float64]:
+        if isinstance(tile_struct[key]["exposureTime"], (float, np.floating)):
             tileexpdur[jj] = tile_struct[key]["exposureTime"]
-        elif type(tile_struct[key]["exposureTime"]) in [list, np.ndarray]:
+        elif isinstance(tile_struct[key]["exposureTime"], (list, np.ndarray)):
             if len(tile_struct[key]["exposureTime"]) > 0:
                 tileexpdur[jj] = tile_struct[key]["exposureTime"][0]
             else:
@@ -128,55 +135,70 @@ def get_order_heuristic(
         tilefilts[key] = copy.deepcopy(tile_struct[key]["filt"])
         tileavailable_tiles[jj] = []
         keynames.append(key)
+        keyname_to_idx[key] = jj
 
         nexps = nexps + tile_struct[key]["nexposures"]
 
-    if "dec_constraint" in config_struct:
+    # Pre-filter tiles: identify which tiles have nonzero probability
+    # and pass the dec constraint, so we skip them once rather than per-exposure
+    has_dec_constraint = "dec_constraint" in config_struct
+    if has_dec_constraint:
         dec_constraint = config_struct["dec_constraint"].split(",")
         dec_min = float(dec_constraint[0])
         dec_max = float(dec_constraint[1])
+
+    valid_tile_indices = []
+    for jj, key in enumerate(keys):
+        if tile_struct[key]["prob"] == 0:
+            continue
+        if has_dec_constraint:
+            tile_dec = tile_struct[key]["dec"]
+            if tile_dec < dec_min or tile_dec > dec_max:
+                continue
+        valid_tile_indices.append(jj)
+
+    # Pre-compute segment intersection matrix for valid tiles × exposures
+    # This avoids calling intersects_segment inside a nested Python loop
+    doMindifFilt = params.get("doMindifFilt", False)
+    mindiff_days = params["mindiff"] / 86400.0 if "mindiff" in params else 0.0
 
     for ii in range(len(exposurelist)):
         exposureids_tiles[ii] = {}
         exposureids = []
         probs = []
         ras, decs = [], []
-        for jj, key in enumerate(keys):
-            tilesegmentlist = tilesegmentlists[jj]
-            if tile_struct[key]["prob"] == 0:
-                continue
-            if "dec_constraint" in config_struct:
-                if (tile_struct[key]["dec"] < dec_min) or (
-                    tile_struct[key]["dec"] > dec_max
-                ):
-                    continue
+        exposure_seg = exposurelist[ii]
+        exposure_start = exposure_seg[0]
+        for jj in valid_tile_indices:
+            key = keynames[jj]
             if "epochs" in tile_struct[key]:
-                if params.get("doMindifFilt", False):
+                if doMindifFilt:
                     if "epochs_filters" not in tile_struct[key]:
                         tile_struct[key]["epochs_filters"] = []
-                    # take into account filter for mindiff
                     idx = np.where(
                         np.asarray(tile_struct[key]["epochs_filters"])
                         == params["filters"][0]
                     )[0]
                     if np.any(
-                        np.abs(exposurelist[ii][0] - tile_struct[key]["epochs"][idx, 2])
-                        < params["mindiff"] / 86400.0
+                        np.abs(exposure_start - tile_struct[key]["epochs"][idx, 2])
+                        < mindiff_days
                     ):
                         continue
                 elif np.any(
-                    np.abs(exposurelist[ii][0] - tile_struct[key]["epochs"][:, 2])
-                    < params["mindiff"] / 86400.0
+                    np.abs(exposure_start - tile_struct[key]["epochs"][:, 2])
+                    < mindiff_days
                 ):
                     continue
-            if tilesegmentlist.intersects_segment(exposurelist[ii]):
+            if tilesegmentlists[jj].intersects_segment(exposure_seg):
                 exposureids.append(key)
                 probs.append(tile_struct[key]["prob"])
                 ras.append(tile_struct[key]["ra"])
                 decs.append(tile_struct[key]["dec"])
 
-                first_exposure[jj] = np.min([first_exposure[jj], ii])
-                last_exposure[jj] = np.max([last_exposure[jj], ii])
+                if ii < first_exposure[jj]:
+                    first_exposure[jj] = ii
+                if ii > last_exposure[jj]:
+                    last_exposure[jj] = ii
                 tileavailable_tiles[jj].append(ii)
                 tileavailable[jj] = tileavailable[jj] + 1
         # in every exposure, the tiles available for observation
@@ -249,8 +271,8 @@ def get_order_heuristic(
                 probs,
                 exptimecheckkeys=exptimecheckkeys,
             )
-            if idx2 in keynames:
-                idx = keynames.index(idx2)
+            if idx2 in keyname_to_idx:
+                idx = keyname_to_idx[idx2]
                 tilenexps[idx] = tilenexps[idx] - 1
                 tileexptime[idx] = exposurelist[ii][0]
 
@@ -294,8 +316,8 @@ def get_order_heuristic(
                 slew_rate=config_struct["slew_rate"],
                 readout=config_struct["readout"],
             )
-            if idx2 in keynames:
-                idx = keynames.index(idx2)
+            if idx2 in keyname_to_idx:
+                idx = keyname_to_idx[idx2]
                 tilenexps[idx] = tilenexps[idx] - 1
                 tileexptime[idx] = exposurelist[ii][0]
 
@@ -350,8 +372,8 @@ def get_order_heuristic(
                     probs,
                     exptimecheckkeys=exptimecheckkeys,
                 )
-            if idx2 in keynames:
-                idx = keynames.index(idx2)
+            if idx2 in keyname_to_idx:
+                idx = keyname_to_idx[idx2]
                 tilenexps[idx] = tilenexps[idx] - 1
                 tileexptime[idx] = exposurelist[ii][0]
                 if len(tilefilts[idx2]) > 0:
@@ -377,8 +399,8 @@ def get_order_heuristic(
             if np.any(weights >= 0):
                 idxmax = np.argmax(weights)
                 idx2 = jj[idxmax]
-                if idx2 in keynames:
-                    idx = keynames.index(idx2)
+                if idx2 in keyname_to_idx:
+                    idx = keyname_to_idx[idx2]
                     tilenexps[idx] = tilenexps[idx] - 1
                     tileexptime[idx] = exposurelist[ii][0]
                     if len(tilefilts[idx2]) > 0:
@@ -599,7 +621,7 @@ def scheduler(params, config_struct, tile_struct):
 
     # import gwemopt.segments_astroplan
     coverage_struct = {}
-    coverage_struct["data"] = np.empty((0, 8))
+    coverage_data_rows = []
     coverage_struct["filters"] = []
     coverage_struct["moc"] = []
     if params["tilesType"] == "galaxy":
@@ -690,23 +712,17 @@ def scheduler(params, config_struct, tile_struct):
             )
             mag = config_struct["magnitude"] + nmag
 
-            coverage_struct["data"] = np.append(
-                coverage_struct["data"],
-                np.array(
-                    [
-                        [
-                            tile_struct_hold["ra"],
-                            tile_struct_hold["dec"],
-                            mjd_exposure_start,
-                            mag,
-                            exposureTime,
-                            int(key),
-                            tile_struct_hold["prob"],
-                            airmass,
-                        ]
-                    ]
-                ),
-                axis=0,
+            coverage_data_rows.append(
+                [
+                    tile_struct_hold["ra"],
+                    tile_struct_hold["dec"],
+                    mjd_exposure_start,
+                    mag,
+                    exposureTime,
+                    int(key),
+                    tile_struct_hold["prob"],
+                    airmass,
+                ]
             )
 
             coverage_struct["filters"].append(filt)
@@ -714,6 +730,10 @@ def scheduler(params, config_struct, tile_struct):
             if params["tilesType"] == "galaxy":
                 coverage_struct["galaxies"].append(tile_struct_hold["galaxies"])
 
+    if coverage_data_rows:
+        coverage_struct["data"] = np.array(coverage_data_rows)
+    else:
+        coverage_struct["data"] = np.empty((0, 8))
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
     coverage_struct["FOV"] = [config_struct["FOV"]] * len(coverage_struct["filters"])
     coverage_struct["telescope"] = [config_struct["telescope"]] * len(
@@ -726,13 +746,13 @@ def scheduler(params, config_struct, tile_struct):
 def computeSlewReadoutTime(config_struct, coverage_struct):
     slew_rate = config_struct["slew_rate"]
     readout = config_struct["readout"]
-    prev_ra = config_struct["latitude"]
-    prev_dec = config_struct["longitude"]
+    prev_ra = config_struct["longitude"]
+    prev_dec = config_struct["latitude"]
     acc_time = 0
     for dat in coverage_struct["data"]:
         dist = angular_distance(prev_ra, prev_dec, dat[0], dat[1])
         slew_readout_time = np.max([dist / slew_rate, readout])
         acc_time += slew_readout_time
-        prev_dec = dat[0]
-        prev_ra = dat[1]
+        prev_ra = dat[0]
+        prev_dec = dat[1]
     return acc_time

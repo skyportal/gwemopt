@@ -44,6 +44,8 @@ def slice_number_tiles(params, tile_struct, coverage_struct):
     if max_nb_tile is None:
         return tile_struct, False
 
+    max_nb_tile = int(np.asarray(max_nb_tile).flat[0])
+
     keys = tile_struct.keys()
     keys_scheduled = np.unique(coverage_struct["data"][:, 5])
 
@@ -56,7 +58,7 @@ def slice_number_tiles(params, tile_struct, coverage_struct):
             prob[ii] = prob[ii] + tile_struct[key]["prob"]
 
     sort_idx = np.argsort(prob)[::-1]
-    idx_keep = sort_idx[: int(max_nb_tile)]
+    idx_keep = sort_idx[:max_nb_tile]
 
     for ii, key in enumerate(keys):
         # in the golden tile set
@@ -117,54 +119,43 @@ def slice_galaxy_tiles(params, tile_struct, coverage_struct):
     if len(coverage_ras) == 0:
         return tile_struct
 
-    keys = tile_struct.keys()
-    ras, decs = [], []
-    for key in keys:
-        ras.append(tile_struct[key]["ra"])
-        decs.append(tile_struct[key]["dec"])
-    ras, decs = np.array(ras), np.array(decs)
-
-    prob = np.zeros((len(keys),))
-    for ii, key in enumerate(keys):
-        prob[ii] = prob[ii] + tile_struct[key]["prob"]
+    keys = list(tile_struct.keys())
+    ras = np.array([tile_struct[key]["ra"] for key in keys])
+    decs = np.array([tile_struct[key]["dec"] for key in keys])
+    prob = np.array([tile_struct[key]["prob"] for key in keys])
 
     sort_idx = np.argsort(prob)[::-1]
     csm = np.empty(len(prob))
     csm[sort_idx] = np.cumsum(prob[sort_idx])
-    ipix_keep = np.where(csm <= params["iterativeOverlap"])[0]
+    ipix_keep = set(np.where(csm <= params["iterativeOverlap"])[0])
 
     catalog1 = SkyCoord(
         ra=coverage_ras * u.degree, dec=coverage_decs * u.degree, frame="icrs"
     )
+    catalog2 = SkyCoord(ra=ras * u.degree, dec=decs * u.degree, frame="icrs")
 
     for ii, key in enumerate(keys):
-        # in the golden tile set
         if ii in ipix_keep:
             continue
 
-        catalog2 = SkyCoord(
-            ra=tile_struct[key]["ra"] * u.degree,
-            dec=tile_struct[key]["dec"] * u.degree,
-            frame="icrs",
-        )
-        sep = catalog1.separation(catalog2)
+        sep = catalog1.separation(catalog2[ii])
+        nearby = np.where(sep.deg <= 1)[0]
+        if len(nearby) == 0:
+            continue
+
         galaxies = tile_struct[key]["galaxies"]
-        for jj, s in enumerate(sep):
-            if s.deg > 1:
-                continue
+        for jj in nearby:
             galaxies2 = coverage_struct["galaxies"][jj]
             overlap = np.intersect1d(galaxies, galaxies2)
             if len(overlap) == 0:
                 continue
 
-            rat = np.array(
-                [
-                    float(len(overlap)) / float(len(galaxies)),
-                    float(len(overlap)) / float(len(galaxies2)),
-                ]
+            rat = max(
+                len(overlap) / len(galaxies),
+                len(overlap) / len(galaxies2),
             )
 
-            if np.max(rat) > params["maximumOverlap"]:
+            if rat > params["maximumOverlap"]:
                 tile_struct[key]["prob"] = 0.0
                 break
 
@@ -251,7 +242,7 @@ def optimize_max_tiles(
             break
 
     # optimize within narrower range for more precision
-    if coarse_bool == True:
+    if coarse_bool:
         max_trials = np.linspace(optimized_max, optimized_max + 24, 4)
     else:
         if optimized_max < 100:
@@ -375,85 +366,82 @@ def check_overlapping_tiles(params, tile_struct, coverage_struct):
         return tile_struct
 
     keys = list(tile_struct.keys())
-    ras, decs = [], []
-    for key in keys:
-        ras.append(tile_struct[key]["ra"])
-        decs.append(tile_struct[key]["dec"])
-    ras, decs = np.array(ras), np.array(decs)
+    ras = np.array([tile_struct[key]["ra"] for key in keys])
+    decs = np.array([tile_struct[key]["dec"] for key in keys])
 
     catalog1 = SkyCoord(
         ra=coverage_ras * u.degree, dec=coverage_decs * u.degree, frame="icrs"
     )
+    catalog2 = SkyCoord(ra=ras * u.degree, dec=decs * u.degree, frame="icrs")
+
     if params["tilesType"] == "galaxy":
-        for key in keys:
-            catalog2 = SkyCoord(
-                ra=tile_struct[key]["ra"] * u.degree,
-                dec=tile_struct[key]["dec"] * u.degree,
-                frame="icrs",
-            )
-            sep = catalog1.separation(catalog2)
+        for ii, key in enumerate(keys):
+            sep = catalog1.separation(catalog2[ii])
+            nearby = np.where(sep.deg <= 1)[0]
+            if len(nearby) == 0:
+                continue
             galaxies = tile_struct[key]["galaxies"]
-            for jj, s in enumerate(sep):
-                if s.deg > 1:
-                    continue
+            epoch_rows = []
+            for jj in nearby:
                 galaxies2 = coverage_struct["galaxies"][jj]
                 overlap = np.setdiff1d(galaxies, galaxies2)
                 if len(overlap) == 0:
-                    if not "epochs" in tile_struct[key]:
-                        tile_struct[key]["epochs"] = np.empty((0, 8))
-                    tile_struct[key]["epochs"] = np.append(
-                        tile_struct[key]["epochs"],
-                        np.atleast_2d(coverage_struct["data"][jj, :]),
-                        axis=0,
-                    )
+                    epoch_rows.append(coverage_struct["data"][jj, :])
+            if epoch_rows:
+                if "epochs" not in tile_struct[key]:
+                    tile_struct[key]["epochs"] = np.empty((0, 8))
+                tile_struct[key]["epochs"] = np.vstack(
+                    [tile_struct[key]["epochs"]]
+                    + [np.atleast_2d(r) for r in epoch_rows]
+                )
     else:
-        for key in keys:
-            catalog2 = SkyCoord(
-                ra=tile_struct[key]["ra"] * u.degree,
-                dec=tile_struct[key]["dec"] * u.degree,
-                frame="icrs",
-            )
-            sep = catalog1.separation(catalog2)
+        for ii, key in enumerate(keys):
+            sep = catalog1.separation(catalog2[ii])
+            nearby = np.where(sep.deg <= 25)[0]
+            if len(nearby) == 0:
+                continue
             ipix = tile_struct[key]["ipix"]
-            for jj, s in enumerate(sep):
-                if s.deg > 25:
-                    continue
+            epoch_rows = []
+            epoch_overlaps = []
+            epoch_filters = []
+            for jj in nearby:
                 ipix2 = coverage_struct["ipix"][jj]
                 overlap = np.intersect1d(ipix, ipix2)
-
                 if len(overlap) == 0:
                     continue
+                epoch_rows.append(coverage_struct["data"][jj, :])
+                epoch_overlaps.append(len(overlap))
+                epoch_filters.append(coverage_struct["filters"][jj])
 
-                if not "epochs" in tile_struct[key]:
+            if epoch_rows:
+                if "epochs" not in tile_struct[key]:
                     tile_struct[key]["epochs"] = np.empty((0, 8))
                     tile_struct[key]["epochs_overlap"] = []
                     tile_struct[key]["epochs_filters"] = []
-
-                tile_struct[key]["epochs"] = np.append(
-                    tile_struct[key]["epochs"],
-                    np.atleast_2d(coverage_struct["data"][jj, :]),
-                    axis=0,
+                tile_struct[key]["epochs"] = np.vstack(
+                    [tile_struct[key]["epochs"]]
+                    + [np.atleast_2d(r) for r in epoch_rows]
                 )
-                tile_struct[key]["epochs_overlap"].append(len(overlap))
-                tile_struct[key]["epochs_filters"].append(
-                    coverage_struct["filters"][jj]
-                )
+                tile_struct[key]["epochs_overlap"].extend(epoch_overlaps)
+                tile_struct[key]["epochs_filters"].extend(epoch_filters)
 
     return tile_struct
 
 
 def append_tile_epochs(tile_struct, coverage_struct):
+    coverage_keys = coverage_struct["data"][:, 5]
+    scheduled_keys = set(coverage_keys)
+
     for key in tile_struct.keys():
-        if key not in coverage_struct["data"][:, 5]:
+        if key not in scheduled_keys:
             continue
         if "epochs" not in tile_struct[key]:
             tile_struct[key]["epochs"] = np.empty((0, 8))
-        idx = np.where(coverage_struct["data"][:, 5] == key)[0]
-        for jj in idx:
-            tile_struct[key]["epochs"] = np.append(
-                tile_struct[key]["epochs"],
-                np.atleast_2d(coverage_struct["data"][jj, :]),
-                axis=0,
+        idx = np.where(coverage_keys == key)[0]
+        if len(idx) > 0:
+            new_rows = coverage_struct["data"][idx, :]
+            tile_struct[key]["epochs"] = np.vstack(
+                [tile_struct[key]["epochs"], new_rows]
             )
 
     return tile_struct
@@ -572,6 +560,8 @@ def schedule_alternating(
 
 
 def get_rectangle(ras, decs, ra_size, dec_size):
+    ras = np.array(ras, copy=True)
+    decs = np.array(decs, copy=True)
     ras[ras > 180.0] = ras[ras > 180.0] - 360.0
 
     poly = MultiPoint([(x, y) for x, y in zip(ras, decs)]).envelope

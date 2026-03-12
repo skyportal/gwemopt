@@ -61,7 +61,7 @@ def read_coverage(params, telescope, filename, moc_struct=None):
     schedule_table = read_schedule(filename)
 
     coverage_struct = {}
-    coverage_struct["data"] = np.empty((0, 8))
+    data_rows = []
     coverage_struct["filters"] = []
     coverage_struct["moc"] = []
 
@@ -75,11 +75,7 @@ def read_coverage(params, telescope, filename, moc_struct=None):
         airmass = row["airmass"]
         filt = row["filter"]
 
-        coverage_struct["data"] = np.append(
-            coverage_struct["data"],
-            np.array([[ra, dec, tobs, limmag, texp, field, prob, airmass]]),
-            axis=0,
-        )
+        data_rows.append([ra, dec, tobs, limmag, texp, field, prob, airmass])
         coverage_struct["filters"].append(filt)
 
         if moc_struct is None:
@@ -102,6 +98,10 @@ def read_coverage(params, telescope, filename, moc_struct=None):
 
         coverage_struct["moc"].append(moc)
 
+    if data_rows:
+        coverage_struct["data"] = np.array(data_rows)
+    else:
+        coverage_struct["data"] = np.empty((0, 8))
     coverage_struct["filters"] = np.array(coverage_struct["filters"])
     coverage_struct["FOV"] = config_struct["FOV_coverage"] * np.ones(
         (len(coverage_struct["filters"]),)

@@ -8,13 +8,7 @@ import pandas as pd
 from gwemopt.io.schedule import read_summary
 from gwemopt.run import run
 
-np.random.seed(42)
-
-test_dir = Path(__file__).parent.absolute()
-test_data_dir = test_dir.joinpath("data")
-expected_results_dir = test_data_dir.joinpath("expected_results")
-
-test_skymap = test_data_dir.joinpath("S190814bv_5_LALInference.v1.fits.gz")
+from .conftest import expected_results_dir, test_skymap
 
 
 def test_coverage():
@@ -31,12 +25,8 @@ def test_coverage():
             os.path.join(expected_results_dir, "schedule_DECam.dat"),
         ]
 
-        # To regenerate the test data, uncomment the following lines
-        # temp_dir = Path(__file__).parent.absolute().joinpath("temp3")
-        # temp_dir.mkdir(exist_ok=True)
-
         args = [
-            f"-t",
+            "-t",
             ",".join(telescope_list),
             "-o",
             str(temp_dir),
@@ -50,9 +40,9 @@ def test_coverage():
 
         run(args)
 
-        new_summary = read_summary(Path(temp_dir).joinpath(f"summary.dat"))
+        new_summary = read_summary(Path(temp_dir).joinpath("summary.dat"))
         expected_summary = read_summary(
-            expected_results_dir.joinpath(f"summary_coverage.dat")
+            expected_results_dir.joinpath("summary_coverage.dat")
         )
 
         pd.testing.assert_frame_equal(

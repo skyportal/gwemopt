@@ -8,13 +8,7 @@ import pandas as pd
 from gwemopt.io.schedule import read_schedule
 from gwemopt.run import run
 
-np.random.seed(42)
-
-test_dir = Path(__file__).parent.absolute()
-test_data_dir = test_dir.joinpath("data")
-expected_results_dir = test_data_dir.joinpath("expected_results")
-
-test_skymap = test_data_dir.joinpath("S190814bv_5_LALInference.v1.fits.gz")
+from .conftest import expected_results_dir, test_skymap
 
 
 def test_scheduler():
@@ -57,17 +51,10 @@ def test_scheduler():
                 "DECam",
                 ["--max_nb_tiles", "5", "--plots", "coverage"],
             ),
-            # ('TRE', []),
-            # ("WINTER", []),
-            # ('TNT', ["--tilesType", "galaxy", "--powerlaw_dist_exp", "1.0", "--doCatalog", "--galaxy_grade", "Sloc"]),
         ]
         for telescope, extra in telescope_list:
-            # To regenerate the test data, uncomment the following lines
-            # temp_dir = Path(__file__).parent.absolute().joinpath("temp")
-            # temp_dir.mkdir(exist_ok=True)
-
             args = [
-                f"-t",
+                "-t",
                 telescope,
                 "-o",
                 str(temp_dir),
@@ -93,7 +80,6 @@ def test_scheduler():
             check_files = [
                 f"schedule_{telescope}.dat",
                 f"tiles_coverage_int_{telescope}.txt",
-                # f"coverage_{telescope}.dat",
             ]
 
             for i, file_name in enumerate(check_files):
@@ -114,19 +100,14 @@ def test_scheduler():
 
         extra_test_files = [
             "summary.dat",
-            # "efficiency.txt",
-            # "efficiency_tophat.txt",
-            # "coverage_ZTF.dat",
         ]
 
         for extra_test_file in extra_test_files:
             print(f"Testing: {extra_test_file}")
 
-            new = pd.read_table(
-                Path(temp_dir).joinpath(extra_test_file), delim_whitespace=True
-            )
+            new = pd.read_table(Path(temp_dir).joinpath(extra_test_file), sep=r"\s+")
             expected = pd.read_table(
-                expected_results_dir.joinpath(extra_test_file), delim_whitespace=True
+                expected_results_dir.joinpath(extra_test_file), sep=r"\s+"
             )
             pd.testing.assert_frame_equal(
                 new.reset_index(drop=True),

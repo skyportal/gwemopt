@@ -125,18 +125,13 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
     # new version of the Slum calcul (from HOGWARTs)
     Lsun = 3.828e26
     Msun = 4.83
-    Lblist = []
 
-    for _, row in cat_df.iterrows():
-        if row[mag_column] is not None:
-            Mb = row[mag_column] - 5 * np.log10((row["distmpc"] * 10**6)) + 5
-            Lb = Lsun * 2.512 ** (Msun - Mb)
-            Lblist.append(Lb)
-        else:
-            Lblist.append(0)
-
-    # set 0 when Sloc is 0 (keep compatible galaxies for normalization)
-    Lblist = np.array(Lblist)
+    mag_vals = cat_df[mag_column].to_numpy(dtype=float)
+    dist_vals = cat_df["distmpc"].to_numpy(dtype=float)
+    valid = np.isfinite(mag_vals) & np.isfinite(dist_vals) & (dist_vals > 0)
+    Lblist = np.zeros(len(cat_df))
+    Mb = mag_vals[valid] - 5 * np.log10(dist_vals[valid] * 1e6) + 5
+    Lblist[valid] = Lsun * 2.512 ** (Msun - Mb)
 
     Lblist[s_loc == 0] = 0
 
@@ -209,16 +204,13 @@ def get_catalog(params, map_struct, export_catalog: bool = True):
     s = np.array(s_loc * Slum * sdet)
     prob = np.zeros(map_struct["skymap_raster_schedule"]["PROB"].shape)
     if params["galaxy_grade"] == "Sloc":
-        for j in range(len(ipix)):
-            prob[ipix[j]] += s_loc[j]
+        np.add.at(prob, ipix, s_loc)
         grade = s_loc
     elif params["galaxy_grade"] == "S":
-        for j in range(len(ipix)):
-            prob[ipix[j]] += s[j]
+        np.add.at(prob, ipix, s)
         grade = s
     elif params["galaxy_grade"] == "Smass":
-        for j in range(len(ipix)):
-            prob[ipix[j]] += s_mass[j]
+        np.add.at(prob, ipix, s_mass)
         grade = s_mass
     else:
         raise ValueError(
