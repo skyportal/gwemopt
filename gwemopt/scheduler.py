@@ -3,9 +3,8 @@ import copy
 import ephem
 import numpy as np
 from astropy.time import Time
-from ortools.linear_solver import pywraplp
 
-from gwemopt.utils import angular_distance, solve_milp
+from gwemopt.utils import angular_distance
 
 
 def get_altaz_tile(ra, dec, observer, obstime):
@@ -410,6 +409,8 @@ def get_order_heuristic(
             tileavailable[jj] = tileavailable[jj] - 1
 
     elif params["scheduleType"] == "airmass_weighted":
+        from ortools.linear_solver import pywraplp
+
         # then use the Hungarian algorithm (munkres) to schedule high prob tiles at low airmass
         tilematrix_mask = tilematrix > 10 ** (-10)
 
@@ -590,6 +591,8 @@ def get_order_milp(params, tile_struct, exposurelist, observer, config_struct):
         else:
             distmatrix[ii, :] = dist
     distmatrix = distmatrix / np.max(distmatrix)
+
+    from gwemopt.utils.milp import solve_milp
 
     dt = int(np.ceil((exposurelist[1][0] - exposurelist[0][0]) * 86400))
     optimal_points = solve_milp(

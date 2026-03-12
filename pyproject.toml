@@ -36,21 +36,17 @@ dependencies = [
     'matplotlib>=3.5',
     'astropy>=6.0',
     'astropy-healpix',
-    'python-dateutil',
     'mocpy>=0.16.0',
     'astroquery',
     'astroplan',
     'ephem',
-    'pyyaml',
     'joblib',
     'igwn-segments',
     'ligo.skymap',
     'lxml',
     'h5py',
     'healpy',
-    'ortools',
     'pandas',
-    'pulp',
     'shapely',
     'tables',
     'requests',
@@ -61,12 +57,17 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
+milp = [
+    'ortools',
+    'pulp',
+]
 test = [
     'pytest',
     'pytest-runner',
     'coverage',
     'coveralls',
     'freezegun',
+    'mocpy[plot]',
 ]
 
 [project.scripts]
