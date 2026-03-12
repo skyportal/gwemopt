@@ -131,7 +131,7 @@ VCS = "git"
 style = "pep440"
 versionfile_source = "gwemopt/_version.py"
 versionfile_build = "gwemopt/_version.py"
-tag_prefix = "v"
+tag_prefix = ""
 parentdir_prefix = "gwemopt-"
 
 [tool.pytest.ini_options]
@@ -141,7 +141,7 @@ markers = [
 ]
 
 [tool.bumpver]
-current_version = "0.3.6"
+current_version = "0.4.0"
 version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
 commit_message = "bump version {old_version} -> {new_version}"
 commit = true
