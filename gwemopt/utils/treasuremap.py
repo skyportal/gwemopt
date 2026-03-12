@@ -55,7 +55,7 @@ def get_treasuremap_pointings(params):
         elif "POINT" not in obs:
             continue
 
-        pointing = re.search("\(([^)]+)", obs).group(1)
+        pointing = re.search(r"\(([^)]+)", obs).group(1)
         pointing = pointing.split(" ")
         ra, dec = float(pointing[0]), float(pointing[1])
 

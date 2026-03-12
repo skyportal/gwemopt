@@ -8,7 +8,10 @@ import pandas as pd
 from gwemopt.io.schedule import read_schedule
 from gwemopt.run import run
 
-from .conftest import expected_results_dir, test_skymap
+_test_dir = Path(__file__).parent.absolute()
+_test_data_dir = _test_dir / "data"
+expected_results_dir = _test_data_dir / "expected_results"
+test_skymap = _test_data_dir / "S190814bv_5_LALInference.v1.fits.gz"
 
 
 def test_scheduler():
