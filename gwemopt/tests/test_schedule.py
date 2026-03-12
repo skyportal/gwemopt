@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from gwemopt.io.schedule import read_schedule
 from gwemopt.run import run
@@ -14,92 +15,75 @@ expected_results_dir = _test_data_dir / "expected_results"
 test_skymap = _test_data_dir / "S190814bv_5_LALInference.v1.fits.gz"
 
 
-def test_scheduler():
-    """
-    Test scheduler
+def _run_telescope(temp_dir, telescope, extra):
+    args = [
+        "-t",
+        telescope,
+        "-o",
+        str(temp_dir),
+        "-e",
+        str(test_skymap),
+        "--doTiles",
+        "--doSchedule",
+        "--timeallocationType",
+        "powerlaw",
+        "--scheduleType",
+        "greedy",
+        "--filters",
+        "g,r",
+        "--exposuretimes",
+        "30,30",
+        "--doSingleExposure",
+        "--doAlternatingFilters",
+        "--doBalanceExposure",
+    ] + extra
 
-    :return: None
-    """
+    run(args)
+
+    check_files = [
+        f"schedule_{telescope}.dat",
+        f"tiles_coverage_int_{telescope}.txt",
+    ]
+
+    for file_name in check_files:
+        print(f"Testing: {file_name}")
+
+        new_schedule = read_schedule(Path(temp_dir).joinpath(file_name))
+        expected_schedule = read_schedule(expected_results_dir.joinpath(file_name))
+
+        pd.testing.assert_frame_equal(
+            new_schedule.reset_index(drop=True),
+            expected_schedule.reset_index(drop=True),
+            rtol=1e-2,
+        )
+
+
+def test_scheduler():
+    """Test scheduler with ZTF, DECam, and summary output."""
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Efficiency just appends, so you would get issues
         Path(temp_dir).joinpath("efficiency.txt").unlink(missing_ok=True)
 
-        telescope_list = [
-            (
-                "ZTF",
-                [
-                    "--doReferences",
-                    "--doChipGaps",
-                    "--doEfficiency",
-                    "--plots",
-                    "coverage",
-                    "--doCoverage",
-                    "--coverageFiles",
-                    os.path.join(temp_dir, "coverage_ZTF.dat"),
-                ],
-            ),
-            (
-                "KPED",
-                [
-                    "--tilesType",
-                    "galaxy",
-                    "--plots",
-                    "coverage",
-                    "--catalog",
-                    "GLADE",
-                ],
-            ),
-            (
-                "DECam",
-                ["--max_nb_tiles", "5", "--plots", "coverage"],
-            ),
-        ]
-        for telescope, extra in telescope_list:
-            args = [
-                "-t",
-                telescope,
-                "-o",
-                str(temp_dir),
-                "-e",
-                str(test_skymap),
-                "--doTiles",
-                "--doSchedule",
-                "--timeallocationType",
-                "powerlaw",
-                "--scheduleType",
-                "greedy",
-                "--filters",
-                "g,r",
-                "--exposuretimes",
-                "30,30",
-                "--doSingleExposure",
-                "--doAlternatingFilters",
-                "--doBalanceExposure",
-            ] + extra
+        _run_telescope(
+            temp_dir,
+            "ZTF",
+            [
+                "--doReferences",
+                "--doChipGaps",
+                "--doEfficiency",
+                "--plots",
+                "coverage",
+                "--doCoverage",
+                "--coverageFiles",
+                os.path.join(temp_dir, "coverage_ZTF.dat"),
+            ],
+        )
 
-            run(args)
-
-            check_files = [
-                f"schedule_{telescope}.dat",
-                f"tiles_coverage_int_{telescope}.txt",
-            ]
-
-            for i, file_name in enumerate(check_files):
-                print(f"Testing: {file_name}")
-
-                new_schedule = read_schedule(Path(temp_dir).joinpath(file_name))
-                expected_schedule = read_schedule(
-                    expected_results_dir.joinpath(file_name)
-                )
-
-                pd.testing.assert_frame_equal(
-                    new_schedule.reset_index(drop=True),
-                    expected_schedule.reset_index(drop=True),
-                    rtol=1e-2,
-                )
-
-        # Test the extra efficiency/coverage files
+        _run_telescope(
+            temp_dir,
+            "DECam",
+            ["--max_nb_tiles", "5", "--plots", "coverage"],
+        )
 
         extra_test_files = [
             "summary.dat",
@@ -117,3 +101,22 @@ def test_scheduler():
                 expected.reset_index(drop=True),
                 rtol=1e-2,
             )
+
+
+@pytest.mark.network
+def test_scheduler_galaxy():
+    """Test scheduler with galaxy tiling (requires GLADE catalog download)."""
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        _run_telescope(
+            temp_dir,
+            "KPED",
+            [
+                "--tilesType",
+                "galaxy",
+                "--plots",
+                "coverage",
+                "--catalog",
+                "GLADE",
+            ],
+        )
